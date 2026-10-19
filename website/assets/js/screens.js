@@ -342,6 +342,22 @@
       '</div>' + reviewNav(0));
   };
 
+  // 11. Technical manager: sent certificates (the last step of the tour)
+  screens.sent = function () {
+    function card(client, equip, verdict, to, when) {
+      return '<div class="ui-card ui-gap"><div class="ui-row ui-between"><span class="ui-h">' + client + '</span>' + verdict + '</div><div class="ui-text">' + equip + '</div>' +
+        '<div class="ui-row ui-between"><span class="ui-meta">' + ic('mail', 'ico" style="width:1.1em;height:1.1em;vertical-align:-.2em;margin-inline-end:.3em') + L('Sent to ', 'أُرسلت إلى ') + '<span dir="ltr">' + to + '</span></span></div>' +
+        '<div class="ui-row ui-between"><span class="ui-meta">' + when + '</span><button type="button" class="ui-btn is-sm is-outline"' + T(L('Opens the signed certificate PDF.', 'يفتح ملف PDF للشهادة الموقّعة.')) + '>' + ic('pdf') + L('View PDF', 'عرض PDF') + '</button></div></div>';
+    }
+    return shell(status(true) +
+      titleHead(L('Sent certificates', 'الشهادات المرسلة'), L('Signed and recorded as sent', 'موقّعة ومسجّلة كمرسلة')) +
+      '<div class="ui-body">' +
+        card(L('Delta Steel Works', 'دلتا للصلب'), L('Overhead crane — 10 t', 'رافعة علوية — 10 طن'), chip(L('With conditions', 'بشروط'), 'amber'), 'certificates@deltasteel.example', L('Today, 10:20', 'اليوم 10:20')) +
+        card(L('Nile Packaging', 'النيل للتغليف'), L('Air compressor — 10 bar', 'ضاغط هواء — 10 بار'), chip(L('Safe', 'آمنة'), 'green'), 'quality@nilepackaging.example', L('Yesterday', 'أمس')) +
+        card(L('Sunrise Foods', 'صن رايز للأغذية'), L('Air compressor — 8 bar', 'ضاغط هواء — 8 بار'), chip(L('Safe', 'آمنة'), 'green'), 'ops@sunrisefoods.example', L('15 Oct', '15 أكتوبر')) +
+      '</div>' + reviewNav(1));
+  };
+
   /* ---------- Fragments for the page (outside a phone) ---------- */
   var frags = {};
 
@@ -366,30 +382,43 @@
       '<div class="ui-sig" style="height:5.4em">' + signPath + '</div>' +
       '<div class="ui-btns"><span class="ui-btn is-danger">' + ic('return') + L('Return', 'إعادة') + '</span><span class="ui-btn" style="background:#15803d">' + ic('check') + L('Approve', 'اعتماد') + '</span></div></div></div>';
   };
-  frags['mini-quotes'] = function () {
-    var ar = '<svg class="ico arrow flip" aria-hidden="true"><use href="#i-arrow"/></svg>';
-    return '<div class="ui-frag" style="width:100%"><div class="mini-flow">' + chip(L('v1 · Sent', 'إصدار 1 · أُرسل'), 'blue') + ar + chip(L('Counter-offer', 'عرض مضاد'), 'amber') + ar + chip(L('v2 · Sent', 'إصدار 2 · أُرسل'), 'blue') + ar + chip(L('Accepted', 'مقبول'), 'green', 'lock') + '</div></div>';
+  /* Larger cut-outs for the bento cards: real app UI, cropped by the card */
+  frags['peek-quote'] = function () {
+    function tl(dot, t, sub) { return '<div class="ui-tl-i"><span class="ui-tl-dot ' + dot + '"></span><div class="ui-tl-b"><b>' + t + '</b><span>' + sub + '</span></div></div>'; }
+    return '<div class="ui-frag" style="width:min(100%,460px)"><div class="ui-card"><div class="ui-row ui-between" style="margin-block-end:12px"><span class="ui-h">' + L('Negotiation history', 'سجل التفاوض') + '</span>' + chip(L('Your turn', 'دورك'), 'amber') + '</div><div class="ui-tl">' +
+      tl('', L('Quote v1 sent', 'تم إرسال عرض الإصدار 1'), L('16 Oct · by you · valid 14 days', '16 أكتوبر · بواسطتك · صالح 14 يومًا')) +
+      tl('is-amber', L('Client countered EGP 4,200', 'عرض العميل المضاد 4,200 ج.م'), L('Counter-offer', 'عرض مضاد')) +
+      tl('is-now', L('Your response', 'ردّك'), L('Send new price (v2) · Accept client’s price', 'إرسال سعر جديد (إصدار 2) · قبول سعر العميل')) +
+    '</div></div></div>';
   };
-  frags['mini-schedule'] = function () {
-    function tr(n, i) { return '<div class="mini-track"><span>' + n + '</span><span class="mini-bar">' + i + '</span></div>'; }
-    return '<div class="mini-tracks">' +
-      tr(L('Omar H.', 'عمر ح.'), '<i style="inset-inline-start:6%;width:34%"></i><i class="alt" style="inset-inline-start:50%;width:40%"></i>') +
-      tr(L('Karim F.', 'كريم ف.'), '<i style="inset-inline-start:24%;width:50%"></i>') +
-      tr(L('Laila S.', 'ليلى س.'), '<i class="off" style="inset-inline-start:0;width:100%"></i>') + '</div>';
+  frags['peek-schedule'] = function () {
+    function row(name, track, cls, note) { return '<div class="ui-trow"><b>' + name + '</b><div class="ui-track ' + (cls || '') + '"' + (note ? ' data-note="' + esc(note) + '"' : '') + '>' + track + '</div></div>'; }
+    function blk(l, w, text, cls) { return '<span class="ui-block ' + (cls || '') + '" style="inset-inline-start:' + l + '%;width:' + w + '%">' + text + '</span>'; }
+    return '<div class="ui-frag" style="width:min(100%,420px)"><div class="ui-card ui-gap"><div class="ui-axis"><span></span><span>08</span><span>10</span><span>12</span><span>14</span><span>16</span></div>' +
+      row(L('Omar Hassan', 'عمر حسن'), blk(2, 38, L('Nile Pack.', 'النيل'), 'is-done') + blk(48, 44, L('Harbor', 'الميناء'), 'is-alt')) +
+      row(L('Karim Fathy', 'كريم فتحي'), blk(22, 56, L('Sunrise Foods', 'صن رايز'))) +
+      row(L('Laila Samir', 'ليلى سمير'), '', 'is-leave', L('On leave until 23 Oct', 'في إجازة حتى 23 أكتوبر')) +
+      row(L('Mariam Said', 'مريم سعيد'), '', 'is-free', L('Free all day', 'متفرغ طوال اليوم')) +
+    '</div></div>';
   };
-  frags['mini-exam'] = function () {
-    return '<div class="ui-frag" style="width:100%"><div class="mini-q"><div class="mini-progress"><i></i></div>' +
-      '<div class="row"><span>' + L('Installed correctly?', 'هل التركيب صحيح؟') + '</span>' + seg(yesNo, 0) + '</div>' +
-      '<div class="row"><span>' + L('Danger to persons?', 'خطر على الأشخاص؟') + '</span>' + seg(yesNo, 1) + '</div></div></div>';
+  frags['peek-review'] = function () {
+    return '<div class="ui-frag" style="width:min(100%,430px)"><div class="ui-row" style="flex-wrap:wrap;gap:8px"><span class="tag tag--safe"><span class="tag-hole"></span>' + L('Safe to operate', 'آمن للتشغيل') + '</span><span class="tag tag--cond"><span class="tag-hole"></span>' + L('Safe with conditions', 'آمن بشروط') + '</span><span class="tag tag--bad"><span class="tag-hole"></span>' + L('Not safe — out of service', 'غير آمن — خارج الخدمة') + '</span></div>' +
+      '<div class="ui-card ui-gap"><div class="ui-row ui-between"><span class="ui-h">' + L('Sign here', 'وقّع هنا') + '</span><span class="ui-meta">' + L('Eng. Adel Mansour · LIC-4471', 'م. عادل منصور · LIC-4471') + '</span></div><div class="ui-sig" style="height:5em">' + signPath + '</div></div></div>';
   };
-  frags['mini-verdicts'] = function () {
-    return '<div class="mini-tags"><span class="tag tag--safe"><span class="tag-hole"></span>' + L('Safe to operate', 'آمن للتشغيل') + '</span><span class="tag tag--cond"><span class="tag-hole"></span>' + L('Safe with conditions', 'آمن بشروط') + '</span><span class="tag tag--bad"><span class="tag-hole"></span>' + L('Not safe — out of service', 'غير آمن — خارج الخدمة') + '</span></div>';
+  frags['peek-clients'] = function () {
+    function client(ini, name, loc, chips) {
+      return '<div class="ui-card ui-gap"><div class="ui-row"><span class="ui-av ui-av--tint" style="width:2.6em;height:2.6em;font-size:.85em">' + ini + '</span><div class="ui-grow"><div class="ui-h">' + name + '</div><div class="ui-meta">' + loc + '</div></div></div><div class="ui-row" style="flex-wrap:wrap;gap:.4em">' + chips + '</div></div>';
+    }
+    return '<div class="ui-frag" style="width:min(100%,420px)">' +
+      client(L('DS', 'دص'), L('Delta Steel Works', 'دلتا للصلب'), L('Sadat City', 'مدينة السادات'), chip(L('3 equipment', '3 معدات'), 'soft') + chip(L('1 open job', 'مهمة مفتوحة'), 'blue') + chip(L('2 due in 30 days', '2 تستحق خلال 30 يومًا'), 'amber')) +
+      client(L('NP', 'نت'), L('Nile Packaging', 'النيل للتغليف'), L('10th of Ramadan', 'العاشر من رمضان'), chip(L('1 equipment', 'معدة'), 'soft') + chip(L('1 open job', 'مهمة مفتوحة'), 'blue')) +
+    '</div>';
   };
-  frags['mini-clients'] = function () {
-    return '<div class="ui-frag" style="width:100%"><div class="ui-row" style="flex-wrap:wrap;gap:8px">' + chip(L('3 equipment', '3 معدات'), 'soft') + chip(L('1 open job', 'مهمة مفتوحة'), 'blue') + chip(L('2 due in 30 days', '2 تستحق خلال 30 يومًا'), 'amber') + '</div></div>';
-  };
-  frags['mini-time'] = function () {
-    return '<div class="mini-formula"><span>' + L('2h 30m × EGP 400 / hour', '2س 30د × 400 ج.م / ساعة') + '</span><span>=</span><strong>' + L('EGP 1,000', '1,000 ج.م') + '</strong></div>';
+  frags['peek-time'] = function () {
+    function line(a, b, strong) { return '<div class="ui-row ui-between"><span class="ui-meta">' + a + '</span><span class="' + (strong ? 'ui-strong' : 'ui-meta') + '" style="font-size:.78em">' + b + '</span></div>'; }
+    return '<div class="ui-frag" style="width:min(100%,420px)"><div class="ui-card ui-gap"><div class="ui-row ui-between"><span class="ui-h">' + L('Delta Steel Works', 'دلتا للصلب') + '</span>' + chip(L('Approved', 'معتمد'), 'green', 'lock') + '</div>' +
+      line(L('Inspection & load testing', 'الفحص واختبار الحمل'), L('1h 30m', '1س 30د')) + line(L('Report preparation', 'إعداد التقرير'), L('45m', '45د')) + line(L('Waiting', 'انتظار'), L('15m', '15د')) +
+      '<div class="ui-divider"></div>' + line(L('Net working time', 'صافي وقت العمل'), L('2h 30m × EGP 400 per hour', '2س 30د × 400 ج.م للساعة'), true) + '</div></div>';
   };
 
   /* ---------- Interactions inside a rendered screen ---------- */

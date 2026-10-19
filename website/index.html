@@ -118,7 +118,7 @@
 <main id="main">
 
 <!-- ============ HERO ============ -->
-<section class="hero" id="home" aria-labelledby="hero-title">
+<section class="hero" id="home" data-tone="dark" aria-labelledby="hero-title">
   <div class="wrap hero-grid">
     <div class="hero-copy">
       <h1 id="hero-title" class="hero-title">
@@ -139,24 +139,23 @@
           <li class="tag tag--bad"><span class="tag-hole"></span><span data-ar="غير آمن — خارج الخدمة">Not safe — out of service</span></li>
         </ul>
       </div>
+      <p class="hero-sample"><svg class="ico" aria-hidden="true"><use href="#i-sample"/></svg><span data-ar="الشاشات المعروضة ببيانات تجريبية وعملاء وهميين.">Screens shown with sample data and fictional clients.</span></p>
+      <ul class="hero-facts">
+        <li><strong data-ar="من الطلب إلى الشهادة الموقّعة">From request to signed certificate</strong><span data-ar="سجل واحد للمهمة عبر أربعة أدوار">One job record across four roles</span></li>
+        <li><strong data-ar="العربية والإنجليزية">English and Arabic</strong><span data-ar="مع تخطيط كامل من اليمين إلى اليسار">with full right-to-left layout</span></li>
+        <li><strong data-ar="مصمم للهاتف أولًا">Phone-first</strong><span data-ar="ويعمل أيضًا في المتصفح">and runs in the browser too</span></li>
+        <li><strong data-ar="صلاحيات حسب الدور">Role-based access</strong><span data-ar="تُفرض عبر قواعد على الخادم">enforced by server-side rules</span></li>
+      </ul>
     </div>
 
     <div class="hero-stage" aria-hidden="true">
+      <div class="hero-glow"></div>
       <div class="hero-device hero-device--back"><div class="device" data-hero-screen="assign"><div class="device-screen"></div></div></div>
       <div class="hero-device hero-device--front"><div class="device" data-hero-screen="report"><div class="device-screen"></div></div></div>
+      <div class="float float--a"><span class="float-ico"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg></span><span data-ar="تم اعتماد الشهادة وتوقيعها.">Certificate approved and signed.</span></div>
+      <div class="float float--b"><span class="float-ico"><svg class="ico" aria-hidden="true"><use href="#i-clip"/></svg></span><span data-ar="تم قبول المهمة.">Task accepted.</span></div>
     </div>
   </div>
-
-  <div class="wrap">
-    <p class="hero-sample"><svg class="ico" aria-hidden="true"><use href="#i-sample"/></svg><span data-ar="الشاشات المعروضة ببيانات تجريبية وعملاء وهميين.">Screens shown with sample data and fictional clients.</span></p>
-    <ul class="hero-facts">
-      <li><strong data-ar="من الطلب إلى الشهادة الموقّعة">From request to signed certificate</strong><span data-ar="سجل واحد للمهمة عبر أربعة أدوار">One job record across four roles</span></li>
-      <li><strong data-ar="العربية والإنجليزية">English and Arabic</strong><span data-ar="مع تخطيط كامل من اليمين إلى اليسار">with full right-to-left layout</span></li>
-      <li><strong data-ar="مصمم للهاتف أولًا">Phone-first</strong><span data-ar="ويعمل أيضًا في المتصفح">and runs in the browser too</span></li>
-      <li><strong data-ar="صلاحيات حسب الدور">Role-based access</strong><span data-ar="تُفرض عبر قواعد على الخادم">enforced by server-side rules</span></li>
-    </ul>
-  </div>
-  <div class="ruler" aria-hidden="true"></div>
 </section>
 
 <!-- ============ PROBLEMS ============ -->
@@ -250,8 +249,8 @@
           <li data-ar="إصدارات أسعار لها مدة صلاحية وانتهاء">Quote versions with validity and expiry</li>
           <li data-ar="القبول يقفل السعر ويحيل المهمة إلى المنسق">Accepting locks the price and hands the job on</li>
         </ul>
-        <div class="mini" data-frag="mini-quotes" aria-hidden="true"></div>
         <a class="chip-link" href="#explorer" data-go-screen="quote"><span data-ar="شاهد التفاوض على السعر">See quote negotiation</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <div class="peek" data-frag="peek-quote" aria-hidden="true"></div>
       </article>
 
       <article class="solution s-schedule">
@@ -262,8 +261,8 @@
           <li data-ar="علامة «الأنسب» حسب المؤهلات">Best match tag from qualifications</li>
           <li data-ar="تنبيه بقرب انتهاء ترخيص المفتش">Warnings as an inspector's license nears expiry</li>
         </ul>
-        <div class="mini" data-frag="mini-schedule" aria-hidden="true"></div>
         <a class="chip-link" href="#explorer" data-go-screen="assign"><span data-ar="شاهد التعيين">See assignment</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <div class="peek" data-frag="peek-schedule" aria-hidden="true"></div>
       </article>
 
       <article class="solution s-exam">
@@ -274,39 +273,43 @@
           <li data-ar="قبول المهمة أو رفضها من الهاتف">Accept or decline a task from the phone</li>
           <li data-ar="أعلام الخطر القائم والمحتمل">Existing and potential danger flags</li>
         </ul>
-        <div class="mini" data-frag="mini-exam" aria-hidden="true"></div>
         <a class="chip-link" href="#explorer" data-go-screen="report"><span data-ar="شاهد تقرير الفحص">See the examination report</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <div class="peek" data-frag="questions" aria-hidden="true"></div>
       </article>
 
       <article class="solution s-review">
         <p class="role-label" data-ar="المدير الفني">Technical manager</p>
         <h3 data-ar="المراجعة والشهادات الموقّعة">Review and signed certificates</h3>
         <p data-ar="اقرأ الملخص وملف PDF الكامل، وأضف تعليقاتك، ووقّع على الشاشة واعتمد، أو أعد التقرير إلى المفتش مع بيان ما يجب تغييره. وتُسجَّل الشهادة المعتمدة كمرسلة إلى بريد الشهادات الخاص بالعميل.">Read the summary and the full PDF, add comments, sign on screen and approve, or return the report to the inspector with what needs to change. An approved certificate is recorded as sent to the client's certificates email.</p>
-        <div class="mini mini--tags" data-frag="mini-verdicts" aria-hidden="true"></div>
+        <ul class="ticks">
+          <li data-ar="النتيجة: آمنة أو آمنة بشروط أو غير آمنة">Result recorded as safe, safe with conditions or not safe</li>
+          <li data-ar="إعادة إلى المفتش مع سبب مكتوب">Return to the inspector with a written reason</li>
+        </ul>
         <a class="chip-link" href="#explorer" data-go-screen="review"><span data-ar="شاهد المراجعة والتوقيع">See review and sign</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <div class="peek" data-frag="peek-review" aria-hidden="true"></div>
       </article>
 
       <article class="solution s-clients">
         <p class="role-label" data-ar="المشرف">Supervisor</p>
         <h3 data-ar="العملاء والمعدات">Clients and equipment</h3>
         <p data-ar="لكل عميل جهات اتصاله وبريد الشهادات والمعدات المسجّلة والمهام المفتوحة وما يستحق خلال 30 يومًا.">Each client keeps its contacts, certificates email, equipment on record, open jobs, and what falls due in the next 30 days.</p>
-        <div class="mini" data-frag="mini-clients" aria-hidden="true"></div>
         <a class="chip-link" href="#explorer" data-go-screen="clients"><span data-ar="شاهد العملاء">See clients</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <div class="peek" data-frag="peek-clients" aria-hidden="true"></div>
       </article>
 
       <article class="solution s-time">
         <p class="role-label" data-ar="المفتش والمنسق">Inspector and coordinator</p>
         <h3 data-ar="سجل الساعات والتكاليف">Timesheets and costs</h3>
         <p data-ar="يسجّل المفتش صافي وقت العمل والأنشطة وتكاليف النقل لكل مهمة. يُحسب السعر من أجر الساعة، ويعتمد المنسق الإدخال أو يعيده، ويُقفل الإدخال المعتمد.">The inspector logs net working time, activities and transport costs for each task. The price comes from the hourly rate, the coordinator approves or returns the entry, and an approved entry locks.</p>
-        <div class="mini" data-frag="mini-time" aria-hidden="true"></div>
         <a class="chip-link" href="#explorer" data-go-screen="timesheet"><span data-ar="شاهد سجل الساعات">See the timesheet</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <div class="peek" data-frag="peek-time" aria-hidden="true"></div>
       </article>
     </div>
   </div>
 </section>
 
 <!-- ============ EXPLORER ============ -->
-<section class="explorer" id="explorer" aria-labelledby="explorer-title">
+<section class="explorer" id="explorer" data-tone="dark" aria-labelledby="explorer-title">
   <div class="wrap">
     <header class="sec-head sec-head--light">
       <h2 id="explorer-title" data-ar="تجوّل داخل التطبيق الحقيقي.">Walk through the real app.</h2>
@@ -441,7 +444,6 @@
       </div>
     </div>
   </div>
-  <div class="ruler ruler--dark" aria-hidden="true"></div>
 </section>
 
 <!-- ============ FEATURES ============ -->
@@ -494,51 +496,61 @@
 </section>
 
 <!-- ============ HOW IT WORKS ============ -->
-<section class="how" id="how-it-works" aria-labelledby="how-title">
+<section class="how" id="how-it-works" data-tone="dark" aria-labelledby="how-title">
   <div class="wrap">
     <header class="sec-head sec-head--light">
       <h2 id="how-title" data-ar="كيف تسير المهمة.">How a job moves.</h2>
-      <p data-ar="ست خطوات تظهر في كل شاشة بالتطبيق، ولكل خطوة دور يملكها.">Six steps, shown on every job screen in the app. Each step has a role that owns it.</p>
+      <p data-ar="ست خطوات تظهر في كل شاشة بالتطبيق، ولكل خطوة دور يملكها. مرّر لترى الشاشة التي تخص كل خطوة.">Six steps, shown on every job screen in the app. Each step has a role that owns it. Scroll to see the screen that belongs to each one.</p>
     </header>
 
-    <ol class="steps">
-      <li class="step">
-        <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-inbox"/></svg></div>
-        <h3 data-ar="الطلب">Request</h3>
-        <p class="step-who" data-ar="المشرف">Supervisor</p>
-        <p data-ar="يتحول بريد العميل أو الإدخال اليدوي إلى طلب: العميل والمعدات والموقع والتاريخ المفضل.">A client email or a manual entry becomes a request: client, equipment, location and preferred date.</p>
-      </li>
-      <li class="step">
-        <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></div>
-        <h3 data-ar="التسعير">Quote</h3>
-        <p class="step-who" data-ar="المشرف">Supervisor</p>
-        <p data-ar="سعّر الطلب وأرسل إصدارًا مرقّمًا وسجّل رد العميل. القبول يقفل السعر ويمرّر المهمة.">Price it, send a numbered version and log the client's reply. Accepting locks the price and passes the job on.</p>
-      </li>
-      <li class="step">
-        <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-cal"/></svg></div>
-        <h3 data-ar="التعيين">Assign</h3>
-        <p class="step-who" data-ar="المنسق">Coordinator</p>
-        <p data-ar="اختر التاريخ ووقت البدء ومفتشًا مؤهلًا. ويقبل المفتش المهمة أو يرفضها.">Choose the date, start time and a qualified inspector. The inspector accepts or declines.</p>
-      </li>
-      <li class="step">
-        <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-clip"/></svg></div>
-        <h3 data-ar="الفحص">Inspect</h3>
-        <p class="step-who" data-ar="المفتش">Inspector</p>
-        <p data-ar="يُكمل المفتش تقرير الفحص في الموقع، ويُحفظ التقدّم تلقائيًا ثم يُرسله للمراجعة.">The inspector completes the examination report on site. Progress autosaves, then it is submitted for review.</p>
-      </li>
-      <li class="step">
-        <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg></div>
-        <h3 data-ar="الشهادة">Certify</h3>
-        <p class="step-who" data-ar="المدير الفني">Technical manager</p>
-        <p data-ar="يراجع المدير الفني التقرير ويوقّع ويعتمد، أو يعيده إلى المفتش مع بيان ما يجب تغييره.">The technical manager reviews, signs and approves, or returns it to the inspector with what to change.</p>
-      </li>
-      <li class="step">
-        <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-send"/></svg></div>
-        <h3 data-ar="الإرسال">Sent</h3>
-        <p class="step-who" data-ar="المدير الفني">Technical manager</p>
-        <p data-ar="تُسجَّل الشهادة المعتمدة كمرسلة إلى بريد الشهادات الخاص بالعميل، ويبقى ملف PDF الموقّع متاحًا للتحميل.">The approved certificate is recorded as sent to the client's certificates email, and the signed PDF stays available to download.</p>
-      </li>
-    </ol>
+    <div class="tour" data-tour>
+      <ol class="tour-steps">
+        <li class="tour-step" data-screen="inbox">
+          <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-inbox"/></svg></div>
+          <h3 data-ar="الطلب">Request</h3>
+          <p class="step-who" data-ar="المشرف">Supervisor</p>
+          <p data-ar="يتحول بريد العميل أو الإدخال اليدوي إلى طلب: العميل والمعدات والموقع والتاريخ المفضل.">A client email or a manual entry becomes a request: client, equipment, location and preferred date.</p>
+          <a class="chip-link" href="#explorer" data-go-screen="inbox"><span data-ar="شاهد هذه الشاشة">See this screen</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </li>
+        <li class="tour-step" data-screen="quote">
+          <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></div>
+          <h3 data-ar="التسعير">Quote</h3>
+          <p class="step-who" data-ar="المشرف">Supervisor</p>
+          <p data-ar="سعّر الطلب وأرسل إصدارًا مرقّمًا وسجّل رد العميل. القبول يقفل السعر ويمرّر المهمة.">Price it, send a numbered version and log the client's reply. Accepting locks the price and passes the job on.</p>
+          <a class="chip-link" href="#explorer" data-go-screen="quote"><span data-ar="شاهد هذه الشاشة">See this screen</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </li>
+        <li class="tour-step" data-screen="assign">
+          <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-cal"/></svg></div>
+          <h3 data-ar="التعيين">Assign</h3>
+          <p class="step-who" data-ar="المنسق">Coordinator</p>
+          <p data-ar="اختر التاريخ ووقت البدء ومفتشًا مؤهلًا. ويقبل المفتش المهمة أو يرفضها.">Choose the date, start time and a qualified inspector. The inspector accepts or declines.</p>
+          <a class="chip-link" href="#explorer" data-go-screen="assign"><span data-ar="شاهد هذه الشاشة">See this screen</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </li>
+        <li class="tour-step" data-screen="report">
+          <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-clip"/></svg></div>
+          <h3 data-ar="الفحص">Inspect</h3>
+          <p class="step-who" data-ar="المفتش">Inspector</p>
+          <p data-ar="يُكمل المفتش تقرير الفحص في الموقع، ويُحفظ التقدّم تلقائيًا ثم يُرسله للمراجعة.">The inspector completes the examination report on site. Progress autosaves, then it is submitted for review.</p>
+          <a class="chip-link" href="#explorer" data-go-screen="report"><span data-ar="شاهد هذه الشاشة">See this screen</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </li>
+        <li class="tour-step" data-screen="review">
+          <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg></div>
+          <h3 data-ar="الشهادة">Certify</h3>
+          <p class="step-who" data-ar="المدير الفني">Technical manager</p>
+          <p data-ar="يراجع المدير الفني التقرير ويوقّع ويعتمد، أو يعيده إلى المفتش مع بيان ما يجب تغييره.">The technical manager reviews, signs and approves, or returns it to the inspector with what to change.</p>
+          <a class="chip-link" href="#explorer" data-go-screen="review"><span data-ar="شاهد هذه الشاشة">See this screen</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </li>
+        <li class="tour-step" data-screen="sent">
+          <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-send"/></svg></div>
+          <h3 data-ar="الإرسال">Sent</h3>
+          <p class="step-who" data-ar="المدير الفني">Technical manager</p>
+          <p data-ar="تُسجَّل الشهادة المعتمدة كمرسلة إلى بريد الشهادات الخاص بالعميل، ويبقى ملف PDF الموقّع متاحًا للتحميل.">The approved certificate is recorded as sent to the client's certificates email, and the signed PDF stays available to download.</p>
+        </li>
+      </ol>
+      <div class="tour-stage" aria-hidden="true">
+        <div class="device device--tour"><div class="device-screen" data-tour-screen></div></div>
+      </div>
+    </div>
 
     <p class="how-note" data-ar="بعد الإرسال يمكن لكل دور العودة إلى سجل المهمة: الطلب وإصدارات العروض والتقرير وسجل الحالات.">After sending, each role can go back to the job's record: the request, quote versions, report and status history.</p>
   </div>
@@ -607,7 +619,7 @@
 
 <!-- ============ BENEFITS ============ -->
 <section class="section benefits" id="benefits" aria-labelledby="benefits-title">
-  <div class="wrap benefits-grid">
+  <div class="wrap"><div class="benefits-panel">
     <header class="sec-head">
       <h2 id="benefits-title" data-ar="ما يتغيّر حين تعيش المهمة في مكان واحد.">What changes when the job lives in one place.</h2>
       <p data-ar="نتائج عملية يمكن ملاحظتها في سير العمل اليومي، دون أرقام مبالغ فيها.">Practical outcomes you can see in the daily workflow, without invented numbers.</p>
@@ -622,7 +634,7 @@
       <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><div><h3 data-ar="اعتماد أقل على الورق">Less reliance on paper</h3><p data-ar="يُملأ التقرير ويُوقَّع على الشاشة ويُصدَّر PDF.">The report is filled in and signed on screen and exported as a PDF.</p></div></li>
       <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><div><h3 data-ar="قرارات تشغيلية أفضل اطلاعًا">Better-informed operational decisions</h3><p data-ar="جدول الفريق وحمل المفتشين وتواريخ الاستحقاق أمام المنسقين.">Team schedule, inspector load and due dates in front of coordinators.</p></div></li>
     </ul>
-  </div>
+  </div></div>
 </section>
 
 <!-- ============ WHY ============ -->
@@ -721,7 +733,7 @@
 </section>
 
 <!-- ============ CONTACT / FINAL CTA ============ -->
-<section class="contact" id="contact" aria-labelledby="contact-title">
+<section class="contact" id="contact" data-tone="dark" aria-labelledby="contact-title">
   <div class="wrap contact-grid">
     <div class="contact-copy">
       <h2 id="contact-title" data-ar="هل أنت مستعد لجعل الفحوصات أذكى؟">Ready to Make Inspections Smarter?</h2>

@@ -52,6 +52,7 @@
     renderHero();
     renderFrags();
     if (explorer) explorer.render();
+    if (tour) tour.render();
     labelTable();
     updateFormText();
     var cp = $('[data-copyright]');
@@ -102,9 +103,14 @@
     doc.body.classList.toggle('menu-lock', open);
     updateHeader();
   }
+  var toneSections = $$('main > section');
   function updateHeader() {
-    var overHero = window.scrollY < 24 && !nav.classList.contains('is-open');
-    header.classList.toggle('is-over-hero', overHero);
+    var open = nav.classList.contains('is-open'), y = 46, tone = 'dark', i, r;
+    for (i = 0; i < toneSections.length; i++) {
+      r = toneSections[i].getBoundingClientRect();
+      if (r.top <= y && r.bottom > y) tone = toneSections[i].getAttribute('data-tone') || 'light'; // later sheets sit on top
+    }
+    header.classList.toggle('is-light', tone === 'light' && !open);
   }
   toggle.addEventListener('click', function () { setMenu(!nav.classList.contains('is-open')); });
   $$('a', nav).forEach(function (a) { a.addEventListener('click', function () { setMenu(false); }); });
@@ -189,6 +195,72 @@
 
     show(current);
     return { render: render, show: show };
+  })();
+
+  /* ------------------------------------------------------------------ *
+   * Pointer effects: hero parallax, card spotlight                      *
+   * ------------------------------------------------------------------ */
+  var finePointer = window.matchMedia && window.matchMedia('(hover: hover) and (prefers-reduced-motion: no-preference)').matches;
+  if (finePointer) {
+    var hero = $('.hero');
+    if (hero) {
+      hero.addEventListener('pointermove', function (e) {
+        var r = hero.getBoundingClientRect();
+        hero.style.setProperty('--px', ((e.clientX - r.left) / r.width - 0.5).toFixed(3));
+        hero.style.setProperty('--py', ((e.clientY - r.top) / r.height - 0.5).toFixed(3));
+      }, { passive: true });
+      hero.addEventListener('pointerleave', function () { hero.style.setProperty('--px', 0); hero.style.setProperty('--py', 0); });
+    }
+    $$('.solution').forEach(function (card) {
+      card.addEventListener('pointermove', function (e) {
+        var r = card.getBoundingClientRect();
+        card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+        card.style.setProperty('--my', (e.clientY - r.top) + 'px');
+      }, { passive: true });
+    });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Pinned tour: the phone follows the step in view                     *
+   * ------------------------------------------------------------------ */
+  var tour = (function () {
+    var host = $('[data-tour]');
+    if (!host) return null;
+    var steps = $$('.tour-step', host), list = $('.tour-steps', host);
+    var device = $('.device--tour', host), screen = $('[data-tour-screen]', host);
+    var current = null, swapTimer = null;
+    $('.tour-stage', host).setAttribute('inert', '');
+
+    function render() { if (current) I.renderScreen(current, screen); }
+    function show(id) {
+      if (id === current) return;
+      var first = current === null;
+      current = id;
+      if (first) { render(); return; }
+      device.classList.add('is-swapping');
+      window.clearTimeout(swapTimer);
+      swapTimer = window.setTimeout(function () { render(); device.classList.remove('is-swapping'); }, 160);
+    }
+    function update() {
+      var mid = window.innerHeight * 0.5, active = 0;
+      steps.forEach(function (s, i) { if (s.getBoundingClientRect().top < mid) active = i; });
+      steps.forEach(function (s, i) {
+        s.classList.toggle('is-active', i === active);
+        s.classList.toggle('is-done', i < active);
+        if (i === active) s.setAttribute('aria-current', 'step'); else s.removeAttribute('aria-current');
+      });
+      show(steps[active].getAttribute('data-screen'));
+      var a = steps[0].querySelector('.step-node').getBoundingClientRect();
+      var z = steps[steps.length - 1].querySelector('.step-node').getBoundingClientRect();
+      var p = (mid - (a.top + a.height / 2)) / (z.top - a.top);
+      list.style.setProperty('--p', Math.max(0, Math.min(1, p)).toFixed(3));
+    }
+    var queued = false;
+    function onScroll() { if (queued) return; queued = true; window.requestAnimationFrame(function () { update(); queued = false; }); }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    update();
+    return { render: render };
   })();
 
   /* ------------------------------------------------------------------ *
