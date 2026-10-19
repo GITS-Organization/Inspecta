@@ -7,14 +7,26 @@ class ReviewDetailState extends Equatable {
   final Certificate? certificate;
 
   final String comments;
+
+  /// The reviewer's profile name — printed on the certificate as the person
+  /// signing it. Not entered on the review screen.
   final String reviewerName;
-  final String license;
   final String email;
 
   /// The address [ReviewDetailCubit] looked up from the client, so the
   /// screen can drop it into the email field once.
   final String? suggestedEmail;
+
+  /// What the reviewer has drawn on this screen — only used when they have no
+  /// saved signature.
   final List<List<double>> strokes;
+
+  /// The signature saved in the reviewer's profile — empty when they haven't
+  /// set one, null until it has loaded.
+  final List<List<double>>? savedStrokes;
+
+  /// Whether a signature drawn here is saved to the profile on approval.
+  final bool rememberSignature;
 
   final bool isApproving;
   final bool isReturning;
@@ -28,10 +40,11 @@ class ReviewDetailState extends Equatable {
     this.certificate,
     this.comments = '',
     this.reviewerName = '',
-    this.license = '',
     this.email = '',
     this.suggestedEmail,
     this.strokes = const [],
+    this.savedStrokes,
+    this.rememberSignature = true,
     this.isApproving = false,
     this.isReturning = false,
     this.actionSeq = 0,
@@ -42,26 +55,32 @@ class ReviewDetailState extends Equatable {
 
   bool get isBusy => isApproving || isReturning;
 
-  bool get isSigned => strokes.any((stroke) => stroke.length >= 4);
+  static bool _hasInk(List<List<double>> strokes) => strokes.any((stroke) => stroke.length >= 4);
 
-  /// Signed, named, licensed and addressed — the certificate can't go out
-  /// unsigned or to a nonsense address.
-  bool get canApprove =>
-      certificate != null &&
-      isSigned &&
-      reviewerName.trim().isNotEmpty &&
-      license.trim().isNotEmpty &&
-      Validators.isEmail(email);
+  bool get isSignatureLoading => savedStrokes == null;
+
+  bool get hasSavedSignature => _hasInk(savedStrokes ?? const []);
+
+  /// What goes on the certificate: the saved signature when there is one,
+  /// otherwise what was drawn here.
+  List<List<double>> get signatureStrokes => hasSavedSignature ? savedStrokes! : strokes;
+
+  bool get isSigned => _hasInk(signatureStrokes);
+
+  /// Signed and addressed — the certificate can't go out unsigned or to a
+  /// nonsense address.
+  bool get canApprove => certificate != null && !isSignatureLoading && isSigned && Validators.isEmail(email);
 
   ReviewDetailState copyWith({
     ReviewDetailStatus? status,
     Certificate? certificate,
     String? comments,
     String? reviewerName,
-    String? license,
     String? email,
     String? suggestedEmail,
     List<List<double>>? strokes,
+    List<List<double>>? savedStrokes,
+    bool? rememberSignature,
     bool? isApproving,
     bool? isReturning,
     int? actionSeq,
@@ -74,10 +93,11 @@ class ReviewDetailState extends Equatable {
       certificate: certificate ?? this.certificate,
       comments: comments ?? this.comments,
       reviewerName: reviewerName ?? this.reviewerName,
-      license: license ?? this.license,
       email: email ?? this.email,
       suggestedEmail: suggestedEmail ?? this.suggestedEmail,
       strokes: strokes ?? this.strokes,
+      savedStrokes: savedStrokes ?? this.savedStrokes,
+      rememberSignature: rememberSignature ?? this.rememberSignature,
       isApproving: isApproving ?? this.isApproving,
       isReturning: isReturning ?? this.isReturning,
       actionSeq: actionSeq ?? this.actionSeq,
@@ -93,10 +113,11 @@ class ReviewDetailState extends Equatable {
     certificate,
     comments,
     reviewerName,
-    license,
     email,
     suggestedEmail,
     strokes,
+    savedStrokes,
+    rememberSignature,
     isApproving,
     isReturning,
     actionSeq,

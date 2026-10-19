@@ -30,7 +30,7 @@ class QuotationDetailState extends Equatable {
     this.lastActionFailure,
   });
 
-  /// The version supervisors act on: the newest one that isn't
+  /// The version coordinators act on: the newest one that isn't
   /// superseded (a draft counts too, so a resumed draft still shows).
   Quotation? get current => versions.isEmpty
       ? null

@@ -4,8 +4,8 @@ import '../entities/request_item.dart';
 
 /// Methods emit / throw [RequestsFailure] on expected errors.
 abstract interface class RequestsRepository {
-  /// The shared requests inbox (BR-02.1), newest first. Every supervisor
-  /// sees every request — there's no per-supervisor split.
+  /// The shared requests inbox (BR-02.1), newest first. Every coordinator
+  /// sees every request — there's no per-coordinator split.
   Stream<List<InspectionRequest>> watchRequests();
 
   /// Feature 05: every job ever assigned to one inspector — the only
@@ -20,6 +20,10 @@ abstract interface class RequestsRepository {
   /// Moves a request to [status] and appends a `JobEvent` to its history
   /// (00-overview.md §7/§8: every status change is logged).
   Future<void> updateStatus(String requestId, JobStatus status, {String? note});
+
+  /// Moves a request to [JobStatus.certificateSubmitted] like [updateStatus],
+  /// and records when — see [InspectionRequest.certificateSubmittedAt].
+  Future<void> markCertificateSubmitted(String requestId);
 
   /// BR-03.8: rejects the request with a reason, closing it.
   Future<void> rejectRequest({required String requestId, required String reason});

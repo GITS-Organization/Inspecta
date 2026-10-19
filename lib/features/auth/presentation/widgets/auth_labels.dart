@@ -17,7 +17,6 @@ extension AuthFailureMessage on AuthFailureCode {
 
 extension UserRoleLabels on UserRole {
   String label(AppLocalizations t) => switch (this) {
-    UserRole.supervisor => t.roleSupervisor,
     UserRole.coordinator => t.roleCoordinator,
     UserRole.inspector => t.roleInspector,
     UserRole.technicalManager => t.roleTechnicalManager,
@@ -26,7 +25,6 @@ extension UserRoleLabels on UserRole {
 
   /// Title of the role's home screen (BR-01.2).
   String homeTitle(AppLocalizations t) => switch (this) {
-    UserRole.supervisor => t.homeSupervisor,
     UserRole.coordinator => t.homeCoordinator,
     UserRole.inspector => t.homeInspector,
     UserRole.technicalManager => t.homeTechnicalManager,

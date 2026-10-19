@@ -44,6 +44,19 @@ void main() {
     });
   });
 
+  group('CertQuestion.intervalCounterpart', () {
+    test('pairs the 6-month and 12-month questions with each other', () {
+      expect(CertQuestion.intervalCounterpart(CertQuestion.within6Months), CertQuestion.within12Months);
+      expect(CertQuestion.intervalCounterpart(CertQuestion.within12Months), CertQuestion.within6Months);
+    });
+
+    test('has none for any other question', () {
+      for (final key in CertQuestion.all.where((q) => q != CertQuestion.within6Months && q != CertQuestion.within12Months)) {
+        expect(CertQuestion.intervalCounterpart(key), isNull, reason: key);
+      }
+    });
+  });
+
   group('Certificate completeness', () {
     test('a fully filled certificate is ready to submit', () {
       expect(completeCertificate().isReadyToSubmit, isTrue);
@@ -87,23 +100,36 @@ void main() {
       expect(c.isQuestionsComplete, isTrue);
     });
 
-    test('a danger needs the defect described', () {
-      var c = completeCertificate().withAnswer(CertQuestion.existingDanger, true);
-      expect(c.isDefectsComplete, isFalse);
-
-      c = c.withText(CertText.defectDescription, 'Cracked pressure relief valve');
-      expect(c.isDefectsComplete, isTrue);
-      expect(c.defectSummary, 'Cracked pressure relief valve');
+    test('nothing in the defects section is required', () {
+      // Not even the two danger questions have been answered.
+      final c = Certificate(
+        requestId: 'REQ-1',
+        inspectorId: 'insp-1',
+        texts: completeCertificate().texts,
+        dates: completeCertificate().dates,
+        answers: {
+          for (final answer in completeCertificate().answers.entries)
+            if (answer.key != CertQuestion.existingDanger && answer.key != CertQuestion.futureDanger)
+              answer.key: answer.value,
+        },
+        functionCheck: ChecklistAnswer.pass,
+        finalResult: CertificateResult.safeToOperate,
+      );
+      expect(c.answerOf(CertQuestion.existingDanger), isNull);
+      expect(c.defectSummary, isNull);
+      expect(c.isReadyToSubmit, isTrue);
     });
 
-    test('a defect that could become a danger needs a date', () {
-      var c = completeCertificate()
-          .withAnswer(CertQuestion.futureDanger, true)
-          .withText(CertText.defectDescription, 'Worn belt');
-      expect(c.isDefectsComplete, isFalse);
+    test('a recorded defect, with or without its details, does not hold up submission', () {
+      var c = completeCertificate().withAnswer(CertQuestion.existingDanger, true);
+      expect(c.isReadyToSubmit, isTrue);
 
-      c = c.withDate(CertDate.futureDangerBy, DateTime(2026, 10, 24));
-      expect(c.isDefectsComplete, isTrue);
+      c = c.withAnswer(CertQuestion.futureDanger, true);
+      expect(c.isReadyToSubmit, isTrue);
+
+      c = c.withText(CertText.defectDescription, 'Cracked pressure relief valve');
+      expect(c.defectSummary, 'Cracked pressure relief valve');
+      expect(c.isReadyToSubmit, isTrue);
     });
 
     test('the conclusion is the last thing required', () {
@@ -120,9 +146,9 @@ void main() {
     });
 
     test('clearing a date removes it', () {
-      final c = completeCertificate().withDate(CertDate.lastExamination, DateTime(2026, 3, 1));
-      expect(c.dateOf(CertDate.lastExamination), isNotNull);
-      expect(c.withDate(CertDate.lastExamination, null).dateOf(CertDate.lastExamination), isNull);
+      final c = completeCertificate().withDate(CertDate.futureDangerBy, DateTime(2026, 12, 1));
+      expect(c.dateOf(CertDate.futureDangerBy), isNotNull);
+      expect(c.withDate(CertDate.futureDangerBy, null).dateOf(CertDate.futureDangerBy), isNull);
     });
   });
 
@@ -176,7 +202,7 @@ void main() {
       expect((json['texts'] as Map).keys, containsAll(CertText.all));
       expect((json['texts'] as Map)[CertText.note], '');
       expect((json['dates'] as Map).keys, containsAll(CertDate.all));
-      expect((json['dates'] as Map)[CertDate.lastExamination], isNull);
+      expect((json['dates'] as Map)[CertDate.futureDangerBy], isNull);
       expect((json['answers'] as Map).keys, containsAll(CertQuestion.all));
       expect((json['answers'] as Map)[CertQuestion.firstExamination], isNull);
     });
@@ -184,14 +210,14 @@ void main() {
     test('survives a round trip through its JSON', () {
       final original = completeCertificate()
           .withText(CertText.manufacturer, 'CATERPILLAR')
-          .withDate(CertDate.lastExamination, DateTime(2026, 3, 1));
+          .withDate(CertDate.futureDangerBy, DateTime(2026, 12, 1));
       final json = CertificateModel.fromEntity(original).toJson();
 
       final restored = CertificateModel.fromJson('REQ-1', json).toEntity();
 
       expect(restored.texts[CertText.manufacturer], 'CATERPILLAR');
       expect(restored.dateOf(CertDate.examination), DateTime(2026, 9, 24));
-      expect(restored.dateOf(CertDate.lastExamination), DateTime(2026, 3, 1));
+      expect(restored.dateOf(CertDate.futureDangerBy), DateTime(2026, 12, 1));
       expect(restored.answerOf(CertQuestion.within6Months), isTrue);
       expect(restored.answerOf(CertQuestion.within12Months), isFalse);
       expect(restored.functionCheck, ChecklistAnswer.pass);

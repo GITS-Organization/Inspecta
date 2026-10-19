@@ -1,5 +1,5 @@
 /// A quotation's lifecycle (Feature 03 §6, extended with `declined` so a
-/// client's decline is distinguishable from the supervisor's own
+/// client's decline is distinguishable from the coordinator's own
 /// [ReplyType.reject]).
 enum QuotationStatus {
   draft('draft'),

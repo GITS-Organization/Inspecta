@@ -13,8 +13,8 @@ import '../../../auth/presentation/widgets/auth_labels.dart';
 /// Landing screen for the signed-in user's role (BR-01.2). Placeholder
 /// until each role's list is built in features 02–07.
 ///
-/// This role has no bottom-nav shell yet (unlike the supervisor's — see
-/// `SupervisorRootPage`), so Profile isn't a tab here either; tapping the
+/// This role has no bottom-nav shell yet (unlike the coordinator's — see
+/// `CoordinatorRootPage`), so Profile isn't a tab here either; tapping the
 /// avatar swaps this screen's own content for [ProfilePage] in place
 /// instead of pushing a new route, and [ProfilePage]'s own close button
 /// swaps back.

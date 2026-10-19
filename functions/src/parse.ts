@@ -91,7 +91,7 @@ export function parseMessage(message: gmail_v1.Schema$Message): ParsedEmail {
  * functions/README.md): scans the body for known equipment keywords and a
  * nearby quantity/capacity. Misses anything phrased differently, and can
  * misfire on unrelated text that happens to contain a keyword. A
- * supervisor always reviews and can fix the result in-app (the "Complete
+ * coordinator always reviews and can fix the result in-app (the "Complete
  * request" sheet), so this only needs to save typing on the common case,
  * not be exhaustive.
  */

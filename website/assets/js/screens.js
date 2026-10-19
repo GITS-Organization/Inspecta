@@ -39,8 +39,8 @@
   function shell(inner, toast) { return inner + '<div class="ui-toast" role="status" aria-live="polite"></div>'; }
   function T(msg) { return ' data-toast="' + esc(msg) + '"'; }
 
-  function supervisorNav(on) { return nav([['inbox', L('Requests', 'الطلبات')], ['doc', L('Quotations', 'عروض الأسعار')], ['users', L('Clients', 'العملاء')]], on); }
-  function coordinatorNav(on) { return nav([['clip', L('Queue', 'القائمة')], ['cal', L('Schedule', 'الجدول')], ['users', L('Inspectors', 'المفتشون')], ['clock', L('Timesheets', 'سجلات الساعات')]], on); }
+  // The coordinator's bar: Clients, Inspectors, Timesheets and Profile sit behind More.
+  function coordinatorNav(on) { return nav([['inbox', L('Requests', 'الطلبات')], ['doc', L('Quotations', 'عروض الأسعار')], ['clip', L('Queue', 'القائمة')], ['cal', L('Schedule', 'الجدول')], ['menu', L('More', 'المزيد')]], on); }
   function inspectorNav(on) { return nav([['clip', L('Tasks', 'المهام')], ['badge', L('Certificates', 'الشهادات')], ['clock', L('Timesheet', 'سجل الساعات')]], on); }
   function reviewNav(on) { return nav([['pen', L('Review', 'المراجعة')], ['send', L('Sent', 'المرسلة')]], on); }
 
@@ -65,7 +65,7 @@
   /* ---------- Screens ---------- */
   var screens = {};
 
-  // 1. Supervisor: requests inbox
+  // 1. Coordinator: requests inbox
   screens.inbox = function () {
     function card(o) {
       return '<div class="ui-card ui-gap">' +
@@ -85,16 +85,16 @@
       card({ client: L('Harbor Cement', 'الميناء للأسمنت'), chips: chip(L('Sent', 'تم الإرسال'), 'blue'), equip: L('Gantry crane — 20 t', 'رافعة جسرية — 20 طن'), units: L('1 unit', 'وحدة واحدة'), when: L('2 d ago', 'منذ يومين'), cta: L('View job', 'عرض المهمة'), outline: true, toast: L('Opens the job.', 'يفتح المهمة.') }) +
       card({ client: L('Sunrise Foods', 'صن رايز للأغذية'), chips: chip(L('Accepted', 'مقبول'), 'green'), equip: L('Air compressor — 8 bar', 'ضاغط هواء — 8 بار'), units: L('2 units', 'وحدتان'), when: L('3 d ago', 'منذ 3 أيام'), cta: L('View job', 'عرض المهمة'), outline: true, toast: L('Opens the job.', 'يفتح المهمة.') });
     return shell(status(true) +
-      head({ initials: L('MA', 'م ع'), greet: L('Good morning', 'صباح الخير'), name: L('Mona Adel · Supervisor', 'منى عادل · المشرف'),
+      head({ initials: L('MA', 'م ع'), greet: L('Good morning', 'صباح الخير'), name: L('Mona Adel · Coordinator', 'منى عادل · المنسق'),
         below: '<div class="ui-search">' + ic('search') + '<span>' + L('Search client, equipment or ID', 'ابحث بالعميل أو المعدة أو الرقم') + '</span></div>' }) +
       '<div class="ui-body">' +
         '<div class="ui-tabs" data-tabs="inbox"><button type="button" class="ui-tab is-on" data-tab="new">' + L('New · 3', 'جديد · 3') + '</button><button type="button" class="ui-tab" data-tab="all">' + L('All · 5', 'الكل · 5') + '</button></div>' +
         '<div class="ui-gap" data-pane-of="inbox" data-pane="new"><div class="ui-row ui-between"><span class="ui-h">' + L('Needs your reply', 'بحاجة إلى ردك') + '</span><span class="ui-sub">' + L('Newest first', 'الأحدث أولاً') + '</span></div>' + newCards + '</div>' +
         '<div class="ui-gap" data-pane-of="inbox" data-pane="all" hidden><div class="ui-row ui-between"><span class="ui-h">' + L('All requests', 'جميع الطلبات') + '</span><span class="ui-sub">' + L('Newest first', 'الأحدث أولاً') + '</span></div>' + newCards + allCards + '</div>' +
-      '</div>' + supervisorNav(0));
+      '</div>' + coordinatorNav(0));
   };
 
-  // 2. Supervisor: request detail with the six-step tracker
+  // 2. Coordinator: request detail with the six-step tracker
   screens.request = function () {
     function eq(name, cap, qty) {
       return '<div class="ui-card ui-gap" style="padding:.75em .9em"><div class="ui-row ui-between"><span class="ui-h">' + name + '</span>' + chip(L('Qty ', 'الكمية ') + qty, 'soft') + '</div><div class="ui-meta">' + L('Capacity', 'السعة') + ': ' + cap + '</div></div>';
@@ -114,10 +114,10 @@
         '<div class="ui-card ui-gap"><div class="ui-row"><span class="ui-av ui-av--sm">' + ic('mail', 'ico" style="width:1.3em;height:1.3em') + '</span><span class="ui-meta ui-grow">purchasing@deltasteel.example</span></div>' +
           '<p class="ui-text">' + L('“Please quote the annual examination of our two overhead cranes and the 5 t hoist at the Sadat City site…”', '«نرجو تسعير الفحص السنوي لرافعتينا العلويتين ورافعة 5 طن في موقع مدينة السادات…»') + '</p>' +
           '<button type="button" class="ui-btn is-sm is-outline"' + T(L('Shows the original client email.', 'يعرض بريد العميل الأصلي.')) + '>' + L('Read full email', 'قراءة البريد الكامل') + '</button></div>' +
-      '</div>' + supervisorNav(0));
+      '</div>' + coordinatorNav(0));
   };
 
-  // 3. Supervisor: quote history / negotiation
+  // 3. Coordinator: quote history / negotiation
   screens.quote = function () {
     return shell(status(false) + appBar(L('Quote history', 'سجل عرض السعر'), chip(L('Your turn', 'دورك'), 'amber')) +
       '<div class="ui-body">' +
@@ -137,10 +137,10 @@
           '<button type="button" class="ui-btn is-danger is-block is-sm"' + T(L('The quote is marked declined.', 'يُحدَّد العرض كمرفوض.')) + '>' + L('Mark declined', 'تحديد كمرفوض') + '</button>' +
           '<p class="ui-meta" style="text-align:center">' + L('Accepting sends the job to the coordinator and locks the price.', 'القبول يرسل المهمة إلى المنسق ويقفل السعر.') + '</p>' +
         '</div>' +
-      '</div>' + supervisorNav(1));
+      '</div>' + coordinatorNav(1));
   };
 
-  // 4. Supervisor: clients
+  // 4. Coordinator: clients
   screens.clients = function () {
     function client(ini, name, loc, chips, tone) {
       return '<div class="ui-card ui-gap"><div class="ui-row"><span class="ui-av ui-av--tint" style="width:2.6em;height:2.6em;font-size:.85em">' + ini + '</span><div class="ui-grow"><div class="ui-h">' + name + '</div><div class="ui-meta">' + loc + '</div></div>' + ic('chevron', 'ico flip" style="width:1.1em;height:1.1em;color:#64748b') + '</div><div class="ui-row" style="flex-wrap:wrap;gap:.4em">' + chips + '</div></div>';
@@ -166,7 +166,7 @@
           client(L('DS', 'دص'), L('Delta Steel Works', 'دلتا للصلب'), L('Sadat City', 'مدينة السادات'), chip(L('3 equipment', '3 معدات'), 'soft') + chip(L('1 open job', 'مهمة مفتوحة'), 'blue') + chip(L('2 due in 30 days', '2 تستحق خلال 30 يومًا'), 'amber')) +
           client(L('AS', 'صل'), L('Al-Safwa Logistics', 'الصفوة للخدمات اللوجستية'), L('Alexandria', 'الإسكندرية'), chip(L('5 equipment', '5 معدات'), 'soft') + chip(L('1 due in 30 days', '1 تستحق خلال 30 يومًا'), 'amber')) +
         '</div>' +
-      '</div>' + supervisorNav(2));
+      '</div>' + coordinatorNav(4));
   };
 
   // 5. Coordinator: assign an inspector
@@ -224,7 +224,7 @@
       titleHead(L('Schedule', 'الجدول'), L('Tasks per inspector, by day', 'مهام كل مفتش حسب اليوم'),
         '<div class="ui-days" data-tabs="sched" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-block-start:1em">' + day('d19', L('Mon', 'الاثنين'), 19, true, true) + day('d20', L('Tue', 'الثلاثاء'), 20, false, true) + day('d21', L('Wed', 'الأربعاء'), 21, false, true) + '</div>') +
       '<div class="ui-body">' + pane('d19', d19) + pane('d20', d20, true) + pane('d21', d21, true) +
-        '<p class="ui-meta">' + L('Pick a day to see each inspector’s load before you assign.', 'اختر يومًا لترى حمل كل مفتش قبل التعيين.') + '</p></div>' + coordinatorNav(1));
+        '<p class="ui-meta">' + L('Pick a day to see each inspector’s load before you assign.', 'اختر يومًا لترى حمل كل مفتش قبل التعيين.') + '</p></div>' + coordinatorNav(3));
   };
 
   // 7. Inspector: my tasks

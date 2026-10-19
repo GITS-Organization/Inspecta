@@ -84,9 +84,6 @@ class Certificate extends Equatable {
   /// `null` until the inspector has answered that question.
   bool? answerOf(String key) => answers[key];
 
-  /// A defect that is, or could become, a danger to persons was recorded.
-  bool get hasDefect => answerOf(CertQuestion.existingDanger) == true || answerOf(CertQuestion.futureDanger) == true;
-
   /// The recorded defect, for the reviewer's result banner.
   String? get defectSummary => text(CertText.defectDescription);
 
@@ -108,21 +105,11 @@ class Certificate extends Equatable {
     return CertQuestion.carriedOut.every((key) => answerOf(key) != null);
   }
 
-  /// Both danger questions answered, a date when the defect isn't a danger
-  /// yet, and a description whenever there's a defect at all.
-  bool get isDefectsComplete {
-    final existing = answerOf(CertQuestion.existingDanger);
-    final future = answerOf(CertQuestion.futureDanger);
-    if (existing == null || future == null) return false;
-    if (future && dateOf(CertDate.futureDangerBy) == null) return false;
-    if ((existing || future) && defectSummary == null) return false;
-    return true;
-  }
-
   bool get isConclusionComplete => finalResult != null;
 
-  bool get isReadyToSubmit =>
-      isDetailsComplete && isItemComplete && isQuestionsComplete && isDefectsComplete && isConclusionComplete;
+  /// The defects section has no completeness rule: nothing in it is
+  /// required, so it never holds up a submission.
+  bool get isReadyToSubmit => isDetailsComplete && isItemComplete && isQuestionsComplete && isConclusionComplete;
 
   Certificate copyWith({
     String? templateId,

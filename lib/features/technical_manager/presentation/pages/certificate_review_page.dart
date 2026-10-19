@@ -56,21 +56,11 @@ class _ReviewView extends StatefulWidget {
 
 class _ReviewViewState extends State<_ReviewView> {
   final _comments = TextEditingController();
-  final _name = TextEditingController();
-  final _license = TextEditingController();
   final _email = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _name.text = context.read<ReviewDetailCubit>().state.reviewerName;
-  }
 
   @override
   void dispose() {
     _comments.dispose();
-    _name.dispose();
-    _license.dispose();
     _email.dispose();
     super.dispose();
   }
@@ -123,6 +113,8 @@ class _ReviewViewState extends State<_ReviewView> {
                     previous.status != current.status ||
                     previous.certificate != current.certificate ||
                     previous.strokes != current.strokes ||
+                    previous.savedStrokes != current.savedStrokes ||
+                    previous.rememberSignature != current.rememberSignature ||
                     previous.isBusy != current.isBusy ||
                     previous.canApprove != current.canApprove,
                 builder: (context, state) {
@@ -158,13 +150,12 @@ class _ReviewViewState extends State<_ReviewView> {
                       ),
                       const SizedBox(height: 18),
                       SignatureCard(
+                        savedStrokes: state.savedStrokes,
                         strokes: state.strokes,
                         onStrokesChanged: cubit.setStrokes,
                         onClear: cubit.clearSignature,
-                        nameController: _name,
-                        licenseController: _license,
-                        onNameChanged: cubit.setReviewerName,
-                        onLicenseChanged: cubit.setLicense,
+                        rememberSignature: state.rememberSignature,
+                        onRememberChanged: cubit.setRememberSignature,
                         enabled: !state.isBusy,
                       ),
                       const SizedBox(height: 18),

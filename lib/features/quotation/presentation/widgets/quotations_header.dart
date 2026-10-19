@@ -62,7 +62,7 @@ class QuotationsHeader extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      t.quotationsSupervisorLabel,
+                      t.roleCoordinator,
                       style: AppTextStyles.caption.copyWith(
                         color: AppColours.onPrimaryMuted,
                       ),

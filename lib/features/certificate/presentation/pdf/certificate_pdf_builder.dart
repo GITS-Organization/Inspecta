@@ -11,10 +11,10 @@ import '../../domain/entities/certificate.dart';
 import '../../domain/entities/certificate_result.dart';
 import '../../domain/entities/checklist_answer.dart';
 
-/// Renders a certificate as TÜV Austria Egypt's one-page "Report of
-/// Thorough Examination" — the same letterhead, tables and wording as the
-/// paper form, whatever language the app is in (it's a document for the
-/// client, not UI). Blank optional fields print as the form's usual
+/// Renders a certificate as Integrity International Inspection's one-page
+/// "Report of Thorough Examination" — the same letterhead, tables and
+/// wording as the paper form, whatever language the app is in (it's a
+/// document for the client, not UI). Blank optional fields print as the form's usual
 /// "N/A" / "NONE".
 Future<Uint8List> buildCertificatePdf({required InspectionRequest request, required Certificate certificate}) async {
   // Inter for the form itself (Cairo's line boxes are too tall to fit the
@@ -23,9 +23,8 @@ Future<Uint8List> buildCertificatePdf({required InspectionRequest request, requi
   final bold = pw.Font.ttf(await rootBundle.load('assets/fonts/inter/Inter-Bold.ttf'));
   final arabic = pw.Font.ttf(await rootBundle.load('assets/fonts/cairo/Cairo-Regular.ttf'));
   final arabicBold = pw.Font.ttf(await rootBundle.load('assets/fonts/cairo/Cairo-Bold.ttf'));
-  final logo = await _image('assets/pngs/tuv_austria_egypt_logo.jpg');
-  final ilac = await _image('assets/pngs/accreditation_ilac_mra.jpg');
-  final egacIso = await _image('assets/pngs/accreditation_egac_iso.jpg');
+  final logo = await _image('assets/pngs/integraty-logo.png');
+  final accreditation = await _image('assets/pngs/accreditation_egac_iso.png');
 
   final report = _Report(request, certificate);
   final doc = pw.Document(
@@ -49,7 +48,7 @@ Future<Uint8List> buildCertificatePdf({required InspectionRequest request, requi
         ),
       ),
       header: (context) => context.pageNumber == 1 ? _header(logo) : pw.SizedBox(),
-      footer: (_) => _footer(ilac, egacIso),
+      footer: (_) => _footer(accreditation),
       build: (_) => [_title(), pw.SizedBox(height: 6), ..._body(report)],
     ),
   );
@@ -63,18 +62,27 @@ Future<pw.MemoryImage> _image(String asset) async =>
 // ---------------------------------------------------------------------------
 // The issuer's fixed details — printed on every certificate.
 
-const _issuerName = 'TUV Austria Egypt';
+const _issuerName = 'Integrity International Inspection';
 
-/// Who signs "For TUV Austria Egypt" — not tracked per certificate in the
+/// The name the report is signed for and the unique certificate number is
+/// issued under — as it appears on the paper form.
+const _issuerLegalName = 'Integrity for inspection and Engineering Solutions';
+
+/// Who signs "For $_issuerLegalName" — not tracked per certificate in the
 /// app, so it's the same person on every one.
-const _issuerSignatory = 'Hussein Rashad';
-const _issuerEmail = 'Hussein.rashad@tuvaustria.eg';
+const _issuerSignatory = 'Ahmed Khalil';
+
+/// The e-mail addresses on the letterhead.
+const _issuerEmails = ['Ahmed.khalil@integrity-intl.com', 'Ibrahim.ashraf@integrity-intl.com'];
+
+const _letterheadGreen = PdfColor.fromInt(0xFF4EA72E);
+const _letterheadBlue = PdfColor.fromInt(0xFF156082);
 
 const _generalNotes = [
   'This Certificate becomes invalid if any Repair/modification is done that affects strength or stability.',
   'Any holder of this document is advised that the information contained hereon is limited to the accessible portions of the item examined only.',
   'Equipment has been correctly installed and fit for the purpose',
-  'This Certificate should be signed, stamped and carries unique TUV Austria certificate number',
+  'This Certificate should be signed, stamped and carries unique $_issuerLegalName certificate number',
 ];
 
 // ---------------------------------------------------------------------------
@@ -86,8 +94,21 @@ const _grey = PdfColor.fromInt(0xFFE7E6E6);
 const _red = PdfColor.fromInt(0xFFFF0000);
 
 pw.Widget _header(pw.MemoryImage logo) {
-  pw.TextStyle style({bool bold = false}) =>
-      pw.TextStyle(fontSize: 8, fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal);
+  pw.TextStyle style({bool bold = false, PdfColor? color}) =>
+      pw.TextStyle(fontSize: 8, fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal, color: color);
+  pw.Widget email(String address) => pw.Row(
+    mainAxisSize: pw.MainAxisSize.min,
+    children: [
+      pw.Text('Email: ', style: style(bold: true)),
+      pw.UrlLink(
+        destination: 'mailto:$address',
+        child: pw.Text(
+          address,
+          style: style(bold: true, color: _letterheadBlue).copyWith(decoration: pw.TextDecoration.underline),
+        ),
+      ),
+    ],
+  );
   return pw.Row(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [
@@ -96,22 +117,21 @@ pw.Widget _header(pw.MemoryImage logo) {
           mainAxisSize: pw.MainAxisSize.min,
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text(_issuerName, style: style()),
-            pw.Text('Industrial Services', style: style()),
-            pw.Text('Address: Courtyard Complex, B226 Sheikh Zayed', style: style()),
-            pw.Text('Tel (Zayed Office: 20237951676) – (Alex Office: 2034230395)', style: style()),
-            pw.Text('Mobile: +2 010 633 79 878', style: style(bold: true)),
-            pw.UrlLink(
-              destination: 'mailto:$_issuerEmail',
-              child: pw.Text(
-                'E-mail: $_issuerEmail',
-                style: style().copyWith(color: PdfColors.blue800, decoration: pw.TextDecoration.underline),
-              ),
+            pw.Text('$_issuerName.', style: style(bold: true)),
+            pw.Text('Industrial & Energy Services.', style: style()),
+            pw.Text('21 Nakib Sharif Ramzy st, Smouha, Alex., Egypt.', style: style()),
+            pw.Row(
+              mainAxisSize: pw.MainAxisSize.min,
+              children: [
+                pw.Text('Mobile No: ', style: style(bold: true)),
+                pw.Text('+201000914066 - 01034462363', style: style(bold: true, color: _letterheadGreen)),
+              ],
             ),
+            for (final address in _issuerEmails) email(address),
           ],
         ),
       ),
-      pw.Image(logo, width: 92, height: 62, fit: pw.BoxFit.contain),
+      pw.Image(logo, width: 66, height: 62, fit: pw.BoxFit.contain),
     ],
   );
 }
@@ -123,9 +143,9 @@ pw.Widget _title() => pw.Center(
   ),
 );
 
-pw.Widget _footer(pw.MemoryImage ilac, pw.MemoryImage egacIso) {
-  pw.TextStyle style({bool bold = false}) =>
-      pw.TextStyle(fontSize: 8, fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal);
+pw.Widget _footer(pw.MemoryImage accreditation) {
+  pw.TextStyle style([PdfColor? color]) =>
+      pw.TextStyle(fontSize: 6.5, fontWeight: pw.FontWeight.bold, color: color);
   return pw.Padding(
     padding: const pw.EdgeInsets.only(top: 8),
     child: pw.Row(
@@ -136,16 +156,23 @@ pw.Widget _footer(pw.MemoryImage ilac, pw.MemoryImage egacIso) {
             mainAxisSize: pw.MainAxisSize.min,
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('$_issuerName.', style: style(bold: true)),
-              pw.Text('Industrial Services.', style: style(bold: true)),
-              pw.Text('Courtyard Complex, B226 Sheikh Zayed, Cairo, Egypt.', style: style()),
-              pw.Text('Mobile:  +2 010 633 79 878', style: style(bold: true)),
+              pw.Text('$_issuerName. All rights reserved.', style: style()),
+              pw.Text('$_issuerName | 21 Nakib Sharif Ramzy St., Smouha, Alexandria, Egypt', style: style()),
+              pw.Text('Tel: +2 01034462363 | +20 100 091 4066', style: style(const PdfColor.fromInt(0xFF00B050))),
+              pw.Text(
+                'Email: Ahmed.khalil@integrity-intl.com / Info@integrity-intl.com',
+                style: style(const PdfColor.fromInt(0xFF0000FF)),
+              ),
+              pw.Text(
+                'This Certificate is confidential and intended solely for the use of the client for whom it was prepared.',
+                style: style(),
+              ),
+              pw.Text('Unauthorized use, reproduction, or distribution is strictly prohibited.', style: style()),
             ],
           ),
         ),
-        pw.Image(ilac, width: 34, height: 34),
-        pw.SizedBox(width: 6),
-        pw.Image(egacIso, width: 138, height: 34),
+        pw.SizedBox(width: 8),
+        pw.Image(accreditation, width: 138, height: 34),
       ],
     ),
   );
@@ -225,17 +252,15 @@ List<pw.Widget> _body(_Report r) {
       ],
     ),
     _table(
-      flex: const [240, 243, 215, 215, 215],
+      flex: const [243, 240, 430, 215],
       rows: [
         [
-          _head('Last Through examination date'),
           _head('Through examination date'),
           _head('Next examination date'),
           _head('Standard of inspection'),
           _head('Test type'),
         ],
         [
-          _value(r.date(CertDate.lastExamination)),
           _value(r.date(CertDate.examination)),
           _value(r.date(CertDate.nextExamination)),
           _value(r.text(CertText.standardOfInspection), bold: false),
@@ -629,7 +654,7 @@ pw.Widget _signatures(_Report r) {
                 size: 8.5,
                 align: pw.TextAlign.center,
               ),
-              _text('For $_issuerName', size: 8.5, align: pw.TextAlign.center),
+              _text('For $_issuerLegalName', size: 8.5, align: pw.TextAlign.center),
               _text('QR Code', size: 8.5, align: pw.TextAlign.center),
             ],
           ],

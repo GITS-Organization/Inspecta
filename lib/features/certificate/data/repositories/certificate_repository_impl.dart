@@ -27,6 +27,16 @@ class CertificateRepositoryImpl implements CertificateRepository {
   }
 
   @override
+  Stream<List<Certificate>> watchReviewedSince(DateTime since) {
+    return _remote
+        .watchReviewedSince(since)
+        .map((models) => [for (final model in models) model.toEntity()])
+        .handleError((Object error) {
+          throw _mapError(error);
+        });
+  }
+
+  @override
   Future<void> saveDraft(Certificate certificate) async {
     try {
       await _remote.save(CertificateModel.fromEntity(certificate));
@@ -52,7 +62,7 @@ class CertificateRepositoryImpl implements CertificateRepository {
         finalResult: certificate.finalResult,
       );
       await _remote.submit(CertificateModel.fromEntity(toSubmit));
-      await _requestsRepository.updateStatus(certificate.requestId, JobStatus.certificateSubmitted);
+      await _requestsRepository.markCertificateSubmitted(certificate.requestId);
     } catch (e) {
       throw _mapError(e);
     }

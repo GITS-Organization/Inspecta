@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/shared/m_card.dart';
+import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../technical_manager/presentation/bloc/my_signature_cubit.dart';
+import '../../../technical_manager/presentation/widgets/signature_edit_sheet.dart';
+import '../../../technical_manager/presentation/widgets/signature_pad.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/entities/user_role.dart';
 
@@ -18,10 +23,15 @@ class ProfileRoleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (user.role) {
-      UserRole.supervisor => _QuotationDefaultsCard(onTap: onComingSoon),
-      UserRole.coordinator => const _MyAreasCard(),
+      UserRole.coordinator => Column(
+        children: [
+          _QuotationDefaultsCard(onTap: onComingSoon),
+          const SizedBox(height: 14),
+          const _MyAreasCard(),
+        ],
+      ),
       UserRole.inspector => _MyWorkCard(user: user, onComingSoon: onComingSoon),
-      UserRole.technicalManager => _MySignatureCard(user: user, onComingSoon: onComingSoon),
+      UserRole.technicalManager => _MySignatureCard(user: user),
       UserRole.admin => const SizedBox.shrink(),
     };
   }
@@ -253,65 +263,81 @@ class _AvailabilityToggleState extends State<_AvailabilityToggle> {
   }
 }
 
+/// The technical manager's saved signature — drawn here once, then used on
+/// every certificate they approve instead of being asked for each time.
 class _MySignatureCard extends StatelessWidget {
   final AppUser user;
-  final VoidCallback onComingSoon;
 
-  const _MySignatureCard({required this.user, required this.onComingSoon});
+  const _MySignatureCard({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => getIt<MySignatureCubit>()..start(user.id),
+      child: const _MySignatureView(),
+    );
+  }
+}
+
+class _MySignatureView extends StatelessWidget {
+  const _MySignatureView();
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final hasSignature = user.signatureImageId != null;
-    return MCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return BlocBuilder<MySignatureCubit, MySignatureState>(
+      builder: (context, state) {
+        return MCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _CardTitle(t.mySignatureTitle)),
-              TextButton(
-                onPressed: onComingSoon,
-                style: TextButton.styleFrom(
-                  backgroundColor: AppColours.surfaceMuted,
-                  foregroundColor: AppColours.primaryDark,
-                  textStyle: AppTextStyles.badge,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                child: Text(t.updateAction),
+              Row(
+                children: [
+                  Expanded(child: _CardTitle(t.mySignatureTitle)),
+                  TextButton(
+                    onPressed: state.isLoaded ? () => showSignatureEditSheet(context) : null,
+                    style: TextButton.styleFrom(
+                      backgroundColor: AppColours.surfaceMuted,
+                      foregroundColor: AppColours.primaryDark,
+                      textStyle: AppTextStyles.badge,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: Text(t.updateAction),
+                  ),
+                ],
               ),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                height: 96,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColours.primarySoft,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColours.primaryTint, width: 1.5),
+                ),
+                child: state.hasSignature
+                    ? SignaturePreview(strokes: state.strokes!)
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.draw_outlined, size: 20, color: AppColours.primaryDark),
+                          const SizedBox(width: 8),
+                          Text(
+                            state.isLoaded ? t.noSignatureLabel : '…',
+                            style: AppTextStyles.emphasis.copyWith(fontSize: 14, color: AppColours.primaryDark),
+                          ),
+                        ],
+                      ),
+              ),
+              if (state.hasSignature) ...[
+                const SizedBox(height: 8),
+                Text(t.signatureOnFileLabel, style: AppTextStyles.caption),
+              ],
             ],
           ),
-          const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            height: 96,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColours.primarySoft,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColours.primaryTint, width: 1.5),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  hasSignature ? Icons.check_circle_outline_rounded : Icons.draw_outlined,
-                  size: 20,
-                  color: AppColours.primaryDark,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  hasSignature ? t.signatureOnFileLabel : t.noSignatureLabel,
-                  style: AppTextStyles.emphasis.copyWith(fontSize: 14, color: AppColours.primaryDark),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          _SettingRow(label: t.licenseNumberLabel, value: t.notSet),
-        ],
-      ),
+        );
+      },
     );
   }
 }

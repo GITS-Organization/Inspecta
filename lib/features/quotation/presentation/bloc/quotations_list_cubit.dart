@@ -11,7 +11,7 @@ import '../../domain/usecases/get_quotations.dart';
 
 part 'quotations_list_state.dart';
 
-/// Backs the Quotations tab: the supervisor's price tracker. Groups
+/// Backs the Quotations tab: the coordinator's price tracker. Groups
 /// every quotation by request and keeps only each request's current one
 /// — drafts and superseded versions don't get their own row on the
 /// board (a draft is still visible on the Requests tab; superseded

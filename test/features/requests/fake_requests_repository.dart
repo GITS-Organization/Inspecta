@@ -16,6 +16,7 @@ InspectionRequest sampleRequest({
   bool hasUnreadClientReply = false,
   List<RequestItem>? items,
   DateTime? scheduledAt,
+  DateTime? certificateSubmittedAt,
 }) {
   return InspectionRequest(
     id: id,
@@ -37,6 +38,7 @@ InspectionRequest sampleRequest({
         ],
     hasUnreadClientReply: hasUnreadClientReply,
     scheduledAt: scheduledAt,
+    certificateSubmittedAt: certificateSubmittedAt,
   );
 }
 
@@ -67,6 +69,11 @@ class FakeRequestsRepository implements RequestsRepository {
     String? note,
   }) async {
     statusUpdates.add((requestId, status, note));
+  }
+
+  @override
+  Future<void> markCertificateSubmitted(String requestId) async {
+    statusUpdates.add((requestId, JobStatus.certificateSubmitted, null));
   }
 
   @override

@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// A person at a client company — who a supervisor calls when starting a
+/// A person at a client company — who a coordinator calls when starting a
 /// new job, and who certificates might be addressed to.
 class ClientContact extends Equatable {
   final String name;

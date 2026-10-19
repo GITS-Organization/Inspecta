@@ -36,7 +36,7 @@ request"** sheet — that UI was added alongside this pipeline for exactly
 this reason. Sender-to-client matching is *not* attempted here either —
 every email-sourced request is created with `clientId: null`, exactly
 like the (already-built) "unmatched sender" case elsewhere in the app;
-a supervisor matches it from the Clients tab as usual.
+a coordinator matches it from the Clients tab as usual.
 
 ## One-time setup
 
@@ -122,7 +122,7 @@ functions:log` after deploying shows the exact job name.)
 ## Testing
 
 - **Fastest**: call `syncGmailNow` (an `onCall` function) from the app
-  or `firebase functions:shell` while signed in as a supervisor/admin —
+  or `firebase functions:shell` while signed in as a coordinator/admin —
   it runs the same sync logic on demand and returns
   `{ created, repliesLogged }`. Send yourself a test email to the
   intake mailbox first, then call it.

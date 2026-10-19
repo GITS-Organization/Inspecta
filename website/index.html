@@ -9,7 +9,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Inspecta">
 <meta property="og:title" content="Inspecta | Digital inspection management">
-<meta property="og:description" content="From a client's request to a signed certificate, one job record across supervisors, coordinators, inspectors and technical managers.">
+<meta property="og:description" content="From a client's request to a signed certificate, one job record across coordinators, inspectors and technical managers.">
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/img/icon-192.png">
@@ -141,7 +141,7 @@
       </div>
       <p class="hero-sample"><svg class="ico" aria-hidden="true"><use href="#i-sample"/></svg><span data-ar="الشاشات المعروضة ببيانات تجريبية وعملاء وهميين.">Screens shown with sample data and fictional clients.</span></p>
       <ul class="hero-facts">
-        <li><strong data-ar="من الطلب إلى الشهادة الموقّعة">From request to signed certificate</strong><span data-ar="سجل واحد للمهمة عبر أربعة أدوار">One job record across four roles</span></li>
+        <li><strong data-ar="من الطلب إلى الشهادة الموقّعة">From request to signed certificate</strong><span data-ar="سجل واحد للمهمة عبر ثلاثة أدوار">One job record across three roles</span></li>
         <li><strong data-ar="العربية والإنجليزية">English and Arabic</strong><span data-ar="مع تخطيط كامل من اليمين إلى اليسار">with full right-to-left layout</span></li>
         <li><strong data-ar="مصمم للهاتف أولًا">Phone-first</strong><span data-ar="ويعمل أيضًا في المتصفح">and runs in the browser too</span></li>
         <li><strong data-ar="صلاحيات حسب الدور">Role-based access</strong><span data-ar="تُفرض عبر قواعد على الخادم">enforced by server-side rules</span></li>
@@ -241,7 +241,7 @@
 
     <div class="bento">
       <article class="solution s-requests">
-        <p class="role-label" data-ar="المشرف">Supervisor</p>
+        <p class="role-label" data-ar="المنسق">Coordinator</p>
         <h3 data-ar="الطلبات وعروض الأسعار">Requests and quotations</h3>
         <p data-ar="حوّل رسائل العملاء والإدخالات اليدوية إلى طلبات منظمة، ثم سعّرها وأرسل إصدارات مرقّمة وسجّل العروض المضادة واحتفظ بسجل التفاوض كاملًا.">Turn client emails and manual entries into structured requests, then quote them. Send numbered quote versions, log counter-offers and keep the full negotiation history.</p>
         <ul class="ticks">
@@ -290,7 +290,7 @@
       </article>
 
       <article class="solution s-clients">
-        <p class="role-label" data-ar="المشرف">Supervisor</p>
+        <p class="role-label" data-ar="المنسق">Coordinator</p>
         <h3 data-ar="العملاء والمعدات">Clients and equipment</h3>
         <p data-ar="لكل عميل جهات اتصاله وبريد الشهادات والمعدات المسجّلة والمهام المفتوحة وما يستحق خلال 30 يومًا.">Each client keeps its contacts, certificates email, equipment on record, open jobs, and what falls due in the next 30 days.</p>
         <a class="chip-link" href="#explorer" data-go-screen="clients"><span data-ar="شاهد العملاء">See clients</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
@@ -318,12 +318,11 @@
 
     <div class="xp" data-explorer>
       <nav class="xp-list" aria-label="App screens" data-ar-aria-label="شاشات التطبيق">
-        <p class="xp-role" data-ar="المشرف">Supervisor</p>
+        <p class="xp-role" data-ar="المنسق">Coordinator</p>
         <button type="button" class="xp-item" data-screen="inbox"><svg class="ico" aria-hidden="true"><use href="#i-inbox"/></svg><span data-ar="صندوق الطلبات">Requests inbox</span></button>
         <button type="button" class="xp-item" data-screen="request"><svg class="ico" aria-hidden="true"><use href="#i-layers"/></svg><span data-ar="الطلب ودورة حياة المهمة">Request and job lifecycle</span></button>
         <button type="button" class="xp-item" data-screen="quote"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg><span data-ar="التفاوض على السعر">Quote negotiation</span></button>
         <button type="button" class="xp-item" data-screen="clients"><svg class="ico" aria-hidden="true"><use href="#i-users"/></svg><span data-ar="العملاء والمعدات">Clients and equipment</span></button>
-        <p class="xp-role" data-ar="المنسق">Coordinator</p>
         <button type="button" class="xp-item" data-screen="assign"><svg class="ico" aria-hidden="true"><use href="#i-user"/></svg><span data-ar="تعيين مفتش">Assign an inspector</span></button>
         <button type="button" class="xp-item" data-screen="schedule"><svg class="ico" aria-hidden="true"><use href="#i-cal"/></svg><span data-ar="جدول الفريق">Team schedule</span></button>
         <p class="xp-role" data-ar="المفتش">Inspector</p>
@@ -508,14 +507,14 @@
         <li class="tour-step" data-screen="inbox">
           <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-inbox"/></svg></div>
           <h3 data-ar="الطلب">Request</h3>
-          <p class="step-who" data-ar="المشرف">Supervisor</p>
+          <p class="step-who" data-ar="المنسق">Coordinator</p>
           <p data-ar="يتحول بريد العميل أو الإدخال اليدوي إلى طلب: العميل والمعدات والموقع والتاريخ المفضل.">A client email or a manual entry becomes a request: client, equipment, location and preferred date.</p>
           <a class="chip-link" href="#explorer" data-go-screen="inbox"><span data-ar="شاهد هذه الشاشة">See this screen</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
         </li>
         <li class="tour-step" data-screen="quote">
           <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></div>
           <h3 data-ar="التسعير">Quote</h3>
-          <p class="step-who" data-ar="المشرف">Supervisor</p>
+          <p class="step-who" data-ar="المنسق">Coordinator</p>
           <p data-ar="سعّر الطلب وأرسل إصدارًا مرقّمًا وسجّل رد العميل. القبول يقفل السعر ويمرّر المهمة.">Price it, send a numbered version and log the client's reply. Accepting locks the price and passes the job on.</p>
           <a class="chip-link" href="#explorer" data-go-screen="quote"><span data-ar="شاهد هذه الشاشة">See this screen</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
         </li>
@@ -610,7 +609,7 @@
         <div class="ind-body">
           <h3 data-ar="جهات الفحص ومقدّمو الخدمات الميدانية">Inspection bodies and field service providers</h3>
           <p data-ar="<strong>التحدّي:</strong> استقبال الطلبات وتسعيرها وجدولتها وإصدار الشهادات بأدوار مختلفة وفي أدوات مختلفة."><strong>The challenge:</strong> receiving, quoting, scheduling and certifying work with different roles in different tools.</p>
-          <p data-ar="<strong>كيف يساعد Inspecta:</strong> الأدوار الأربعة كلها في تطبيق واحد، من صندوق الطلبات إلى الشهادة الموقّعة وسجل الساعات."><strong>How Inspecta helps:</strong> all four roles in one app, from the requests inbox to the signed certificate and timesheet.</p>
+          <p data-ar="<strong>كيف يساعد Inspecta:</strong> الأدوار الثلاثة كلها في تطبيق واحد، من صندوق الطلبات إلى الشهادة الموقّعة وسجل الساعات."><strong>How Inspecta helps:</strong> all three roles in one app, from the requests inbox to the signed certificate and timesheet.</p>
         </div>
       </li>
     </ul>
@@ -669,7 +668,7 @@
   <div class="wrap about-grid">
     <div>
       <h2 id="about-title" data-ar="بُني حول الطريقة التي يسير بها عمل الفحص فعليًا.">Built around how inspection work actually moves.</h2>
-      <p class="about-lede" data-ar="Inspecta تطبيق لإدارة الفحص يعمل أولًا على الهاتف. صُمّم حول التسلسل الحقيقي لمهمة الفحص: الطلب، التسعير، التعيين، الفحص، الشهادة، الإرسال، وحول الأشخاص الذين يتولون كل خطوة: المشرفون والمنسقون والمفتشون والمديرون الفنيون.">Inspecta is a mobile-first inspection-management app. It is designed around the real sequence of an inspection job (request, quote, assign, inspect, certify, send) and the people who handle each step: supervisors, coordinators, inspectors and technical managers.</p>
+      <p class="about-lede" data-ar="Inspecta تطبيق لإدارة الفحص يعمل أولًا على الهاتف. صُمّم حول التسلسل الحقيقي لمهمة الفحص: الطلب، التسعير، التعيين، الفحص، الشهادة، الإرسال، وحول الأشخاص الذين يتولون كل خطوة: المنسقون والمفتشون والمديرون الفنيون.">Inspecta is a mobile-first inspection-management app. It is designed around the real sequence of an inspection job (request, quote, assign, inspect, certify, send) and the people who handle each step: coordinators, inspectors and technical managers.</p>
       <p data-ar="يعمل التطبيق على Flutter ويخزّن بياناته في Cloud Firestore، وتُفرض صلاحيات كل دور عبر قواعد أمان على الخادم.">The app is built with Flutter and stores its data in Cloud Firestore, with each role's permissions enforced by server-side security rules.</p>
     </div>
     <ul class="principles">
@@ -694,7 +693,7 @@
       </details>
       <details class="qa" name="faq">
         <summary data-ar="لمن صُمّم Inspecta؟">Who is Inspecta designed for?</summary>
-        <p data-ar="للفرق التي تفحص المعدات الصناعية، سواء كانت جهات فحص أو أقسام فحص داخلية. تُدعم اليوم أربعة أدوار: المشرفون والمنسقون والمفتشون والمديرون الفنيون.">For teams that examine industrial equipment, whether inspection bodies or in-house inspection departments. Four roles are supported today: supervisors, coordinators, inspectors and technical managers.</p>
+        <p data-ar="للفرق التي تفحص المعدات الصناعية، سواء كانت جهات فحص أو أقسام فحص داخلية. تُدعم اليوم ثلاثة أدوار: المنسقون والمفتشون والمديرون الفنيون.">For teams that examine industrial equipment, whether inspection bodies or in-house inspection departments. Three roles are supported today: coordinators, inspectors and technical managers.</p>
       </details>
       <details class="qa" name="faq">
         <summary data-ar="كيف تعمل إدارة الفحص الرقمية؟">How does digital inspection management work?</summary>
@@ -769,7 +768,6 @@
           <select id="f-role" name="role">
             <option value="" data-ar="اختر…">Select…</option>
             <option value="management" data-ar="الإدارة">Management</option>
-            <option value="supervisor" data-ar="مشرف">Supervisor</option>
             <option value="coordinator" data-ar="منسق">Coordinator</option>
             <option value="inspector" data-ar="مفتش">Inspector</option>
             <option value="technical_manager" data-ar="مدير فني">Technical manager</option>

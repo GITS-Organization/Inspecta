@@ -19,7 +19,7 @@ import '../widgets/profile_stat_tiles.dart';
 /// Name, role, this month's activity, role-specific settings, account
 /// actions and sign out. Never pushed as a new route: a role shell with
 /// its own bottom nav embeds this in place as a tab ([onClose] left
-/// null, matching its siblings — see `SupervisorRootPage`); a role
+/// null, matching its siblings — see `CoordinatorRootPage`); a role
 /// without one swaps it in for the home content instead, passing
 /// [onClose] to swap back (see `RoleHomePage`).
 class ProfilePage extends StatelessWidget {
@@ -30,7 +30,7 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => getIt<ProfileStatsCubit>()..start(),
+      create: (context) => getIt<ProfileStatsCubit>()..start(context.read<AuthCubit>().user?.role),
       child: _ProfileView(onClose: onClose),
     );
   }
@@ -78,15 +78,10 @@ class _ProfileView extends StatelessWidget {
     ProfileStatsState stats,
     AppLocalizations t,
   ) => switch (role) {
-    UserRole.supervisor => [
+    UserRole.coordinator => [
       (stats.quotesSentThisMonth, t.profileStatQuotesSent),
       (stats.acceptedThisMonth, t.profileStatAccepted),
       (stats.clientsCount, t.profileStatClients),
-    ],
-    UserRole.coordinator => [
-      (null, t.profileStatJobsAssigned),
-      (null, t.profileStatReassigned),
-      (null, t.profileStatInspectors),
     ],
     UserRole.inspector => [
       (null, t.profileStatInspections),
@@ -94,9 +89,9 @@ class _ProfileView extends StatelessWidget {
       (null, t.profileStatReturned),
     ],
     UserRole.technicalManager => [
-      (null, t.profileStatReviewed),
-      (null, t.profileStatReturned),
-      (null, t.profileStatSent),
+      (stats.reviewedThisMonth, t.profileStatReviewed),
+      (stats.returnedThisMonth, t.profileStatReturned),
+      (stats.sentThisMonth, t.profileStatSent),
     ],
     UserRole.admin => const [],
   };

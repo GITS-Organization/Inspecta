@@ -20,7 +20,7 @@ class InspectionRequestModel {
   final DateTime? preferredDate;
   final String? accessNotes;
   final JobStatus? status;
-  final String? supervisorId;
+  final String? coordinatorId;
   final List<RequestItemModel> items;
   final bool hasUnreadClientReply;
   final String? lastReplySnippet;
@@ -28,6 +28,7 @@ class InspectionRequestModel {
   final String? inspectorId;
   final DateTime? scheduledAt;
   final String? assignmentNote;
+  final DateTime? certificateSubmittedAt;
 
   const InspectionRequestModel({
     required this.id,
@@ -44,13 +45,14 @@ class InspectionRequestModel {
     this.preferredDate,
     this.accessNotes,
     this.status,
-    this.supervisorId,
+    this.coordinatorId,
     this.hasUnreadClientReply = false,
     this.lastReplySnippet,
     this.rejectReason,
     this.inspectorId,
     this.scheduledAt,
     this.assignmentNote,
+    this.certificateSubmittedAt,
   });
 
   factory InspectionRequestModel.fromJson(String id, Map<String, dynamic> json) {
@@ -69,7 +71,8 @@ class InspectionRequestModel {
       preferredDate: (json['preferredDate'] as Timestamp?)?.toDate(),
       accessNotes: json['accessNotes'] as String?,
       status: JobStatus.fromValue(json['status']),
-      supervisorId: json['supervisorId'] as String?,
+      // Older documents stored this as `supervisorId`.
+      coordinatorId: (json['coordinatorId'] ?? json['supervisorId']) as String?,
       items: (json['items'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
           .map(RequestItemModel.fromJson)
@@ -80,6 +83,7 @@ class InspectionRequestModel {
       inspectorId: json['inspectorId'] as String?,
       scheduledAt: (json['scheduledAt'] as Timestamp?)?.toDate(),
       assignmentNote: json['assignmentNote'] as String?,
+      certificateSubmittedAt: (json['certificateSubmittedAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -102,7 +106,7 @@ class InspectionRequestModel {
       preferredDate: preferredDate,
       accessNotes: accessNotes,
       status: resolvedStatus,
-      supervisorId: supervisorId,
+      coordinatorId: coordinatorId,
       items: items.map((item) => item.toEntity()).toList(),
       hasUnreadClientReply: hasUnreadClientReply,
       lastReplySnippet: lastReplySnippet,
@@ -110,6 +114,7 @@ class InspectionRequestModel {
       inspectorId: inspectorId,
       scheduledAt: scheduledAt,
       assignmentNote: assignmentNote,
+      certificateSubmittedAt: certificateSubmittedAt,
     );
   }
 }

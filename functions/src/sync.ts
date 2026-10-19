@@ -135,7 +135,7 @@ async function processMessage(
     .set({
       source: "email",
       clientId: null,
-      // Best-effort display name until a supervisor matches the sender
+      // Best-effort display name until a coordinator matches the sender
       // to a client (see MatchClientSheet) — mirrors an unmatched
       // sender's `isNewClient` treatment elsewhere in the app.
       clientName: parsed.fromName ?? parsed.fromEmail,
@@ -148,7 +148,7 @@ async function processMessage(
       preferredDate: null,
       accessNotes: null,
       status: "request_received",
-      supervisorId: null,
+      coordinatorId: null,
       items: items.map((item, index) => ({
         id: `item-${messageId}-${index}`,
         type: item.type,

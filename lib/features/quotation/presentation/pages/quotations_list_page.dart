@@ -21,9 +21,9 @@ import '../widgets/quote_value_summary.dart';
 import '../widgets/quotation_labels.dart';
 import 'quotation_detail_page.dart';
 
-/// The Quotations tab: the supervisor's price tracker — every quote
+/// The Quotations tab: the coordinator's price tracker — every quote
 /// they've sent, where it stands, and what needs chasing. A real tab
-/// alongside Requests (see [SupervisorRootPage]), not a pushed screen.
+/// alongside Requests (see [CoordinatorRootPage]), not a pushed screen.
 /// Search covers client, request id, and quote number; date-range and
 /// client filter dropdowns from the original ask aren't built yet.
 class QuotationsListPage extends StatelessWidget {

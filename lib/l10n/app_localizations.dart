@@ -191,7 +191,7 @@ abstract class AppLocalizations {
   /// No description provided for @signInRoleHint.
   ///
   /// In en, this message translates to:
-  /// **'You\'ll go straight to your own screens — supervisor, coordinator, inspector or technical manager.'**
+  /// **'You\'ll go straight to your own screens — coordinator, inspector or technical manager.'**
   String get signInRoleHint;
 
   /// No description provided for @noAccount.
@@ -530,12 +530,6 @@ abstract class AppLocalizations {
   /// **'No signature added yet'**
   String get noSignatureLabel;
 
-  /// No description provided for @licenseNumberLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'License no.'**
-  String get licenseNumberLabel;
-
   /// No description provided for @accountSectionTitle.
   ///
   /// In en, this message translates to:
@@ -578,12 +572,6 @@ abstract class AppLocalizations {
   /// **'Version {version}'**
   String versionLabel(String version);
 
-  /// No description provided for @roleSupervisor.
-  ///
-  /// In en, this message translates to:
-  /// **'Supervisor'**
-  String get roleSupervisor;
-
   /// No description provided for @roleCoordinator.
   ///
   /// In en, this message translates to:
@@ -607,12 +595,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Admin'**
   String get roleAdmin;
-
-  /// No description provided for @homeSupervisor.
-  ///
-  /// In en, this message translates to:
-  /// **'Requests inbox'**
-  String get homeSupervisor;
 
   /// No description provided for @homeCoordinator.
   ///
@@ -1261,12 +1243,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Quotations'**
   String get quotationsTitle;
-
-  /// No description provided for @quotationsSupervisorLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Supervisor'**
-  String get quotationsSupervisorLabel;
 
   /// No description provided for @filter.
   ///
@@ -2090,6 +2066,12 @@ abstract class AppLocalizations {
   /// **'Inspectors'**
   String get navInspectors;
 
+  /// No description provided for @navMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get navMore;
+
   /// No description provided for @statUnassigned.
   ///
   /// In en, this message translates to:
@@ -2666,12 +2648,6 @@ abstract class AppLocalizations {
   /// **'Examination date'**
   String get examinationDateLabel;
 
-  /// No description provided for @lastExaminationDateLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Last examination date'**
-  String get lastExaminationDateLabel;
-
   /// No description provided for @nextExaminationDateLabel.
   ///
   /// In en, this message translates to:
@@ -2828,11 +2804,11 @@ abstract class AppLocalizations {
   /// **'Leave empty if there is none'**
   String get defectDescriptionHint;
 
-  /// No description provided for @describeDefectRequired.
+  /// No description provided for @defectsOptionalSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Describe the defect (required)'**
-  String get describeDefectRequired;
+  /// **'Optional — only if something was found'**
+  String get defectsOptionalSubtitle;
 
   /// No description provided for @existingDangerLabel.
   ///
@@ -3230,29 +3206,35 @@ abstract class AppLocalizations {
   /// **'Clear'**
   String get clearAction;
 
-  /// No description provided for @fullNameLabel.
+  /// No description provided for @savedSignatureTitle.
   ///
   /// In en, this message translates to:
-  /// **'Full name'**
-  String get fullNameLabel;
+  /// **'Your signature'**
+  String get savedSignatureTitle;
 
-  /// No description provided for @fullNameHint.
+  /// No description provided for @savedSignatureHint.
   ///
   /// In en, this message translates to:
-  /// **'Eng. Your name'**
-  String get fullNameHint;
+  /// **'Used on every certificate you approve. Change it in your Profile.'**
+  String get savedSignatureHint;
 
-  /// No description provided for @licenseNoLabel.
+  /// No description provided for @rememberSignatureLabel.
   ///
   /// In en, this message translates to:
-  /// **'License no.'**
-  String get licenseNoLabel;
+  /// **'Remember my signature for next time'**
+  String get rememberSignatureLabel;
 
-  /// No description provided for @licenseNoHint.
+  /// No description provided for @signatureSheetTitle.
   ///
   /// In en, this message translates to:
-  /// **'License number'**
-  String get licenseNoHint;
+  /// **'Draw your signature'**
+  String get signatureSheetTitle;
+
+  /// No description provided for @signatureSheetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to your profile and used every time you approve a certificate.'**
+  String get signatureSheetHint;
 
   /// No description provided for @sendSignedPdfToLabel.
   ///
@@ -3275,7 +3257,7 @@ abstract class AppLocalizations {
   /// No description provided for @approveRequirementsHint.
   ///
   /// In en, this message translates to:
-  /// **'Sign above and fill in your name, license and a valid email to approve.'**
+  /// **'Add your signature and a valid email to approve.'**
   String get approveRequirementsHint;
 
   /// No description provided for @confirmApproveTitle.

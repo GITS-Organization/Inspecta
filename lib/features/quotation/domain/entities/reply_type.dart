@@ -1,4 +1,4 @@
-/// The supervisor's three ways to reply to a request (BR-03.1).
+/// The coordinator's three ways to reply to a request (BR-03.1).
 enum ReplyType {
   accept('accept'),
   offer('offer'),

@@ -60,6 +60,16 @@ class RequestsRemoteDataSource {
     return data == null ? null : InspectionRequestModel.fromJson(snapshot.id, data);
   }
 
+  /// The inspector hands a certificate in (or back in, after a return):
+  /// the job moves to `certificate_submitted` and is stamped with the
+  /// server time it happened, which the technical manager's Review tab sorts
+  /// by.
+  Future<void> markCertificateSubmitted(String requestId) => updateStatus(
+    requestId,
+    JobStatus.certificateSubmitted,
+    extra: {'certificateSubmittedAt': FieldValue.serverTimestamp()},
+  );
+
   Future<void> updateStatus(
     String requestId,
     JobStatus status, {

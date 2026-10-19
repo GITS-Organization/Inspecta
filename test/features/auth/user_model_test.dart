@@ -28,6 +28,12 @@ void main() {
     expect(model.active, isFalse);
   });
 
+  test('reads the retired supervisor role as a coordinator', () {
+    final model = UserModel.fromJson('u1', {'role': 'supervisor', 'active': true});
+    expect(model.toEntity()!.role, UserRole.coordinator);
+    expect(UserRole.fromValue('coordinator'), UserRole.coordinator);
+  });
+
   test('has no entity when the role is unknown', () {
     final model = UserModel.fromJson('u1', {'role': 'client', 'active': true});
     expect(model.toEntity(), isNull);

@@ -13,7 +13,7 @@ class InspectionRequest extends Equatable {
   final RequestSource source;
 
   /// Null until the sender is matched to a known client (BR-02.4) — the
-  /// supervisor must confirm or create the client before quoting.
+  /// coordinator must confirm or create the client before quoting.
   final String? clientId;
   final String clientName;
   final String? emailThreadId;
@@ -25,7 +25,7 @@ class InspectionRequest extends Equatable {
   final DateTime? preferredDate;
   final String? accessNotes;
   final JobStatus status;
-  final String? supervisorId;
+  final String? coordinatorId;
   final List<RequestItem> items;
 
   /// The client answered in the email thread and it hasn't been acted on
@@ -42,6 +42,12 @@ class InspectionRequest extends Equatable {
   final DateTime? scheduledAt;
   final String? assignmentNote;
 
+  /// When the inspector last submitted this job's certificate — set again
+  /// on a resubmission after the technical manager sends it back. The
+  /// technical manager's Review tab lists the most recent first. Null on
+  /// jobs submitted before it was recorded.
+  final DateTime? certificateSubmittedAt;
+
   const InspectionRequest({
     required this.id,
     required this.source,
@@ -57,13 +63,14 @@ class InspectionRequest extends Equatable {
     this.emailPreview,
     this.preferredDate,
     this.accessNotes,
-    this.supervisorId,
+    this.coordinatorId,
     this.hasUnreadClientReply = false,
     this.lastReplySnippet,
     this.rejectReason,
     this.inspectorId,
     this.scheduledAt,
     this.assignmentNote,
+    this.certificateSubmittedAt,
   });
 
   bool get isNew => RequestsTabX.isNew(status);
@@ -113,7 +120,7 @@ class InspectionRequest extends Equatable {
     preferredDate,
     accessNotes,
     status,
-    supervisorId,
+    coordinatorId,
     items,
     hasUnreadClientReply,
     lastReplySnippet,
@@ -121,5 +128,6 @@ class InspectionRequest extends Equatable {
     inspectorId,
     scheduledAt,
     assignmentNote,
+    certificateSubmittedAt,
   ];
 }

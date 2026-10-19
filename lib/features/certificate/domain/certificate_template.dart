@@ -70,13 +70,12 @@ abstract final class CertText {
 /// Keys of the certificate's date fields.
 abstract final class CertDate {
   static const examination = 'examination';
-  static const lastExamination = 'lastExamination';
   static const nextExamination = 'nextExamination';
 
   /// "If YES state the date by when" — the defect that isn't a danger yet.
   static const futureDangerBy = 'futureDangerBy';
 
-  static const all = [examination, lastExamination, nextExamination, futureDangerBy];
+  static const all = [examination, nextExamination, futureDangerBy];
 }
 
 /// Keys of the certificate's yes/no questions.
@@ -91,6 +90,17 @@ abstract final class CertQuestion {
 
   static const existingDanger = 'existingDanger';
   static const futureDanger = 'futureDanger';
+
+  /// The paper form asks about the examination interval twice — "within 6
+  /// months?" and "within 12 months?" — but only one interval applies, so the
+  /// two answers are always opposites: yes to one is no to the other. Returns
+  /// the question that answers [question] the opposite way, or null when
+  /// [question] isn't one of the pair.
+  static String? intervalCounterpart(String question) => switch (question) {
+    within6Months => within12Months,
+    within12Months => within6Months,
+    _ => null,
+  };
 
   /// "Was the examination carried out…" — the four that sit under that
   /// heading on the paper certificate, in order.

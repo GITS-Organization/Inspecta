@@ -12,7 +12,7 @@ The job to be done on the site: understand in seconds what Inspecta is, see the 
 
 ## Product Purpose
 
-Inspecta is a mobile-first (also runs in the browser) inspection-management app built on Flutter and Firebase. It carries one job from a client's request to a signed certificate: request intake, quotation negotiation, inspector assignment and scheduling, a guided digital "Report of Thorough Examination", technical-manager review and signature, and timesheets. Four working roles: supervisor, coordinator, inspector, technical manager (admin exists, user management is not built yet). English and Arabic.
+Inspecta is a mobile-first (also runs in the browser) inspection-management app built on Flutter and Firebase. It carries one job from a client's request to a signed certificate: request intake, quotation negotiation, inspector assignment and scheduling, a guided digital "Report of Thorough Examination", technical-manager review and signature, and timesheets. Three working roles: coordinator (requests, quotations, clients, assignment, scheduling and timesheet approval), inspector, technical manager (admin exists, user management is not built yet). English and Arabic.
 
 Success for the website: a visitor can accurately describe what Inspecta does, has explored the real screens through the interactive explorer, and submits the demo request. It must never claim anything the app does not do. Known non-features (do not imply): photo/attachment capture in the report, push notifications, analytics dashboards, a corrective-action tracker, a client portal, emailing quotes or certificates from inside the app.
 

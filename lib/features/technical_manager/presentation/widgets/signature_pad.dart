@@ -92,20 +92,7 @@ class _SignaturePainter extends CustomPainter {
       baseline,
     );
 
-    final ink = Paint()
-      ..color = const Color(0xFF1E3A8A)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    for (final stroke in strokes) {
-      if (stroke.length < 4) continue;
-      final path = Path()..moveTo(stroke[0] * size.width, stroke[1] * size.height);
-      for (var i = 2; i + 1 < stroke.length; i += 2) {
-        path.lineTo(stroke[i] * size.width, stroke[i + 1] * size.height);
-      }
-      canvas.drawPath(path, ink);
-    }
+    _paintInk(canvas, size, strokes);
   }
 
   void _drawDashedBorder(Canvas canvas, RRect box) {
@@ -124,4 +111,46 @@ class _SignaturePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SignaturePainter oldDelegate) => true;
+}
+
+void _paintInk(Canvas canvas, Size size, List<List<double>> strokes) {
+  final ink = Paint()
+    ..color = const Color(0xFF1E3A8A)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 3
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round;
+  for (final stroke in strokes) {
+    if (stroke.length < 4) continue;
+    final path = Path()..moveTo(stroke[0] * size.width, stroke[1] * size.height);
+    for (var i = 2; i + 1 < stroke.length; i += 2) {
+      path.lineTo(stroke[i] * size.width, stroke[i + 1] * size.height);
+    }
+    canvas.drawPath(path, ink);
+  }
+}
+
+/// A saved signature, drawn as it will appear — the pad's ink without the
+/// dashed box or the baseline, and not drawable.
+class SignaturePreview extends StatelessWidget {
+  final List<List<double>> strokes;
+
+  const SignaturePreview({super.key, required this.strokes});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(painter: _InkPainter(strokes), size: Size.infinite);
+  }
+}
+
+class _InkPainter extends CustomPainter {
+  final List<List<double>> strokes;
+
+  _InkPainter(this.strokes);
+
+  @override
+  void paint(Canvas canvas, Size size) => _paintInk(canvas, size, strokes);
+
+  @override
+  bool shouldRepaint(_InkPainter oldDelegate) => oldDelegate.strokes != strokes;
 }

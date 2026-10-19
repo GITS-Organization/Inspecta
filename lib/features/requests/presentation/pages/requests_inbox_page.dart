@@ -12,7 +12,7 @@ import 'request_detail_page.dart';
 
 /// Feature 02's "Requests inbox": the header, search, tabs, and the list
 /// itself. Content only — the bottom nav belongs to whichever role shell
-/// hosts this screen (see `SupervisorRootPage`).
+/// hosts this screen (see `CoordinatorRootPage`).
 class RequestsInboxPage extends StatelessWidget {
   final VoidCallback onOpenProfile;
 

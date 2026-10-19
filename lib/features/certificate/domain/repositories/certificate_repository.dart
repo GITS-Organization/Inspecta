@@ -6,6 +6,12 @@ abstract interface class CertificateRepository {
   /// first save creates it.
   Stream<Certificate?> watchCertificate(String requestId);
 
+  /// Every certificate a technical manager has reviewed (approved, or sent
+  /// back) since [since] — what the manager's Profile counts for "this
+  /// month". One that's since been resubmitted is still in it: its review
+  /// time stays until the next review replaces it.
+  Stream<List<Certificate>> watchReviewedSince(DateTime since);
+
   /// Autosaves the current state of the form.
   Future<void> saveDraft(Certificate certificate);
 

@@ -79,6 +79,15 @@ class RequestsRepositoryImpl implements RequestsRepository {
   }
 
   @override
+  Future<void> markCertificateSubmitted(String requestId) async {
+    try {
+      await _remote.markCertificateSubmitted(requestId);
+    } catch (e) {
+      throw _mapError(e);
+    }
+  }
+
+  @override
   Future<void> rejectRequest({
     required String requestId,
     required String reason,

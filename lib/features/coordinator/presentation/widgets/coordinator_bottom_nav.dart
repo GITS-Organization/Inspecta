@@ -4,11 +4,26 @@ import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// The five tabs on the coordinator's shell.
-enum CoordinatorTab { queue, schedule, inspectors, timesheets, profile }
+/// Every screen the coordinator's shell swaps in place. The bar only has
+/// room for five of them — Requests, Quotations, Queue, Schedule and More —
+/// so Clients, Inspectors, Timesheets and Profile live behind More.
+enum CoordinatorTab {
+  requests,
+  quotations,
+  queue,
+  schedule,
+  more,
+  clients,
+  inspectors,
+  timesheets,
+  profile;
 
-/// Queue / Schedule / Inspectors / Timesheets / Profile — same shape as the
-/// supervisor's `RequestsBottomNav`.
+  /// Whether this tab has its own slot in the bar. The rest show under More.
+  bool get inBar => index <= more.index;
+}
+
+/// Requests / Quotations / Queue / Schedule / More. While one of the
+/// screens behind More is showing, More stays the highlighted slot.
 class CoordinatorBottomNav extends StatelessWidget {
   final CoordinatorTab selected;
   final ValueChanged<CoordinatorTab> onSelectTab;
@@ -18,6 +33,7 @@ class CoordinatorBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final highlighted = selected.inBar ? selected : CoordinatorTab.more;
     return SafeArea(
       top: false,
       child: SizedBox(
@@ -33,8 +49,24 @@ class CoordinatorBottomNav extends StatelessWidget {
               Expanded(
                 child: _NavItem(
                   icon: Icons.inbox_outlined,
+                  label: t.navRequests,
+                  selected: highlighted == CoordinatorTab.requests,
+                  onTap: () => onSelectTab(CoordinatorTab.requests),
+                ),
+              ),
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.description_outlined,
+                  label: t.navQuotations,
+                  selected: highlighted == CoordinatorTab.quotations,
+                  onTap: () => onSelectTab(CoordinatorTab.quotations),
+                ),
+              ),
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.assignment_ind_outlined,
                   label: t.navQueue,
-                  selected: selected == CoordinatorTab.queue,
+                  selected: highlighted == CoordinatorTab.queue,
                   onTap: () => onSelectTab(CoordinatorTab.queue),
                 ),
               ),
@@ -42,32 +74,16 @@ class CoordinatorBottomNav extends StatelessWidget {
                 child: _NavItem(
                   icon: Icons.calendar_today_outlined,
                   label: t.navSchedule,
-                  selected: selected == CoordinatorTab.schedule,
+                  selected: highlighted == CoordinatorTab.schedule,
                   onTap: () => onSelectTab(CoordinatorTab.schedule),
                 ),
               ),
               Expanded(
                 child: _NavItem(
-                  icon: Icons.groups_outlined,
-                  label: t.navInspectors,
-                  selected: selected == CoordinatorTab.inspectors,
-                  onTap: () => onSelectTab(CoordinatorTab.inspectors),
-                ),
-              ),
-              Expanded(
-                child: _NavItem(
-                  icon: Icons.schedule_rounded,
-                  label: t.navTimesheets,
-                  selected: selected == CoordinatorTab.timesheets,
-                  onTap: () => onSelectTab(CoordinatorTab.timesheets),
-                ),
-              ),
-              Expanded(
-                child: _NavItem(
-                  icon: Icons.person_outline_rounded,
-                  label: t.profile,
-                  selected: selected == CoordinatorTab.profile,
-                  onTap: () => onSelectTab(CoordinatorTab.profile),
+                  icon: Icons.menu_rounded,
+                  label: t.navMore,
+                  selected: highlighted == CoordinatorTab.more,
+                  onTap: () => onSelectTab(CoordinatorTab.more),
                 ),
               ),
             ],
@@ -111,6 +127,8 @@ class _NavItem extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.caption.copyWith(
                   fontSize: 12,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w600,

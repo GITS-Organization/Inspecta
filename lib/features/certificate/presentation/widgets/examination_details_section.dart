@@ -45,12 +45,6 @@ class ExaminationDetailsSection extends StatelessWidget {
               certificateFieldGap,
               CertificateDateInput(dateKey: CertDate.examination, label: t.examinationDateLabel),
               certificateFieldGap,
-              CertificateDateInput(
-                dateKey: CertDate.lastExamination,
-                label: t.lastExaminationDateLabel,
-                clearable: true,
-              ),
-              certificateFieldGap,
               CertificateDateInput(dateKey: CertDate.nextExamination, label: t.nextExaminationDateLabel),
               certificateFieldGap,
               CertificateTextInput(textKey: CertText.standardOfInspection, label: t.standardOfInspectionLabel),

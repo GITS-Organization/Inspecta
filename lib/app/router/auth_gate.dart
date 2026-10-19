@@ -7,7 +7,6 @@ import '../../features/auth/presentation/pages/sign_in_page.dart';
 import '../../features/home/presentation/pages/coordinator_root_page.dart';
 import '../../features/home/presentation/pages/inspector_root_page.dart';
 import '../../features/home/presentation/pages/role_home_page.dart';
-import '../../features/home/presentation/pages/supervisor_root_page.dart';
 import '../../features/home/presentation/pages/technical_manager_root_page.dart';
 import '../../features/splash/presentation/views/splash_screen.dart';
 
@@ -60,7 +59,6 @@ class _AuthGateState extends State<AuthGate> {
           Authenticated(:final user) => KeyedSubtree(
             key: ValueKey((user.id, user.role)),
             child: switch (user.role) {
-              UserRole.supervisor => const SupervisorRootPage(),
               UserRole.coordinator => const CoordinatorRootPage(),
               UserRole.inspector => const InspectorRootPage(),
               UserRole.technicalManager => const TechnicalManagerRootPage(),

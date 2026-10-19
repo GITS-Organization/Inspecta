@@ -106,10 +106,15 @@ class CertificateCubit extends Cubit<CertificateState> {
     _persist(updated);
   }
 
+  /// The 6-month and 12-month interval questions are opposites (see
+  /// [CertQuestion.intervalCounterpart]), so answering one answers the other.
   void setAnswer(String question, bool answer) {
     final current = state.certificate;
     if (current == null) return;
-    _persist(current.withAnswer(question, answer));
+    var updated = current.withAnswer(question, answer);
+    final counterpart = CertQuestion.intervalCounterpart(question);
+    if (counterpart != null) updated = updated.withAnswer(counterpart, !answer);
+    _persist(updated);
   }
 
   void setFunctionCheck(ChecklistAnswer answer) {

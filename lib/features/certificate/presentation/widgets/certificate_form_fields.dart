@@ -114,14 +114,12 @@ class _CertificateTextInputState extends State<CertificateTextInput> {
 }
 
 /// A labelled date field bound to one of the certificate's dates
-/// ([CertDate]): tap to pick, and — when [clearable] — an ✕ to empty it
-/// again (an empty optional date prints as "N/A").
+/// ([CertDate]): tap to pick.
 class CertificateDateInput extends StatelessWidget {
   final String dateKey;
   final String label;
-  final bool clearable;
 
-  const CertificateDateInput({super.key, required this.dateKey, required this.label, this.clearable = false});
+  const CertificateDateInput({super.key, required this.dateKey, required this.label});
 
   Future<void> _pick(BuildContext context, DateTime? current) async {
     final cubit = context.read<CertificateCubit>();
@@ -173,18 +171,10 @@ class CertificateDateInput extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (clearable && value != null)
-                        IconButton(
-                          tooltip: t.clearAction,
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => context.read<CertificateCubit>().setDate(dateKey, null),
-                          icon: const Icon(Icons.close_rounded, size: 18, color: AppColours.inkMuted),
-                        )
-                      else
-                        const Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Icon(Icons.calendar_today_outlined, size: 18, color: AppColours.inkMuted),
-                        ),
+                      const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Icon(Icons.calendar_today_outlined, size: 18, color: AppColours.inkMuted),
+                      ),
                     ],
                   ),
                 ),

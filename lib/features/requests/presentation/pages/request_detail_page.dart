@@ -54,7 +54,7 @@ class RequestDetailPage extends StatelessWidget {
               if (_quotable)
                 QuotationFooter(
                   unitsLabel: AppLocalizations.of(context)!.unitsCount(request.totalUnits),
-                  // The request has left New/Negotiating for the supervisor
+                  // The request has left New/Negotiating for the coordinator
                   // once sent or rejected — back to the inbox.
                   onSent: () => Navigator.of(context).pop(),
                 )
@@ -177,7 +177,7 @@ class _NotReadyNotice extends StatelessWidget {
 
 /// Shown once the request has left New/draft: a quote already exists
 /// for it, so replying again here would just regress its status —
-/// point the supervisor at Quotations instead of repeating the picker.
+/// point the coordinator at Quotations instead of repeating the picker.
 class _MovedOnNotice extends StatelessWidget {
   final InspectionRequest request;
 

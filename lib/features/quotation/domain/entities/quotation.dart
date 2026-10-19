@@ -5,7 +5,7 @@ import 'quote_line_item.dart';
 import 'quotation_status.dart';
 import 'reply_type.dart';
 
-/// A supervisor's reply to a request (Feature 03 §6) — now including
+/// A coordinator's reply to a request (Feature 03 §6) — now including
 /// [ReplyType.reject], so the Quotations tracker has a full history of
 /// every reply sent, not only priced ones.
 ///
@@ -37,7 +37,7 @@ class Quotation extends Equatable {
   final String createdBy;
   final DateTime createdAt;
 
-  // BR-03.6: the client's answer, logged by the supervisor.
+  // BR-03.6: the client's answer, logged by the coordinator.
   final ClientResponseOutcome? clientResponseOutcome;
   final int? clientCounterPricePiastres;
   final String? clientResponseNote;

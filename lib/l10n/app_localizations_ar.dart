@@ -56,7 +56,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get signInRoleHint =>
-      'ستنتقل مباشرة إلى شاشاتك — المشرف أو المنسق أو المفتش أو المدير الفني.';
+      'ستنتقل مباشرة إلى شاشاتك — المنسق أو المفتش أو المدير الفني.';
 
   @override
   String get noAccount => 'ليس لديك حساب؟ اطلب من المسؤول إضافتك.';
@@ -233,9 +233,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noSignatureLabel => 'لم تتم إضافة توقيع بعد';
 
   @override
-  String get licenseNumberLabel => 'رقم الرخصة';
-
-  @override
   String get accountSectionTitle => 'الحساب';
 
   @override
@@ -259,9 +256,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get roleSupervisor => 'مشرف';
-
-  @override
   String get roleCoordinator => 'منسق';
 
   @override
@@ -272,9 +266,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get roleAdmin => 'مسؤول';
-
-  @override
-  String get homeSupervisor => 'صندوق الطلبات';
 
   @override
   String get homeCoordinator => 'جاهز للتعيين';
@@ -667,9 +658,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get quotationsTitle => 'عروض الأسعار';
-
-  @override
-  String get quotationsSupervisorLabel => 'المشرف';
 
   @override
   String get filter => 'تصفية';
@@ -1130,6 +1118,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navInspectors => 'المفتشون';
 
   @override
+  String get navMore => 'المزيد';
+
+  @override
   String get statUnassigned => 'غير معيّن';
 
   @override
@@ -1444,9 +1435,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get examinationDateLabel => 'تاريخ الفحص';
 
   @override
-  String get lastExaminationDateLabel => 'تاريخ آخر فحص';
-
-  @override
   String get nextExaminationDateLabel => 'تاريخ الفحص القادم';
 
   @override
@@ -1527,7 +1515,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get defectDescriptionHint => 'اتركه فارغًا إن لم يوجد';
 
   @override
-  String get describeDefectRequired => 'صف العيب (مطلوب)';
+  String get defectsOptionalSubtitle => 'اختياري — فقط إن وُجد شيء';
 
   @override
   String get existingDangerLabel =>
@@ -1744,16 +1732,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get clearAction => 'مسح';
 
   @override
-  String get fullNameLabel => 'الاسم الكامل';
+  String get savedSignatureTitle => 'توقيعك';
 
   @override
-  String get fullNameHint => 'م. اسمك';
+  String get savedSignatureHint =>
+      'يُستخدم في كل شهادة تعتمدها. يمكنك تغييره من ملفك الشخصي.';
 
   @override
-  String get licenseNoLabel => 'رقم الترخيص';
+  String get rememberSignatureLabel => 'تذكّر توقيعي للمرات القادمة';
 
   @override
-  String get licenseNoHint => 'رقم الترخيص';
+  String get signatureSheetTitle => 'ارسم توقيعك';
+
+  @override
+  String get signatureSheetHint =>
+      'يُحفظ في ملفك الشخصي ويُستخدم عند كل اعتماد لشهادة.';
 
   @override
   String get sendSignedPdfToLabel => 'إرسال ملف PDF الموقّع إلى';
@@ -1765,8 +1758,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get approveAndSendAction => 'اعتماد وإرسال للعميل';
 
   @override
-  String get approveRequirementsHint =>
-      'وقّع أعلاه واملأ اسمك ورقم الترخيص وبريدًا صالحًا للاعتماد.';
+  String get approveRequirementsHint => 'أضف توقيعك وبريدًا صالحًا للاعتماد.';
 
   @override
   String get confirmApproveTitle => 'اعتماد هذه الشهادة؟';

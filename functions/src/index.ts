@@ -46,14 +46,17 @@ export const renewGmailWatch = onSchedule(
   },
 );
 
-async function requireSupervisorOrAdmin(uid: string | undefined): Promise<void> {
+async function requireCoordinatorOrAdmin(uid: string | undefined): Promise<void> {
   if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
   const profile = await admin.firestore().doc(`users/${uid}`).get();
   const data = profile.data();
   const role = data?.role;
   const active = data?.active === true;
-  if (!active || (role !== "supervisor" && role !== "admin")) {
-    throw new HttpsError("permission-denied", "Only an active supervisor or admin can do this.");
+  // "supervisor" was folded into "coordinator"; accounts still stored with
+  // the old value keep their access.
+  const isCoordinator = role === "coordinator" || role === "supervisor";
+  if (!active || (!isCoordinator && role !== "admin")) {
+    throw new HttpsError("permission-denied", "Only an active coordinator or admin can do this.");
   }
 }
 
@@ -65,6 +68,6 @@ async function requireSupervisorOrAdmin(uid: string | undefined): Promise<void> 
  * mail in the intake inbox shows up as a request.
  */
 export const syncGmailNow = onCall({ secrets: [gmailKey] }, async (request) => {
-  await requireSupervisorOrAdmin(request.auth?.uid);
+  await requireCoordinatorOrAdmin(request.auth?.uid);
   return syncNewMessages();
 });

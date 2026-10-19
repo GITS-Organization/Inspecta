@@ -20,8 +20,13 @@ service cloud.firestore {
         && profile().active == true;
     }
 
+    // "supervisor" was folded into "coordinator". Accounts still stored with
+    // the old role keep working as coordinators until their document is
+    // updated.
     function hasRole(role) {
-      return isActive() && profile().role == role;
+      return isActive()
+        && (profile().role == role
+            || (role == 'coordinator' && profile().role == 'supervisor'));
     }
 
     match /users/{uid} {
@@ -48,31 +53,28 @@ service cloud.firestore {
     }
 
     match /requests/{id} {
-      // Feature 02's inbox is the supervisor's; other roles only get a
-      // read-only view once a job is further along (00-overview.md's
+      // When the write sets `certificateSubmittedAt`, it is the server time.
+      function submittedAtIsServerTime() {
+        return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['certificateSubmittedAt'])
+          || request.resource.data.certificateSubmittedAt == request.time;
+      }
+
+      // Feature 02's inbox is the coordinator's; the technical manager only
+      // gets a read-only view once a job is further along (00-overview.md's
       // permissions matrix — "View any job (read-only)").
-      allow read: if hasRole('supervisor')
-        || hasRole('coordinator')
+      allow read: if hasRole('coordinator')
         || hasRole('technical_manager')
         || hasRole('admin')
         // Feature 05: an inspector reads only jobs assigned to them —
         // the app always queries `where inspectorId == uid` to match.
         || (hasRole('inspector') && resource.data.inspectorId == request.auth.uid);
 
-      // BR-02.9: only supervisors edit request details.
-      allow create, delete: if hasRole('supervisor');
+      // BR-02.9: only coordinators edit request details.
+      allow create, delete: if hasRole('coordinator');
 
-      // Feature 04: a coordinator may only assign an inspector to a job
-      // that's already quote-accepted, and only by touching the
-      // assignment fields (plus the status/history write that goes with
-      // them) — everything else about a request stays supervisor-owned.
-      allow update: if hasRole('supervisor')
-        || (hasRole('coordinator')
-            && resource.data.status == 'quote_accepted'
-            && request.resource.data.status == 'assigned'
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                 'status', 'inspectorId', 'scheduledAt', 'assignmentNote',
-               ]))
+      // A coordinator owns a request from intake to assignment (Feature 04
+      // included), so they may update any of its fields.
+      allow update: if hasRole('coordinator')
         // Feature 05: the assigned inspector accepts, declines (handing
         // the job back to the coordinator's queue) or starts their own
         // job — each move touches only the fields it needs.
@@ -91,14 +93,19 @@ service cloud.firestore {
                  || (resource.data.status == 'task_accepted'
                    && request.resource.data.status == 'in_progress'
                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+                 // Submitting also stamps when, so the technical manager's
+                 // Review tab can list the most recent first — only ever
+                 // with the server time.
                  || (resource.data.status == 'in_progress'
                    && request.resource.data.status == 'certificate_submitted'
-                   && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+                   && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'certificateSubmittedAt'])
+                   && submittedAtIsServerTime())
                  // Feature 05: resubmitting after a technical manager
                  // sends a certificate back for changes.
                  || (resource.data.status == 'certificate_returned'
                    && request.resource.data.status == 'certificate_submitted'
-                   && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+                   && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'certificateSubmittedAt'])
+                   && submittedAtIsServerTime())
                ))
         // Feature 06: a technical manager approves (sending it to the
         // client) or returns a submitted certificate — status only.
@@ -120,8 +127,7 @@ service cloud.firestore {
         return get(/databases/$(database)/documents/requests/$(id)).data.inspectorId == request.auth.uid;
       }
 
-      allow read: if hasRole('supervisor')
-        || hasRole('coordinator')
+      allow read: if hasRole('coordinator')
         || hasRole('technical_manager')
         || hasRole('admin')
         || (hasRole('inspector') && ownsJob());
@@ -253,6 +259,23 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /signatures/{uid} {
+      // A technical manager's own signature, drawn once and reused on every
+      // certificate they approve (doc id == uid). Only its owner reads or
+      // sets it. The strokes are a bounded list, so it can't be used as
+      // free storage.
+      allow read: if hasRole('technical_manager') && request.auth.uid == uid;
+
+      allow create, update: if hasRole('technical_manager')
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['strokes', 'updatedAt'])
+        && request.resource.data.strokes is list
+        && request.resource.data.strokes.size() <= 100
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete: if false;
+    }
+
     match /timesheetSettings/{uid} {
       // An inspector's hourly rate, one doc per inspector (doc id == uid).
       // It's pay data, so only its owner reads or sets it — admins can read
@@ -274,36 +297,32 @@ service cloud.firestore {
     match /requests/{id}/events/{eventId} {
       // 00-overview.md §8: every status change is logged and can't be
       // edited — append-only, same readers as the request itself.
-      allow read: if hasRole('supervisor')
-        || hasRole('coordinator')
+      allow read: if hasRole('coordinator')
         || hasRole('technical_manager')
         || hasRole('admin');
       // A coordinator's assignment write, or an inspector's own
       // accept/decline/start write, logs an event alongside it (see
       // requests/{id}'s update rule above).
-      allow create: if hasRole('supervisor') || hasRole('coordinator') || hasRole('inspector') || hasRole('technical_manager');
+      allow create: if hasRole('coordinator') || hasRole('inspector') || hasRole('technical_manager');
       allow update, delete: if false;
     }
 
     match /clients/{id} {
       // Same readers as requests/quotations (00-overview.md's
-      // permissions matrix — clients are shared reference data, not
-      // supervisor-owned).
-      allow read: if hasRole('supervisor')
-        || hasRole('coordinator')
+      // permissions matrix — clients are shared reference data).
+      allow read: if hasRole('coordinator')
         || hasRole('technical_manager')
         || hasRole('admin');
 
-      // Only supervisors maintain the roster (BR-02.4/02.9's spirit —
+      // Only coordinators maintain the roster (BR-02.4/02.9's spirit —
       // matching senders and keeping client records is their job).
-      allow create, update: if hasRole('supervisor');
+      allow create, update: if hasRole('coordinator');
       allow delete: if false;
     }
 
     match /quotations/{id} {
       // Same readers as the request it belongs to (Feature 03 §5).
-      allow read: if hasRole('supervisor')
-        || hasRole('coordinator')
+      allow read: if hasRole('coordinator')
         || hasRole('technical_manager')
         || hasRole('admin');
 
@@ -313,8 +332,8 @@ service cloud.firestore {
       // can touch any field), or — once sent — only for the narrow set
       // of fields BR-03.6's client-response logging and a reminder
       // timestamp touch; nothing else may change after sending.
-      allow create: if hasRole('supervisor');
-      allow update: if hasRole('supervisor')
+      allow create: if hasRole('coordinator');
+      allow update: if hasRole('coordinator')
         && (resource.data.status == 'draft'
             || request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                  'status', 'clientResponseOutcome', 'clientCounterPricePiastres',

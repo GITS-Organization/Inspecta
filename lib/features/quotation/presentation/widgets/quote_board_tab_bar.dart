@@ -10,7 +10,7 @@ import 'quote_board_labels.dart';
 /// (tinted track, solid white shadowed pill under the selected tab) —
 /// matching [RequestsTabBar]'s pattern rather than plain text tabs.
 /// Replied carries a red count badge when it has anything in it —
-/// "this is the supervisor's to-do list" (the pasted spec's own words).
+/// "this is the coordinator's to-do list" (the pasted spec's own words).
 class QuoteBoardTabBar extends StatelessWidget {
   final QuoteBoardTab selected;
   final int Function(QuoteBoardTab tab) countOf;

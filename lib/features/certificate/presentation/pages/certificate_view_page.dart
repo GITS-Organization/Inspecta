@@ -135,7 +135,6 @@ class _ReadOnlyReport extends StatelessWidget {
             (t.certificateNumberLabel, certNumberFor(request)),
             (t.clientRepresentativeLabel, text(CertText.clientRepresentative)),
             (t.examinationDateLabel, date(CertDate.examination)),
-            (t.lastExaminationDateLabel, date(CertDate.lastExamination)),
             (t.nextExaminationDateLabel, date(CertDate.nextExamination)),
             (t.standardOfInspectionLabel, text(CertText.standardOfInspection)),
             (t.testTypeLabel, text(CertText.testType)),

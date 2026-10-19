@@ -34,6 +34,7 @@ import 'features/certificate/domain/usecases/return_certificate.dart';
 import 'features/certificate/domain/usecases/save_certificate_draft.dart';
 import 'features/certificate/domain/usecases/submit_certificate.dart';
 import 'features/certificate/domain/usecases/watch_certificate.dart';
+import 'features/certificate/domain/usecases/watch_reviewed_certificates.dart';
 import 'features/certificate/presentation/bloc/certificate_cubit.dart';
 import 'features/coordinator/data/datasources/inspectors_remote_datasource.dart';
 import 'features/coordinator/data/repositories/coordinator_repository_impl.dart';
@@ -72,6 +73,12 @@ import 'features/requests/domain/usecases/get_request_detail.dart';
 import 'features/requests/domain/usecases/get_requests.dart';
 import 'features/requests/domain/usecases/start_inspection.dart';
 import 'features/requests/presentation/bloc/requests_list_cubit.dart';
+import 'features/technical_manager/data/datasources/signature_remote_datasource.dart';
+import 'features/technical_manager/data/repositories/signature_repository_impl.dart';
+import 'features/technical_manager/domain/repositories/signature_repository.dart';
+import 'features/technical_manager/domain/usecases/save_signature.dart';
+import 'features/technical_manager/domain/usecases/watch_signature.dart';
+import 'features/technical_manager/presentation/bloc/my_signature_cubit.dart';
 import 'features/technical_manager/presentation/bloc/review_detail_cubit.dart';
 import 'features/technical_manager/presentation/bloc/review_queue_cubit.dart';
 import 'features/timesheet/data/datasources/timesheet_remote_datasource.dart';
@@ -224,7 +231,7 @@ void _registerCoordinator() {
 }
 
 void _registerProfile() {
-  getIt.registerFactory(() => ProfileStatsCubit(getIt(), getIt()));
+  getIt.registerFactory(() => ProfileStatsCubit(getIt(), getIt(), getIt(), getIt()));
 }
 
 void _registerInspector() {
@@ -250,6 +257,7 @@ void _registerCertificate() {
       () => CertificateRepositoryImpl(getIt(), getIt()),
     )
     ..registerLazySingleton(() => WatchCertificate(getIt()))
+    ..registerLazySingleton(() => WatchReviewedCertificates(getIt()))
     ..registerLazySingleton(() => SaveCertificateDraft(getIt()))
     ..registerLazySingleton(() => SubmitCertificate(getIt()))
     ..registerLazySingleton(() => ApproveCertificate(getIt()))
@@ -267,15 +275,23 @@ void _registerCertificate() {
 
 void _registerTechnicalManager() {
   getIt
-    ..registerFactory(() => ReviewQueueCubit(getIt(), getIt()))
+    ..registerLazySingleton(SignatureRemoteDataSource.new)
+    ..registerLazySingleton<SignatureRepository>(() => SignatureRepositoryImpl(getIt()))
+    ..registerLazySingleton(() => WatchSignature(getIt()))
+    ..registerLazySingleton(() => SaveSignature(getIt()))
+    ..registerFactory(() => MySignatureCubit(getIt(), getIt()))
+    ..registerFactory(() => ReviewQueueCubit(getIt(), getIt(), getIt()))
     ..registerFactoryParam<ReviewDetailCubit, InspectionRequest, String>(
       (request, reviewerName) => ReviewDetailCubit(
         request: request,
         reviewerName: reviewerName,
+        managerId: getIt<AuthCubit>().user?.id ?? '',
         watchCertificate: getIt(),
         getClientDetail: getIt(),
         approveCertificate: getIt(),
         returnCertificate: getIt(),
+        watchSignature: getIt(),
+        saveSignature: getIt(),
       ),
     );
 }

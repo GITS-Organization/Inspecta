@@ -58,7 +58,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signInRoleHint =>
-      'You\'ll go straight to your own screens — supervisor, coordinator, inspector or technical manager.';
+      'You\'ll go straight to your own screens — coordinator, inspector or technical manager.';
 
   @override
   String get noAccount => 'No account? Ask your admin to add you.';
@@ -238,9 +238,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noSignatureLabel => 'No signature added yet';
 
   @override
-  String get licenseNumberLabel => 'License no.';
-
-  @override
   String get accountSectionTitle => 'Account';
 
   @override
@@ -264,9 +261,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get roleSupervisor => 'Supervisor';
-
-  @override
   String get roleCoordinator => 'Coordinator';
 
   @override
@@ -277,9 +271,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get roleAdmin => 'Admin';
-
-  @override
-  String get homeSupervisor => 'Requests inbox';
 
   @override
   String get homeCoordinator => 'Ready to assign';
@@ -661,9 +652,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get quotationsTitle => 'Quotations';
-
-  @override
-  String get quotationsSupervisorLabel => 'Supervisor';
 
   @override
   String get filter => 'Filter';
@@ -1135,6 +1123,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navInspectors => 'Inspectors';
 
   @override
+  String get navMore => 'More';
+
+  @override
   String get statUnassigned => 'Unassigned';
 
   @override
@@ -1448,9 +1439,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get examinationDateLabel => 'Examination date';
 
   @override
-  String get lastExaminationDateLabel => 'Last examination date';
-
-  @override
   String get nextExaminationDateLabel => 'Next examination date';
 
   @override
@@ -1534,7 +1522,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get defectDescriptionHint => 'Leave empty if there is none';
 
   @override
-  String get describeDefectRequired => 'Describe the defect (required)';
+  String get defectsOptionalSubtitle =>
+      'Optional — only if something was found';
 
   @override
   String get existingDangerLabel =>
@@ -1753,16 +1742,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearAction => 'Clear';
 
   @override
-  String get fullNameLabel => 'Full name';
+  String get savedSignatureTitle => 'Your signature';
 
   @override
-  String get fullNameHint => 'Eng. Your name';
+  String get savedSignatureHint =>
+      'Used on every certificate you approve. Change it in your Profile.';
 
   @override
-  String get licenseNoLabel => 'License no.';
+  String get rememberSignatureLabel => 'Remember my signature for next time';
 
   @override
-  String get licenseNoHint => 'License number';
+  String get signatureSheetTitle => 'Draw your signature';
+
+  @override
+  String get signatureSheetHint =>
+      'Saved to your profile and used every time you approve a certificate.';
 
   @override
   String get sendSignedPdfToLabel => 'Send signed PDF to';
@@ -1775,7 +1769,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get approveRequirementsHint =>
-      'Sign above and fill in your name, license and a valid email to approve.';
+      'Add your signature and a valid email to approve.';
 
   @override
   String get confirmApproveTitle => 'Approve this certificate?';

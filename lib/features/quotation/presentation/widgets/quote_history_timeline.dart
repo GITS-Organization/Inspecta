@@ -15,7 +15,7 @@ import '../../domain/entities/reply_type.dart';
 /// The quote detail's negotiation history: a vertical timeline from the
 /// request landing to whatever's next — every version sent and the
 /// client's answer to each, ending in a "your response" prompt when it's
-/// the supervisor's turn to act.
+/// the coordinator's turn to act.
 class QuoteHistoryTimeline extends StatelessWidget {
   final InspectionRequest? request;
 
@@ -30,7 +30,7 @@ class QuoteHistoryTimeline extends StatelessWidget {
     final dateFormat = DateFormat.yMMMd(Localizations.localeOf(context).languageCode);
     final chronological = versions.reversed.toList();
     final latest = versions.isEmpty ? null : versions.first;
-    final awaitingSupervisor = latest?.status == QuotationStatus.countered;
+    final awaitingCoordinator = latest?.status == QuotationStatus.countered;
 
     final steps = <_Step>[
       if (request != null) _requestReceivedStep(t, dateFormat, request!),
@@ -38,7 +38,7 @@ class QuoteHistoryTimeline extends StatelessWidget {
         _sentStep(t, dateFormat, version),
         if (version.clientResponseOutcome != null) _responseStep(t, dateFormat, version),
       ],
-      if (awaitingSupervisor) _yourResponseStep(t),
+      if (awaitingCoordinator) _yourResponseStep(t),
     ];
 
     return Container(

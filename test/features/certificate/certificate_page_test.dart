@@ -35,6 +35,9 @@ class FakeCertificateRepository implements CertificateRepository {
   }
 
   @override
+  Stream<List<Certificate>> watchReviewedSince(DateTime since) => const Stream.empty();
+
+  @override
   Future<void> saveDraft(Certificate certificate) async {
     stored = certificate;
     controller.add(certificate);
@@ -179,14 +182,10 @@ void main() {
     }
     expect(tester.widget<FilledButton>(submitButton()).onPressed, isNull);
 
-    // Defects: a danger needs a description, a "future" one needs a date too.
-    await answer(tester, CertQuestion.existingDanger, 'Yes');
-    await answer(tester, CertQuestion.futureDanger, 'No');
-    expect(find.text('Describe the defect (required)'), findsOneWidget);
-    await tester.enterText(textField(CertText.defectDescription), 'Cracked relief valve');
-    await tester.pumpAndSettle();
-    expect(find.text('Describe the defect (required)'), findsNothing);
-    await answer(tester, CertQuestion.existingDanger, 'No');
+    // Defects are optional: nothing in that section was touched, and the
+    // only thing still missing is the conclusion.
+    expect(find.text('Optional — only if something was found'), findsOneWidget);
+    expect(find.textContaining('(required)'), findsNothing);
 
     // Conclusion.
     expect(tester.widget<FilledButton>(submitButton()).onPressed, isNull);
@@ -205,8 +204,53 @@ void main() {
     expect(submitted.functionCheck, ChecklistAnswer.pass);
     expect(submitted.finalResult, CertificateResult.safeToOperate);
     expect(submitted.answerOf(CertQuestion.firstExamination), isFalse);
+    expect(submitted.answerOf(CertQuestion.existingDanger), isNull);
+    expect(submitted.answerOf(CertQuestion.futureDanger), isNull);
     expect(submitted.text(CertText.preparedByName), 'Anas Hegazi');
     expect(submitted.isReadyToSubmit, isTrue);
+  });
+
+  test('the 6-month and 12-month interval answers are always opposites', () async {
+    final cubit = CertificateCubit(
+      request: request,
+      inspector: inspector,
+      watchCertificate: WatchCertificate(repo),
+      saveDraft: SaveCertificateDraft(repo),
+      submitCertificate: SubmitCertificate(repo),
+    )..start();
+    Future<void> settle() => Future<void>.delayed(Duration.zero);
+    bool? answer(String question) => cubit.state.certificate!.answerOf(question);
+    await settle();
+
+    cubit.setAnswer(CertQuestion.within6Months, true);
+    await settle();
+    expect(answer(CertQuestion.within6Months), isTrue);
+    expect(answer(CertQuestion.within12Months), isFalse);
+
+    cubit.setAnswer(CertQuestion.within12Months, true);
+    await settle();
+    expect(answer(CertQuestion.within12Months), isTrue);
+    expect(answer(CertQuestion.within6Months), isFalse);
+
+    // And the other way round: a no on one is a yes on the other.
+    cubit.setAnswer(CertQuestion.within12Months, false);
+    await settle();
+    expect(answer(CertQuestion.within6Months), isTrue);
+    cubit.setAnswer(CertQuestion.within6Months, false);
+    await settle();
+    expect(answer(CertQuestion.within12Months), isTrue);
+
+    // The other two questions in that block are independent.
+    cubit.setAnswer(CertQuestion.examinationScheme, true);
+    await settle();
+    expect(answer(CertQuestion.within12Months), isTrue);
+    expect(answer(CertQuestion.exceptionalCircumstances), isNull);
+
+    // What was picked is what was saved.
+    expect(repo.stored!.answerOf(CertQuestion.within6Months), isFalse);
+    expect(repo.stored!.answerOf(CertQuestion.within12Months), isTrue);
+
+    await cubit.close();
   });
 
   test("moving the examination date moves the suggested next date with it, unless it was changed", () async {
