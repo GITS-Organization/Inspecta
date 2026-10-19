@@ -52,4 +52,10 @@ Worth confirming before launch:
 
 ## Before it goes public
 
-`canonical`, `og:image` and a `sitemap.xml` need the final domain. Add a `hosting` entry to `firebase.json` (or any host) when you are ready to publish; nothing here deploys itself.
+It is live at **https://inspecta-68798.web.app** (Firebase Hosting, `hosting` block in `firebase.json`, public dir `website/`). Redeploy after any change with:
+
+```bash
+firebase deploy --only hosting
+```
+
+`canonical`, `og:image` and a `sitemap.xml` still need the final domain; connect a custom domain under Hosting in the Firebase console when you have one.
