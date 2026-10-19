@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-ar="Inspecta | إدارة الفحص الرقمية، من الطلب إلى الشهادة الموقّعة">Inspecta | Digital inspection management, from request to signed certificate</title>
+<meta name="description" content="Inspecta digitizes equipment inspection workflows: client requests, quotations, inspector scheduling, guided digital examination reports, technical review and signed certificates. English and Arabic." data-ar-content="يرقمن Inspecta سير عمل فحص المعدات: طلبات العملاء وعروض الأسعار وجدولة المفتشين وتقارير الفحص الرقمية الموجّهة والمراجعة الفنية والشهادات الموقّعة. بالعربية والإنجليزية.">
+<meta name="theme-color" content="#2563EB">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Inspecta">
+<meta property="og:title" content="Inspecta | Digital inspection management">
+<meta property="og:description" content="From a client's request to a signed certificate, one job record across supervisors, coordinators, inspectors and technical managers.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/icon-192.png">
+<link rel="preload" href="assets/fonts/inter-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="stylesheet" href="assets/css/app-ui.css">
+<script>document.documentElement.className = 'js';</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Inspecta",
+  "applicationCategory": "BusinessApplication",
+  "description": "Inspection-management app that carries an equipment-inspection job from client request and quotation through inspector assignment, a guided digital examination report, technical review and signature, to a certificate recorded as sent.",
+  "inLanguage": ["en", "ar"],
+  "featureList": [
+    "Request intake and versioned quotations",
+    "Inspector scheduling and assignment",
+    "Guided digital Report of Thorough Examination with PDF output",
+    "Technical manager review, on-screen signature and return with reason",
+    "Client and equipment records",
+    "Timesheets with approval",
+    "Role-based access enforced by server-side rules",
+    "English and Arabic with right-to-left layout"
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main" data-ar="انتقل إلى المحتوى">Skip to content</a>
+
+<!-- Icon sprite: 24x24, stroke-based -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-mark" viewBox="0 0 512 512"><g fill="none" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"><path d="M339.8 162.3A121 121 0 1 0 347.6 340.6"/><path d="M200 254l43 44L383 160"/></g></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13l2.5-7h13L21 13v6H3z"/><path d="M3 13h5l1.5 2.5h5L16 13h5"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 5.2a3.2 3.2 0 010 5.6M18 14.2c2 .7 3.5 2.6 3.5 5.8"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20c0-4 3.4-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-clip" viewBox="0 0 24 24"><rect x="5" y="4.5" width="14" height="17" rx="2.5"/><path d="M9 4.5V3h6v1.5M9 13l2.2 2.2L15.5 11"/></symbol>
+    <symbol id="i-badge" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.6 2.6L16 9.5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 17v-6a6 6 0 1112 0v6l1.5 2h-15z"/><path d="M10 21h4"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l1-4L16.5 4.5a2 2 0 012.8 2.8L8 19z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 017 0v2.5"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3.2 3 3.2 15 0 18M12 3c-3.2 3-3.2 15 0 18"/></symbol>
+    <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 15h1.5a1.5 1.5 0 000-3H9v5M13.5 17v-5h1.2a2.5 2.5 0 010 5z"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.4v.2"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-6h4v6"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.6-.8-1.5-1.2-2.5-1.2-1.4 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1.1 2-2.5 2c-1 0-1.9-.4-2.5-1.2M12 6.5V8M12 16v1.5"/></symbol>
+    <symbol id="i-return" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3L3 10.5l7 2.5 2.5 7z"/><path d="M10 13L21 3"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5L15.5 10"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 5h12l-2 4 2 4H5"/></symbol>
+    <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.5 6.5a4 4 0 005 5L20.5 12.5l-8 8a2 2 0 01-2.8 0l-6-6a2 2 0 010-2.8l8-8z"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-sample" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6.5L5 18.5A2 2 0 006.8 21.5h10.4A2 2 0 0019 18.5l-5-9V3"/><path d="M7.5 15h9"/></symbol>
+  </defs>
+</svg>
+
+<header class="site-header" id="top">
+  <div class="wrap header-in">
+    <a class="brand" href="#home" aria-label="Inspecta" data-ar-aria-label="Inspecta، الصفحة الرئيسية">
+      <svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="currentColor" class="brand-tile"/><g fill="none" stroke="var(--mark-ink)" stroke-width="33" stroke-linecap="round" stroke-linejoin="round"><path d="M339.8 162.3A121 121 0 1 0 347.6 340.6"/><path d="M200 254l43 44L383 160"/></g></svg>
+      <span class="brand-name">Inspecta</span>
+    </a>
+
+    <nav class="nav" id="site-nav" aria-label="Primary" data-ar-aria-label="التنقل الرئيسي">
+      <ul class="nav-list">
+        <li><a href="#home" data-ar="الرئيسية">Home</a></li>
+        <li><a href="#solutions" data-ar="الحلول">Solutions</a></li>
+        <li><a href="#features" data-ar="المزايا">Features</a></li>
+        <li><a href="#how-it-works" data-ar="كيف يعمل">How It Works</a></li>
+        <li><a href="#industries" data-ar="القطاعات">Industries</a></li>
+        <li><a href="#about" data-ar="من نحن">About</a></li>
+        <li><a href="#contact" data-ar="تواصل معنا">Contact</a></li>
+      </ul>
+      <a class="btn btn-primary nav-cta" href="#contact" data-open-form="demo" data-ar="اطلب عرضًا تجريبيًا">Request a Demo</a>
+    </nav>
+
+    <div class="header-actions">
+      <button class="lang-toggle" type="button" data-lang-toggle lang="ar" aria-label="Switch language to Arabic">
+        <svg class="ico" aria-hidden="true"><use href="#i-globe"/></svg><span data-lang-label>العربية</span>
+      </button>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Menu" data-ar-aria-label="القائمة">
+        <svg class="ico ico-open" aria-hidden="true"><use href="#i-menu"/></svg>
+        <svg class="ico ico-close" aria-hidden="true"><use href="#i-x"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ============ HERO ============ -->
+<section class="hero" id="home" aria-labelledby="hero-title">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <h1 id="hero-title" class="hero-title">
+        <span class="hl" data-ar="فحوصات أذكى.">Smarter Inspections.</span>
+        <span class="hl" data-ar="قرارات أفضل.">Better Decisions.</span>
+        <span class="hl hl-accent" data-ar="تحكّم أكبر.">Greater Control.</span>
+      </h1>
+      <p class="hero-lede" data-ar="يساعد Inspecta المؤسسات على رقمنة سير عمل الفحص، وإدارة الملاحظات، وتنظيم سجلات الفحص، والحصول على رؤية أوضح للأنشطة التشغيلية عبر منصة رقمية موحّدة.">Inspecta helps organizations digitize inspection workflows, manage findings, organize inspection records, and gain better visibility into operational activities through a centralized digital platform.</p>
+      <div class="hero-actions">
+        <a class="btn btn-light btn-lg" href="#explorer"><span data-ar="استكشف Inspecta">Explore Inspecta</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <a class="btn btn-outline-light btn-lg" href="#contact" data-open-form="demo" data-ar="اطلب عرضًا تجريبيًا">Request a Demo</a>
+      </div>
+      <div class="hero-verdicts">
+        <p data-ar="تنتهي كل شهادة بإحدى ثلاث نتائج:">Every certificate ends in one of three results:</p>
+        <ul class="hero-tags">
+          <li class="tag tag--safe"><span class="tag-hole"></span><span data-ar="آمن للتشغيل">Safe to operate</span></li>
+          <li class="tag tag--cond"><span class="tag-hole"></span><span data-ar="آمن بشروط">Safe with conditions</span></li>
+          <li class="tag tag--bad"><span class="tag-hole"></span><span data-ar="غير آمن — خارج الخدمة">Not safe — out of service</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="hero-stage" aria-hidden="true">
+      <div class="hero-device hero-device--back"><div class="device" data-hero-screen="assign"><div class="device-screen"></div></div></div>
+      <div class="hero-device hero-device--front"><div class="device" data-hero-screen="report"><div class="device-screen"></div></div></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <p class="hero-sample"><svg class="ico" aria-hidden="true"><use href="#i-sample"/></svg><span data-ar="الشاشات المعروضة ببيانات تجريبية وعملاء وهميين.">Screens shown with sample data and fictional clients.</span></p>
+    <ul class="hero-facts">
+      <li><strong data-ar="من الطلب إلى الشهادة الموقّعة">From request to signed certificate</strong><span data-ar="سجل واحد للمهمة عبر أربعة أدوار">One job record across four roles</span></li>
+      <li><strong data-ar="العربية والإنجليزية">English and Arabic</strong><span data-ar="مع تخطيط كامل من اليمين إلى اليسار">with full right-to-left layout</span></li>
+      <li><strong data-ar="مصمم للهاتف أولًا">Phone-first</strong><span data-ar="ويعمل أيضًا في المتصفح">and runs in the browser too</span></li>
+      <li><strong data-ar="صلاحيات حسب الدور">Role-based access</strong><span data-ar="تُفرض عبر قواعد على الخادم">enforced by server-side rules</span></li>
+    </ul>
+  </div>
+  <div class="ruler" aria-hidden="true"></div>
+</section>
+
+<!-- ============ PROBLEMS ============ -->
+<section class="section problems" id="problems" aria-labelledby="problems-title">
+  <div class="wrap">
+    <header class="sec-head">
+      <h2 id="problems-title" data-ar="يتعثر عمل الفحص في الفجوات بين الفرق.">Inspection work breaks down in the gaps between people.</h2>
+      <p data-ar="الورق وجداول البيانات ومحادثات الرسائل، كلٌّ منها يحتفظ بجزء من المهمة. يحتفظ Inspecta بسجل واحد تعمل منه جميع الأدوار.">Paper, spreadsheets and chat threads each hold a piece of the job. Inspecta keeps one record that every role works from.</p>
+    </header>
+
+    <div class="ledger-head" aria-hidden="true">
+      <span data-ar="التحدّي">The challenge</span>
+      <span data-ar="كيف يعالجه Inspecta">How Inspecta handles it</span>
+    </div>
+    <ol class="ledger">
+      <li class="ledger-row">
+        <div class="ledger-problem"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg><h3 data-ar="السجلات الورقية للفحص">Paper-based inspection records</h3></div>
+        <div class="ledger-solution">
+          <p data-ar="يُكمل المفتش تقريرًا رقميًا موجّهًا: تفاصيل الفحص، وبيانات المعدة، وأسئلة الفحص، والعيوب، والخلاصة. يُحفظ تلقائيًا كمسودة ويُحوَّل إلى ملف PDF.">Inspectors complete a guided digital report: examination details, item information, examination questions, defects and conclusion. It autosaves as a draft and renders to a PDF.</p>
+          <p class="ledger-benefit"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="لا إعادة كتابة من الورق، ونموذج موحّد في كل مرة.">No re-typing from paper, and the same form every time.</span></p>
+          <a class="chip-link" href="#explorer" data-go-screen="report"><span data-ar="شاهد تقرير الفحص">See the examination report</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+      </li>
+      <li class="ledger-row">
+        <div class="ledger-problem"><svg class="ico" aria-hidden="true"><use href="#i-cal"/></svg><h3 data-ar="جداول ومهام فحص غير منظمة">Disorganized schedules and assignments</h3></div>
+        <div class="ledger-solution">
+          <p data-ar="يرى المنسق العروض المقبولة مرتبة حسب تاريخ الاستحقاق، ويحدد التاريخ ووقت البدء ويعيّن المفتش. تُبرز علامة «الأنسب» المفتشين المؤهلين للمعدة، وتظهر حالات المتاح والمشغول والإجازة.">The coordinator sees accepted jobs by due date, picks a date and start time, and assigns an inspector. A Best match tag marks inspectors qualified for the equipment, and free, busy and on-leave states are visible.</p>
+          <p class="ledger-benefit"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="تُتخذ قرارات التعيين مع مراعاة التوافر والمؤهلات.">Assignments are made with availability and qualifications in view.</span></p>
+          <a class="chip-link" href="#explorer" data-go-screen="assign"><span data-ar="شاهد التعيين">See assignment</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+      </li>
+      <li class="ledger-row">
+        <div class="ledger-problem"><svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg><h3 data-ar="تأخر الإبلاغ عن العيوب">Delayed reporting of defects</h3></div>
+        <div class="ledger-solution">
+          <p data-ar="تُسجَّل العيوب وأعلام الخطر والإصلاحات المطلوبة في التقرير نفسه. وعند إرسال المفتش للتقرير تنتقل المهمة مباشرة إلى قائمة مراجعة المدير الفني.">Defects, danger flags and required repairs are recorded in the report itself. When the inspector submits, the job moves straight into the technical manager's review queue.</p>
+          <p class="ledger-benefit"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="تصل الملاحظات إلى المراجع لحظة إرسال المفتش للتقرير.">Findings reach the reviewer the moment the inspector submits.</span></p>
+          <a class="chip-link" href="#explorer" data-go-screen="review"><span data-ar="شاهد المراجعة والتوقيع">See review and sign</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+      </li>
+      <li class="ledger-row">
+        <div class="ledger-problem"><svg class="ico" aria-hidden="true"><use href="#i-eye"/></svg><h3 data-ar="رؤية محدودة لسير العمل">Limited visibility into progress</h3></div>
+        <div class="ledger-solution">
+          <p data-ar="تحمل كل مهمة حالة واحدة عبر دورة الحياة ذات الخطوات الست، مع سجل بمن غيّرها ومتى. وتعرض الشاشة الرئيسية لكل دور ما يحتاج إلى انتباه.">Every job carries one status across the six-step lifecycle, with a history of who changed it and when. Each role's home screen counts what needs attention.</p>
+          <p class="ledger-benefit"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="يعرف أي شخص موقع المهمة دون أن يسأل.">Anyone can see where a job stands without asking.</span></p>
+          <a class="chip-link" href="#explorer" data-go-screen="request"><span data-ar="شاهد دورة حياة المهمة">See the job lifecycle</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+      </li>
+      <li class="ledger-row">
+        <div class="ledger-problem"><svg class="ico" aria-hidden="true"><use href="#i-wrench"/></svg><h3 data-ar="متابعة تضيع في البريد">Follow-up that lives in email</h3></div>
+        <div class="ledger-solution">
+          <p data-ar="يسجل التقرير الإصلاح أو الاستبدال أو التعديل المطلوب، والتاريخ الذي يجب إصلاح الخطر المحتمل قبله. وتُوسم النتيجة المشروطة بعبارة «آمن بشروط (الإصلاح خلال 14 يومًا)»، ويُسجَّل تاريخ الفحص القادم.">The report records the repair, renewal or alteration required and the date a potential danger must be fixed by. A conditional result reads Safe with conditions (fix in 14 days), and the next examination date is recorded.</p>
+          <p class="ledger-benefit"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="مواعيد المتابعة مكتوبة في السجل الموقّع بدل أن تبقى في رسالة بريد.">Follow-up deadlines sit in the signed record instead of an email.</span></p>
+          <a class="chip-link" href="#explorer" data-go-screen="report"><span data-ar="شاهد قسم العيوب">See the defects section</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+      </li>
+      <li class="ledger-row">
+        <div class="ledger-problem"><svg class="ico" aria-hidden="true"><use href="#i-layers"/></svg><h3 data-ar="مستندات وسجلات متفرقة">Scattered documents and history</h3></div>
+        <div class="ledger-solution">
+          <p data-ar="تجتمع الطلبات وسجل عروض الأسعار وجهات اتصال العملاء والمعدات المسجّلة في مكان واحد، ويبحث كل دور في عمله بالعميل أو المعدة أو الرقم.">Requests, quotation history, client contacts and equipment on record sit in one place, and each role can search its own work by client, equipment or ID.</p>
+          <p class="ledger-benefit"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="ما تحتاجه من تاريخ العمل على بعد بحث.">The history you need is one search away.</span></p>
+          <a class="chip-link" href="#explorer" data-go-screen="clients"><span data-ar="شاهد العملاء">See clients</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+      </li>
+      <li class="ledger-row">
+        <div class="ledger-problem"><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg><h3 data-ar="إعداد التقارير يدويًا يستهلك الوقت">Time-consuming manual reporting</h3></div>
+        <div class="ledger-solution">
+          <p data-ar="يُولَّد ملف شهادة PDF مما أدخله المفتش. ويسجّل المفتشون الوقت وتكاليف النقل لكل مهمة ويُحتسب السعر من أجر الساعة، ثم يعتمد المنسق الإدخالات أو يعيدها.">The certificate PDF is generated from what the inspector entered. Inspectors log time and transport costs per task, the price is worked out from their hourly rate, and a coordinator approves or returns the entry.</p>
+          <p class="ledger-benefit"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="نسخ أقل بين المستندات، وتكاليف تُسجَّل أثناء العمل.">Less copying between documents, with costs recorded as the work happens.</span></p>
+          <a class="chip-link" href="#explorer" data-go-screen="timesheet"><span data-ar="شاهد سجل الساعات">See the timesheet</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============ SOLUTIONS ============ -->
+<section class="section solutions" id="solutions" aria-labelledby="solutions-title">
+  <div class="wrap">
+    <header class="sec-head sec-head--split">
+      <h2 id="solutions-title" data-ar="كل ما بين بريد العميل والشهادة الموقّعة.">Everything between the client's email and the signed certificate.</h2>
+      <p data-ar="ستة أجزاء في سير عمل واحد، لكلٍّ منها شاشاته وصلاحياته الخاصة بدوره.">Six parts of one workflow, each with its own screens and permissions for the role that owns it.</p>
+    </header>
+
+    <div class="bento">
+      <article class="solution s-requests">
+        <p class="role-label" data-ar="المشرف">Supervisor</p>
+        <h3 data-ar="الطلبات وعروض الأسعار">Requests and quotations</h3>
+        <p data-ar="حوّل رسائل العملاء والإدخالات اليدوية إلى طلبات منظمة، ثم سعّرها وأرسل إصدارات مرقّمة وسجّل العروض المضادة واحتفظ بسجل التفاوض كاملًا.">Turn client emails and manual entries into structured requests, then quote them. Send numbered quote versions, log counter-offers and keep the full negotiation history.</p>
+        <ul class="ticks">
+          <li data-ar="صندوق طلبات يبرز «الجديد» و«بحاجة إلى ردك»">Inbox that surfaces New and Needs your reply</li>
+          <li data-ar="إصدارات أسعار لها مدة صلاحية وانتهاء">Quote versions with validity and expiry</li>
+          <li data-ar="القبول يقفل السعر ويحيل المهمة إلى المنسق">Accepting locks the price and hands the job on</li>
+        </ul>
+        <div class="mini" data-frag="mini-quotes" aria-hidden="true"></div>
+        <a class="chip-link" href="#explorer" data-go-screen="quote"><span data-ar="شاهد التفاوض على السعر">See quote negotiation</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+
+      <article class="solution s-schedule">
+        <p class="role-label" data-ar="المنسق">Coordinator</p>
+        <h3 data-ar="الجدولة والتعيين">Scheduling and assignment</h3>
+        <p data-ar="قائمة بالعروض المقبولة حسب تاريخ الاستحقاق. اختر التاريخ ووقت البدء والمفتش، وشاهد من هو متاح أو مشغول أو في إجازة.">A queue of accepted quotations by due date. Pick the date, start time and inspector, and see who is free, busy or on leave.</p>
+        <ul class="ticks">
+          <li data-ar="علامة «الأنسب» حسب المؤهلات">Best match tag from qualifications</li>
+          <li data-ar="تنبيه بقرب انتهاء ترخيص المفتش">Warnings as an inspector's license nears expiry</li>
+        </ul>
+        <div class="mini" data-frag="mini-schedule" aria-hidden="true"></div>
+        <a class="chip-link" href="#explorer" data-go-screen="assign"><span data-ar="شاهد التعيين">See assignment</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+
+      <article class="solution s-exam">
+        <p class="role-label" data-ar="المفتش">Inspector</p>
+        <h3 data-ar="الفحص الرقمي">Digital examinations</h3>
+        <p data-ar="تقرير فحص شامل موجّه على خمس خطوات يُحفظ تلقائيًا، مع أسئلة الفحص والعيوب والإصلاحات المطلوبة والخلاصة، ومعاينة PDF قبل الإرسال.">A guided five-step Report of Thorough Examination that autosaves: examination questions, defects, required repairs and a conclusion, with a PDF preview before submitting.</p>
+        <ul class="ticks">
+          <li data-ar="قبول المهمة أو رفضها من الهاتف">Accept or decline a task from the phone</li>
+          <li data-ar="أعلام الخطر القائم والمحتمل">Existing and potential danger flags</li>
+        </ul>
+        <div class="mini" data-frag="mini-exam" aria-hidden="true"></div>
+        <a class="chip-link" href="#explorer" data-go-screen="report"><span data-ar="شاهد تقرير الفحص">See the examination report</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+
+      <article class="solution s-review">
+        <p class="role-label" data-ar="المدير الفني">Technical manager</p>
+        <h3 data-ar="المراجعة والشهادات الموقّعة">Review and signed certificates</h3>
+        <p data-ar="اقرأ الملخص وملف PDF الكامل، وأضف تعليقاتك، ووقّع على الشاشة واعتمد، أو أعد التقرير إلى المفتش مع بيان ما يجب تغييره. وتُسجَّل الشهادة المعتمدة كمرسلة إلى بريد الشهادات الخاص بالعميل.">Read the summary and the full PDF, add comments, sign on screen and approve, or return the report to the inspector with what needs to change. An approved certificate is recorded as sent to the client's certificates email.</p>
+        <div class="mini mini--tags" data-frag="mini-verdicts" aria-hidden="true"></div>
+        <a class="chip-link" href="#explorer" data-go-screen="review"><span data-ar="شاهد المراجعة والتوقيع">See review and sign</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+
+      <article class="solution s-clients">
+        <p class="role-label" data-ar="المشرف">Supervisor</p>
+        <h3 data-ar="العملاء والمعدات">Clients and equipment</h3>
+        <p data-ar="لكل عميل جهات اتصاله وبريد الشهادات والمعدات المسجّلة والمهام المفتوحة وما يستحق خلال 30 يومًا.">Each client keeps its contacts, certificates email, equipment on record, open jobs, and what falls due in the next 30 days.</p>
+        <div class="mini" data-frag="mini-clients" aria-hidden="true"></div>
+        <a class="chip-link" href="#explorer" data-go-screen="clients"><span data-ar="شاهد العملاء">See clients</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+
+      <article class="solution s-time">
+        <p class="role-label" data-ar="المفتش والمنسق">Inspector and coordinator</p>
+        <h3 data-ar="سجل الساعات والتكاليف">Timesheets and costs</h3>
+        <p data-ar="يسجّل المفتش صافي وقت العمل والأنشطة وتكاليف النقل لكل مهمة. يُحسب السعر من أجر الساعة، ويعتمد المنسق الإدخال أو يعيده، ويُقفل الإدخال المعتمد.">The inspector logs net working time, activities and transport costs for each task. The price comes from the hourly rate, the coordinator approves or returns the entry, and an approved entry locks.</p>
+        <div class="mini" data-frag="mini-time" aria-hidden="true"></div>
+        <a class="chip-link" href="#explorer" data-go-screen="timesheet"><span data-ar="شاهد سجل الساعات">See the timesheet</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EXPLORER ============ -->
+<section class="explorer" id="explorer" aria-labelledby="explorer-title">
+  <div class="wrap">
+    <header class="sec-head sec-head--light">
+      <h2 id="explorer-title" data-ar="تجوّل داخل التطبيق الحقيقي.">Walk through the real app.</h2>
+      <p data-ar="اختر شاشة لترى كيف يتعامل Inspecta معها. كل ما يظهر هنا بيانات تجريبية لعملاء وهميين، وليس سجلات فعلية.">Pick a screen to see how Inspecta handles it. Everything shown is sample data for fictional clients, not production records. The screens are the app's own, shown in a phone frame because Inspecta is built phone-first.</p>
+    </header>
+
+    <div class="xp" data-explorer>
+      <nav class="xp-list" aria-label="App screens" data-ar-aria-label="شاشات التطبيق">
+        <p class="xp-role" data-ar="المشرف">Supervisor</p>
+        <button type="button" class="xp-item" data-screen="inbox"><svg class="ico" aria-hidden="true"><use href="#i-inbox"/></svg><span data-ar="صندوق الطلبات">Requests inbox</span></button>
+        <button type="button" class="xp-item" data-screen="request"><svg class="ico" aria-hidden="true"><use href="#i-layers"/></svg><span data-ar="الطلب ودورة حياة المهمة">Request and job lifecycle</span></button>
+        <button type="button" class="xp-item" data-screen="quote"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg><span data-ar="التفاوض على السعر">Quote negotiation</span></button>
+        <button type="button" class="xp-item" data-screen="clients"><svg class="ico" aria-hidden="true"><use href="#i-users"/></svg><span data-ar="العملاء والمعدات">Clients and equipment</span></button>
+        <p class="xp-role" data-ar="المنسق">Coordinator</p>
+        <button type="button" class="xp-item" data-screen="assign"><svg class="ico" aria-hidden="true"><use href="#i-user"/></svg><span data-ar="تعيين مفتش">Assign an inspector</span></button>
+        <button type="button" class="xp-item" data-screen="schedule"><svg class="ico" aria-hidden="true"><use href="#i-cal"/></svg><span data-ar="جدول الفريق">Team schedule</span></button>
+        <p class="xp-role" data-ar="المفتش">Inspector</p>
+        <button type="button" class="xp-item" data-screen="tasks"><svg class="ico" aria-hidden="true"><use href="#i-clip"/></svg><span data-ar="مهامي">My tasks</span></button>
+        <button type="button" class="xp-item" data-screen="report"><svg class="ico" aria-hidden="true"><use href="#i-badge"/></svg><span data-ar="تقرير الفحص">Examination report</span></button>
+        <button type="button" class="xp-item" data-screen="timesheet"><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg><span data-ar="سجل الساعات">Timesheet</span></button>
+        <p class="xp-role" data-ar="المدير الفني">Technical manager</p>
+        <button type="button" class="xp-item" data-screen="review"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span data-ar="المراجعة والتوقيع">Review and sign</span></button>
+      </nav>
+
+      <div class="xp-stage">
+        <div class="device device--stage" data-stage-device>
+          <div class="device-screen" data-stage-screen role="group" aria-label="Sample screen" data-ar-aria-label="شاشة تجريبية"></div>
+        </div>
+        <p class="sample-note"><svg class="ico" aria-hidden="true"><use href="#i-sample"/></svg><span data-ar="بيانات تجريبية، عملاء وهميون">Sample data, fictional clients</span></p>
+      </div>
+
+      <div class="xp-info">
+        <div class="xp-panels" aria-live="polite">
+
+          <article class="xp-panel" data-panel="inbox">
+            <h3 data-ar="صندوق الطلبات">Requests inbox</h3>
+            <p class="xp-what" data-ar="يصل كل طلب من العملاء إلى صندوق واحد، سواء من البريد الإلكتروني أو بإدخال يدوي. تظهر الطلبات الجديدة وما ينتظر ردًا في الأعلى، ويمكنك البحث بالعميل أو المعدة أو الرقم.">Every client request lands in one inbox, whether it came from email or was entered by hand. New requests and anything waiting on a reply rise to the top, and you can search by client, equipment or ID.</p>
+            <dl class="xp-notes">
+              <div><dt data-ar="المشكلة">The problem</dt><dd data-ar="طلبات مدفونة في صندوق بريد مشترك، دون معرفة ما ينتظر وإلى متى.">Requests buried in a shared mailbox, with no sense of what is waiting or for how long.</dd></div>
+              <div><dt data-ar="ما تحصل عليه">What you get</dt><dd data-ar="قائمة واضحة: تُوسم الطلبات التي بقيت «جديدة» أكثر من 24 ساعة، ويظهر رد العميل من النظرة الأولى.">A clear queue: requests left in New for more than 24 hours are flagged, and a client reply is visible at a glance.</dd></div>
+            </dl>
+          </article>
+
+          <article class="xp-panel" data-panel="request">
+            <h3 data-ar="الطلب ودورة حياة المهمة">Request and job lifecycle</h3>
+            <p class="xp-what" data-ar="يعرض الطلب المفتوح العميل والموقع والتاريخ المفضل وملاحظات الوصول وبنود المعدات بسعتها وكميتها، إضافةً إلى متتبّع الخطوات الست: الطلب، التسعير، التعيين، الفحص، الشهادة، الإرسال. والبريد الأصلي على بُعد نقرة.">An open request shows the client, location, preferred date, access notes and equipment items with capacity and quantity, plus the six-step tracker: Request, Quote, Assign, Inspect, Certify, Sent. The original email is one tap away.</p>
+            <dl class="xp-notes">
+              <div><dt data-ar="المشكلة">The problem</dt><dd data-ar="تفاصيل المهمة مبعثرة في رسائل البريد، دون رؤية مشتركة لموقف المهمة.">Job details scattered across emails, with no shared view of where the job stands.</dd></div>
+              <div><dt data-ar="ما تحصل عليه">What you get</dt><dd data-ar="رؤية مشتركة واحدة للمهمة. ولا يمكن تسعير الطلب قبل استكمال العميل والمعدات والموقع، فلا تُبنى العروض على بيانات ناقصة.">One shared view of the job. A request cannot be quoted until the client, equipment and location are filled in, so quotes are not built on gaps.</dd></div>
+            </dl>
+          </article>
+
+          <article class="xp-panel" data-panel="quote">
+            <h3 data-ar="التفاوض على السعر">Quote negotiation</h3>
+            <p class="xp-what" data-ar="كل عرض سعر إصدار مرقّم لا يتغيّر وله مدة صلاحية. وعندما يقدّم العميل عرضًا مضادًا تسجّل سعره ثم تقبله أو ترسل إصدارًا جديدًا أو تحدّد العرض كمرفوض. القبول يقفل السعر ويحيل المهمة إلى المنسق.">Each quote is a numbered version that cannot be edited once sent, with a validity period. When a client counters, you log their price, then accept it, send a new version, or mark the quote declined. Accepting locks the price and hands the job to the coordinator.</p>
+            <dl class="xp-notes">
+              <div><dt data-ar="المشكلة">The problem</dt><dd data-ar="الأسعار والعروض المضادة مبعثرة بين ردود البريد، فلا أحد متأكد من الرقم المتفق عليه.">Prices and counter-offers scattered through email replies, so nobody is sure which number was agreed.</dd></div>
+              <div><dt data-ar="ما تحصل عليه">What you get</dt><dd data-ar="سجل تفاوض كامل وسعر واحد متفق عليه ومقفل. يُسجَّل التواصل مع العميل في التطبيق، بينما يجري عبر قناتك المعتادة.">A complete negotiation history and one agreed, locked price. The app records the exchange; the conversation with the client itself still happens over your usual channel.</dd></div>
+            </dl>
+          </article>
+
+          <article class="xp-panel" data-panel="clients">
+            <h3 data-ar="العملاء والمعدات">Clients and equipment</h3>
+            <p class="xp-what" data-ar="يحتفظ كل عميل بجهات اتصاله والعنوان الذي تُرسل إليه الشهادات والمعدات المسجّلة والمهام المفتوحة وما يستحق خلال 30 يومًا. ويُنبَّه إلى أي مرسل جديد لم يُربط بعميل بعد لتربطه.">Each client keeps its contacts, the address certificates are sent to, equipment on record, open jobs, and anything falling due in the next 30 days. A new sender not yet matched to a client is flagged so you can match it.</p>
+            <dl class="xp-notes">
+              <div><dt data-ar="المشكلة">The problem</dt><dd data-ar="بيانات العملاء وقوائم المعدات محفوظة في جداول شخصية.">Client details and equipment lists kept in personal spreadsheets.</dd></div>
+              <div><dt data-ar="ما تحصل عليه">What you get</dt><dd data-ar="يعمل الجميع من سجل العميل نفسه، ويسهل اكتشاف المعدات التي يقترب موعد فحصها.">Everyone works from the same client record, and equipment coming due is easy to spot.</dd></div>
+            </dl>
+          </article>
+
+          <article class="xp-panel" data-panel="assign">
+            <h3 data-ar="تعيين مفتش">Assign an inspector</h3>
+            <p class="xp-what" data-ar="تصطف العروض المقبولة حسب تاريخ الاستحقاق. اختر الموعد ثم المفتش وعيّنه. يحمل المفتشون الذين تغطي مؤهلاتهم المعدة علامة «الأنسب»، ويظهر حمل كل منهم، ولا يكون من في إجازة هو الاختيار الافتراضي أبدًا.">Accepted quotations queue up by due date. Pick a time, choose an inspector and assign. Inspectors whose qualifications cover the equipment carry a Best match tag, their load is shown, and someone on leave is never the default pick.</p>
+            <dl class="xp-notes">
+              <div><dt data-ar="المشكلة">The problem</dt><dd data-ar="التعيين بالمكالمات والذاكرة، فيُهدر الوقت وتقع التعارضات.">Dispatching by phone call and memory, which wastes time and invites clashes.</dd></div>
+              <div><dt data-ar="ما تحصل عليه">What you get</dt><dd data-ar="تعيين في بضع نقرات مع رؤية للمؤهلات والتوافر، ويرى المفتش المهمة الجديدة في تطبيقه.">Assignment in a few taps with qualifications and availability in view, and the inspector sees it as a new task in their app.</dd></div>
+            </dl>
+          </article>
+
+          <article class="xp-panel" data-panel="schedule">
+            <h3 data-ar="جدول الفريق">Team schedule</h3>
+            <p class="xp-what" data-ar="جدول يومي لكل مفتش على محور زمني: المهام المحجوزة والمتفرغ طوال اليوم ومن في إجازة. تنقّل بين الأيام لترى الحمل قبل أن تعيّن.">A day view per inspector on a time axis: booked tasks, who is free all day, who is on leave. Move between days to see the load before you assign.</p>
+            <dl class="xp-notes">
+              <div><dt data-ar="المشكلة">The problem</dt><dd data-ar="لا طريقة سريعة لمعرفة من يملك وقتًا فارغًا هذا الأسبوع.">No quick way to know who has free time this week.</dd></div>
+              <div><dt data-ar="ما تحصل عليه">What you get</dt><dd data-ar="رؤية للفريق كله في شاشة واحدة، فتُوزَّع المهام بوعي بالحمل.">The whole team on one screen, so work is spread with the load in view.</dd></div>
+            </dl>
+          </article>
+
+          <article class="xp-panel" data-panel="tasks">
+            <h3 data-ar="مهامي">My tasks</h3>
+            <p class="xp-what" data-ar="يرى المفتش مهام اليوم على شريط أيام، مع لافتة للمهمة الجديدة من المنسق وأزرار القبول والرفض. وتنقله «متابعة الشهادة» إلى حيث توقف.">The inspector sees today's tasks on a day strip, with a banner for a new task from the coordinator and Accept and Decline buttons. Continue certificate takes them back to where they left off.</p>
+            <dl class="xp-notes">
+              <div><dt data-ar="المشكلة">The problem</dt><dd data-ar="لا يعرف المفتش جدول يومه إلا بمكالمة أو رسالة.">Inspectors learn their day through a call or a message.</dd></div>
+              <div><dt data-ar="ما تحصل عليه">What you get</dt><dd data-ar="قائمة مهام واضحة في الهاتف، ويعرف المنسق ما إذا قُبلت المهمة.">A clear task list on the phone, and the coordinator can see whether a task was accepted.</dd></div>
+            </dl>
+          </article>
+
+          <article class="xp-panel" data-panel="report">
+            <h3 data-ar="تقرير الفحص">Examination report</h3>
+            <p class="xp-what" data-ar="تقرير الفحص الشامل على خمس خطوات: تفاصيل الفحص، وبيانات المعدة، وأسئلة الفحص، والعيوب والإجراءات التصحيحية، والخلاصة. يُحفظ تلقائيًا، ويمكن معاينة ملف PDF قبل الإرسال إلى المدير الفني.">The Report of Thorough Examination runs in five steps: examination details, item information, examination questions, defects and remedial action, and conclusion. It autosaves, and the PDF can be previewed before it is submitted to the technical manager.</p>
+            <dl class="xp-notes">
+              <div><dt data-ar="المشكلة">The problem</dt><dd data-ar="نماذج ورقية أو ملفات مكتبية تُعاد كتابتها لاحقًا، بصياغات مختلفة لكل مفتش.">Paper forms or office files retyped later, worded differently by each inspector.</dd></div>
+              <div><dt data-ar="ما تحصل عليه">What you get</dt><dd data-ar="نموذج واحد موحّد يملؤه المفتش في الموقع، وملف PDF جاهز منه. (يصدر ملف PDF حاليًا بالإنجليزية.)">One consistent form filled in on site, and a PDF produced from it. (The PDF is currently issued in English.)</dd></div>
+            </dl>
+          </article>
+
+          <article class="xp-panel" data-panel="timesheet">
+            <h3 data-ar="سجل الساعات">Timesheet</h3>
+            <p class="xp-what" data-ar="لكل مهمة مقبولة يسجّل المفتش الوقت المنقضي وكيف قُضي، وتكاليف النقل الداخلي والخارجي. يُحسب صافي وقت العمل مطروحًا منه الاستراحة غير المدفوعة، ويُحسب السعر من أجر ساعته.">For each accepted task the inspector logs time and how it was spent, plus internal and external transport costs. Net working time excludes unpaid breaks, and the price is worked out from their hourly rate.</p>
+            <dl class="xp-notes">
+              <div><dt data-ar="المشكلة">The problem</dt><dd data-ar="تُجمع الساعات والمصروفات في نهاية الشهر من الذاكرة.">Hours and expenses reconstructed from memory at month end.</dd></div>
+              <div><dt data-ar="ما تحصل عليه">What you get</dt><dd data-ar="تُسجَّل التكاليف بعد المهمة مباشرة، ويعتمدها المنسق، ويُقفل ما اعتُمد. تُفرض قاعدة السعر على الخادم.">Costs are logged straight after the task, a coordinator approves them, and approved entries lock. The pricing rule is enforced on the server.</dd></div>
+            </dl>
+          </article>
+
+          <article class="xp-panel" data-panel="review">
+            <h3 data-ar="المراجعة والتوقيع">Review and sign</h3>
+            <p class="xp-what" data-ar="يفتح المدير الفني الشهادة المقدَّمة، ويقرأ الملخص والنتيجة (آمن، آمن بشروط، غير آمن)، ويعرض ملف PDF الكامل، ويضيف تعليقاته، ثم يوقّع على الشاشة ويعتمد. أو يعيدها إلى المفتش مع بيان ما يجب تغييره.">The technical manager opens a submitted certificate, reads the summary and result (safe, safe with conditions, not safe), views the full PDF, adds comments, then signs on screen and approves. Or returns it to the inspector with what needs to change.</p>
+            <dl class="xp-notes">
+              <div><dt data-ar="المشكلة">The problem</dt><dd data-ar="شهادات تُطبع وتُوقَّع وتُمسح ضوئيًا، وتعود للتصحيح بلا سبب مكتوب.">Certificates printed, signed and scanned, then sent back for fixes with no written reason.</dd></div>
+              <div><dt data-ar="ما تحصل عليه">What you get</dt><dd data-ar="اعتماد بتوقيع على الشاشة، أو إعادة بسبب موثّق. وتُسجَّل الشهادة المعتمدة كمرسلة إلى بريد الشهادات الخاص بالعميل (يظل إرسال البريد نفسه خارج التطبيق).">Approval with an on-screen signature, or a return with a documented reason. An approved certificate is recorded as sent to the client's certificates email; the email itself is sent outside the app.</dd></div>
+            </dl>
+          </article>
+
+        </div>
+
+        <div class="xp-controls">
+          <button type="button" class="btn btn-ghost-light btn-sm" data-xp-prev><svg class="ico ico-back" aria-hidden="true"><use href="#i-arrow"/></svg><span data-ar="السابق">Previous</span></button>
+          <span class="xp-count" data-xp-count></span>
+          <button type="button" class="btn btn-light btn-sm" data-xp-next><span data-ar="التالي">Next screen</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="ruler ruler--dark" aria-hidden="true"></div>
+</section>
+
+<!-- ============ FEATURES ============ -->
+<section class="section features" id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <header class="sec-head">
+      <h2 id="features-title" data-ar="ما يميّز Inspecta.">What sets Inspecta apart.</h2>
+      <p data-ar="نبدأ بالأمور الثلاثة التي تغيّر طريقة عمل الفريق أكثر من غيرها، ثم الباقي.">The three things that change how a team works most, first. The rest follow.</p>
+    </header>
+
+    <div class="lead-features">
+      <article class="lead">
+        <div class="lead-copy">
+          <h3 data-ar="سجل واحد للمهمة، بست خطوات">One job record, six steps</h3>
+          <p data-ar="تحمل المهمة حالتها وسجل تغييراتها ومستنداتها من أول رسالة بريد إلى الشهادة المرسلة، فلا يعيد أحد إدخال البيانات بين الفرق.">A job carries its status, change history and documents from the first email to the sent certificate, so nobody re-enters data between teams.</p>
+          <p class="lead-why"><strong data-ar="لماذا يهم:">Why it matters:</strong> <span data-ar="يُجيب أي شخص عن «أين وصلت هذه المهمة؟» من الشاشة نفسها.">anyone can answer “where is this job?” from the same screen.</span></p>
+        </div>
+        <div class="lead-visual" data-frag="lifecycle" aria-hidden="true"></div>
+      </article>
+
+      <article class="lead lead--flip">
+        <div class="lead-copy">
+          <h3 data-ar="تقرير فحص رقمي موجّه">A guided digital examination report</h3>
+          <p data-ar="يتبع التقرير هيكل «تقرير الفحص الشامل»: أسئلة بنعم/لا، وأعلام للخطر القائم والمحتمل، والإصلاح المطلوب، ونتيجة من ثلاث درجات. يُحفظ أثناء العمل ويُصدَّر بصيغة PDF.">The report follows the structure of a Report of Thorough Examination: yes or no questions, flags for existing and potential danger, the repair required, and a three-level result. It saves as the inspector works and exports as a PDF.</p>
+          <p class="lead-why"><strong data-ar="لماذا يهم:">Why it matters:</strong> <span data-ar="كل تقرير يُكتب بالبنية نفسها، فيسهل مراجعته ومقارنته.">every report is written to the same structure, so it is quicker to review and easier to compare.</span></p>
+        </div>
+        <div class="lead-visual" data-frag="questions" aria-hidden="true"></div>
+      </article>
+
+      <article class="lead">
+        <div class="lead-copy">
+          <h3 data-ar="مراجعة وتوقيع، أو إعادة بسبب مكتوب">Review and sign, or return with a reason</h3>
+          <p data-ar="لا تصل الشهادة إلى العميل قبل أن يراجعها المدير الفني. يوقّع على الشاشة باسمه ورقم ترخيصه ثم يعتمد، أو يعيدها إلى المفتش مع بيان ما يجب إصلاحه.">A certificate does not go to the client before the technical manager has reviewed it. They sign on screen with their name and license number and approve, or return it to the inspector with what must be fixed.</p>
+          <p class="lead-why"><strong data-ar="لماذا يهم:">Why it matters:</strong> <span data-ar="خطوة مراجعة واضحة تُسجَّل فيها هوية من اعتمد ومتى.">a clear review step that records who approved and when.</span></p>
+        </div>
+        <div class="lead-visual" data-frag="signoff" aria-hidden="true"></div>
+      </article>
+    </div>
+
+    <h3 class="also-title" data-ar="وأيضًا في التطبيق">Also in the app</h3>
+    <ul class="also">
+      <li><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg><div><h4 data-ar="صلاحيات حسب الدور">Role-based access</h4><p data-ar="لكل دور شاشاته وإجراءاته، وتُفرض القواعد على الخادم لا في الواجهة فقط.">Each role gets its own screens and actions, with rules enforced on the server, not only hidden in the interface.</p></div></li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-globe"/></svg><div><h4 data-ar="العربية والإنجليزية">English and Arabic</h4><p data-ar="واجهة كاملة بالعربية مع تخطيط من اليمين إلى اليسار، ويمكن تبديل اللغة من الملف الشخصي.">A complete Arabic interface with right-to-left layout, switchable from the profile.</p></div></li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg><div><h4 data-ar="عروض أسعار بإصدارات">Versioned quotations</h4><p data-ar="كل إصدار مرقّم، له صلاحية وانتهاء، ولا يتغيّر بعد إرساله.">Every version is numbered, has a validity period, and cannot change after it is sent.</p></div></li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-user"/></svg><div><h4 data-ar="تعيين بوعي بالمؤهلات">Qualification-aware assignment</h4><p data-ar="علامة «الأنسب»، وحمل المفتش اليومي، وتنبيه عند اقتراب انتهاء الترخيص.">A Best match tag, each inspector's daily load, and a warning as a license nears expiry.</p></div></li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg><div><h4 data-ar="سجل ساعات بقفل بعد الاعتماد">Timesheets that lock on approval</h4><p data-ar="تُحسب الأسعار من أجر الساعة، وتُفرض القاعدة على الخادم.">Prices come from the hourly rate, and the rule is enforced on the server.</p></div></li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-mail"/></svg><div><h4 data-ar="طلبات من صندوق بريد متصل">Requests from a connected mailbox</h4><p data-ar="يمكن ربط صندوق بريد مشترك في Google Workspace ليتحول كل بريد وارد إلى بطاقة طلب، وتُستكمل بياناتها من التطبيق.">A shared Google Workspace mailbox can be connected so each inbound email becomes a request card, completed from within the app.</p></div></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section class="how" id="how-it-works" aria-labelledby="how-title">
+  <div class="wrap">
+    <header class="sec-head sec-head--light">
+      <h2 id="how-title" data-ar="كيف تسير المهمة.">How a job moves.</h2>
+      <p data-ar="ست خطوات تظهر في كل شاشة بالتطبيق، ولكل خطوة دور يملكها.">Six steps, shown on every job screen in the app. Each step has a role that owns it.</p>
+    </header>
+
+    <ol class="steps">
+      <li class="step">
+        <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-inbox"/></svg></div>
+        <h3 data-ar="الطلب">Request</h3>
+        <p class="step-who" data-ar="المشرف">Supervisor</p>
+        <p data-ar="يتحول بريد العميل أو الإدخال اليدوي إلى طلب: العميل والمعدات والموقع والتاريخ المفضل.">A client email or a manual entry becomes a request: client, equipment, location and preferred date.</p>
+      </li>
+      <li class="step">
+        <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></div>
+        <h3 data-ar="التسعير">Quote</h3>
+        <p class="step-who" data-ar="المشرف">Supervisor</p>
+        <p data-ar="سعّر الطلب وأرسل إصدارًا مرقّمًا وسجّل رد العميل. القبول يقفل السعر ويمرّر المهمة.">Price it, send a numbered version and log the client's reply. Accepting locks the price and passes the job on.</p>
+      </li>
+      <li class="step">
+        <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-cal"/></svg></div>
+        <h3 data-ar="التعيين">Assign</h3>
+        <p class="step-who" data-ar="المنسق">Coordinator</p>
+        <p data-ar="اختر التاريخ ووقت البدء ومفتشًا مؤهلًا. ويقبل المفتش المهمة أو يرفضها.">Choose the date, start time and a qualified inspector. The inspector accepts or declines.</p>
+      </li>
+      <li class="step">
+        <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-clip"/></svg></div>
+        <h3 data-ar="الفحص">Inspect</h3>
+        <p class="step-who" data-ar="المفتش">Inspector</p>
+        <p data-ar="يُكمل المفتش تقرير الفحص في الموقع، ويُحفظ التقدّم تلقائيًا ثم يُرسله للمراجعة.">The inspector completes the examination report on site. Progress autosaves, then it is submitted for review.</p>
+      </li>
+      <li class="step">
+        <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg></div>
+        <h3 data-ar="الشهادة">Certify</h3>
+        <p class="step-who" data-ar="المدير الفني">Technical manager</p>
+        <p data-ar="يراجع المدير الفني التقرير ويوقّع ويعتمد، أو يعيده إلى المفتش مع بيان ما يجب تغييره.">The technical manager reviews, signs and approves, or returns it to the inspector with what to change.</p>
+      </li>
+      <li class="step">
+        <div class="step-node"><svg class="ico" aria-hidden="true"><use href="#i-send"/></svg></div>
+        <h3 data-ar="الإرسال">Sent</h3>
+        <p class="step-who" data-ar="المدير الفني">Technical manager</p>
+        <p data-ar="تُسجَّل الشهادة المعتمدة كمرسلة إلى بريد الشهادات الخاص بالعميل، ويبقى ملف PDF الموقّع متاحًا للتحميل.">The approved certificate is recorded as sent to the client's certificates email, and the signed PDF stays available to download.</p>
+      </li>
+    </ol>
+
+    <p class="how-note" data-ar="بعد الإرسال يمكن لكل دور العودة إلى سجل المهمة: الطلب وإصدارات العروض والتقرير وسجل الحالات.">After sending, each role can go back to the job's record: the request, quote versions, report and status history.</p>
+  </div>
+</section>
+
+<!-- ============ INDUSTRIES ============ -->
+<section class="section industries" id="industries" aria-labelledby="industries-title">
+  <div class="wrap">
+    <header class="sec-head sec-head--split">
+      <h2 id="industries-title" data-ar="أين يناسب Inspecta.">Where Inspecta fits.</h2>
+      <p data-ar="صُمّم Inspecta حول فحص المعدات الصناعية، وبخاصة المصاعد والرافعات والمعدات الخاضعة للضغط. هذه أبرز الحالات.">Inspecta is designed around the examination of industrial equipment, in particular lifts, cranes and pressure equipment. These are the clearest fits.</p>
+    </header>
+
+    <ul class="ind-list">
+      <li class="ind">
+        <svg class="ind-art" viewBox="0 0 160 110" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 100V30M138 100V30M12 100h20M128 100h20"/><path d="M14 30h132v10H14z"/><path d="M22 40l16-10M138 40l-16-10M22 62l16-22M138 62l-16-22" opacity=".45"/></g><g fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M64 40v6M54 46h22v10H54z"/><path d="M65 56v20"/><path d="M65 76c-4 0-6 2.5-6 5.5s2.5 5 5.5 5 5-2 5-4.5"/><path d="M52 92h26v8H52z"/></g></svg>
+        <div class="ind-body">
+          <h3 data-ar="الرافعات ومعدات الرفع">Cranes and lifting equipment</h3>
+          <p data-ar="<strong>التحدّي:</strong> رافعات علوية ومعدات رفع تتعدد بنودها وسعاتها عبر المواقع، ولكل بند فحصه وشهادته."><strong>The challenge:</strong> overhead cranes and lifting plant with many items and capacities across sites, each needing its own examination and certificate.</p>
+          <p data-ar="<strong>كيف يساعد Inspecta:</strong> كل بند معدات في الطلب يُسعَّر ويُشهَّد على حدة، وتُسجَّل السعة وتُربط الشهادة بالعميل."><strong>How Inspecta helps:</strong> each equipment item on a request is quoted and certified separately, capacity is recorded, and the certificate ties back to the client.</p>
+        </div>
+      </li>
+      <li class="ind">
+        <svg class="ind-art" viewBox="0 0 160 110" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M44 8h72v94H44z"/><path d="M44 36h72M44 66h72" opacity=".45"/></g><g fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M62 70h36v32H62z"/><path d="M80 70v32"/><path d="M127 40l8-9 8 9M127 70l8 9 8-9"/></g></svg>
+        <div class="ind-body">
+          <h3 data-ar="المصاعد">Lifts</h3>
+          <p data-ar="<strong>التحدّي:</strong> فحوصات دورية لمصاعد في مبانٍ كثيرة، تتضمن بنودًا مثل أقفال أبواب الطوابق."><strong>The challenge:</strong> periodic examinations of lifts across many buildings, with items such as landing-door interlocks to check.</p>
+          <p data-ar="<strong>كيف يساعد Inspecta:</strong> مؤهلات «المصاعد» تُسجَّل للمفتشين فيُبرز التعيين من يناسب، ويمكن للمراجع إعادة التقرير بطلب محدد."><strong>How Inspecta helps:</strong> Lifts is a qualification an inspector can hold, so assignment can surface who fits, and a reviewer can return a report with a specific request.</p>
+        </div>
+      </li>
+      <li class="ind">
+        <svg class="ind-art" viewBox="0 0 160 110" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="26" y="44" width="92" height="44" rx="22"/><path d="M40 88v14M104 88v14M30 102h20M94 102h20"/><path d="M118 66h26v-18"/></g><g fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="72" cy="30" r="14"/><path d="M72 30l7-6M72 44v-0M60 30h3M81 30h3M72 18v3"/></g></svg>
+        <div class="ind-body">
+          <h3 data-ar="المعدات الخاضعة للضغط">Pressure equipment and compressors</h3>
+          <p data-ar="<strong>التحدّي:</strong> ضواغط هواء ومعدات أخرى خاضعة للضغط تتطلب فحصًا وتسجيلًا لأقصى معدل تشغيل ونتائج الاختبار."><strong>The challenge:</strong> air compressors and other pressure equipment that need an examination, with working limits and test results on record.</p>
+          <p data-ar="<strong>كيف يساعد Inspecta:</strong> يضم التقرير الشركة المصنعة والطراز وأقصى معدل تشغيل والرقم التسلسلي ونتيجة فحص الأداء، ويُسجَّل تاريخ الفحص القادم."><strong>How Inspecta helps:</strong> the report holds manufacturer, model, maximum working rate, serial number and function-check result, and the next examination date is recorded.</p>
+        </div>
+      </li>
+      <li class="ind">
+        <svg class="ind-art" viewBox="0 0 160 110" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 102h144"/><path d="M16 102V54l30 16V54l30 16V54l30 16V40h28v62"/><path d="M116 40V24h12v16" opacity=".45"/></g><g fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M120 24c0-6 8-6 8-12M132 24c0-6 8-6 8-12"/><path d="M26 86h10M54 86h10M82 86h10"/></g></svg>
+        <div class="ind-body">
+          <h3 data-ar="المنشآت الصناعية والتصنيع">Industrial and manufacturing plants</h3>
+          <p data-ar="<strong>التحدّي:</strong> معدات متنوعة وفحوصات متكررة، وتواريخ استحقاق يصعب تتبعها بين الأقسام."><strong>The challenge:</strong> a mix of equipment and recurring examinations, with due dates that are hard to track across departments.</p>
+          <p data-ar="<strong>كيف يساعد Inspecta:</strong> سجل العميل يجمع المعدات والمهام المفتوحة وما يقترب موعده خلال 30 يومًا."><strong>How Inspecta helps:</strong> the client record gathers equipment, open jobs and what is coming due in 30 days.</p>
+        </div>
+      </li>
+      <li class="ind">
+        <svg class="ind-art" viewBox="0 0 160 110" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M54 102V30M70 102V30M54 30h16M54 44l16-14M54 58l16-14M54 72l16-14M54 86l16-14M54 102l16-16"/><path d="M20 24h110M44 24l10 6M130 24l-12 22"/></g><g fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M112 24v22M106 46h14v10h-14z"/><path d="M36 24v12"/><path d="M30 36h12v10H30z"/></g></svg>
+        <div class="ind-body">
+          <h3 data-ar="الإنشاءات والهندسة">Construction and engineering</h3>
+          <p data-ar="<strong>التحدّي:</strong> رافعات ومعدات رفع مؤقتة تنتقل بين المواقع، وتحتاج شهادات سارية قبل التشغيل."><strong>The challenge:</strong> cranes and lifting plant moving between sites that need current certificates before use.</p>
+          <p data-ar="<strong>كيف يساعد Inspecta:</strong> يُسجَّل موقع كل طلب وتاريخه المفضل وملاحظات الوصول، فيصل المفتش إلى الموقع وهو يعرف ما يلزم."><strong>How Inspecta helps:</strong> each request records location, preferred date and access notes, so the inspector arrives knowing what is needed.</p>
+        </div>
+      </li>
+      <li class="ind">
+        <svg class="ind-art" viewBox="0 0 160 110" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="34" y="12" width="68" height="88" rx="8"/><path d="M52 12V6h32v6"/><path d="M48 38h40M48 54h40M48 70h24" opacity=".45"/></g><g fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="112" cy="76" r="22"/><path d="M101 76l8 8 14-16"/></g></svg>
+        <div class="ind-body">
+          <h3 data-ar="جهات الفحص ومقدّمو الخدمات الميدانية">Inspection bodies and field service providers</h3>
+          <p data-ar="<strong>التحدّي:</strong> استقبال الطلبات وتسعيرها وجدولتها وإصدار الشهادات بأدوار مختلفة وفي أدوات مختلفة."><strong>The challenge:</strong> receiving, quoting, scheduling and certifying work with different roles in different tools.</p>
+          <p data-ar="<strong>كيف يساعد Inspecta:</strong> الأدوار الأربعة كلها في تطبيق واحد، من صندوق الطلبات إلى الشهادة الموقّعة وسجل الساعات."><strong>How Inspecta helps:</strong> all four roles in one app, from the requests inbox to the signed certificate and timesheet.</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ BENEFITS ============ -->
+<section class="section benefits" id="benefits" aria-labelledby="benefits-title">
+  <div class="wrap benefits-grid">
+    <header class="sec-head">
+      <h2 id="benefits-title" data-ar="ما يتغيّر حين تعيش المهمة في مكان واحد.">What changes when the job lives in one place.</h2>
+      <p data-ar="نتائج عملية يمكن ملاحظتها في سير العمل اليومي، دون أرقام مبالغ فيها.">Practical outcomes you can see in the daily workflow, without invented numbers.</p>
+    </header>
+    <ul class="benefit-list">
+      <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><div><h3 data-ar="سير عمل أكثر تنظيمًا">More organized workflows</h3><p data-ar="لكل مهمة مسار واحد وأدوار واضحة.">Each job has one path and clear owners.</p></div></li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><div><h3 data-ar="رؤية أفضل للتقدّم">Better visibility into progress</h3><p data-ar="حالة واحدة لكل مهمة وشاشة رئيسية تعدّ ما يحتاج انتباهًا.">One status per job and a home screen that counts what needs attention.</p></div></li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><div><h3 data-ar="توثيق وتتبّع أفضل">Better documentation and traceability</h3><p data-ar="سجل بمن غيّر الحالة ومتى، مع ملاحظة اختيارية.">A history of who changed a status and when, with an optional note.</p></div></li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><div><h3 data-ar="متابعة أسرع للمشكلات">Faster follow-up on issues</h3><p data-ar="تنتقل العيوب إلى المراجعة فور إرسال التقرير.">Defects move to review the moment a report is submitted.</p></div></li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><div><h3 data-ar="إجراءات أكثر اتساقًا">More consistent procedures</h3><p data-ar="نموذج فحص واحد يتبعه كل المفتشين.">One examination form that every inspector follows.</p></div></li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><div><h3 data-ar="وصول أسهل إلى المعلومات السابقة">Easier access to earlier information</h3><p data-ar="الطلبات وإصدارات الأسعار والعملاء قابلة للبحث.">Requests, quote versions and clients are searchable.</p></div></li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><div><h3 data-ar="اعتماد أقل على الورق">Less reliance on paper</h3><p data-ar="يُملأ التقرير ويُوقَّع على الشاشة ويُصدَّر PDF.">The report is filled in and signed on screen and exported as a PDF.</p></div></li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><div><h3 data-ar="قرارات تشغيلية أفضل اطلاعًا">Better-informed operational decisions</h3><p data-ar="جدول الفريق وحمل المفتشين وتواريخ الاستحقاق أمام المنسقين.">Team schedule, inspector load and due dates in front of coordinators.</p></div></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ WHY ============ -->
+<section class="section why" id="why" aria-labelledby="why-title">
+  <div class="wrap">
+    <header class="sec-head sec-head--split">
+      <h2 id="why-title" data-ar="Inspecta مقابل الورق وجداول البيانات والمحادثات.">Inspecta versus paper, spreadsheets and chat threads.</h2>
+      <p data-ar="ليست مقارنة بمنتجات أخرى، بل بالطريقة التي تُدار بها كثير من فرق الفحص اليوم.">Not a comparison with other products: a comparison with how many inspection teams run today.</p>
+    </header>
+
+    <div class="table-wrap">
+      <table class="compare">
+        <caption class="sr-only" data-ar="مقارنة بين سير العمل اليدوي أو المتفرق وسير العمل في Inspecta">Manual or fragmented workflow compared with Inspecta</caption>
+        <thead>
+          <tr><th scope="col"><span class="sr-only" data-ar="الجانب">Aspect</span></th><th scope="col" data-ar="يدوي أو متفرق">Manual or fragmented</th><th scope="col" class="col-us" data-ar="مع Inspecta">With Inspecta</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row" data-ar="أين تعيش المهمة">Where the job lives</th><td data-ar="سلسلة بريد وجدول بيانات ومجلد ملفات">An email thread, a spreadsheet and a folder of files</td><td class="col-us" data-ar="سجل واحد بحالة واحدة وسجل تغييرات">One record with a single status and history</td></tr>
+          <tr><th scope="row" data-ar="نموذج الفحص">The examination form</th><td data-ar="ورق أو ملف مكتبي يُعاد كتابته">Paper or an office file, retyped later</td><td class="col-us" data-ar="تقرير رقمي موجّه يُحفظ تلقائيًا ويُصدَّر PDF">A guided digital report that autosaves and exports to PDF</td></tr>
+          <tr><th scope="row" data-ar="تعيين المفتشين">Assigning inspectors</th><td data-ar="مكالمات وذاكرة">Phone calls and memory</td><td class="col-us" data-ar="التاريخ والوقت والمفتش مع رؤية المؤهلات والتوافر">Date, time and inspector chosen with qualifications and availability in view</td></tr>
+          <tr><th scope="row" data-ar="المراجعة والتوقيع">Review and signature</th><td data-ar="طباعة وتوقيع ومسح ضوئي">Print, sign, scan</td><td class="col-us" data-ar="توقيع على الشاشة، أو إعادة مع سبب مكتوب">On-screen signature, or a return with a written reason</td></tr>
+          <tr><th scope="row" data-ar="التفاوض على الأسعار">Negotiating prices</th><td data-ar="أرقام مدفونة في الردود">Figures buried in replies</td><td class="col-us" data-ar="إصدارات مرقّمة وسجل تفاوض مسجّل">Numbered versions and a logged negotiation history</td></tr>
+          <tr><th scope="row" data-ar="اللغة">Language</th><td data-ar="لغة واحدة لكل نموذج">One language per template</td><td class="col-us" data-ar="واجهة بالعربية والإنجليزية مع تخطيط RTL كامل">An interface in English and Arabic with full RTL layout</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ABOUT ============ -->
+<section class="section about" id="about" aria-labelledby="about-title">
+  <div class="wrap about-grid">
+    <div>
+      <h2 id="about-title" data-ar="بُني حول الطريقة التي يسير بها عمل الفحص فعليًا.">Built around how inspection work actually moves.</h2>
+      <p class="about-lede" data-ar="Inspecta تطبيق لإدارة الفحص يعمل أولًا على الهاتف. صُمّم حول التسلسل الحقيقي لمهمة الفحص: الطلب، التسعير، التعيين، الفحص، الشهادة، الإرسال، وحول الأشخاص الذين يتولون كل خطوة: المشرفون والمنسقون والمفتشون والمديرون الفنيون.">Inspecta is a mobile-first inspection-management app. It is designed around the real sequence of an inspection job (request, quote, assign, inspect, certify, send) and the people who handle each step: supervisors, coordinators, inspectors and technical managers.</p>
+      <p data-ar="يعمل التطبيق على Flutter ويخزّن بياناته في Cloud Firestore، وتُفرض صلاحيات كل دور عبر قواعد أمان على الخادم.">The app is built with Flutter and stores its data in Cloud Firestore, with each role's permissions enforced by server-side security rules.</p>
+    </div>
+    <ul class="principles">
+      <li><h3 data-ar="سجل واحد، أدوار متعددة">One record, many roles</h3><p data-ar="لا يعيد أحد إدخال المهمة. كل دور يرى ما يخصه.">Nobody re-enters the job. Each role sees what is theirs.</p></li>
+      <li><h3 data-ar="الهاتف أولًا، والمتصفح أيضًا">Phone-first, browser-ready</h3><p data-ar="للعمل في الموقع، ويعمل كذلك في المتصفح لمن يعمل من المكتب.">Made for work on site, and it runs in a browser for people at a desk.</p></li>
+      <li><h3 data-ar="العربية والإنجليزية منذ البداية">English and Arabic from the start</h3><p data-ar="تخطيط من اليمين إلى اليسار حقيقي، لا ترجمة مضافة لاحقًا.">A true right-to-left layout, not a translation bolted on.</p></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="section faq" id="faq" aria-labelledby="faq-title">
+  <div class="wrap faq-grid">
+    <header class="sec-head">
+      <h2 id="faq-title" data-ar="أسئلة شائعة.">Frequently asked questions.</h2>
+      <p data-ar="إجابات تعكس ما يفعله التطبيق اليوم. وما لم نذكره هنا يمكن أن نناقشه في العرض التجريبي.">Answers reflect what the app does today. Anything not covered here we can discuss in a demo.</p>
+    </header>
+    <div class="faq-list">
+      <details class="qa" name="faq">
+        <summary data-ar="ما هو Inspecta؟">What is Inspecta?</summary>
+        <p data-ar="Inspecta تطبيق لإدارة الفحص. يتولى طلب العميل لفحص معدات عبر التسعير والجدولة وتقرير الفحص الرقمي والمراجعة الفنية والتوقيع، ثم يسجّل الشهادة كمرسلة.">Inspecta is an inspection-management app. It takes a client's request to examine equipment through quoting, scheduling, a digital examination report, technical review and signature, and records the certificate as sent.</p>
+      </details>
+      <details class="qa" name="faq">
+        <summary data-ar="لمن صُمّم Inspecta؟">Who is Inspecta designed for?</summary>
+        <p data-ar="للفرق التي تفحص المعدات الصناعية، سواء كانت جهات فحص أو أقسام فحص داخلية. تُدعم اليوم أربعة أدوار: المشرفون والمنسقون والمفتشون والمديرون الفنيون.">For teams that examine industrial equipment, whether inspection bodies or in-house inspection departments. Four roles are supported today: supervisors, coordinators, inspectors and technical managers.</p>
+      </details>
+      <details class="qa" name="faq">
+        <summary data-ar="كيف تعمل إدارة الفحص الرقمية؟">How does digital inspection management work?</summary>
+        <p data-ar="يتحول كل طلب إلى مهمة بحالة واحدة تمر بالخطوات: الطلب، التسعير، التعيين، الفحص، الشهادة، الإرسال. يرى كل دور المهام والإجراءات التي تخصه، ويُكتب كل تغيير في الحالة في سجل المهمة.">Each request becomes a job with one status that moves through Request, Quote, Assign, Inspect, Certify and Sent. Each role sees the jobs and actions that belong to it, and every status change is written to the job's history.</p>
+      </details>
+      <details class="qa" name="faq">
+        <summary data-ar="هل تتضمن سجلات الفحص صورًا ومرفقات؟">Can inspection records include photos and attachments?</summary>
+        <p data-ar="يلتقط تقرير الفحص الحالي بيانات منظمة وإجابات أسئلة الفحص والعيوب والإصلاحات المطلوبة والاختبارات المنفذة والخلاصة، ويُنتج شهادة PDF. إرفاق الصور والملفات ليس جزءًا من التقرير الحالي. إن كنت تحتاجه فأخبرنا عند طلب العرض التجريبي.">The current examination report captures structured details, answers to the examination questions, defects, required repairs, tests carried out and a conclusion, and produces a PDF certificate. Attaching photos and files is not part of the current report. If you need it, tell us when you request a demo.</p>
+      </details>
+      <details class="qa" name="faq">
+        <summary data-ar="هل يمكن تعيين الفحوصات لأعضاء الفريق؟">Can inspections be assigned to team members?</summary>
+        <p data-ar="نعم. يعيّن المنسقون العروض المقبولة إلى مفتش بتاريخ ووقت بدء، مع إظهار «الأنسب» حسب المؤهلات والتوافر. ويقبل المفتش المهمة أو يرفضها.">Yes. Coordinators assign accepted jobs to an inspector with a date and start time, with a Best match tag from qualifications and availability shown. The inspector accepts or declines the task.</p>
+      </details>
+      <details class="qa" name="faq">
+        <summary data-ar="هل يدعم Inspecta الأجهزة المحمولة؟">Does Inspecta support mobile devices?</summary>
+        <p data-ar="صُمّم Inspecta ليعمل أولًا على الهاتف، ويعمل كذلك في المتصفح. تواصل معنا لمعرفة المنصات وطرق التوزيع المتاحة لمؤسستك.">Inspecta is built phone-first and also runs in a web browser. Ask us about the platforms and distribution available for your organization.</p>
+      </details>
+      <details class="qa" name="faq">
+        <summary data-ar="هل يمكن للإدارة مراجعة تقارير الفحص؟">Can management review inspection reports?</summary>
+        <p data-ar="نعم. للمديرين الفنيين قائمة مراجعة: يقرأون الملخص وملف PDF الكامل ويضيفون تعليقاتهم ثم يوقّعون ويعتمدون، أو يعيدون التقرير إلى المفتش مع سبب. وتُعرض الشهادات المرسلة للرجوع إليها. أما التحليلات على مستوى الإدارة فليست جزءًا من الإصدار الحالي.">Yes. Technical managers have a review queue: they read the summary and full PDF, add comments, then sign and approve, or return the report to the inspector with a reason. Sent certificates are listed for reference. Management-level analytics are not part of the current release.</p>
+      </details>
+      <details class="qa" name="faq">
+        <summary data-ar="هل يدعم Inspecta العربية؟">Does Inspecta support Arabic?</summary>
+        <p data-ar="نعم. الواجهة بالعربية والإنجليزية مع تخطيط من اليمين إلى اليسار. ملف شهادة PDF يصدر حاليًا بالإنجليزية.">Yes. The interface is available in English and Arabic with a right-to-left layout. The certificate PDF is currently issued in English.</p>
+      </details>
+      <details class="qa" name="faq">
+        <summary data-ar="كيف تُضبط الصلاحيات؟">How is access controlled?</summary>
+        <p data-ar="يسجّل كل مستخدم الدخول بحسابه، ويرى ما يسمح به دوره فقط. وتُفرض الصلاحيات عبر قواعد أمان على الخادم، لا بإخفائها في الواجهة فحسب.">Each user signs in with their own account and sees only what their role allows. Permissions are enforced by server-side security rules, not just by hiding things in the interface.</p>
+      </details>
+      <details class="qa" name="faq">
+        <summary data-ar="كيف نرتّب عرضًا تجريبيًا؟">How can we arrange a demonstration?</summary>
+        <p data-ar="أرسل طلبًا من النموذج أدناه، وسنتواصل معك لترتيب العرض.">Send a request through the form below and we will get back to you to arrange a walkthrough.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONTACT / FINAL CTA ============ -->
+<section class="contact" id="contact" aria-labelledby="contact-title">
+  <div class="wrap contact-grid">
+    <div class="contact-copy">
+      <h2 id="contact-title" data-ar="هل أنت مستعد لجعل الفحوصات أذكى؟">Ready to Make Inspections Smarter?</h2>
+      <p data-ar="اكتشف كيف يساعد Inspecta مؤسستك على تنظيم سير عمل الفحص وتحسين الرؤية وإدارة الملاحظات بفعالية أكبر.">Discover how Inspecta can help your organization organize inspection workflows, improve visibility, and manage findings more effectively.</p>
+      <div class="mode-switch" role="group" aria-label="What would you like to do?" data-ar-aria-label="ماذا تريد أن تفعل؟">
+        <button type="button" class="btn btn-light btn-lg" data-mode="demo" aria-pressed="true" data-ar="اطلب عرضًا تجريبيًا">Request a Demo</button>
+        <button type="button" class="btn btn-outline-light btn-lg" data-mode="contact" aria-pressed="false" data-ar="تواصل مع فريقنا">Contact Our Team</button>
+      </div>
+      <p class="contact-note" data-ar="نرد على الطلبات بالتواصل معك مباشرة. لا نشارك بياناتك.">We reply to requests by contacting you directly. We do not share your details.</p>
+    </div>
+
+    <form class="form" id="contact-form" novalidate aria-labelledby="form-title">
+      <h3 id="form-title" class="form-title" data-form-title data-ar="طلب عرض تجريبي">Request a demo</h3>
+
+      <div class="field">
+        <label for="f-name" data-ar="الاسم الكامل">Full name</label>
+        <input id="f-name" name="name" type="text" autocomplete="name" required maxlength="120">
+        <p class="field-error" id="e-name" role="alert"></p>
+      </div>
+      <div class="field">
+        <label for="f-email" data-ar="البريد الإلكتروني للعمل">Work email</label>
+        <input id="f-email" name="email" type="email" autocomplete="email" inputmode="email" required maxlength="254" dir="ltr">
+        <p class="field-error" id="e-email" role="alert"></p>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="f-company" data-ar="الشركة أو الجهة">Company</label>
+          <input id="f-company" name="company" type="text" autocomplete="organization" required maxlength="120">
+          <p class="field-error" id="e-company" role="alert"></p>
+        </div>
+        <div class="field">
+          <label for="f-role"><span data-ar="دورك">Your role</span> <span class="opt" data-ar="(اختياري)">(optional)</span></label>
+          <select id="f-role" name="role">
+            <option value="" data-ar="اختر…">Select…</option>
+            <option value="management" data-ar="الإدارة">Management</option>
+            <option value="supervisor" data-ar="مشرف">Supervisor</option>
+            <option value="coordinator" data-ar="منسق">Coordinator</option>
+            <option value="inspector" data-ar="مفتش">Inspector</option>
+            <option value="technical_manager" data-ar="مدير فني">Technical manager</option>
+            <option value="other" data-ar="أخرى">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-message"><span data-ar="رسالتك">Your message</span> <span class="opt" data-message-opt data-ar="(اختياري)">(optional)</span></label>
+        <textarea id="f-message" name="message" rows="4" maxlength="2000" data-ar-placeholder="مثال: أنواع المعدات التي تفحصونها وعدد المفتشين" placeholder="For example: the equipment you examine and how many inspectors you have"></textarea>
+        <p class="field-error" id="e-message" role="alert"></p>
+      </div>
+      <div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+
+      <button class="btn btn-primary btn-lg form-submit" type="submit" data-submit>
+        <span class="btn-label" data-submit-label data-ar="أرسل الطلب">Send request</span>
+        <span class="spinner" aria-hidden="true"></span>
+      </button>
+      <p class="form-legal"><span data-ar="بإرسال النموذج فإنك توافق على استخدام بياناتك للرد عليك فقط. اطلع على">By sending this form you agree that your details are used only to reply to you. Read the</span> <a href="privacy.html" data-ar="إشعار الخصوصية">privacy notice</a>.</p>
+      <p class="form-status" data-form-status role="status" aria-live="polite" tabindex="-1"></p>
+    </form>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap foot-grid">
+    <div class="foot-brand">
+      <a class="brand" href="#home" aria-label="Inspecta" data-ar-aria-label="Inspecta، الصفحة الرئيسية">
+        <svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="currentColor" class="brand-tile"/><g fill="none" stroke="var(--mark-ink)" stroke-width="33" stroke-linecap="round" stroke-linejoin="round"><path d="M339.8 162.3A121 121 0 1 0 347.6 340.6"/><path d="M200 254l43 44L383 160"/></g></svg>
+        <span class="brand-name">Inspecta</span>
+      </a>
+      <p data-ar="إدارة الفحص الرقمية للفرق التي تفحص المعدات: من طلب العميل إلى الشهادة الموقّعة.">Digital inspection management for teams that examine equipment: from a client's request to a signed certificate.</p>
+    </div>
+    <nav class="foot-col" aria-label="Product" data-ar-aria-label="المنتج">
+      <h2 data-ar="المنتج">Product</h2>
+      <ul>
+        <li><a href="#solutions" data-ar="الحلول">Solutions</a></li>
+        <li><a href="#features" data-ar="المزايا">Features</a></li>
+        <li><a href="#explorer" data-ar="جولة في التطبيق">Explore the app</a></li>
+        <li><a href="#how-it-works" data-ar="كيف يعمل">How It Works</a></li>
+      </ul>
+    </nav>
+    <nav class="foot-col" aria-label="Company" data-ar-aria-label="الشركة">
+      <h2 data-ar="المزيد">More</h2>
+      <ul>
+        <li><a href="#industries" data-ar="القطاعات">Industries</a></li>
+        <li><a href="#about" data-ar="من نحن">About</a></li>
+        <li><a href="#faq" data-ar="أسئلة شائعة">FAQ</a></li>
+        <li><a href="privacy.html" data-ar="إشعار الخصوصية">Privacy notice</a></li>
+      </ul>
+    </nav>
+    <nav class="foot-col" aria-label="Contact" data-ar-aria-label="التواصل">
+      <h2 data-ar="تواصل">Contact</h2>
+      <ul>
+        <li><a href="#contact" data-open-form="demo" data-ar="اطلب عرضًا تجريبيًا">Request a Demo</a></li>
+        <li><a href="#contact" data-open-form="contact" data-ar="تواصل مع فريقنا">Contact Our Team</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="wrap foot-base">
+    <p><span data-copyright>© 2026</span> Inspecta. <span data-ar="جميع الحقوق محفوظة.">All rights reserved.</span></p>
+    <p class="foot-sample" data-ar="كل شاشات المنتج المعروضة في هذا الموقع ببيانات تجريبية.">All product screens on this site use sample data.</p>
+  </div>
+</footer>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/screens.js"></script>
+<script src="assets/js/site.js"></script>
+</body>
+</html>

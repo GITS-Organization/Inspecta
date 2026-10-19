@@ -6,6 +6,12 @@
       "runtimeExecutable": "flutter",
       "runtimeArgs": ["run", "-d", "web-server", "--web-port", "8765", "--no-pub"],
       "port": 8765
+    },
+    {
+      "name": "inspecta-website",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["website/serve.mjs", "8780"],
+      "port": 8780
     }
   ]
 }

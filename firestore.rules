@@ -323,6 +323,36 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // The public marketing site (website/): its "Request a demo" and
+    // "Contact our team" form creates one document per submission, with no
+    // sign-in. Anyone may create a well-formed one; nothing can be read
+    // back, changed or deleted through a client (admins can read them in
+    // the app, and the Firebase console always can). Every field is
+    // bounded so the collection can't be used as free storage.
+    match /demoRequests/{id} {
+      function validDemoRequest() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['type', 'name', 'email', 'company', 'role', 'message', 'lang', 'source', 'createdAt'])
+          && d.keys().hasAll(['type', 'name', 'email', 'company', 'role', 'message', 'lang', 'source', 'createdAt'])
+          && d.type in ['demo', 'contact']
+          && d.name is string && d.name.size() >= 2 && d.name.size() <= 120
+          && d.email is string && d.email.size() <= 254
+          && d.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]{2,}$')
+          && d.company is string && d.company.size() >= 2 && d.company.size() <= 120
+          && d.role is string && d.role.size() <= 40
+          && d.message is string && d.message.size() <= 2000
+          && d.lang in ['en', 'ar']
+          && d.source == 'website'
+          && d.createdAt is timestamp
+          && d.createdAt >= request.time - duration.value(1, 'd')
+          && d.createdAt <= request.time + duration.value(1, 'd');
+      }
+
+      allow create: if validDemoRequest();
+      allow read: if hasRole('admin');
+      allow update, delete: if false;
+    }
+
     // Deny everything else until each feature adds its own rules.
     match /{document=**} {
       allow read, write: if false;
