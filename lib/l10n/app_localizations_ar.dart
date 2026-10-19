@@ -203,12 +203,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get emailSignatureLabel => 'توقيع البريد الإلكتروني';
 
   @override
-  String get myAreasTitle => 'مناطقي';
-
-  @override
-  String get areasNotTrackedYet => 'لم يتم بعد تتبّع المناطق المخصّصة والفريق.';
-
-  @override
   String get myWorkTitle => 'عملي';
 
   @override
@@ -1112,9 +1106,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navQueue => 'القائمة';
 
   @override
-  String get navSchedule => 'الجدول';
-
-  @override
   String get navInspectors => 'المفتشون';
 
   @override
@@ -1138,6 +1129,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get emptyCoordinatorQueue =>
       'لا توجد مهام بحاجة إلى تعيين أو جدولة الآن.';
+
+  @override
+  String get emptyCoordinatorQueueFiltered =>
+      'لا توجد مهام في هذه المجموعة الآن.';
 
   @override
   String get assignInspectorAction => 'تعيين مفتش';
@@ -1322,15 +1317,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get scheduleFreeAllDayLabel => 'متفرغ طوال اليوم';
 
   @override
-  String get scheduleEmptyRoster => 'لا يوجد مفتشون لجدولتهم.';
-
-  @override
-  String get previousDayTooltip => 'اليوم السابق';
-
-  @override
-  String get nextDayTooltip => 'اليوم التالي';
-
-  @override
   String get navTasks => 'المهام';
 
   @override
@@ -1338,16 +1324,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get navTimesheet => 'سجل الساعات';
-
-  @override
-  String tasksTodayTitle(int count) {
-    return '$count مهام اليوم';
-  }
-
-  @override
-  String tasksOnDayTitle(int count, String day) {
-    return '$count مهام في $day';
-  }
 
   @override
   String get newTaskLabel => 'مهمة جديدة';
@@ -1386,7 +1362,38 @@ class AppLocalizationsAr extends AppLocalizations {
   String get taskDeclinedMessage => 'تم رفض المهمة.';
 
   @override
-  String get emptyTasksForDay => 'لا توجد مهام في هذا اليوم.';
+  String get tasksFilterToday => 'اليوم';
+
+  @override
+  String get tasksFilterUpcoming => 'القادمة';
+
+  @override
+  String get tasksFilterOverdue => 'المتأخرة';
+
+  @override
+  String get tomorrowLabel => 'غدًا';
+
+  @override
+  String get emptyTasksToday => 'لا توجد مهام مجدولة لليوم.';
+
+  @override
+  String get emptyTasksUpcoming => 'لا توجد مهام قادمة.';
+
+  @override
+  String get emptyTasksOverdue => 'لا توجد مهام متأخرة. كل شيء على ما يرام.';
+
+  @override
+  String taskOverdueByDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'متأخرة $days يومًا',
+      few: 'متأخرة $days أيام',
+      two: 'متأخرة يومين',
+      one: 'متأخرة يومًا واحدًا',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get certificateTitle => 'تقرير الفحص الشامل';

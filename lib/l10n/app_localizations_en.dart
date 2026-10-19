@@ -207,13 +207,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emailSignatureLabel => 'Email signature';
 
   @override
-  String get myAreasTitle => 'My areas';
-
-  @override
-  String get areasNotTrackedYet =>
-      'Assigned areas and team aren\'t tracked yet.';
-
-  @override
   String get myWorkTitle => 'My work';
 
   @override
@@ -1117,9 +1110,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navQueue => 'Queue';
 
   @override
-  String get navSchedule => 'Schedule';
-
-  @override
   String get navInspectors => 'Inspectors';
 
   @override
@@ -1143,6 +1133,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get emptyCoordinatorQueue =>
       'Nothing to assign or schedule right now.';
+
+  @override
+  String get emptyCoordinatorQueueFiltered =>
+      'No jobs in this group right now.';
 
   @override
   String get assignInspectorAction => 'Assign inspector';
@@ -1326,15 +1320,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scheduleFreeAllDayLabel => 'Free all day';
 
   @override
-  String get scheduleEmptyRoster => 'No inspectors to schedule.';
-
-  @override
-  String get previousDayTooltip => 'Previous day';
-
-  @override
-  String get nextDayTooltip => 'Next day';
-
-  @override
   String get navTasks => 'Tasks';
 
   @override
@@ -1342,16 +1327,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get navTimesheet => 'Timesheet';
-
-  @override
-  String tasksTodayTitle(int count) {
-    return '$count tasks today';
-  }
-
-  @override
-  String tasksOnDayTitle(int count, String day) {
-    return '$count tasks on $day';
-  }
 
   @override
   String get newTaskLabel => 'New task';
@@ -1390,7 +1365,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDeclinedMessage => 'Task declined.';
 
   @override
-  String get emptyTasksForDay => 'No tasks on this day.';
+  String get tasksFilterToday => 'Today';
+
+  @override
+  String get tasksFilterUpcoming => 'Upcoming';
+
+  @override
+  String get tasksFilterOverdue => 'Overdue';
+
+  @override
+  String get tomorrowLabel => 'Tomorrow';
+
+  @override
+  String get emptyTasksToday => 'Nothing scheduled for today.';
+
+  @override
+  String get emptyTasksUpcoming => 'No upcoming tasks.';
+
+  @override
+  String get emptyTasksOverdue => 'No overdue tasks. You are all caught up.';
+
+  @override
+  String taskOverdueByDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days overdue',
+      one: '1 day overdue',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get certificateTitle => 'Report of thorough examination';

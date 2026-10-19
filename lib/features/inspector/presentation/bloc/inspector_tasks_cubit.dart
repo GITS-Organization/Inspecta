@@ -13,9 +13,9 @@ import '../../../requests/domain/usecases/start_inspection.dart';
 
 part 'inspector_tasks_state.dart';
 
-/// Backs the inspector's Tasks tab (Feature 05): the day strip, the
-/// "needs response" banner, and each day's task cards — plus accepting,
-/// declining and starting a job.
+/// Backs the inspector's Tasks tab (Feature 05): the Today / Upcoming /
+/// Overdue lists, the "needs response" banner and the task cards — plus
+/// accepting, declining and starting a job.
 class InspectorTasksCubit extends Cubit<InspectorTasksState> {
   final String inspectorId;
   final GetMyTasks _getMyTasks;
@@ -35,7 +35,7 @@ class InspectorTasksCubit extends Cubit<InspectorTasksState> {
        _acceptTask = acceptTask,
        _declineTask = declineTask,
        _startInspection = startInspection,
-       super(InspectorTasksState());
+       super(const InspectorTasksState());
 
   void start() {
     if (_subscription != null) return;
@@ -59,7 +59,7 @@ class InspectorTasksCubit extends Cubit<InspectorTasksState> {
     start();
   }
 
-  void selectDate(DateTime date) => emit(state.copyWith(selectedDate: date));
+  void selectFilter(TasksFilter filter) => emit(state.copyWith(filter: filter));
 
   Future<void> accept(String requestId) =>
       _run(InspectorTaskAction.accept, () => _acceptTask(requestId));

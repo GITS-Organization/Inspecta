@@ -130,7 +130,10 @@ service cloud.firestore {
       allow read: if hasRole('coordinator')
         || hasRole('technical_manager')
         || hasRole('admin')
-        || (hasRole('inspector') && ownsJob());
+        || (hasRole('inspector') && ownsJob())
+        // An inspector's Profile counts their own certificates with one query
+        // `where inspectorId == uid`, which `ownsJob()` can't vouch for.
+        || (hasRole('inspector') && resource.data.inspectorId == request.auth.uid);
 
       allow create: if hasRole('inspector')
         && ownsJob()

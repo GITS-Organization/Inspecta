@@ -470,18 +470,6 @@ abstract class AppLocalizations {
   /// **'Email signature'**
   String get emailSignatureLabel;
 
-  /// No description provided for @myAreasTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'My areas'**
-  String get myAreasTitle;
-
-  /// No description provided for @areasNotTrackedYet.
-  ///
-  /// In en, this message translates to:
-  /// **'Assigned areas and team aren\'t tracked yet.'**
-  String get areasNotTrackedYet;
-
   /// No description provided for @myWorkTitle.
   ///
   /// In en, this message translates to:
@@ -2054,12 +2042,6 @@ abstract class AppLocalizations {
   /// **'Queue'**
   String get navQueue;
 
-  /// No description provided for @navSchedule.
-  ///
-  /// In en, this message translates to:
-  /// **'Schedule'**
-  String get navSchedule;
-
   /// No description provided for @navInspectors.
   ///
   /// In en, this message translates to:
@@ -2107,6 +2089,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing to assign or schedule right now.'**
   String get emptyCoordinatorQueue;
+
+  /// No description provided for @emptyCoordinatorQueueFiltered.
+  ///
+  /// In en, this message translates to:
+  /// **'No jobs in this group right now.'**
+  String get emptyCoordinatorQueueFiltered;
 
   /// No description provided for @assignInspectorAction.
   ///
@@ -2438,24 +2426,6 @@ abstract class AppLocalizations {
   /// **'Free all day'**
   String get scheduleFreeAllDayLabel;
 
-  /// No description provided for @scheduleEmptyRoster.
-  ///
-  /// In en, this message translates to:
-  /// **'No inspectors to schedule.'**
-  String get scheduleEmptyRoster;
-
-  /// No description provided for @previousDayTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Previous day'**
-  String get previousDayTooltip;
-
-  /// No description provided for @nextDayTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Next day'**
-  String get nextDayTooltip;
-
   /// No description provided for @navTasks.
   ///
   /// In en, this message translates to:
@@ -2473,18 +2443,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Timesheet'**
   String get navTimesheet;
-
-  /// No description provided for @tasksTodayTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} tasks today'**
-  String tasksTodayTitle(int count);
-
-  /// No description provided for @tasksOnDayTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} tasks on {day}'**
-  String tasksOnDayTitle(int count, String day);
 
   /// No description provided for @newTaskLabel.
   ///
@@ -2558,11 +2516,53 @@ abstract class AppLocalizations {
   /// **'Task declined.'**
   String get taskDeclinedMessage;
 
-  /// No description provided for @emptyTasksForDay.
+  /// No description provided for @tasksFilterToday.
   ///
   /// In en, this message translates to:
-  /// **'No tasks on this day.'**
-  String get emptyTasksForDay;
+  /// **'Today'**
+  String get tasksFilterToday;
+
+  /// No description provided for @tasksFilterUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get tasksFilterUpcoming;
+
+  /// No description provided for @tasksFilterOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get tasksFilterOverdue;
+
+  /// No description provided for @tomorrowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow'**
+  String get tomorrowLabel;
+
+  /// No description provided for @emptyTasksToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing scheduled for today.'**
+  String get emptyTasksToday;
+
+  /// No description provided for @emptyTasksUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'No upcoming tasks.'**
+  String get emptyTasksUpcoming;
+
+  /// No description provided for @emptyTasksOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'No overdue tasks. You are all caught up.'**
+  String get emptyTasksOverdue;
+
+  /// No description provided for @taskOverdueByDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 day overdue} other{{days} days overdue}}'**
+  String taskOverdueByDays(int days);
 
   /// No description provided for @certificateTitle.
   ///

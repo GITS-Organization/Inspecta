@@ -26,22 +26,22 @@ class ProfileAccountSection extends StatelessWidget {
             alignment: AlignmentDirectional.centerStart,
             child: Text(t.accountSectionTitle, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
           ),
-          _MenuRow(
+          ProfileMenuRow(
             icon: Icons.person_outline_rounded,
             label: t.personalInfoLabel,
             onTap: onComingSoon,
           ),
-          _MenuRow(
+          ProfileMenuRow(
             icon: Icons.lock_outline_rounded,
             label: t.changePasswordLabel,
             onTap: onComingSoon,
           ),
-          _MenuRow(
+          ProfileMenuRow(
             icon: Icons.notifications_outlined,
             label: t.notifications,
             onTap: onComingSoon,
           ),
-          _MenuRow(
+          ProfileMenuRow(
             icon: Icons.language_rounded,
             label: t.languageLabel,
             trailing: const LanguageSwitcherWidget(),
@@ -66,14 +66,14 @@ class ProfileHelpSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Column(
         children: [
-          _MenuRow(
+          ProfileMenuRow(
             icon: Icons.help_outline_rounded,
             label: t.helpGuidesLabel,
             tint: AppColours.surfaceMuted,
             iconColor: AppColours.inkSecondary,
             onTap: onComingSoon,
           ),
-          _MenuRow(
+          ProfileMenuRow(
             icon: Icons.mail_outline_rounded,
             label: t.contactAdminLabel,
             tint: AppColours.surfaceMuted,
@@ -87,7 +87,10 @@ class ProfileHelpSection extends StatelessWidget {
   }
 }
 
-class _MenuRow extends StatelessWidget {
+/// One icon-tile row of a Profile card — public so a role shell can build its
+/// own card of rows (the coordinator's Clients / Inspectors / Timesheets)
+/// that looks like the Account one beside it.
+class ProfileMenuRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color tint;
@@ -96,7 +99,8 @@ class _MenuRow extends StatelessWidget {
   final VoidCallback? onTap;
   final bool isLast;
 
-  const _MenuRow({
+  const ProfileMenuRow({
+    super.key,
     required this.icon,
     required this.label,
     this.tint = AppColours.primarySoft,

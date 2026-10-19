@@ -84,7 +84,7 @@ class _Body extends StatelessWidget {
               ),
             ),
             if (jobs.isEmpty)
-              const SliverFillRemaining(hasScrollBody: false, child: _EmptyState())
+              SliverFillRemaining(hasScrollBody: false, child: _EmptyState(filtered: state.filter != null))
             else
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, AppLayout.bottomNavClearance),
@@ -110,7 +110,11 @@ class _Body extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  /// A header-tile filter is on, so the queue isn't necessarily empty —
+  /// just this group of it.
+  final bool filtered;
+
+  const _EmptyState({required this.filtered});
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +127,11 @@ class _EmptyState extends StatelessWidget {
           children: [
             const Icon(Icons.fact_check_outlined, size: 40, color: AppColours.inkMuted),
             const SizedBox(height: 12),
-            Text(t.emptyCoordinatorQueue, textAlign: TextAlign.center, style: AppTextStyles.subtitle),
+            Text(
+              filtered ? t.emptyCoordinatorQueueFiltered : t.emptyCoordinatorQueue,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.subtitle,
+            ),
           ],
         ),
       ),

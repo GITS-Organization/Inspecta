@@ -11,8 +11,13 @@ import '../../../requests/domain/entities/inspection_request.dart';
 /// [JobStatus.assigned] still needs an Accept/Decline response; one
 /// that's been accepted or started offers "Continue certificate" and a
 /// way to navigate to the site instead.
+///
+/// Today's tasks show just their time; [showDate] adds the day (upcoming and
+/// overdue ones), and a positive [overdueDays] flags how late it is.
 class InspectorTaskCard extends StatelessWidget {
   final InspectionRequest task;
+  final bool showDate;
+  final int overdueDays;
   final bool submitting;
   final VoidCallback onAccept;
   final VoidCallback onDecline;
@@ -23,6 +28,8 @@ class InspectorTaskCard extends StatelessWidget {
     super.key,
     required this.task,
     required this.submitting,
+    this.showDate = false,
+    this.overdueDays = 0,
     required this.onAccept,
     required this.onDecline,
     required this.onContinueCertificate,
@@ -53,13 +60,37 @@ class InspectorTaskCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                scheduledAt == null ? '—' : DateFormat('HH:mm', locale).format(scheduledAt),
-                style: AppTextStyles.cardTitle.copyWith(fontSize: 18, color: AppColours.primaryDark),
+              Expanded(
+                child: Text(
+                  scheduledAt == null
+                      ? '—'
+                      : DateFormat(showDate ? 'EEE, d MMM · HH:mm' : 'HH:mm', locale).format(scheduledAt),
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.cardTitle.copyWith(fontSize: 18, color: AppColours.primaryDark),
+                ),
               ),
+              const SizedBox(width: 8),
               _StatusBadge(status: task.status),
             ],
           ),
+          if (overdueDays > 0) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(color: AppColours.chipRedBackground, borderRadius: BorderRadius.circular(999)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.schedule_rounded, size: 14, color: AppColours.chipRedText),
+                  const SizedBox(width: 4),
+                  Text(
+                    t.taskOverdueByDays(overdueDays),
+                    style: AppTextStyles.badge.copyWith(color: AppColours.chipRedText),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           Text(task.equipmentTitle, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
           const SizedBox(height: 4),

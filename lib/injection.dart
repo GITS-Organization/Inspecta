@@ -34,6 +34,7 @@ import 'features/certificate/domain/usecases/return_certificate.dart';
 import 'features/certificate/domain/usecases/save_certificate_draft.dart';
 import 'features/certificate/domain/usecases/submit_certificate.dart';
 import 'features/certificate/domain/usecases/watch_certificate.dart';
+import 'features/certificate/domain/usecases/watch_inspector_certificates.dart';
 import 'features/certificate/domain/usecases/watch_reviewed_certificates.dart';
 import 'features/certificate/presentation/bloc/certificate_cubit.dart';
 import 'features/coordinator/data/datasources/inspectors_remote_datasource.dart';
@@ -45,7 +46,6 @@ import 'features/coordinator/presentation/bloc/assign_inspector_cubit.dart';
 import 'features/coordinator/presentation/bloc/coordinator_queue_cubit.dart';
 import 'features/coordinator/presentation/bloc/inspector_detail_cubit.dart';
 import 'features/coordinator/presentation/bloc/inspectors_list_cubit.dart';
-import 'features/coordinator/presentation/bloc/schedule_cubit.dart';
 import 'features/inspector/presentation/bloc/certificates_list_cubit.dart';
 import 'features/inspector/presentation/bloc/inspector_tasks_cubit.dart';
 import 'features/quotation/data/datasources/quotation_remote_datasource.dart';
@@ -219,7 +219,6 @@ void _registerCoordinator() {
       ),
     )
     ..registerFactory(() => InspectorsListCubit(getIt(), getIt()))
-    ..registerFactory(() => ScheduleCubit(getIt(), getIt()))
     ..registerLazySingleton(() => MarkInspectorLeave(getIt()))
     ..registerFactoryParam<InspectorDetailCubit, AppUser, void>(
       (inspector, _) => InspectorDetailCubit(
@@ -231,7 +230,7 @@ void _registerCoordinator() {
 }
 
 void _registerProfile() {
-  getIt.registerFactory(() => ProfileStatsCubit(getIt(), getIt(), getIt(), getIt()));
+  getIt.registerFactory(() => ProfileStatsCubit(getIt(), getIt(), getIt(), getIt(), getIt(), getIt()));
 }
 
 void _registerInspector() {
@@ -258,6 +257,7 @@ void _registerCertificate() {
     )
     ..registerLazySingleton(() => WatchCertificate(getIt()))
     ..registerLazySingleton(() => WatchReviewedCertificates(getIt()))
+    ..registerLazySingleton(() => WatchInspectorCertificates(getIt()))
     ..registerLazySingleton(() => SaveCertificateDraft(getIt()))
     ..registerLazySingleton(() => SubmitCertificate(getIt()))
     ..registerLazySingleton(() => ApproveCertificate(getIt()))

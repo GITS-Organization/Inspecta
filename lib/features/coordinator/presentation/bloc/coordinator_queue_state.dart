@@ -6,19 +6,26 @@ class CoordinatorQueueState extends Equatable {
   final CoordinatorQueueStatus status;
   final List<InspectionRequest> requests;
   final List<AppUser> inspectors;
+
+  /// The header tile the list is narrowed to, or `null` for every job.
+  final QueueFilter? filter;
   final RequestsFailureCode? failure;
 
   const CoordinatorQueueState({
     this.status = CoordinatorQueueStatus.loading,
     this.requests = const [],
     this.inspectors = const [],
+    this.filter,
     this.failure,
   });
 
   /// Every job still on the coordinator's radar: waiting on an inspector,
-  /// or already assigned/running — soonest due date first.
+  /// or already assigned/running — narrowed to [filter] when one is set,
+  /// soonest due date first.
   List<InspectionRequest> get jobs {
-    final visible = requests.where((r) => r.isReadyToAssign || r.isAssignedOrLater).toList()
+    final visible = requests
+        .where((r) => (r.isReadyToAssign || r.isAssignedOrLater) && (filter?.matches(r) ?? true))
+        .toList()
       ..sort((a, b) => _dueKey(a).compareTo(_dueKey(b)));
     return visible;
   }
@@ -31,13 +38,15 @@ class CoordinatorQueueState extends Equatable {
     return visible;
   }
 
-  int get unassignedCount => requests.where((r) => r.isReadyToAssign).length;
+  /// What a header tile counts — always across every job, whichever filter
+  /// is on, so the tiles stay a summary of the whole queue.
+  int countOf(QueueFilter filter) => requests.where(filter.matches).length;
 
-  int get scheduledCount => requests.where((r) => r.status == JobStatus.assigned).length;
+  int get unassignedCount => countOf(QueueFilter.unassigned);
 
-  int get inProgressCount => requests
-      .where((r) => r.status == JobStatus.taskAccepted || r.status == JobStatus.inProgress)
-      .length;
+  int get scheduledCount => countOf(QueueFilter.scheduled);
+
+  int get inProgressCount => countOf(QueueFilter.inProgress);
 
   /// The assigned inspector's name for a job's card, or `null` while the
   /// roster is still loading (or the id no longer matches anyone).
@@ -58,6 +67,8 @@ class CoordinatorQueueState extends Equatable {
     CoordinatorQueueStatus? status,
     List<InspectionRequest>? requests,
     List<AppUser>? inspectors,
+    QueueFilter? filter,
+    bool clearFilter = false,
     RequestsFailureCode? failure,
     bool clearFailure = false,
   }) {
@@ -65,10 +76,11 @@ class CoordinatorQueueState extends Equatable {
       status: status ?? this.status,
       requests: requests ?? this.requests,
       inspectors: inspectors ?? this.inspectors,
+      filter: clearFilter ? null : (filter ?? this.filter),
       failure: clearFailure ? null : (failure ?? this.failure),
     );
   }
 
   @override
-  List<Object?> get props => [status, requests, inspectors, failure];
+  List<Object?> get props => [status, requests, inspectors, filter, failure];
 }

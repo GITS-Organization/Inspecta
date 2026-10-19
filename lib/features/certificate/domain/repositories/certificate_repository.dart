@@ -12,6 +12,10 @@ abstract interface class CertificateRepository {
   /// time stays until the next review replaces it.
   Stream<List<Certificate>> watchReviewedSince(DateTime since);
 
+  /// Every certificate belonging to this inspector's jobs — what their
+  /// Profile counts for "this month".
+  Stream<List<Certificate>> watchInspectorCertificates(String inspectorId);
+
   /// Autosaves the current state of the form.
   Future<void> saveDraft(Certificate certificate);
 

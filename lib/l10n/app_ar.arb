@@ -71,9 +71,6 @@
   "viewAction": "عرض",
   "emailSignatureLabel": "توقيع البريد الإلكتروني",
 
-  "myAreasTitle": "مناطقي",
-  "areasNotTrackedYet": "لم يتم بعد تتبّع المناطق المخصّصة والفريق.",
-
   "myWorkTitle": "عملي",
   "qualifiedForLabel": "مؤهل لـ",
   "availableForTasksLabel": "متاح لمهام جديدة",
@@ -364,7 +361,6 @@
   "certificatesEmailUpdated": "تم تحديث بريد الشهادات.",
 
   "navQueue": "القائمة",
-  "navSchedule": "الجدول",
   "navInspectors": "المفتشون",
   "navMore": "المزيد",
   "statUnassigned": "غير معيّن",
@@ -373,6 +369,7 @@
   "coordinatorQueueHeading": "عروض أسعار مقبولة",
   "byDueDate": "حسب تاريخ الاستحقاق",
   "emptyCoordinatorQueue": "لا توجد مهام بحاجة إلى تعيين أو جدولة الآن.",
+  "emptyCoordinatorQueueFiltered": "لا توجد مهام في هذه المجموعة الآن.",
   "assignInspectorAction": "تعيين مفتش",
   "dueToday": "مستحق اليوم",
   "dueTomorrow": "مستحق غدًا",
@@ -444,15 +441,10 @@
   "onSiteNowBadge": "في الموقع الآن",
 
   "scheduleFreeAllDayLabel": "متفرغ طوال اليوم",
-  "scheduleEmptyRoster": "لا يوجد مفتشون لجدولتهم.",
-  "previousDayTooltip": "اليوم السابق",
-  "nextDayTooltip": "اليوم التالي",
 
   "navTasks": "المهام",
   "navCertificates": "الشهادات",
   "navTimesheet": "سجل الساعات",
-  "tasksTodayTitle": "{count} مهام اليوم",
-  "tasksOnDayTitle": "{count} مهام في {day}",
   "newTaskLabel": "مهمة جديدة",
   "fromYourCoordinatorLabel": "من المنسق الخاص بك",
   "openAction": "فتح",
@@ -465,7 +457,14 @@
   "declineReasonHint": "السبب (اختياري)",
   "taskAcceptedMessage": "تم قبول المهمة.",
   "taskDeclinedMessage": "تم رفض المهمة.",
-  "emptyTasksForDay": "لا توجد مهام في هذا اليوم.",
+  "tasksFilterToday": "اليوم",
+  "tasksFilterUpcoming": "القادمة",
+  "tasksFilterOverdue": "المتأخرة",
+  "tomorrowLabel": "غدًا",
+  "emptyTasksToday": "لا توجد مهام مجدولة لليوم.",
+  "emptyTasksUpcoming": "لا توجد مهام قادمة.",
+  "emptyTasksOverdue": "لا توجد مهام متأخرة. كل شيء على ما يرام.",
+  "taskOverdueByDays": "{days, plural, =1{متأخرة يومًا واحدًا} =2{متأخرة يومين} few{متأخرة {days} أيام} other{متأخرة {days} يومًا}}",
 
   "certificateTitle": "تقرير الفحص الشامل",
   "templateLabel": "القالب {id}",

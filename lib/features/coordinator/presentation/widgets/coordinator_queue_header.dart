@@ -6,11 +6,12 @@ import '../../../../core/consts/app_text_styles.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/presentation/bloc/auth_cubit.dart';
 import '../../../auth/presentation/widgets/auth_labels.dart';
+import '../../domain/queue_filter.dart';
 import '../bloc/coordinator_queue_cubit.dart';
 
 /// The queue's blue header: avatar, role/screen title, notifications, and
 /// the three job-count tiles (mockup's "Unassigned / Scheduled / In
-/// progress").
+/// progress"), each of which filters the list below when tapped.
 class CoordinatorQueueHeader extends StatelessWidget {
   final VoidCallback onOpenProfile;
 
@@ -87,19 +88,22 @@ class CoordinatorQueueHeader extends StatelessWidget {
           const SizedBox(height: 18),
           BlocBuilder<CoordinatorQueueCubit, CoordinatorQueueState>(
             builder: (context, state) {
+              final cubit = context.read<CoordinatorQueueCubit>();
+              Widget tile(QueueFilter filter, String label) => Expanded(
+                child: _FilterTile(
+                  value: state.countOf(filter),
+                  label: label,
+                  selected: state.filter == filter,
+                  onTap: () => cubit.toggleFilter(filter),
+                ),
+              );
               return Row(
                 children: [
-                  Expanded(
-                    child: _StatTile(
-                      value: state.unassignedCount,
-                      label: t.statUnassigned,
-                      emphasised: true,
-                    ),
-                  ),
+                  tile(QueueFilter.unassigned, t.statUnassigned),
                   const SizedBox(width: 8),
-                  Expanded(child: _StatTile(value: state.scheduledCount, label: t.statScheduled)),
+                  tile(QueueFilter.scheduled, t.statScheduled),
                   const SizedBox(width: 8),
-                  Expanded(child: _StatTile(value: state.inProgressCount, label: t.statInProgress)),
+                  tile(QueueFilter.inProgress, t.statInProgress),
                 ],
               );
             },
@@ -110,42 +114,59 @@ class CoordinatorQueueHeader extends StatelessWidget {
   }
 }
 
-class _StatTile extends StatelessWidget {
+/// A count tile that doubles as a filter: white while its group is the one
+/// the list is narrowed to, translucent otherwise. Tapping it again clears
+/// the filter.
+class _FilterTile extends StatelessWidget {
   final int value;
   final String label;
-  final bool emphasised;
+  final bool selected;
+  final VoidCallback onTap;
 
-  const _StatTile({required this.value, required this.label, this.emphasised = false});
+  const _FilterTile({
+    required this.value,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: emphasised ? Colors.white : Colors.white.withValues(alpha: 0.16),
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected ? Colors.white : Colors.white.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$value',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: emphasised ? AppColours.chipAmberTextStrong : Colors.white,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '$value',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: selected ? AppColours.chipAmberTextStrong : Colors.white,
+                  ),
+                ),
+                Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: selected ? AppColours.inkSecondary : AppColours.onPrimaryMuted,
+                  ),
+                ),
+              ],
             ),
           ),
-          Text(
-            label,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.caption.copyWith(
-              fontWeight: FontWeight.w600,
-              color: emphasised ? AppColours.inkSecondary : AppColours.onPrimaryMuted,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

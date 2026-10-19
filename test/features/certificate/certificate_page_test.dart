@@ -35,6 +35,9 @@ class FakeCertificateRepository implements CertificateRepository {
   }
 
   @override
+  Stream<List<Certificate>> watchInspectorCertificates(String inspectorId) => const Stream.empty();
+
+  @override
   Stream<List<Certificate>> watchReviewedSince(DateTime since) => const Stream.empty();
 
   @override

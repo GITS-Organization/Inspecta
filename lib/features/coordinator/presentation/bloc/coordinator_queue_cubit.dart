@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/enums/job_status.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/domain/usecases/get_requests.dart';
+import '../../domain/queue_filter.dart';
 import '../../domain/usecases/get_inspectors.dart';
 
 part 'coordinator_queue_state.dart';
@@ -51,6 +51,12 @@ class CoordinatorQueueCubit extends Cubit<CoordinatorQueueState> {
       onError: (_) {},
     );
   }
+
+  /// Narrows the list to [filter]'s group; tapping the group that's already
+  /// on turns the filter off and shows every job again.
+  void toggleFilter(QueueFilter filter) => emit(
+    state.filter == filter ? state.copyWith(clearFilter: true) : state.copyWith(filter: filter),
+  );
 
   Future<void> retry() async {
     await _requestsSubscription?.cancel();

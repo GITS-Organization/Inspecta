@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/consts/app_colors.dart';
@@ -22,8 +23,9 @@ import '../widgets/inspector_task_card.dart';
 import '../widgets/inspector_tasks_header.dart';
 import '../widgets/new_task_banner.dart';
 
-/// Feature 05's Tasks tab: a day strip, a nudge toward any job the
-/// inspector hasn't responded to yet, and that day's task cards.
+/// Feature 05's Tasks tab: Today, Upcoming and Overdue lists (chosen from the
+/// header's tiles), a nudge toward any job the inspector hasn't responded to
+/// yet, and the task cards.
 class InspectorTasksPage extends StatelessWidget {
   const InspectorTasksPage({super.key});
 
@@ -85,12 +87,18 @@ class _BodyState extends State<_Body> {
     );
   }
 
+  /// Takes the inspector to the job that needs a response: switching to the
+  /// list it's in first, if it isn't the one showing, then scrolling to it.
   void _openFirstNeedsResponse(InspectorTasksState state) {
     final task = state.firstNeedsResponse;
     if (task == null) return;
-    final targetContext = _cardKeys[task.id]?.currentContext;
-    if (targetContext == null) return;
-    Scrollable.ensureVisible(targetContext, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    final filter = InspectorTasksState.filterOf(task);
+    if (filter != null && filter != state.filter) context.read<InspectorTasksCubit>().selectFilter(filter);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final targetContext = _cardKeys[task.id]?.currentContext;
+      if (targetContext == null || !targetContext.mounted) return;
+      Scrollable.ensureVisible(targetContext, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    });
   }
 
   @override
@@ -118,9 +126,15 @@ class _BodyState extends State<_Body> {
           return _ErrorState(failure: state.failure!);
         }
 
-        final tasks = state.tasksForSelectedDate;
+        final tasks = state.visibleTasks;
         final banner = state.firstNeedsResponse;
         final cubit = context.read<InspectorTasksCubit>();
+        final locale = Localizations.localeOf(context).languageCode;
+        final tomorrow = DateTime.now().add(const Duration(days: 1));
+
+        String dayLabel(DateTime day) => DateUtils.isSameDay(day, tomorrow)
+            ? t.tomorrowLabel
+            : DateFormat('EEEE, d MMM', locale).format(day);
 
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, AppLayout.bottomNavClearance),
@@ -130,19 +144,23 @@ class _BodyState extends State<_Body> {
               const SizedBox(height: 14),
             ],
             if (tasks.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                child: Center(
-                  child: Text(t.emptyTasksForDay, style: AppTextStyles.subtitle),
-                ),
-              )
+              _EmptyState(filter: state.filter)
             else
               for (var i = 0; i < tasks.length; i++) ...[
-                if (i > 0) const SizedBox(height: 12),
+                // Upcoming jobs are grouped under the day they're due.
+                if (state.filter == TasksFilter.upcoming &&
+                    (i == 0 || !DateUtils.isSameDay(tasks[i - 1].scheduledAt, tasks[i].scheduledAt))) ...[
+                  if (i > 0) const SizedBox(height: 18),
+                  Text(dayLabel(tasks[i].scheduledAt!), style: AppTextStyles.cardTitle.copyWith(fontSize: 15)),
+                  const SizedBox(height: 10),
+                ] else if (i > 0)
+                  const SizedBox(height: 12),
                 KeyedSubtree(
                   key: _keyFor(tasks[i].id),
                   child: InspectorTaskCard(
                     task: tasks[i],
+                    showDate: state.filter == TasksFilter.overdue,
+                    overdueDays: InspectorTasksState.daysOverdue(tasks[i]),
                     submitting: state.isSubmitting,
                     onAccept: () => cubit.accept(tasks[i].id),
                     onDecline: () => _decline(tasks[i]),
@@ -154,6 +172,32 @@ class _BodyState extends State<_Body> {
           ],
         );
       },
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final TasksFilter filter;
+
+  const _EmptyState({required this.filter});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final (icon, message) = switch (filter) {
+      TasksFilter.today => (Icons.event_available_outlined, t.emptyTasksToday),
+      TasksFilter.upcoming => (Icons.event_note_outlined, t.emptyTasksUpcoming),
+      TasksFilter.overdue => (Icons.check_circle_outline_rounded, t.emptyTasksOverdue),
+    };
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 16),
+      child: Column(
+        children: [
+          Icon(icon, size: 40, color: AppColours.inkMuted),
+          const SizedBox(height: 12),
+          Text(message, textAlign: TextAlign.center, style: AppTextStyles.subtitle),
+        ],
+      ),
     );
   }
 }

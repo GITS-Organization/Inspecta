@@ -23,13 +23,7 @@ class ProfileRoleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (user.role) {
-      UserRole.coordinator => Column(
-        children: [
-          _QuotationDefaultsCard(onTap: onComingSoon),
-          const SizedBox(height: 14),
-          const _MyAreasCard(),
-        ],
-      ),
+      UserRole.coordinator => _QuotationDefaultsCard(onTap: onComingSoon),
       UserRole.inspector => _MyWorkCard(user: user, onComingSoon: onComingSoon),
       UserRole.technicalManager => _MySignatureCard(user: user),
       UserRole.admin => const SizedBox.shrink(),
@@ -129,25 +123,6 @@ class _QuotationDefaultsCard extends StatelessWidget {
             ),
             _SettingRow(label: t.emailSignatureLabel, value: t.editAction, emphasized: true, onTap: onTap),
           ]),
-        ],
-      ),
-    );
-  }
-}
-
-class _MyAreasCard extends StatelessWidget {
-  const _MyAreasCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    return MCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _CardTitle(t.myAreasTitle),
-          const SizedBox(height: 4),
-          Text(t.areasNotTrackedYet, style: AppTextStyles.caption),
         ],
       ),
     );

@@ -4,10 +4,14 @@ enum InspectorTasksStatus { loading, ready, error }
 
 enum InspectorTaskAction { accept, decline, start }
 
+/// The Tasks tab's three lists: what's due today, what's coming up, and what
+/// was due on an earlier day and still isn't done.
+enum TasksFilter { today, upcoming, overdue }
+
 class InspectorTasksState extends Equatable {
   final InspectorTasksStatus status;
   final List<InspectionRequest> requests;
-  final DateTime selectedDate;
+  final TasksFilter filter;
   final RequestsFailureCode? failure;
 
   final bool isSubmitting;
@@ -16,63 +20,72 @@ class InspectorTasksState extends Equatable {
   final bool lastActionSuccess;
   final RequestsFailureCode? lastActionFailure;
 
-  InspectorTasksState({
+  const InspectorTasksState({
     this.status = InspectorTasksStatus.loading,
     this.requests = const [],
-    DateTime? selectedDate,
+    this.filter = TasksFilter.today,
     this.failure,
     this.isSubmitting = false,
     this.actionSeq = 0,
     this.lastAction,
     this.lastActionSuccess = false,
     this.lastActionFailure,
-  }) : selectedDate = _dateOnly(selectedDate ?? DateTime.now());
+  });
 
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  bool get isToday => selectedDate == _dateOnly(DateTime.now());
-
-  /// The day strip's 7 dates, the selected day always in the middle.
-  List<DateTime> get weekDates => List.generate(7, (i) => selectedDate.add(Duration(days: i - 3)));
-
   /// This job is still open work for the inspector — not yet certified.
   static bool _isOpen(InspectionRequest r) =>
-      r.status == JobStatus.assigned ||
-      r.status == JobStatus.taskAccepted ||
-      r.status == JobStatus.inProgress;
+      r.status == JobStatus.assigned || r.status == JobStatus.taskAccepted || r.status == JobStatus.inProgress;
 
-  /// Open jobs scheduled on [selectedDate], earliest first.
-  List<InspectionRequest> get tasksForSelectedDate {
-    final tasks = requests.where((r) {
-      final at = r.scheduledAt;
-      return _isOpen(r) && at != null && _dateOnly(at) == selectedDate;
-    }).toList()
+  /// Which list [task] belongs in as of [now] (default: right now), by the
+  /// day it's scheduled for — or null when it isn't open work, or has no
+  /// day. A job scheduled earlier today is still today's, however late.
+  static TasksFilter? filterOf(InspectionRequest task, {DateTime? now}) {
+    final scheduledAt = task.scheduledAt;
+    if (!_isOpen(task) || scheduledAt == null) return null;
+    final today = _dateOnly(now ?? DateTime.now());
+    final day = _dateOnly(scheduledAt);
+    if (day.isBefore(today)) return TasksFilter.overdue;
+    return day == today ? TasksFilter.today : TasksFilter.upcoming;
+  }
+
+  /// How many whole days past its day an overdue [task] is — 1 for a job that
+  /// was due yesterday. Zero for anything not overdue.
+  static int daysOverdue(InspectionRequest task, {DateTime? now}) {
+    final scheduledAt = task.scheduledAt;
+    if (filterOf(task, now: now) != TasksFilter.overdue || scheduledAt == null) return 0;
+    final today = now ?? DateTime.now();
+    return DateTime.utc(today.year, today.month, today.day)
+        .difference(DateTime.utc(scheduledAt.year, scheduledAt.month, scheduledAt.day))
+        .inDays;
+  }
+
+  /// The open jobs in [filter]'s list, earliest first: the longest overdue,
+  /// today's by time of day, or the soonest to come.
+  List<InspectionRequest> tasksFor(TasksFilter filter, {DateTime? now}) {
+    return requests.where((r) => filterOf(r, now: now) == filter).toList()
       ..sort((a, b) => a.scheduledAt!.compareTo(b.scheduledAt!));
-    return tasks;
   }
 
-  /// A task count per day for the day strip's pills.
-  int taskCountFor(DateTime day) {
-    final key = _dateOnly(day);
-    return requests.where((r) {
-      final at = r.scheduledAt;
-      return _isOpen(r) && at != null && _dateOnly(at) == key;
-    }).length;
-  }
+  int countFor(TasksFilter filter, {DateTime? now}) => requests.where((r) => filterOf(r, now: now) == filter).length;
 
-  /// The coordinator just assigned something the inspector hasn't
-  /// responded to yet — the "New task" banner's trigger.
+  /// The jobs in the list the inspector is looking at.
+  List<InspectionRequest> get visibleTasks => tasksFor(filter);
+
+  /// The coordinator assigned something the inspector hasn't responded to
+  /// yet — the "New task" banner's trigger — whichever list it's in. The
+  /// earliest one.
   InspectionRequest? get firstNeedsResponse {
-    for (final r in tasksForSelectedDate) {
-      if (r.status == JobStatus.assigned) return r;
-    }
-    return null;
+    final waiting = requests.where((r) => r.status == JobStatus.assigned && r.scheduledAt != null).toList()
+      ..sort((a, b) => a.scheduledAt!.compareTo(b.scheduledAt!));
+    return waiting.isEmpty ? null : waiting.first;
   }
 
   InspectorTasksState copyWith({
     InspectorTasksStatus? status,
     List<InspectionRequest>? requests,
-    DateTime? selectedDate,
+    TasksFilter? filter,
     RequestsFailureCode? failure,
     bool clearFailure = false,
     bool? isSubmitting,
@@ -85,7 +98,7 @@ class InspectorTasksState extends Equatable {
     return InspectorTasksState(
       status: status ?? this.status,
       requests: requests ?? this.requests,
-      selectedDate: selectedDate ?? this.selectedDate,
+      filter: filter ?? this.filter,
       failure: clearFailure ? null : (failure ?? this.failure),
       isSubmitting: isSubmitting ?? this.isSubmitting,
       actionSeq: actionSeq ?? this.actionSeq,
@@ -99,7 +112,7 @@ class InspectorTasksState extends Equatable {
   List<Object?> get props => [
     status,
     requests,
-    selectedDate,
+    filter,
     failure,
     isSubmitting,
     actionSeq,

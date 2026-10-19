@@ -71,9 +71,6 @@
   "viewAction": "View",
   "emailSignatureLabel": "Email signature",
 
-  "myAreasTitle": "My areas",
-  "areasNotTrackedYet": "Assigned areas and team aren't tracked yet.",
-
   "myWorkTitle": "My work",
   "qualifiedForLabel": "Qualified for",
   "availableForTasksLabel": "Available for new tasks",
@@ -409,7 +406,6 @@
   "certificatesEmailUpdated": "Certificates email updated.",
 
   "navQueue": "Queue",
-  "navSchedule": "Schedule",
   "navInspectors": "Inspectors",
   "navMore": "More",
   "statUnassigned": "Unassigned",
@@ -418,6 +414,7 @@
   "coordinatorQueueHeading": "Accepted quotations",
   "byDueDate": "By due date",
   "emptyCoordinatorQueue": "Nothing to assign or schedule right now.",
+  "emptyCoordinatorQueueFiltered": "No jobs in this group right now.",
   "assignInspectorAction": "Assign inspector",
   "dueToday": "Due today",
   "dueTomorrow": "Due tomorrow",
@@ -489,19 +486,10 @@
   "onSiteNowBadge": "On site now",
 
   "scheduleFreeAllDayLabel": "Free all day",
-  "scheduleEmptyRoster": "No inspectors to schedule.",
-  "previousDayTooltip": "Previous day",
-  "nextDayTooltip": "Next day",
 
   "navTasks": "Tasks",
   "navCertificates": "Certificates",
   "navTimesheet": "Timesheet",
-  "tasksTodayTitle": "{count} tasks today",
-  "@tasksTodayTitle": { "placeholders": { "count": { "type": "int" } } },
-  "tasksOnDayTitle": "{count} tasks on {day}",
-  "@tasksOnDayTitle": {
-    "placeholders": { "count": { "type": "int" }, "day": { "type": "String" } }
-  },
   "newTaskLabel": "New task",
   "fromYourCoordinatorLabel": "from your coordinator",
   "openAction": "Open",
@@ -514,7 +502,15 @@
   "declineReasonHint": "Reason (optional)",
   "taskAcceptedMessage": "Task accepted.",
   "taskDeclinedMessage": "Task declined.",
-  "emptyTasksForDay": "No tasks on this day.",
+  "tasksFilterToday": "Today",
+  "tasksFilterUpcoming": "Upcoming",
+  "tasksFilterOverdue": "Overdue",
+  "tomorrowLabel": "Tomorrow",
+  "emptyTasksToday": "Nothing scheduled for today.",
+  "emptyTasksUpcoming": "No upcoming tasks.",
+  "emptyTasksOverdue": "No overdue tasks. You are all caught up.",
+  "taskOverdueByDays": "{days, plural, =1{1 day overdue} other{{days} days overdue}}",
+  "@taskOverdueByDays": { "placeholders": { "days": { "type": "int" } } },
 
   "certificateTitle": "Report of thorough examination",
   "templateLabel": "Template {id}",

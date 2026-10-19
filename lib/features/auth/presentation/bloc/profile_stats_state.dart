@@ -11,6 +11,10 @@ class ProfileStatsState extends Equatable {
   final int? returnedThisMonth;
   final int? sentThisMonth;
 
+  // An inspector's (and, in returnedThisMonth, shared with the manager's).
+  final int? inspectionsThisMonth;
+  final int? certificatesThisMonth;
+
   const ProfileStatsState({
     this.quotesSentThisMonth,
     this.acceptedThisMonth,
@@ -18,6 +22,8 @@ class ProfileStatsState extends Equatable {
     this.reviewedThisMonth,
     this.returnedThisMonth,
     this.sentThisMonth,
+    this.inspectionsThisMonth,
+    this.certificatesThisMonth,
   });
 
   ProfileStatsState copyWith({
@@ -27,6 +33,8 @@ class ProfileStatsState extends Equatable {
     int? reviewedThisMonth,
     int? returnedThisMonth,
     int? sentThisMonth,
+    int? inspectionsThisMonth,
+    int? certificatesThisMonth,
   }) {
     return ProfileStatsState(
       quotesSentThisMonth: quotesSentThisMonth ?? this.quotesSentThisMonth,
@@ -35,6 +43,8 @@ class ProfileStatsState extends Equatable {
       reviewedThisMonth: reviewedThisMonth ?? this.reviewedThisMonth,
       returnedThisMonth: returnedThisMonth ?? this.returnedThisMonth,
       sentThisMonth: sentThisMonth ?? this.sentThisMonth,
+      inspectionsThisMonth: inspectionsThisMonth ?? this.inspectionsThisMonth,
+      certificatesThisMonth: certificatesThisMonth ?? this.certificatesThisMonth,
     );
   }
 
@@ -46,5 +56,7 @@ class ProfileStatsState extends Equatable {
     reviewedThisMonth,
     returnedThisMonth,
     sentThisMonth,
+    inspectionsThisMonth,
+    certificatesThisMonth,
   ];
 }

@@ -5,25 +5,24 @@ import '../../../../core/consts/app_text_styles.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// Every screen the coordinator's shell swaps in place. The bar only has
-/// room for five of them — Requests, Quotations, Queue, Schedule and More —
-/// so Clients, Inspectors, Timesheets and Profile live behind More.
+/// room for four of them — Requests, Quotations, Queue and More — so
+/// Clients, Inspectors and Timesheets live behind More. More itself is the
+/// Profile screen.
 enum CoordinatorTab {
   requests,
   quotations,
   queue,
-  schedule,
   more,
   clients,
   inspectors,
-  timesheets,
-  profile;
+  timesheets;
 
   /// Whether this tab has its own slot in the bar. The rest show under More.
   bool get inBar => index <= more.index;
 }
 
-/// Requests / Quotations / Queue / Schedule / More. While one of the
-/// screens behind More is showing, More stays the highlighted slot.
+/// Requests / Quotations / Queue / More. While one of the screens behind
+/// More is showing, More stays the highlighted slot.
 class CoordinatorBottomNav extends StatelessWidget {
   final CoordinatorTab selected;
   final ValueChanged<CoordinatorTab> onSelectTab;
@@ -68,14 +67,6 @@ class CoordinatorBottomNav extends StatelessWidget {
                   label: t.navQueue,
                   selected: highlighted == CoordinatorTab.queue,
                   onTap: () => onSelectTab(CoordinatorTab.queue),
-                ),
-              ),
-              Expanded(
-                child: _NavItem(
-                  icon: Icons.calendar_today_outlined,
-                  label: t.navSchedule,
-                  selected: highlighted == CoordinatorTab.schedule,
-                  onTap: () => onSelectTab(CoordinatorTab.schedule),
                 ),
               ),
               Expanded(

@@ -22,24 +22,30 @@ import '../widgets/profile_stat_tiles.dart';
 /// null, matching its siblings — see `CoordinatorRootPage`); a role
 /// without one swaps it in for the home content instead, passing
 /// [onClose] to swap back (see `RoleHomePage`).
+///
+/// A shell whose bar has a "More" slot embeds this as that screen and passes
+/// [navigationSection] — a card of rows to its overflow screens — which shows
+/// after the role's own card, ahead of the Account card.
 class ProfilePage extends StatelessWidget {
   final VoidCallback? onClose;
+  final Widget? navigationSection;
 
-  const ProfilePage({super.key, this.onClose});
+  const ProfilePage({super.key, this.onClose, this.navigationSection});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => getIt<ProfileStatsCubit>()..start(context.read<AuthCubit>().user?.role),
-      child: _ProfileView(onClose: onClose),
+      create: (context) => getIt<ProfileStatsCubit>()..start(context.read<AuthCubit>().user),
+      child: _ProfileView(onClose: onClose, navigationSection: navigationSection),
     );
   }
 }
 
 class _ProfileView extends StatelessWidget {
   final VoidCallback? onClose;
+  final Widget? navigationSection;
 
-  const _ProfileView({required this.onClose});
+  const _ProfileView({required this.onClose, required this.navigationSection});
 
   void _comingSoon(BuildContext context) {
     final t = AppLocalizations.of(context)!;
@@ -84,9 +90,9 @@ class _ProfileView extends StatelessWidget {
       (stats.clientsCount, t.profileStatClients),
     ],
     UserRole.inspector => [
-      (null, t.profileStatInspections),
-      (null, t.profileStatCertificates),
-      (null, t.profileStatReturned),
+      (stats.inspectionsThisMonth, t.profileStatInspections),
+      (stats.certificatesThisMonth, t.profileStatCertificates),
+      (stats.returnedThisMonth, t.profileStatReturned),
     ],
     UserRole.technicalManager => [
       (stats.reviewedThisMonth, t.profileStatReviewed),
@@ -128,6 +134,7 @@ class _ProfileView extends StatelessWidget {
                 const SizedBox(height: 14),
                 ProfileRoleCard(user: user, onComingSoon: () => _comingSoon(context)),
                 if (user.role != UserRole.admin) const SizedBox(height: 14),
+                if (navigationSection != null) ...[navigationSection!, const SizedBox(height: 14)],
                 ProfileAccountSection(onComingSoon: () => _comingSoon(context)),
                 const SizedBox(height: 14),
                 ProfileHelpSection(onComingSoon: () => _comingSoon(context)),

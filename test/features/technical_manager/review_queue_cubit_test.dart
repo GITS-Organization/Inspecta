@@ -39,6 +39,9 @@ class _FakeCertificateRepository implements CertificateRepository {
       controllers[requestId]!.add(Certificate(requestId: requestId, inspectorId: 'insp-1', submittedAt: at));
 
   @override
+  Stream<List<Certificate>> watchInspectorCertificates(String inspectorId) => throw UnimplementedError();
+
+  @override
   Stream<List<Certificate>> watchReviewedSince(DateTime since) => throw UnimplementedError();
 
   @override

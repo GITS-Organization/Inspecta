@@ -27,6 +27,16 @@ class CertificateRepositoryImpl implements CertificateRepository {
   }
 
   @override
+  Stream<List<Certificate>> watchInspectorCertificates(String inspectorId) {
+    return _remote
+        .watchInspectorCertificates(inspectorId)
+        .map((models) => [for (final model in models) model.toEntity()])
+        .handleError((Object error) {
+          throw _mapError(error);
+        });
+  }
+
+  @override
   Stream<List<Certificate>> watchReviewedSince(DateTime since) {
     return _remote
         .watchReviewedSince(since)
