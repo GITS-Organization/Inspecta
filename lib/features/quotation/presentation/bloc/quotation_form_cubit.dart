@@ -4,9 +4,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/utils/currency.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
+import '../../domain/entities/pricing_unit.dart';
 import '../../domain/entities/quotation_failure.dart';
 import '../../domain/entities/quote_line_item.dart';
 import '../../domain/entities/reply_type.dart';
+import '../../domain/proposal_terms.dart';
 import '../../domain/usecases/save_draft.dart';
 import '../../domain/usecases/send_quotation.dart';
 
@@ -19,10 +21,10 @@ part 'quotation_form_state.dart';
 /// history of every reply sent.
 ///
 /// Known gaps: Accept has no real price (no price list backend, US-03's
-/// open question #1), an offer prices every item at the same per-unit
-/// rate (the UI has one price field, not one per item), there's no VAT
-/// line, and nothing here emails the client a PDF (BR-03.5) — that needs
-/// a backend job this client can't perform.
+/// open question #1), there's no VAT line (the proposal just states that
+/// 14% VAT is added), and nothing here emails the client the proposal PDF
+/// (BR-03.5) — that needs a backend job this client can't perform, so for
+/// now it is only previewed.
 class QuotationFormCubit extends Cubit<QuotationFormState> {
   final InspectionRequest request;
   final SaveDraft _saveDraft;
@@ -34,14 +36,23 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
     required SendQuotation sendQuotation,
   }) : _saveDraft = saveDraft,
        _sendQuotation = sendQuotation,
-       super(const QuotationFormState());
+       super(QuotationFormState(itemIds: request.items.map((item) => item.id).toList()));
 
+  /// Sum of every line's price × quantity, or `null` until each line has a
+  /// price.
   int? get totalPiastres {
-    final unitPrice = state.unitPricePiastres;
-    if (unitPrice == null) return null;
-    final totalUnits = request.items.fold<int>(0, (sum, item) => sum + item.quantity);
-    return unitPrice * totalUnits;
+    var total = 0;
+    for (final item in request.items) {
+      final unitPrice = state.unitPriceOf(item.id);
+      if (unitPrice == null) return null;
+      total += unitPrice * item.quantity;
+    }
+    return total;
   }
+
+  /// The notes as they'll print: the points as edited, without blank ones.
+  List<String> get notes =>
+      state.notes.map((note) => note.trim()).where((note) => note.isNotEmpty).toList();
 
   /// "Overhead crane × 2", or each item type joined when there's more
   /// than one — shown on the Quotations tracker's cards.
@@ -54,22 +65,28 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
     emit(state.copyWith(replyType: type, submitted: false, clearFailure: true));
   }
 
-  void changePrice(String value) => emit(state.copyWith(priceText: value));
+  void changeLinePrice(String itemId, String value) =>
+      emit(state.copyWith(linePrices: {...state.linePrices, itemId: value}));
+
+  void changeLineUnit(String itemId, PricingUnit unit) =>
+      emit(state.copyWith(lineUnits: {...state.lineUnits, itemId: unit}));
+
+  void changeNotes(List<String> value) => emit(state.copyWith(notes: value));
 
   void changeValidity(int days) => emit(state.copyWith(validityDays: days));
 
   void changeMessage(String value) => emit(state.copyWith(message: value));
 
-  /// Every item priced at the same entered rate (see the class doc's
-  /// gaps list).
-  List<QuoteLineItem> _priceAllItems(int unitPricePiastres) {
+  /// The offer's lines, each at its own entered price and pricing unit.
+  List<QuoteLineItem> offerLines({bool priced = true}) {
     return request.items
         .map(
           (item) => QuoteLineItem(
             requestItemId: item.id,
             type: item.type,
             quantity: item.quantity,
-            unitPricePiastres: unitPricePiastres,
+            unitPricePiastres: priced ? (state.unitPriceOf(item.id) ?? 0) : 0,
+            pricingUnit: state.unitOf(item.id),
           ),
         )
         .toList();
@@ -90,10 +107,11 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
         equipmentSummary: _equipmentSummary,
         type: state.replyType!,
         items: state.replyType == ReplyType.offer
-            ? _priceAllItems(state.unitPricePiastres ?? 0)
-            : _priceAllItems(0),
+            ? offerLines()
+            : offerLines(priced: false),
         validityDays: state.replyType == ReplyType.offer ? state.validityDays : null,
         message: state.message,
+        notes: state.replyType == ReplyType.offer ? notes : null,
       );
       _completeAction(QuotationAction.saveDraft, success: true);
     } catch (e) {
@@ -116,10 +134,11 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
         equipmentSummary: _equipmentSummary,
         type: state.replyType!,
         items: state.replyType == ReplyType.offer
-            ? _priceAllItems(state.unitPricePiastres ?? 0)
-            : _priceAllItems(0),
+            ? offerLines()
+            : offerLines(priced: false),
         validityDays: state.replyType == ReplyType.offer ? state.validityDays : null,
         message: state.message,
+        notes: state.replyType == ReplyType.offer ? notes : null,
       );
       emit(state.copyWith(sentVersion: version));
       _completeAction(QuotationAction.send, success: true);

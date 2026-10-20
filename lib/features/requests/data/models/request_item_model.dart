@@ -7,6 +7,7 @@ class RequestItemModel {
   final String? manufacturer;
   final String? model;
   final String? serialNumber;
+  final String? prNumber;
   final String? capacity;
   final int quantity;
 
@@ -17,6 +18,7 @@ class RequestItemModel {
     this.manufacturer,
     this.model,
     this.serialNumber,
+    this.prNumber,
     this.capacity,
     this.quantity = 1,
   });
@@ -29,6 +31,7 @@ class RequestItemModel {
       manufacturer: json['manufacturer'] as String?,
       model: json['model'] as String?,
       serialNumber: json['serialNumber'] as String?,
+      prNumber: json['prNumber'] as String?,
       capacity: json['capacity'] as String?,
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
     );
@@ -41,6 +44,7 @@ class RequestItemModel {
     'manufacturer': manufacturer,
     'model': model,
     'serialNumber': serialNumber,
+    'prNumber': prNumber,
     'capacity': capacity,
     'quantity': quantity,
   };
@@ -52,6 +56,7 @@ class RequestItemModel {
     manufacturer: manufacturer,
     model: model,
     serialNumber: serialNumber,
+    prNumber: prNumber,
     capacity: capacity,
     quantity: quantity,
   );

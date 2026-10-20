@@ -210,6 +210,7 @@
 .ui-verdict.is-ok { background: var(--u-ok-bg); color: var(--u-ok-t); }
 .ui-verdict.is-amber { background: var(--u-amber-bg); color: var(--u-amber-t); }
 .ui-verdict.is-red { background: var(--u-red-bg); color: var(--u-red-t); }
+.ui-verdict.is-blue { background: var(--u-ps); color: var(--u-pd); } /* the app's review banner for "with conditions" */
 .ui-kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6em 0.8em; }
 .ui-kv div { min-width: 0; }
 .ui-kv small { display: block; font-size: 0.64em; color: var(--u-mut); font-weight: 600; }

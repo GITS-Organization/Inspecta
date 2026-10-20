@@ -19,9 +19,17 @@ Any static host works (it is just files). `?lang=ar` / `?lang=en` forces a langu
 | `assets/css/site.css` | Tokens (OKLCH, brand blue `#2563EB`), layout, sections. Logical properties throughout. |
 | `assets/css/app-ui.css` | HTML/CSS replica of the app's UI (phone frame + components). Colours mirror `lib/core/consts/app_colors.dart`. Sized in `em`, so a screen scales with the device. |
 | `assets/js/screens.js` | The ten explorer screens and page fragments, English and Arabic, with their interactions (tabs, yes/no, wizard steps, assign picker, signature pad). Labels mirror `lib/l10n/app_en.arb` / `app_ar.arb`. |
-| `assets/js/site.js` | Language switch, header/menu, explorer, form validation and submit. |
+| `assets/js/site.js` | Language switch, header/menu, hero toasts, explorer, "Try it" trail, form validation and submit. |
 | `assets/js/config.js` | Where the contact form delivers (see below). |
 | `serve.mjs` | Dependency-free static server for local preview. |
+
+Page flow: hero (badge, headline, the six-step staircase, three fact stats, phones with cycling in-app toasts), problems, solutions, explorer, features, **Try it**, how it works, industries, benefits, comparison, about, **Where we are**, FAQ, contact, footer with a closing band. The nav is Solutions, Features, How It Works, Try It, Where We Are, FAQ plus the demo button; Industries and About stay reachable from the footer. The EN / العربية pill in the header sets the language (`data-set-lang`).
+
+**Try it** (`#try`, rendered by `renderTrail` in `site.js`) shows one examination result in the four places the app puts it: the inspector's Conclusion option, the review banner, the certificate PDF's conclusion line (`certificate_pdf_builder.dart`: Satisfactory / Satisfactory with conditions / Not satisfactory) and the sent-list badge. The wording is the app's (`reviewResult*`, `reviewBadge*`, `*Option` in the `.arb` files). If the app changes how a result is worded or coloured, change `RESULTS` in `site.js`.
+
+**Where we are** (`#where`) is two lists written from the code: what the app does today, and what it does not (photo attachments, push notifications, analytics, client portal, emailing from the app, Arabic certificate PDF). It is deliberately not a roadmap: no future plans are stated. Keep both lists in step with the app, and with the FAQ.
+
+The hero stats (6 steps, 3 roles, 2 languages) are product facts, not metrics. The hero toasts cycle strings that exist in the app (`taskAcceptedMessage`, `certificateSubmittedMessage`, and the review approve and return messages).
 
 To add or change an explorer screen: add the template in `screens.js`, a button in the `.xp-list` and a `.xp-panel` article (with the same id) in `index.html`.
 

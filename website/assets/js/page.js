@@ -22,17 +22,16 @@
         }
       }
     });
-    var b = doc.querySelector('[data-lang-toggle]');
-    if (b) {
-      b.querySelector('[data-lang-label]').textContent = lang === 'ar' ? 'English' : 'العربية';
-      b.setAttribute('lang', lang === 'ar' ? 'en' : 'ar');
-      b.setAttribute('aria-label', lang === 'ar' ? 'التبديل إلى الإنجليزية (English)' : 'Switch language to Arabic (العربية)');
-    }
+    Array.prototype.forEach.call(doc.querySelectorAll('[data-set-lang]'), function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-set-lang') === lang));
+    });
     if (persist) store('inspecta-lang', lang);
   }
   var m = /[?&]lang=(ar|en)/.exec(window.location.search);
   var saved = store('inspecta-lang');
   var start = m ? m[1] : (saved === 'ar' || saved === 'en' ? saved : ((navigator.language || '').toLowerCase().indexOf('ar') === 0 ? 'ar' : 'en'));
-  doc.querySelector('[data-lang-toggle]').addEventListener('click', function () { apply(root.lang === 'ar' ? 'en' : 'ar', true); });
+  Array.prototype.forEach.call(doc.querySelectorAll('[data-set-lang]'), function (b) {
+    b.addEventListener('click', function () { if (b.getAttribute('data-set-lang') !== root.lang) apply(b.getAttribute('data-set-lang'), true); });
+  });
   apply(start, false);
 })();

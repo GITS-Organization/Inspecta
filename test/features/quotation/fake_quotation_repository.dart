@@ -34,6 +34,7 @@ class FakeQuotationRepository implements QuotationRepository {
     required List<QuoteLineItem> items,
     int? validityDays,
     String? message,
+    List<String>? notes,
   }) async {
     saveDraftCalls.add((type: type, items: items, message: message));
     if (saveDraftFailure != null) throw saveDraftFailure!;
@@ -61,6 +62,7 @@ class FakeQuotationRepository implements QuotationRepository {
     required List<QuoteLineItem> items,
     int? validityDays,
     String? message,
+    List<String>? notes,
   }) async {
     sendCalls.add((type: type, items: items, message: message));
     if (sendFailure != null) throw sendFailure!;

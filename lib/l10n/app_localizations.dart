@@ -464,12 +464,6 @@ abstract class AppLocalizations {
   /// **'View'**
   String get viewAction;
 
-  /// No description provided for @emailSignatureLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Email signature'**
-  String get emailSignatureLabel;
-
   /// No description provided for @myWorkTitle.
   ///
   /// In en, this message translates to:
@@ -3780,6 +3774,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Price {price}\n+ {transport} transport'**
   String timesheetPricePlusTransport(String price, String transport);
+
+  /// No description provided for @previewProposal.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview proposal'**
+  String get previewProposal;
+
+  /// No description provided for @proposalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Technical and Commercial Proposal'**
+  String get proposalTitle;
+
+  /// No description provided for @pricingUnitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit of pricing'**
+  String get pricingUnitLabel;
+
+  /// No description provided for @pricingUnitPerVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Per visit'**
+  String get pricingUnitPerVisit;
+
+  /// No description provided for @pricingUnitPerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Per day'**
+  String get pricingUnitPerDay;
+
+  /// No description provided for @pricingUnitPerHour.
+  ///
+  /// In en, this message translates to:
+  /// **'Per hour'**
+  String get pricingUnitPerHour;
+
+  /// No description provided for @pricingUnitPerItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Per item'**
+  String get pricingUnitPerItem;
+
+  /// No description provided for @proposalNotesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes on the proposal'**
+  String get proposalNotesLabel;
+
+  /// No description provided for @proposalNotesHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a point to edit it, drag the handle to reorder.'**
+  String get proposalNotesHelp;
+
+  /// No description provided for @addNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note'**
+  String get addNote;
+
+  /// No description provided for @removeNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove note'**
+  String get removeNote;
+
+  /// No description provided for @proposalNotesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} points'**
+  String proposalNotesCount(int count);
+
+  /// No description provided for @proposalNotesStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard notes · {count} points'**
+  String proposalNotesStandard(int count);
+
+  /// No description provided for @resetNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to standard'**
+  String get resetNotes;
 }
 
 class _AppLocalizationsDelegate

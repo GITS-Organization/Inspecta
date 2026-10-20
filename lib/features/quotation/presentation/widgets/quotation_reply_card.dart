@@ -5,9 +5,13 @@ import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/shared/m_card.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/entities/pricing_unit.dart';
 import '../../domain/entities/reply_type.dart';
 import '../bloc/quotation_form_cubit.dart';
+import '../pdf/proposal_pdf_preview.dart';
 import 'price_field.dart';
+import 'proposal_notes_editor.dart';
+import 'quotation_labels.dart';
 import 'reply_option_tile.dart';
 
 /// Feature 03 §5's "Reply panel (on Request detail)": Accept / Offer
@@ -20,12 +24,14 @@ class QuotationReplyCard extends StatefulWidget {
 }
 
 class _QuotationReplyCardState extends State<QuotationReplyCard> {
-  final _priceController = TextEditingController();
+  final _priceControllers = <String, TextEditingController>{};
   final _messageController = TextEditingController();
 
   @override
   void dispose() {
-    _priceController.dispose();
+    for (final controller in _priceControllers.values) {
+      controller.dispose();
+    }
     _messageController.dispose();
     super.dispose();
   }
@@ -66,44 +72,23 @@ class _QuotationReplyCardState extends State<QuotationReplyCard> {
             onTap: () => cubit.selectReplyType(ReplyType.reject),
           ),
           if (state.replyType == ReplyType.offer) ...[
+            for (final item in cubit.request.items) ...[
+              const SizedBox(height: 14),
+              _LinePricing(
+                title: '${item.displayTitle} × ${item.quantity}',
+                controller: _priceControllers.putIfAbsent(item.id, TextEditingController.new),
+                unit: state.unitOf(item.id),
+                priceError: state.submitted && state.linePriceInvalid(item.id),
+                onPriceChanged: (value) => cubit.changeLinePrice(item.id, value),
+                onUnitChanged: (unit) => cubit.changeLineUnit(item.id, unit),
+              ),
+            ],
             const SizedBox(height: 14),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(t.pricePerUnit, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
-                      const SizedBox(height: 6),
-                      PriceField(
-                        controller: _priceController,
-                        onChanged: cubit.changePrice,
-                        errorText: state.showPriceError ? t.errorPriceRequired : null,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(t.validFor, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
-                      const SizedBox(height: 6),
-                      _ValidityDropdown(
-                        value: state.validityDays,
-                        onChanged: cubit.changeValidity,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            Text(t.validFor, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
+            const SizedBox(height: 6),
+            _ValidityDropdown(value: state.validityDays, onChanged: cubit.changeValidity),
+            const SizedBox(height: 14),
+            ProposalNotesEditor(initial: state.notes, onChanged: cubit.changeNotes),
           ],
           if (state.replyType == ReplyType.offer || state.replyType == ReplyType.reject) ...[
             const SizedBox(height: 14),
@@ -112,6 +97,24 @@ class _QuotationReplyCardState extends State<QuotationReplyCard> {
               required: state.replyType == ReplyType.reject,
               hasError: state.showReasonError,
               onChanged: cubit.changeMessage,
+            ),
+          ],
+          if (state.replyType == ReplyType.offer && !state.priceInvalid) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () => previewProposalPdf(
+                  context,
+                  request: cubit.request,
+                  lines: cubit.offerLines(),
+                  notes: cubit.notes,
+                  validityDays: state.validityDays,
+                ),
+                icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                label: Text(t.previewProposal),
+              ),
             ),
           ],
         ],
@@ -129,6 +132,30 @@ class _ValidityDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    return _DropdownBox<int>(
+      value: value,
+      items: const [14, 30],
+      labelOf: t.validityDaysOption,
+      onChanged: onChanged,
+    );
+  }
+}
+
+class _DropdownBox<T> extends StatelessWidget {
+  final T value;
+  final List<T> items;
+  final String Function(T) labelOf;
+  final ValueChanged<T> onChanged;
+
+  const _DropdownBox({
+    required this.value,
+    required this.items,
+    required this.labelOf,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       height: 54,
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -138,20 +165,15 @@ class _ValidityDropdown extends StatelessWidget {
         border: Border.all(color: AppColours.border, width: 1.5),
       ),
       child: DropdownButtonHideUnderline(
-        child: DropdownButton<int>(
+        child: DropdownButton<T>(
           value: value,
           isExpanded: true,
           style: AppTextStyles.input,
-          items: [14, 30]
-              .map(
-                (days) => DropdownMenuItem(
-                  value: days,
-                  child: Text(t.validityDaysOption(days)),
-                ),
-              )
+          items: items
+              .map((item) => DropdownMenuItem(value: item, child: Text(labelOf(item), overflow: TextOverflow.ellipsis)))
               .toList(),
-          onChanged: (days) {
-            if (days != null) onChanged(days);
+          onChanged: (item) {
+            if (item != null) onChanged(item);
           },
         ),
       ),
@@ -224,6 +246,62 @@ class _MessageField extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// One request item's price and pricing unit.
+class _LinePricing extends StatelessWidget {
+  final String title;
+  final TextEditingController controller;
+  final PricingUnit unit;
+  final bool priceError;
+  final ValueChanged<String> onPriceChanged;
+  final ValueChanged<PricingUnit> onUnitChanged;
+
+  const _LinePricing({
+    required this.title,
+    required this.controller,
+    required this.unit,
+    required this.priceError,
+    required this.onPriceChanged,
+    required this.onUnitChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(title, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
+        const SizedBox(height: 6),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 3,
+              child: PriceField(
+                controller: controller,
+                onChanged: onPriceChanged,
+                errorText: priceError ? t.errorPriceRequired : null,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: _DropdownBox<PricingUnit>(
+                value: unit,
+                items: PricingUnit.values,
+                labelOf: (unit) => unit.label(t),
+                onChanged: onUnitChanged,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }

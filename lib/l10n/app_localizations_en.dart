@@ -204,9 +204,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get viewAction => 'View';
 
   @override
-  String get emailSignatureLabel => 'Email signature';
-
-  @override
   String get myWorkTitle => 'My work';
 
   @override
@@ -2075,4 +2072,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String timesheetPricePlusTransport(String price, String transport) {
     return 'Price $price\n+ $transport transport';
   }
+
+  @override
+  String get previewProposal => 'Preview proposal';
+
+  @override
+  String get proposalTitle => 'Technical and Commercial Proposal';
+
+  @override
+  String get pricingUnitLabel => 'Unit of pricing';
+
+  @override
+  String get pricingUnitPerVisit => 'Per visit';
+
+  @override
+  String get pricingUnitPerDay => 'Per day';
+
+  @override
+  String get pricingUnitPerHour => 'Per hour';
+
+  @override
+  String get pricingUnitPerItem => 'Per item';
+
+  @override
+  String get proposalNotesLabel => 'Notes on the proposal';
+
+  @override
+  String get proposalNotesHelp =>
+      'Tap a point to edit it, drag the handle to reorder.';
+
+  @override
+  String get addNote => 'Add a note';
+
+  @override
+  String get removeNote => 'Remove note';
+
+  @override
+  String proposalNotesCount(int count) {
+    return '$count points';
+  }
+
+  @override
+  String proposalNotesStandard(int count) {
+    return 'Standard notes · $count points';
+  }
+
+  @override
+  String get resetNotes => 'Reset to standard';
 }

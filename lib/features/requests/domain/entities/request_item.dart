@@ -10,6 +10,10 @@ class RequestItem extends Equatable {
   final String? model;
   final String? serialNumber;
 
+  /// The client's purchase-request number for this item — printed in the
+  /// proposal's scope-of-work table.
+  final String? prNumber;
+
   /// Free-text capacity / SWL, e.g. "10 t" (00-overview.md's `Equipment`).
   final String? capacity;
   final int quantity;
@@ -21,6 +25,7 @@ class RequestItem extends Equatable {
     this.manufacturer,
     this.model,
     this.serialNumber,
+    this.prNumber,
     this.capacity,
     this.quantity = 1,
   });
@@ -39,6 +44,7 @@ class RequestItem extends Equatable {
     manufacturer,
     model,
     serialNumber,
+    prNumber,
     capacity,
     quantity,
   ];

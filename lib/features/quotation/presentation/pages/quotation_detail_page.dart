@@ -16,7 +16,10 @@ import '../../../requests/presentation/pages/request_detail_page.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
 import '../../domain/entities/client_response_outcome.dart';
 import '../../domain/entities/quotation_status.dart';
+import '../../domain/entities/reply_type.dart';
+import '../../domain/proposal_terms.dart';
 import '../bloc/quotation_detail_cubit.dart';
+import '../pdf/proposal_pdf_preview.dart';
 import '../widgets/log_client_reply_sheet.dart';
 import '../widgets/quote_board_status_chip.dart';
 import '../widgets/quote_detail_info_card.dart';
@@ -28,9 +31,8 @@ import '../widgets/quotation_labels.dart';
 /// negotiation history as a timeline, and — while there's something to
 /// respond to — the actions that move it forward (BR-03.6/03.7).
 ///
-/// No PDF viewer: generating one needs the same backend job this app
-/// can't run for emailing it (BR-03.5). The timeline shows every price
-/// and date the PDF would contain instead.
+/// An offer can be previewed as its proposal PDF; emailing it to the client
+/// needs a backend job this app can't run (BR-03.5), so it isn't sent yet.
 class QuotationDetailPage extends StatelessWidget {
   final String requestId;
 
@@ -185,6 +187,26 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
                             const SizedBox(height: 14),
                             QuoteHistoryTimeline(request: state.request, versions: state.versions),
                             const SizedBox(height: 14),
+                            if (current.type == ReplyType.offer && state.request != null) ...[
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: OutlinedButton.icon(
+                                  onPressed: () => previewProposalPdf(
+                                    context,
+                                    request: state.request!,
+                                    lines: current.items,
+                                    notes: current.notes.isEmpty ? defaultProposalNotes : current.notes,
+                                    version: current.version ?? 1,
+                                    date: current.sentAt ?? current.createdAt,
+                                    validUntil: current.validUntil,
+                                  ),
+                                  icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                                  label: Text(t.previewProposal),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                            ],
                             if (current.status == QuotationStatus.accepted)
                               MNotice(
                                 type: MNoticeType.success,

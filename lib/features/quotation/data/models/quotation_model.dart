@@ -20,6 +20,7 @@ class QuotationModel {
   final int? totalPiastres;
   final DateTime? validUntil;
   final String? message;
+  final List<String> notes;
   final String? status;
   final DateTime? sentAt;
   final String createdBy;
@@ -45,6 +46,7 @@ class QuotationModel {
     this.totalPiastres,
     this.validUntil,
     this.message,
+    this.notes = const [],
     this.status,
     this.sentAt,
     this.clientResponseOutcome,
@@ -71,6 +73,7 @@ class QuotationModel {
       totalPiastres: (json['totalPiastres'] as num?)?.toInt(),
       validUntil: (json['validUntil'] as Timestamp?)?.toDate(),
       message: json['message'] as String?,
+      notes: (json['notes'] as List<dynamic>? ?? const []).whereType<String>().toList(),
       status: json['status'] as String?,
       sentAt: (json['sentAt'] as Timestamp?)?.toDate(),
       createdBy: json['createdBy'] as String? ?? '',
@@ -101,6 +104,7 @@ class QuotationModel {
       totalPiastres: totalPiastres,
       validUntil: validUntil,
       message: message,
+      notes: notes,
       status: quotationStatus,
       sentAt: sentAt,
       createdBy: createdBy,

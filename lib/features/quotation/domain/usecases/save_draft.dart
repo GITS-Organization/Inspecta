@@ -17,6 +17,7 @@ class SaveDraft {
     required List<QuoteLineItem> items,
     int? validityDays,
     String? message,
+    List<String>? notes,
   }) {
     return _repository.saveDraft(
       requestId: requestId,
@@ -27,6 +28,7 @@ class SaveDraft {
       items: items,
       validityDays: validityDays,
       message: message?.trim(),
+      notes: notes,
     );
   }
 }

@@ -92,21 +92,21 @@
 
     <nav class="nav" id="site-nav" aria-label="Primary" data-ar-aria-label="التنقل الرئيسي">
       <ul class="nav-list">
-        <li><a href="#home" data-ar="الرئيسية">Home</a></li>
         <li><a href="#solutions" data-ar="الحلول">Solutions</a></li>
         <li><a href="#features" data-ar="المزايا">Features</a></li>
         <li><a href="#how-it-works" data-ar="كيف يعمل">How It Works</a></li>
-        <li><a href="#industries" data-ar="القطاعات">Industries</a></li>
-        <li><a href="#about" data-ar="من نحن">About</a></li>
-        <li><a href="#contact" data-ar="تواصل معنا">Contact</a></li>
+        <li><a href="#try" data-ar="جرّب بنفسك">Try It</a></li>
+        <li><a href="#where" data-ar="أين وصلنا">Where We Are</a></li>
+        <li><a href="#faq" data-ar="أسئلة شائعة">FAQ</a></li>
       </ul>
       <a class="btn btn-primary nav-cta" href="#contact" data-open-form="demo" data-ar="اطلب عرضًا تجريبيًا">Request a Demo</a>
     </nav>
 
     <div class="header-actions">
-      <button class="lang-toggle" type="button" data-lang-toggle lang="ar" aria-label="Switch language to Arabic">
-        <svg class="ico" aria-hidden="true"><use href="#i-globe"/></svg><span data-lang-label>العربية</span>
-      </button>
+      <div class="lang-seg" role="group" aria-label="Language" data-ar-aria-label="اللغة">
+        <button class="lang-opt" type="button" data-set-lang="en" lang="en" aria-pressed="true">EN</button>
+        <button class="lang-opt" type="button" data-set-lang="ar" lang="ar" aria-pressed="false">العربية</button>
+      </div>
       <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Menu" data-ar-aria-label="القائمة">
         <svg class="ico ico-open" aria-hidden="true"><use href="#i-menu"/></svg>
         <svg class="ico ico-close" aria-hidden="true"><use href="#i-x"/></svg>
@@ -121,6 +121,7 @@
 <section class="hero" id="home" data-tone="dark" aria-labelledby="hero-title">
   <div class="wrap hero-grid">
     <div class="hero-copy">
+      <p class="hero-badge"><span class="hero-badge-dot" aria-hidden="true"></span><span data-ar="إدارة فحص رقمية · بالعربية والإنجليزية">Digital inspection management · English and Arabic</span></p>
       <h1 id="hero-title" class="hero-title">
         <span class="hl" data-ar="فحوصات أذكى.">Smarter Inspections.</span>
         <span class="hl" data-ar="قرارات أفضل.">Better Decisions.</span>
@@ -131,29 +132,28 @@
         <a class="btn btn-light btn-lg" href="#explorer"><span data-ar="استكشف Inspecta">Explore Inspecta</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
         <a class="btn btn-outline-light btn-lg" href="#contact" data-open-form="demo" data-ar="اطلب عرضًا تجريبيًا">Request a Demo</a>
       </div>
-      <div class="hero-verdicts">
-        <p data-ar="تنتهي كل شهادة بإحدى ثلاث نتائج:">Every certificate ends in one of three results:</p>
-        <ul class="hero-tags">
-          <li class="tag tag--safe"><span class="tag-hole"></span><span data-ar="آمن للتشغيل">Safe to operate</span></li>
-          <li class="tag tag--cond"><span class="tag-hole"></span><span data-ar="آمن بشروط">Safe with conditions</span></li>
-          <li class="tag tag--bad"><span class="tag-hole"></span><span data-ar="غير آمن — خارج الخدمة">Not safe — out of service</span></li>
-        </ul>
-      </div>
-      <p class="hero-sample"><svg class="ico" aria-hidden="true"><use href="#i-sample"/></svg><span data-ar="الشاشات المعروضة ببيانات تجريبية وعملاء وهميين.">Screens shown with sample data and fictional clients.</span></p>
-      <ul class="hero-facts">
-        <li><strong data-ar="من الطلب إلى الشهادة الموقّعة">From request to signed certificate</strong><span data-ar="سجل واحد للمهمة عبر ثلاثة أدوار">One job record across three roles</span></li>
-        <li><strong data-ar="العربية والإنجليزية">English and Arabic</strong><span data-ar="مع تخطيط كامل من اليمين إلى اليسار">with full right-to-left layout</span></li>
-        <li><strong data-ar="مصمم للهاتف أولًا">Phone-first</strong><span data-ar="ويعمل أيضًا في المتصفح">and runs in the browser too</span></li>
-        <li><strong data-ar="صلاحيات حسب الدور">Role-based access</strong><span data-ar="تُفرض عبر قواعد على الخادم">enforced by server-side rules</span></li>
+      <ol class="hero-path" aria-label="The six steps of an inspection job" data-ar-aria-label="الخطوات الست لمهمة الفحص">
+        <li style="--i:0"><span class="hp-label" data-ar="الطلب">Request</span></li>
+        <li style="--i:1"><span class="hp-label" data-ar="التسعير">Quote</span></li>
+        <li style="--i:2"><span class="hp-label" data-ar="التعيين">Assign</span></li>
+        <li style="--i:3"><span class="hp-label" data-ar="الفحص">Inspect</span></li>
+        <li style="--i:4"><span class="hp-label" data-ar="الشهادة">Certify</span></li>
+        <li style="--i:5"><span class="hp-label" data-ar="الإرسال">Sent</span></li>
+      </ol>
+      <ul class="hero-stats">
+        <li><strong>6</strong><span data-ar="خطوات من الطلب إلى الشهادة الموقّعة">steps from request to signed certificate</span></li>
+        <li><strong>3</strong><span data-ar="أدوار تعمل على سجل واحد للمهمة">roles working from one job record</span></li>
+        <li><strong>2</strong><span data-ar="لغتان بتخطيط حقيقي من اليمين إلى اليسار">languages, with true right-to-left layout</span></li>
       </ul>
+      <p class="hero-sample"><svg class="ico" aria-hidden="true"><use href="#i-sample"/></svg><span data-ar="الشاشات المعروضة ببيانات تجريبية وعملاء وهميين.">Screens shown with sample data and fictional clients.</span></p>
     </div>
 
     <div class="hero-stage" aria-hidden="true">
       <div class="hero-glow"></div>
       <div class="hero-device hero-device--back"><div class="device" data-hero-screen="assign"><div class="device-screen"></div></div></div>
       <div class="hero-device hero-device--front"><div class="device" data-hero-screen="report"><div class="device-screen"></div></div></div>
-      <div class="float float--a"><span class="float-ico"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg></span><span data-ar="تم اعتماد الشهادة وتوقيعها.">Certificate approved and signed.</span></div>
-      <div class="float float--b"><span class="float-ico"><svg class="ico" aria-hidden="true"><use href="#i-clip"/></svg></span><span data-ar="تم قبول المهمة.">Task accepted.</span></div>
+      <div class="float float--a" data-float="a"><span class="float-ico"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg></span><span class="float-text">Certificate approved and signed.</span></div>
+      <div class="float float--b" data-float="b"><span class="float-ico"><svg class="ico" aria-hidden="true"><use href="#i-clip"/></svg></span><span class="float-text">Task accepted.</span></div>
     </div>
   </div>
 </section>
@@ -494,6 +494,24 @@
   </div>
 </section>
 
+<!-- ============ TRY IT ============ -->
+<section class="section tryit" id="try" aria-labelledby="try-title">
+  <div class="wrap tryit-grid">
+    <div class="tryit-copy">
+      <h2 id="try-title" data-ar="اختر نتيجة. وشاهد أين تظهر.">Pick a result. See where it lands.</h2>
+      <p data-ar="ينتهي كل فحص بنتيجة واحدة يختارها المفتش في الخطوة الأخيرة من التقرير. شاهد كيف يظهر هذا الاختيار الواحد للمدير الفني، وفي ملف الشهادة، وفي قائمة الشهادات المرسلة.">Every examination ends in one result, chosen by the inspector at the last step of the report. See how that single choice shows up for the technical manager, on the certificate and in the sent list.</p>
+      <div class="tag-picker" role="group" aria-label="Examination result" data-ar-aria-label="نتيجة الفحص" data-result-picker>
+        <button type="button" class="tag-btn" data-result="safe" aria-pressed="false"><span class="tag tag--safe"><span class="tag-hole"></span><span data-ar="آمن للتشغيل">Safe to operate</span><svg class="ico tag-check" aria-hidden="true"><use href="#i-check"/></svg></span></button>
+        <button type="button" class="tag-btn" data-result="cond" aria-pressed="true"><span class="tag tag--cond"><span class="tag-hole"></span><span data-ar="آمن بشروط">Safe with conditions</span><svg class="ico tag-check" aria-hidden="true"><use href="#i-check"/></svg></span></button>
+        <button type="button" class="tag-btn" data-result="bad" aria-pressed="false"><span class="tag tag--bad"><span class="tag-hole"></span><span data-ar="غير آمن — خارج الخدمة">Not safe — out of service</span><svg class="ico tag-check" aria-hidden="true"><use href="#i-check"/></svg></span></button>
+      </div>
+      <p class="tryit-note"><svg class="ico" aria-hidden="true"><use href="#i-sample"/></svg><span data-ar="بيانات تجريبية. يصدر ملف PDF حاليًا بالإنجليزية.">Sample data. The certificate PDF is issued in English today.</span></p>
+    </div>
+    <div class="trail ui-frag" data-result-trail></div>
+    <p class="sr-only" role="status" data-result-status></p>
+  </div>
+</section>
+
 <!-- ============ HOW IT WORKS ============ -->
 <section class="how" id="how-it-works" data-tone="dark" aria-labelledby="how-title">
   <div class="wrap">
@@ -679,6 +697,52 @@
   </div>
 </section>
 
+<!-- ============ WHERE WE ARE ============ -->
+<section class="section where" id="where" aria-labelledby="where-title">
+  <div class="wrap">
+    <header class="sec-head sec-head--split">
+      <h2 id="where-title" data-ar="مبني ويعمل، وواضح بشأن حدوده.">Built, working, and clear about the edges.</h2>
+      <p data-ar="ما في العمود الأول موجود في التطبيق اليوم. وما في العمود الثاني ما لا يفعله التطبيق، حتى لا يحمل العرض التجريبي مفاجآت.">The first column is in the app today. The second is what it does not do, so a demo holds no surprises.</p>
+    </header>
+
+    <div class="where-grid">
+      <div class="where-built">
+        <h3 data-ar="في التطبيق اليوم">In the app today</h3>
+        <ul class="built-list">
+          <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="صندوق طلبات يبرز «الجديد» و«بحاجة إلى ردك»">Requests inbox with New and Needs your reply flags</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="طلبات من البريد الإلكتروني أو بإدخال يدوي">Requests from email or entered by hand</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="إصدارات أسعار مرقّمة وعروض مضادة وقفل للسعر عند القبول">Numbered quote versions, counter-offers and a price lock on acceptance</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="تعيين بحسب التاريخ ووقت البدء والمؤهلات">Assignment by date, start time and qualification</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="قبول المهمة أو رفضها من الهاتف">Accept or decline a task from the phone</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="تقرير فحص موجّه من خمس خطوات يُحفظ تلقائيًا">A guided five-step examination report that autosaves</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="ملف شهادة PDF يُولَّد من التقرير">A certificate PDF generated from the report</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="مراجعة بتوقيع على الشاشة، أو إعادة بسبب مكتوب">Review with an on-screen signature, or a return with a written reason</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="تسجيل الشهادة المعتمدة كمرسلة إلى بريد الشهادات الخاص بالعميل">The approved certificate recorded as sent to the client's certificates email</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="سجلات العملاء والمعدات، وما يستحق خلال 30 يومًا">Client and equipment records, with what falls due in 30 days</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="سجل ساعات يُحسب سعره من أجر الساعة ويعتمده المنسق">Timesheets priced from the hourly rate and approved by the coordinator</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="العربية والإنجليزية بتخطيط من اليمين إلى اليسار">English and Arabic, with right-to-left layout</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="صلاحيات حسب الدور تُفرض بقواعد على الخادم">Role-based access enforced by server-side rules</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span data-ar="مصمم للهاتف أولًا، ويعمل أيضًا في المتصفح">Phone-first, and it runs in a browser too</span></li>
+        </ul>
+      </div>
+
+      <aside class="where-not">
+        <h3 data-ar="ليس جزءًا من التطبيق اليوم">Not part of the app today</h3>
+        <ul class="not-list">
+          <li data-ar="إرفاق الصور والملفات في تقرير الفحص">Photo and file attachments in the examination report</li>
+          <li data-ar="الإشعارات الفورية">Push notifications</li>
+          <li data-ar="تحليلات ولوحات على مستوى الإدارة">Management-level analytics and dashboards</li>
+          <li data-ar="بوابة للعملاء">A portal for clients</li>
+          <li data-ar="إرسال عروض الأسعار أو الشهادات بالبريد من داخل التطبيق">Emailing quotes or certificates from inside the app</li>
+          <li data-ar="ملف شهادة PDF بالعربية">A certificate PDF in Arabic</li>
+        </ul>
+        <p data-ar="هل تحتاج إلى أحدها؟ أخبرنا عند طلب العرض التجريبي.">Need one of these? Tell us when you request a demo.</p>
+        <a class="chip-link" href="#contact" data-open-form="demo"><span data-ar="اطلب عرضًا تجريبيًا">Request a Demo</span><svg class="ico flip" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </aside>
+    </div>
+  </div>
+</section>
+
 <!-- ============ FAQ ============ -->
 <section class="section faq" id="faq" aria-labelledby="faq-title">
   <div class="wrap faq-grid">
@@ -795,6 +859,14 @@
 </main>
 
 <footer class="site-footer">
+  <div class="wrap foot-band">
+    <div class="foot-band-glyphs" aria-hidden="true"><span lang="en">Aa</span><span lang="ar">أب</span></div>
+    <div class="foot-band-copy">
+      <p class="foot-band-line" data-ar="بُني للعربية والإنجليزية منذ البداية.">Built for English and Arabic from the start.</p>
+      <p data-ar="المهمة نفسها والسجل نفسه بأي من اللغتين، بتخطيط حقيقي من اليمين إلى اليسار.">The same job and the same record in either language, with a true right-to-left layout.</p>
+      <p class="foot-band-note" data-ar="يسجّل Inspecta العمل ويوجّهه. أما الفحص والتوقيع فيبقيان للمفتش والمدير الفني.">Inspecta records and routes the work. The examination and the signature stay with the inspector and the technical manager.</p>
+    </div>
+  </div>
   <div class="wrap foot-grid">
     <div class="foot-brand">
       <a class="brand" href="#home" aria-label="Inspecta" data-ar-aria-label="Inspecta، الصفحة الرئيسية">
@@ -810,6 +882,7 @@
         <li><a href="#features" data-ar="المزايا">Features</a></li>
         <li><a href="#explorer" data-ar="جولة في التطبيق">Explore the app</a></li>
         <li><a href="#how-it-works" data-ar="كيف يعمل">How It Works</a></li>
+        <li><a href="#try" data-ar="جرّب بنفسك">Try It</a></li>
       </ul>
     </nav>
     <nav class="foot-col" aria-label="Company" data-ar-aria-label="الشركة">
@@ -817,6 +890,7 @@
       <ul>
         <li><a href="#industries" data-ar="القطاعات">Industries</a></li>
         <li><a href="#about" data-ar="من نحن">About</a></li>
+        <li><a href="#where" data-ar="أين وصلنا">Where We Are</a></li>
         <li><a href="#faq" data-ar="أسئلة شائعة">FAQ</a></li>
         <li><a href="privacy.html" data-ar="إشعار الخصوصية">Privacy notice</a></li>
       </ul>

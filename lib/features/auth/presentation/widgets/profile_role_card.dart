@@ -121,7 +121,6 @@ class _QuotationDefaultsCard extends StatelessWidget {
               emphasized: true,
               onTap: onTap,
             ),
-            _SettingRow(label: t.emailSignatureLabel, value: t.editAction, emphasized: true, onTap: onTap),
           ]),
         ],
       ),

@@ -9,7 +9,9 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/css/site.css">
 <style>
-  .doc-head { position: static; }
+  .doc-head { position: static; margin-block-start: 14px; }
+  .doc-head .header-in { isolation: isolate; } /* keeps the dark pill (a z-index:-1 layer) above the page background */
+  .doc-head .header-in::before { background: var(--navy-950); backdrop-filter: none; }
   .doc { padding-block: clamp(48px, 7vw, 96px); }
   .doc .wrap { max-width: 46rem; }
   .doc h1 { font-size: clamp(2rem, 1.3rem + 2.6vw, 3rem); letter-spacing: -0.03em; line-height: 1.1; }
@@ -27,13 +29,14 @@
 <header class="site-header doc-head">
   <div class="wrap header-in">
     <a class="brand" href="index.html" aria-label="Inspecta" data-ar-aria-label="Inspecta، الصفحة الرئيسية">
-      <svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="currentColor"/><g fill="none" stroke="#fff" stroke-width="33" stroke-linecap="round" stroke-linejoin="round"><path d="M339.8 162.3A121 121 0 1 0 347.6 340.6"/><path d="M200 254l43 44L383 160"/></g></svg>
+      <svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="currentColor" class="brand-tile"/><g fill="none" stroke="var(--mark-ink)" stroke-width="33" stroke-linecap="round" stroke-linejoin="round"><path d="M339.8 162.3A121 121 0 1 0 347.6 340.6"/><path d="M200 254l43 44L383 160"/></g></svg>
       <span class="brand-name">Inspecta</span>
     </a>
     <div class="header-actions" style="margin-inline-start:auto">
-      <button class="lang-toggle" type="button" data-lang-toggle lang="ar" aria-label="Switch language to Arabic (العربية)">
-        <svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3.2 3 3.2 15 0 18M12 3c-3.2 3-3.2 15 0 18"/></svg><span data-lang-label>العربية</span>
-      </button>
+      <div class="lang-seg" role="group" aria-label="Language" data-ar-aria-label="اللغة">
+        <button class="lang-opt" type="button" data-set-lang="en" lang="en" aria-pressed="true">EN</button>
+        <button class="lang-opt" type="button" data-set-lang="ar" lang="ar" aria-pressed="false">العربية</button>
+      </div>
     </div>
   </div>
 </header>

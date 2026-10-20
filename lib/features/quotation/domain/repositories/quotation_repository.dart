@@ -25,6 +25,7 @@ abstract interface class QuotationRepository {
     required List<QuoteLineItem> items,
     int? validityDays,
     String? message,
+    List<String>? notes,
   });
 
   /// BR-03.4/03.5/03.8: turns the request's current draft (or creates one
@@ -40,6 +41,7 @@ abstract interface class QuotationRepository {
     required List<QuoteLineItem> items,
     int? validityDays,
     String? message,
+    List<String>? notes,
   });
 
   /// BR-03.6: records the client's answer on [quotationId]. When

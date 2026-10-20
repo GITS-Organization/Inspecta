@@ -200,9 +200,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get viewAction => 'عرض';
 
   @override
-  String get emailSignatureLabel => 'توقيع البريد الإلكتروني';
-
-  @override
   String get myWorkTitle => 'عملي';
 
   @override
@@ -2061,4 +2058,51 @@ class AppLocalizationsAr extends AppLocalizations {
   String timesheetPricePlusTransport(String price, String transport) {
     return 'السعر $price\n+ $transport نقل';
   }
+
+  @override
+  String get previewProposal => 'معاينة العرض';
+
+  @override
+  String get proposalTitle => 'العرض الفني والتجاري';
+
+  @override
+  String get pricingUnitLabel => 'وحدة التسعير';
+
+  @override
+  String get pricingUnitPerVisit => 'لكل زيارة';
+
+  @override
+  String get pricingUnitPerDay => 'لكل يوم';
+
+  @override
+  String get pricingUnitPerHour => 'لكل ساعة';
+
+  @override
+  String get pricingUnitPerItem => 'لكل بند';
+
+  @override
+  String get proposalNotesLabel => 'ملاحظات العرض';
+
+  @override
+  String get proposalNotesHelp =>
+      'اضغط على النقطة لتعديلها، واسحب المقبض لإعادة الترتيب.';
+
+  @override
+  String get addNote => 'إضافة ملاحظة';
+
+  @override
+  String get removeNote => 'حذف الملاحظة';
+
+  @override
+  String proposalNotesCount(int count) {
+    return '$count نقاط';
+  }
+
+  @override
+  String proposalNotesStandard(int count) {
+    return 'الملاحظات القياسية · $count نقاط';
+  }
+
+  @override
+  String get resetNotes => 'استعادة القياسية';
 }

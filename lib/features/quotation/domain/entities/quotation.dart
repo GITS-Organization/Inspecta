@@ -32,6 +32,10 @@ class Quotation extends Equatable {
   final int? totalPiastres;
   final DateTime? validUntil;
   final String? message;
+
+  /// The proposal's "Note that:" list as edited for this quotation; empty
+  /// means the defaults (older quotations predate the field).
+  final List<String> notes;
   final QuotationStatus status;
   final DateTime? sentAt;
   final String createdBy;
@@ -63,6 +67,7 @@ class Quotation extends Equatable {
     this.totalPiastres,
     this.validUntil,
     this.message,
+    this.notes = const [],
     this.sentAt,
     this.clientResponseOutcome,
     this.clientCounterPricePiastres,
@@ -107,6 +112,7 @@ class Quotation extends Equatable {
     totalPiastres,
     validUntil,
     message,
+    notes,
     status,
     sentAt,
     createdBy,

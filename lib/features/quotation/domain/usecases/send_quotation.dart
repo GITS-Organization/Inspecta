@@ -28,6 +28,7 @@ class SendQuotation {
     required List<QuoteLineItem> items,
     int? validityDays,
     String? message,
+    List<String>? notes,
   }) async {
     final version = await _quotations.send(
       requestId: requestId,
@@ -38,6 +39,7 @@ class SendQuotation {
       items: items,
       validityDays: validityDays,
       message: message?.trim(),
+      notes: notes,
     );
 
     if (type == ReplyType.reject) {

@@ -41,16 +41,12 @@
     root.dir = lang === 'ar' ? 'rtl' : 'ltr';
     translateAttrs(lang);
 
-    var btn = $('[data-lang-toggle]');
-    if (btn) {
-      $('[data-lang-label]', btn).textContent = lang === 'ar' ? 'English' : 'العربية';
-      btn.setAttribute('lang', lang === 'ar' ? 'en' : 'ar');
-      btn.setAttribute('aria-label', lang === 'ar' ? 'التبديل إلى الإنجليزية (English)' : 'Switch language to Arabic (العربية)');
-    }
+    $$('[data-set-lang]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-set-lang') === lang)); });
     if (persist) store.set('inspecta-lang', lang);
 
     renderHero();
     renderFrags();
+    renderTrail();
     if (explorer) explorer.render();
     if (tour) tour.render();
     labelTable();
@@ -77,7 +73,45 @@
     });
     var stage = $('.hero-stage');
     if (stage) stage.setAttribute('inert', '');
+    if (floats) floats.paint();
   }
+  function ico(name) { return '<svg class="ico" aria-hidden="true"><use href="#i-' + name + '"/></svg>'; }
+
+  /* Real in-app toasts that float beside the hero phones, taking turns */
+  var reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var floats = (function () {
+    var els = { a: $('[data-float="a"]'), b: $('[data-float="b"]') };
+    if (!els.a || !els.b) return null;
+    var sets = {
+      a: [
+        { icon: 'check', cls: '', t: ['Certificate approved and signed.', 'تم اعتماد الشهادة وتوقيعها.'] },
+        { icon: 'return', cls: 'is-amber', t: ['Certificate returned to the inspector.', 'أُعيدت الشهادة إلى المفتش.'] }
+      ],
+      b: [
+        { icon: 'clip', cls: '', t: ['Task accepted.', 'تم قبول المهمة.'] },
+        { icon: 'send', cls: '', t: ['Certificate submitted.', 'تم إرسال الشهادة.'] }
+      ]
+    };
+    var at = { a: 0, b: 0 };
+    function paint() {
+      ['a', 'b'].forEach(function (k) {
+        var m = sets[k][at[k]], el = els[k];
+        $('use', el).setAttribute('href', '#i-' + m.icon);
+        $('.float-ico', el).className = 'float-ico' + (m.cls ? ' ' + m.cls : '');
+        $('.float-text', el).textContent = L(m.t[0], m.t[1]);
+      });
+    }
+    function swap(k) {
+      if (doc.hidden) return;
+      els[k].classList.add('is-swapping');
+      window.setTimeout(function () { at[k] = (at[k] + 1) % sets[k].length; paint(); els[k].classList.remove('is-swapping'); }, 300);
+    }
+    if (!reducedMotion) {
+      window.setInterval(function () { swap('a'); }, 5200);
+      window.setInterval(function () { swap('b'); }, 6600);
+    }
+    return { paint: paint };
+  })();
   function renderFrags() {
     $$('[data-frag]').forEach(function (el) { I.renderFrag(el.getAttribute('data-frag'), el); });
   }
@@ -125,7 +159,7 @@
   }, { passive: true });
   updateHeader();
 
-  var sectionMap = { home: 'home', problems: 'solutions', solutions: 'solutions', explorer: 'solutions', features: 'features', 'how-it-works': 'how-it-works', industries: 'industries', benefits: 'industries', why: 'industries', about: 'about', faq: 'about', contact: 'contact' };
+  var sectionMap = { home: '', problems: 'solutions', solutions: 'solutions', explorer: 'solutions', features: 'features', 'try': 'try', 'how-it-works': 'how-it-works', industries: '', benefits: '', why: '', about: '', where: 'where', faq: 'faq', contact: '' };
   if ('IntersectionObserver' in window) {
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
@@ -264,6 +298,62 @@
   })();
 
   /* ------------------------------------------------------------------ *
+   * Try it: one examination result, four places it appears             *
+   * Wording is the app's own (lib/l10n/*.arb, the certificate PDF).      *
+   * ------------------------------------------------------------------ */
+  var RESULTS = {
+    safe: {
+      option: ['Safe to operate', 'آمن للتشغيل'], optionTone: 'green',
+      review: ['Safe to operate', 'آمنة للتشغيل'], reviewTone: 'is-ok', reviewIcon: 'check', defect: false,
+      pdf: 'Satisfactory',
+      badge: ['Safe', 'آمنة'], badgeTone: 'green'
+    },
+    cond: {
+      option: ['Safe with conditions (fix in 14 days)', 'آمن بشروط (الإصلاح خلال 14 يومًا)'], optionTone: 'amber',
+      review: ['Safe with conditions', 'آمنة بشروط'], reviewTone: 'is-blue', reviewIcon: 'alert', defect: true,
+      pdf: 'Satisfactory with conditions',
+      badge: ['With conditions', 'بشروط'], badgeTone: 'amber'
+    },
+    bad: {
+      option: ['Not safe — out of service', 'غير آمن — خارج الخدمة'], optionTone: 'red',
+      review: ['Not safe — out of service', 'غير آمنة — خارج الخدمة'], reviewTone: 'is-red', reviewIcon: 'alert', defect: true,
+      pdf: 'Not satisfactory',
+      badge: ['Not safe', 'غير آمنة'], badgeTone: 'red'
+    }
+  };
+  var trailHost = $('[data-result-trail]'), trailNow = 'cond';
+
+  function renderTrail() {
+    if (!trailHost) return;
+    var r = RESULTS[trailNow];
+    function row(i, icon, label, sub, inner) {
+      return '<div class="trail-row" style="--i:' + i + '"><span class="trail-node">' + ico(icon) + '</span><div class="trail-body">' +
+        '<p class="trail-label">' + label + '<span>' + sub + '</span></p>' + inner + '</div></div>';
+    }
+    var defect = L('Broken wires found in the hoist rope near the hook block.', 'أسلاك مقطوعة في حبل الرفع بالقرب من كتلة الخطاف.');
+    trailHost.innerHTML =
+      row(0, 'clip', L('The inspector picks it', 'المفتش يختارها'), L('Last step of the report: Conclusion', 'الخطوة الأخيرة من التقرير: الخلاصة'),
+        '<div class="ui-card"><div class="trail-pick"><span class="ui-radio is-on"></span><span class="ui-chip is-' + r.optionTone + '">' + L(r.option[0], r.option[1]) + '</span></div></div>') +
+      row(1, 'pen', L('The technical manager sees it', 'المدير الفني يراها'), L('On the review screen, with the defect description if there is one', 'في شاشة المراجعة، مع وصف العيب إن وُجد'),
+        '<div class="ui-card"><div class="ui-verdict ' + r.reviewTone + '">' + ico(r.reviewIcon) + '<span>' + L(r.review[0], r.review[1]) + '</span></div>' +
+        (r.defect ? '<p class="ui-note">' + defect + '</p>' : '') + '</div>') +
+      row(2, 'pdf', L('The certificate PDF states it', 'ملف الشهادة PDF يذكرها'), L('The conclusion line, issued in English today', 'سطر الخلاصة، ويصدر حاليًا بالإنجليزية'),
+        '<div class="ui-card trail-pdf" dir="ltr">' + ico('pdf') + '<div><small>Conclusion</small><b>' + r.pdf + '</b></div></div>') +
+      row(3, 'send', L('The sent list shows it', 'قائمة الشهادات المرسلة تعرضها'), L('A badge on each signed certificate', 'شارة على كل شهادة موقّعة'),
+        '<div class="ui-card trail-sent"><div><b>' + L('Delta Steel Works', 'دلتا للصلب') + '</b><small>' + L('Overhead crane — 10 t', 'رافعة علوية — 10 طن') + '</small></div>' +
+        '<span class="ui-chip is-' + r.badgeTone + '">' + L(r.badge[0], r.badge[1]) + '</span></div>');
+    var status = $('[data-result-status]');
+    if (status) status.textContent = L('Showing: ', 'المعروض: ') + L(r.review[0], r.review[1]);
+  }
+  $$('[data-result]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      trailNow = b.getAttribute('data-result');
+      $$('[data-result]').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      renderTrail();
+    });
+  });
+
+  /* ------------------------------------------------------------------ *
    * Contact / demo form                                                 *
    * ------------------------------------------------------------------ */
   var form = $('#contact-form'), mode = 'demo';
@@ -373,7 +463,11 @@
   /* ------------------------------------------------------------------ *
    * Go                                                                  *
    * ------------------------------------------------------------------ */
-  var langBtn = $('[data-lang-toggle]');
-  langBtn.addEventListener('click', function () { applyLang(I.lang === 'ar' ? 'en' : 'ar', true); });
+  $$('[data-set-lang]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var next = b.getAttribute('data-set-lang');
+      if (next !== I.lang) applyLang(next, true);
+    });
+  });
   applyLang(initialLang(), false);
 })();

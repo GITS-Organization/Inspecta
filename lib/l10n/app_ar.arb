@@ -69,7 +69,6 @@
   "quoteValidForLabel": "صلاحية العرض",
   "standardPriceListLabel": "قائمة الأسعار القياسية",
   "viewAction": "عرض",
-  "emailSignatureLabel": "توقيع البريد الإلكتروني",
 
   "myWorkTitle": "عملي",
   "qualifiedForLabel": "مؤهل لـ",
@@ -675,5 +674,19 @@
   "timesheetHideDetails": "إخفاء التفاصيل",
   "timesheetLockedLabel": "مقفل",
   "timesheetExcludingBreak": "دون استراحة {duration}",
-  "timesheetPricePlusTransport": "السعر {price}\n+ {transport} نقل"
+  "timesheetPricePlusTransport": "السعر {price}\n+ {transport} نقل",
+  "previewProposal": "معاينة العرض",
+  "proposalTitle": "العرض الفني والتجاري",
+  "pricingUnitLabel": "وحدة التسعير",
+  "pricingUnitPerVisit": "لكل زيارة",
+  "pricingUnitPerDay": "لكل يوم",
+  "pricingUnitPerHour": "لكل ساعة",
+  "pricingUnitPerItem": "لكل بند",
+  "proposalNotesLabel": "ملاحظات العرض",
+  "proposalNotesHelp": "اضغط على النقطة لتعديلها، واسحب المقبض لإعادة الترتيب.",
+  "addNote": "إضافة ملاحظة",
+  "removeNote": "حذف الملاحظة",
+  "proposalNotesCount": "{count} نقاط",
+  "proposalNotesStandard": "الملاحظات القياسية · {count} نقاط",
+  "resetNotes": "استعادة القياسية"
 }

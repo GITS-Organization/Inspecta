@@ -328,7 +328,7 @@
           '<div class="ui-kv"><div style="grid-column:1/-1"><small>' + L('Client', 'العميل') + '</small><b>' + L('Delta Steel Works', 'دلتا للصلب') + '</b></div>' +
           '<div style="grid-column:1/-1"><small>' + L('Inspected item', 'المعدة المفحوصة') + '</small><b>' + L('Overhead crane — 10 t', 'رافعة علوية — 10 طن') + '</b></div><div style="grid-column:1/-1"><small>' + L('Inspector', 'المفتش') + '</small><b>' + L('Omar Hassan', 'عمر حسن') + '</b></div>' +
           '<div><small>' + L('Inspected', 'تاريخ الفحص') + '</small><b>' + L('19 Oct 2026', '19 أكتوبر 2026') + '</b></div><div><small>' + L('Next due', 'الاستحقاق التالي') + '</small><b>' + L('19 Apr 2027', '19 أبريل 2027') + '</b></div></div>' +
-          '<div class="ui-verdict is-amber">' + ic('alert') + '<span>' + L('Safe with conditions', 'آمنة بشروط') + '</span></div>' +
+          '<div class="ui-verdict is-blue">' + ic('alert') + '<span>' + L('Safe with conditions', 'آمنة بشروط') + '</span></div>' +
           '<p class="ui-note is-amber">' + L('Repair required: replace the hoist rope within 14 days.', 'الإصلاح المطلوب: استبدال حبل الرفع خلال 14 يومًا.') + '</p>' +
           '<button type="button" class="ui-btn is-outline is-block is-sm"' + T(L('Opens the full certificate PDF.', 'يفتح ملف PDF الكامل للشهادة.')) + '>' + ic('pdf') + L('View full PDF', 'عرض ملف PDF كاملاً') + '</button></div>' +
         '<label class="ui-field"><span>' + L('Your comments', 'تعليقاتك') + '</span><span class="ui-input is-muted">' + L('Add a note for the record (optional)', 'أضف ملاحظة للسجل (اختياري)') + '</span></label>' +
@@ -378,7 +378,7 @@
       '</div></div>';
   };
   frags.signoff = function () {
-    return '<div class="ui-frag"><div class="ui-card ui-gap"><div class="ui-verdict is-amber">' + ic('alert') + '<span>' + L('Safe with conditions', 'آمنة بشروط') + '</span></div>' +
+    return '<div class="ui-frag"><div class="ui-card ui-gap"><div class="ui-verdict is-blue">' + ic('alert') + '<span>' + L('Safe with conditions', 'آمنة بشروط') + '</span></div>' +
       '<div class="ui-sig" style="height:5.4em">' + signPath + '</div>' +
       '<div class="ui-btns"><span class="ui-btn is-danger">' + ic('return') + L('Return', 'إعادة') + '</span><span class="ui-btn" style="background:#15803d">' + ic('check') + L('Approve', 'اعتماد') + '</span></div></div></div>';
   };

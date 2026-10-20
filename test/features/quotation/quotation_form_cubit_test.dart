@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:inspecta/features/quotation/domain/entities/pricing_unit.dart';
 import 'package:inspecta/features/quotation/domain/entities/quotation_failure.dart';
 import 'package:inspecta/features/quotation/domain/entities/reply_type.dart';
 import 'package:inspecta/features/quotation/domain/usecases/save_draft.dart';
@@ -30,9 +31,9 @@ void main() {
       final cubit = buildCubit();
 
       cubit.selectReplyType(ReplyType.offer);
-      cubit.changePrice('4500');
+      cubit.changeLinePrice('item-1', '4500');
 
-      expect(cubit.state.unitPricePiastres, 450000);
+      expect(cubit.state.unitPriceOf('item-1'), 450000);
       expect(cubit.totalPiastres, 900000);
       expect(cubit.state.isValid, isTrue);
     });
@@ -71,11 +72,13 @@ void main() {
     test('sending an offer creates a quotation and moves the request to quote_sent', () async {
       final cubit = buildCubit();
       cubit.selectReplyType(ReplyType.offer);
-      cubit.changePrice('4500');
+      cubit.changeLinePrice('item-1', '4500');
+      cubit.changeLineUnit('item-1', PricingUnit.perDay);
 
       await cubit.send();
 
       expect(quotationRepo.sendCalls.single.type, ReplyType.offer);
+      expect(quotationRepo.sendCalls.single.items.single.pricingUnit, PricingUnit.perDay);
       expect(requestsRepo.statusUpdates.single.$1, cubit.request.id);
       expect(cubit.state.lastActionSuccess, isTrue);
       expect(cubit.state.sentVersion, 1);
@@ -103,7 +106,7 @@ void main() {
     test('save draft calls the repository for accept/offer', () async {
       final cubit = buildCubit();
       cubit.selectReplyType(ReplyType.offer);
-      cubit.changePrice('100');
+      cubit.changeLinePrice('item-1', '100');
 
       await cubit.saveDraft();
 

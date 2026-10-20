@@ -4,7 +4,15 @@ enum QuotationAction { saveDraft, send }
 
 class QuotationFormState extends Equatable {
   final ReplyType? replyType;
-  final String priceText;
+  /// Typed price (EGP) and pricing unit per request item, keyed by item id.
+  final Map<String, String> linePrices;
+  final Map<String, PricingUnit> lineUnits;
+
+  /// The proposal's notes, one point each; [defaultProposalNotes] until edited.
+  final List<String> notes;
+
+  /// The request's item ids, so validation knows which lines need a price.
+  final List<String> itemIds;
   final int validityDays;
   final String message;
 
@@ -24,7 +32,10 @@ class QuotationFormState extends Equatable {
 
   const QuotationFormState({
     this.replyType,
-    this.priceText = '',
+    this.linePrices = const {},
+    this.lineUnits = const {},
+    this.notes = defaultProposalNotes,
+    this.itemIds = const [],
     this.validityDays = 14,
     this.message = '',
     this.submitted = false,
@@ -36,11 +47,18 @@ class QuotationFormState extends Equatable {
     this.sentVersion,
   });
 
-  int? get unitPricePiastres => Currency.parsePiastres(priceText);
+  int? unitPriceOf(String itemId) => Currency.parsePiastres(linePrices[itemId] ?? '');
 
+  PricingUnit unitOf(String itemId) => lineUnits[itemId] ?? PricingUnit.perVisit;
+
+  bool linePriceInvalid(String itemId) {
+    final price = unitPriceOf(itemId);
+    return price == null || price <= 0;
+  }
+
+  /// An offer needs every line priced (the budget table prints them all).
   bool get priceInvalid =>
-      replyType == ReplyType.offer &&
-      (unitPricePiastres == null || unitPricePiastres! <= 0);
+      replyType == ReplyType.offer && itemIds.any(linePriceInvalid);
 
   bool get reasonInvalid => replyType == ReplyType.reject && message.trim().isEmpty;
 
@@ -54,7 +72,9 @@ class QuotationFormState extends Equatable {
 
   QuotationFormState copyWith({
     ReplyType? replyType,
-    String? priceText,
+    Map<String, String>? linePrices,
+    Map<String, PricingUnit>? lineUnits,
+    List<String>? notes,
     int? validityDays,
     String? message,
     bool? submitted,
@@ -68,7 +88,10 @@ class QuotationFormState extends Equatable {
   }) {
     return QuotationFormState(
       replyType: replyType ?? this.replyType,
-      priceText: priceText ?? this.priceText,
+      linePrices: linePrices ?? this.linePrices,
+      lineUnits: lineUnits ?? this.lineUnits,
+      notes: notes ?? this.notes,
+      itemIds: itemIds,
       validityDays: validityDays ?? this.validityDays,
       message: message ?? this.message,
       submitted: submitted ?? this.submitted,
@@ -84,7 +107,10 @@ class QuotationFormState extends Equatable {
   @override
   List<Object?> get props => [
     replyType,
-    priceText,
+    linePrices,
+    lineUnits,
+    notes,
+    itemIds,
     validityDays,
     message,
     submitted,

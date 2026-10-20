@@ -1,3 +1,4 @@
+import '../../domain/entities/pricing_unit.dart';
 import '../../domain/entities/quote_line_item.dart';
 
 class QuoteLineItemModel {
@@ -5,12 +6,14 @@ class QuoteLineItemModel {
   final String type;
   final int quantity;
   final int unitPricePiastres;
+  final PricingUnit pricingUnit;
 
   const QuoteLineItemModel({
     required this.requestItemId,
     required this.type,
     required this.quantity,
     required this.unitPricePiastres,
+    this.pricingUnit = PricingUnit.perVisit,
   });
 
   factory QuoteLineItemModel.fromJson(Map<String, dynamic> json) {
@@ -19,6 +22,7 @@ class QuoteLineItemModel {
       type: json['type'] as String? ?? '',
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
       unitPricePiastres: (json['unitPricePiastres'] as num?)?.toInt() ?? 0,
+      pricingUnit: PricingUnit.fromValue(json['pricingUnit']),
     );
   }
 
@@ -27,6 +31,7 @@ class QuoteLineItemModel {
     type: item.type,
     quantity: item.quantity,
     unitPricePiastres: item.unitPricePiastres,
+    pricingUnit: item.pricingUnit,
   );
 
   Map<String, dynamic> toJson() => {
@@ -34,6 +39,7 @@ class QuoteLineItemModel {
     'type': type,
     'quantity': quantity,
     'unitPricePiastres': unitPricePiastres,
+    'pricingUnit': pricingUnit.value,
   };
 
   QuoteLineItem toEntity() => QuoteLineItem(
@@ -41,5 +47,6 @@ class QuoteLineItemModel {
     type: type,
     quantity: quantity,
     unitPricePiastres: unitPricePiastres,
+    pricingUnit: pricingUnit,
   );
 }

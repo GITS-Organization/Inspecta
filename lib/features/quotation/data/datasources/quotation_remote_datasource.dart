@@ -86,6 +86,7 @@ class QuotationRemoteDataSource {
     required List<QuoteLineItem> items,
     int? validityDays,
     String? message,
+    List<String>? notes,
   }) async {
     final itemModels = items.map(QuoteLineItemModel.fromEntity).toList();
     final data = {
@@ -97,6 +98,7 @@ class QuotationRemoteDataSource {
       'items': itemModels.map((i) => i.toJson()).toList(),
       ..._priceFields(type, itemModels, validityDays),
       'message': message,
+      'notes': notes,
       'status': 'draft',
       'createdBy': _auth.currentUser?.uid,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -123,6 +125,7 @@ class QuotationRemoteDataSource {
     required List<QuoteLineItem> items,
     int? validityDays,
     String? message,
+    List<String>? notes,
   }) async {
     final itemModels = items.map(QuoteLineItemModel.fromEntity).toList();
     final version = await _nextVersion(requestId);
@@ -136,6 +139,7 @@ class QuotationRemoteDataSource {
       'items': itemModels.map((i) => i.toJson()).toList(),
       ..._priceFields(type, itemModels, validityDays),
       'message': message,
+      'notes': notes,
       'status': 'sent',
       'sentAt': FieldValue.serverTimestamp(),
       'createdBy': _auth.currentUser?.uid,

@@ -69,7 +69,6 @@
   "quoteValidForLabel": "Quote valid for",
   "standardPriceListLabel": "Standard price list",
   "viewAction": "View",
-  "emailSignatureLabel": "Email signature",
 
   "myWorkTitle": "My work",
   "qualifiedForLabel": "Qualified for",
@@ -766,5 +765,21 @@
   "timesheetPricePlusTransport": "Price {price}\n+ {transport} transport",
   "@timesheetPricePlusTransport": {
     "placeholders": { "price": { "type": "String" }, "transport": { "type": "String" } }
-  }
+  },
+  "previewProposal": "Preview proposal",
+  "proposalTitle": "Technical and Commercial Proposal",
+  "pricingUnitLabel": "Unit of pricing",
+  "pricingUnitPerVisit": "Per visit",
+  "pricingUnitPerDay": "Per day",
+  "pricingUnitPerHour": "Per hour",
+  "pricingUnitPerItem": "Per item",
+  "proposalNotesLabel": "Notes on the proposal",
+  "proposalNotesHelp": "Tap a point to edit it, drag the handle to reorder.",
+  "addNote": "Add a note",
+  "removeNote": "Remove note",
+  "proposalNotesCount": "{count} points",
+  "@proposalNotesCount": { "placeholders": { "count": { "type": "int" } } },
+  "proposalNotesStandard": "Standard notes · {count} points",
+  "@proposalNotesStandard": { "placeholders": { "count": { "type": "int" } } },
+  "resetNotes": "Reset to standard"
 }

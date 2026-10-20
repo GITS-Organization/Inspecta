@@ -41,6 +41,7 @@ class QuotationRepositoryImpl implements QuotationRepository {
     required List<QuoteLineItem> items,
     int? validityDays,
     String? message,
+    List<String>? notes,
   }) async {
     try {
       final model = await _remote.saveDraft(
@@ -52,6 +53,7 @@ class QuotationRepositoryImpl implements QuotationRepository {
         items: items,
         validityDays: validityDays,
         message: message,
+        notes: notes,
       );
       final entity = model.toEntity();
       if (entity == null) throw const QuotationFailure(QuotationFailureCode.unknown);
@@ -71,6 +73,7 @@ class QuotationRepositoryImpl implements QuotationRepository {
     required List<QuoteLineItem> items,
     int? validityDays,
     String? message,
+    List<String>? notes,
   }) async {
     try {
       return await _remote.send(
@@ -82,6 +85,7 @@ class QuotationRepositoryImpl implements QuotationRepository {
         items: items,
         validityDays: validityDays,
         message: message,
+        notes: notes,
       );
     } catch (e) {
       throw _mapError(e);
