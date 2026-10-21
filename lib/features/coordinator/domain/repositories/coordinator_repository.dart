@@ -7,8 +7,4 @@ abstract interface class CoordinatorRepository {
   /// role `inspector` (see `firestore.rules`), so this is the one user
   /// list a coordinator's app can query.
   Stream<List<AppUser>> watchInspectors();
-
-  /// Marks (or clears, with `null`) an inspector's leave — Feature 04's
-  /// "Mark leave" action on the inspector detail screen.
-  Future<void> markOnLeave(String inspectorId, DateTime? until);
 }

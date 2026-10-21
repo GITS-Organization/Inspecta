@@ -23,6 +23,9 @@ class CertificateModel {
   final String? sentTo;
   final DateTime? reviewedAt;
   final List<List<double>> signatureStrokes;
+  final String? certificateNumber;
+  final String? verificationCode;
+  final String? qrData;
 
   const CertificateModel({
     required this.requestId,
@@ -41,6 +44,9 @@ class CertificateModel {
     this.sentTo,
     this.reviewedAt,
     this.signatureStrokes = const [],
+    this.certificateNumber,
+    this.verificationCode,
+    this.qrData,
   });
 
   factory CertificateModel.fromEntity(Certificate certificate) {
@@ -61,6 +67,9 @@ class CertificateModel {
       sentTo: certificate.sentTo,
       reviewedAt: certificate.reviewedAt,
       signatureStrokes: certificate.signatureStrokes,
+      certificateNumber: certificate.certificateNumber,
+      verificationCode: certificate.verificationCode,
+      qrData: certificate.qrData,
     );
   }
 
@@ -98,6 +107,9 @@ class CertificateModel {
       reviewerLicense: json['reviewerLicense'] as String?,
       sentTo: json['sentTo'] as String?,
       reviewedAt: (json['reviewedAt'] as Timestamp?)?.toDate(),
+      certificateNumber: json['certificateNumber'] as String?,
+      verificationCode: json['verificationCode'] as String?,
+      qrData: json['qrData'] as String?,
       // Firestore can't nest arrays, so each stroke is stored as {'p': [...]}.
       signatureStrokes: [
         for (final stroke in (json['signature'] as List<dynamic>? ?? const []))
@@ -135,6 +147,12 @@ class CertificateModel {
     'reviewerName': reviewerName,
     'reviewerLicense': reviewerLicense,
     'sentTo': sentTo,
+    // Issued on approval; absent on a send-back, so a return never clears them.
+    if (qrData != null) ...{
+      'certificateNumber': certificateNumber,
+      'verificationCode': verificationCode,
+      'qrData': qrData,
+    },
     'signature': [
       for (final stroke in signatureStrokes) {'p': stroke},
     ],
@@ -157,5 +175,8 @@ class CertificateModel {
     sentTo: sentTo,
     reviewedAt: reviewedAt,
     signatureStrokes: signatureStrokes,
+    certificateNumber: certificateNumber,
+    verificationCode: verificationCode,
+    qrData: qrData,
   );
 }

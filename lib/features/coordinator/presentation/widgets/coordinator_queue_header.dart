@@ -10,8 +10,8 @@ import '../../domain/queue_filter.dart';
 import '../bloc/coordinator_queue_cubit.dart';
 
 /// The queue's blue header: avatar, role/screen title, notifications, and
-/// the three job-count tiles (mockup's "Unassigned / Scheduled / In
-/// progress"), each of which filters the list below when tapped.
+/// the four job-count tiles ("Unassigned / Scheduled / In progress / To send"),
+/// each of which filters the list below when tapped.
 class CoordinatorQueueHeader extends StatelessWidget {
   final VoidCallback onOpenProfile;
 
@@ -104,6 +104,8 @@ class CoordinatorQueueHeader extends StatelessWidget {
                   tile(QueueFilter.scheduled, t.statScheduled),
                   const SizedBox(width: 8),
                   tile(QueueFilter.inProgress, t.statInProgress),
+                  const SizedBox(width: 8),
+                  tile(QueueFilter.toSend, t.statToSend),
                 ],
               );
             },
@@ -142,7 +144,7 @@ class _FilterTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,

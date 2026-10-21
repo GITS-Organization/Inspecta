@@ -22,7 +22,7 @@ class ReviewFooter extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog.adaptive(
         title: Text(t.confirmApproveTitle),
-        content: Text(t.confirmApproveMessage(state.reviewerName.trim(), state.email.trim())),
+        content: Text(t.confirmApproveMessage(state.reviewerName.trim())),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(t.cancel)),
           TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(t.approveConfirmAction)),

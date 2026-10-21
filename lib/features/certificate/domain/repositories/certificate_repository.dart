@@ -24,9 +24,14 @@ abstract interface class CertificateRepository {
   Future<void> submit(Certificate certificate);
 
   /// Feature 06: the technical manager approves and signs — saves the
-  /// review fields and moves the job to [JobStatus.sentToClient]. The
-  /// client email itself is not sent from the app.
+  /// review fields (including the QR code issued with the approval) and moves
+  /// the job to [JobStatus.certificateApproved], back to the coordinator.
   Future<void> approve(Certificate certificate);
+
+  /// The coordinator sends an approved certificate on: records who it went to
+  /// and moves the job to [JobStatus.sentToClient]. The client email itself is
+  /// not sent from the app.
+  Future<void> markSentToClient(String requestId, {required String email});
 
   /// Feature 06: sends the certificate back to its inspector with a
   /// reason, moving the job to [JobStatus.certificateReturned].

@@ -17,23 +17,4 @@ abstract interface class TimesheetRepository {
   /// Sets the inspector's hourly rate. It applies to entries saved from now
   /// on; entries already logged keep the rate they were saved with.
   Future<void> saveHourlyRate(String inspectorId, int hourlyRatePiastres);
-
-  /// A coordinator's view: every inspector's entries.
-  Stream<List<TimesheetEntry>> watchAllEntries();
-
-  /// A coordinator accepts a pending entry, locking it.
-  Future<void> approve({
-    required String requestId,
-    required String reviewerId,
-    required String reviewerName,
-  });
-
-  /// A coordinator sends a pending entry back to its inspector with a
-  /// reason.
-  Future<void> sendBack({
-    required String requestId,
-    required String reviewerId,
-    required String reviewerName,
-    required String note,
-  });
 }

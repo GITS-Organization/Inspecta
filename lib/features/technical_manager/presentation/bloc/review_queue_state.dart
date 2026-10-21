@@ -38,7 +38,15 @@ class ReviewQueueState extends Equatable {
 
   List<InspectionRequest> get returned => _with(JobStatus.certificateReturned, _submittedAt);
 
-  List<InspectionRequest> get sent => _with(JobStatus.sentToClient, _scheduledOrReceived);
+  /// Approved certificates, whether the coordinator has sent them on yet or
+  /// not — newest first.
+  List<InspectionRequest> get sent {
+    final list = requests
+        .where((r) => r.status == JobStatus.certificateApproved || r.status == JobStatus.sentToClient)
+        .toList()
+      ..sort((a, b) => _scheduledOrReceived(b).compareTo(_scheduledOrReceived(a)));
+    return list;
+  }
 
   String? inspectorName(InspectionRequest request) => inspectorNames[request.inspectorId];
 

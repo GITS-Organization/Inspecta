@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../domain/entities/timesheet_entry_status.dart';
 import '../models/timesheet_entry_model.dart';
 
 class TimesheetRemoteDataSource {
@@ -34,14 +33,6 @@ class TimesheetRemoteDataSource {
         .map(_models);
   }
 
-  /// Unfiltered — only a coordinator (or admin) may run it, per
-  /// firestore.rules. Filtering by status is left to the caller: an entry
-  /// logged before review existed has no `status` field, so a
-  /// `where status ==` query would silently skip it.
-  Stream<List<TimesheetEntryModel>> watchAllEntries() {
-    return _firestore.collection(collection).snapshots().map(_models);
-  }
-
   /// The inspector's hourly rate in piastres; 0 until they set one.
   Stream<int> watchHourlyRate(String inspectorId) {
     return _firestore
@@ -62,22 +53,4 @@ class TimesheetRemoteDataSource {
   /// to equal the request time, so a client clock can't be used.
   Future<void> save(TimesheetEntryModel model) =>
       _doc(model.requestId).set({...model.toJson(), 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
-
-  /// A coordinator's decision. Touches only the status and review fields,
-  /// matching the paired firestore.rules check; `reviewedAt` is the server
-  /// time. A note is kept for a return and cleared on an approval, so an
-  /// approved entry never carries a stale reason from an earlier return.
-  Future<void> review({
-    required String requestId,
-    required TimesheetEntryStatus status,
-    required String reviewerId,
-    required String reviewerName,
-    String? note,
-  }) => _doc(requestId).update({
-    'status': status.value,
-    'reviewNote': note ?? FieldValue.delete(),
-    'reviewedBy': reviewerId,
-    'reviewerName': reviewerName,
-    'reviewedAt': FieldValue.serverTimestamp(),
-  });
 }

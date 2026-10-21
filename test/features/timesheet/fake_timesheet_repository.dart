@@ -40,9 +40,6 @@ class FakeTimesheetRepository implements TimesheetRepository {
   /// What `watchEntries` (one inspector's own entries) emits.
   final controller = StreamController<List<TimesheetEntry>>.broadcast();
 
-  /// What `watchAllEntries` (a coordinator's view) emits.
-  final allController = StreamController<List<TimesheetEntry>>.broadcast();
-
   /// What `watchHourlyRate` emits.
   final rateController = StreamController<int>.broadcast();
 
@@ -50,10 +47,7 @@ class FakeTimesheetRepository implements TimesheetRepository {
   final savedRates = <(String inspectorId, int hourlyRatePiastres)>[];
 
   TimesheetFailure? saveFailure;
-  TimesheetFailure? reviewFailure;
   final saved = <TimesheetEntry>[];
-  final approvals = <(String requestId, String reviewerId, String reviewerName)>[];
-  final returns = <(String requestId, String reviewerId, String reviewerName, String note)>[];
 
   @override
   Stream<List<TimesheetEntry>> watchEntries(String inspectorId) => controller.stream;
@@ -68,32 +62,8 @@ class FakeTimesheetRepository implements TimesheetRepository {
   }
 
   @override
-  Stream<List<TimesheetEntry>> watchAllEntries() => allController.stream;
-
-  @override
   Future<void> saveEntry(TimesheetEntry entry) async {
     if (saveFailure != null) throw saveFailure!;
     saved.add(entry);
-  }
-
-  @override
-  Future<void> approve({
-    required String requestId,
-    required String reviewerId,
-    required String reviewerName,
-  }) async {
-    if (reviewFailure != null) throw reviewFailure!;
-    approvals.add((requestId, reviewerId, reviewerName));
-  }
-
-  @override
-  Future<void> sendBack({
-    required String requestId,
-    required String reviewerId,
-    required String reviewerName,
-    required String note,
-  }) async {
-    if (reviewFailure != null) throw reviewFailure!;
-    returns.add((requestId, reviewerId, reviewerName, note));
   }
 }

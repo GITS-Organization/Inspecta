@@ -57,6 +57,12 @@ class FakeCertificateRepository implements CertificateRepository {
 
   @override
   Future<void> sendBack(Certificate certificate, {required String note}) => throw UnimplementedError();
+
+  @override
+  Future<void> markSentToClient(String requestId, {required String email}) {
+    // TODO: implement markSentToClient
+    throw UnimplementedError();
+  }
 }
 
 void main() {

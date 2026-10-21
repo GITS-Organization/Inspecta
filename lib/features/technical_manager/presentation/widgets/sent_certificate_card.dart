@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
+import '../../../../core/enums/job_status.dart';
 import '../../../../core/framework/mtoast.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -12,7 +13,8 @@ import '../../../certificate/presentation/pdf/certificate_pdf_preview.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import 'review_labels.dart';
 
-/// One certificate already signed and sent: verdict badge, equipment and
+/// One certificate already signed — sent to its client, or approved and with
+/// the coordinator to send: verdict badge, equipment and
 /// client, who it went to, and a link to its PDF.
 class SentCertificateCard extends StatelessWidget {
   final InspectionRequest request;
@@ -69,7 +71,10 @@ class SentCertificateCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text('${request.equipmentTitle} — ${request.clientName}', style: AppTextStyles.cardTitle.copyWith(fontSize: 17)),
-              if (sentTo != null && sentTo.isNotEmpty) ...[
+              if (request.status == JobStatus.certificateApproved) ...[
+                const SizedBox(height: 2),
+                Text(t.awaitingCoordinatorLabel, style: AppTextStyles.subtitle.copyWith(fontSize: 13)),
+              ] else if (sentTo != null && sentTo.isNotEmpty) ...[
                 const SizedBox(height: 2),
                 Text(t.sentToLabel(sentTo), style: AppTextStyles.subtitle.copyWith(fontSize: 13)),
               ],

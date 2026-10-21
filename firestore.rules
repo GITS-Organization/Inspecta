@@ -107,11 +107,12 @@ service cloud.firestore {
                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'certificateSubmittedAt'])
                    && submittedAtIsServerTime())
                ))
-        // Feature 06: a technical manager approves (sending it to the
-        // client) or returns a submitted certificate — status only.
+        // Feature 06: a technical manager approves (handing it back to the
+        // coordinator to send to the client) or returns a submitted
+        // certificate — status only.
         || (hasRole('technical_manager')
             && resource.data.status == 'certificate_submitted'
-            && (request.resource.data.status == 'sent_to_client'
+            && (request.resource.data.status == 'certificate_approved'
                 || request.resource.data.status == 'certificate_returned')
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
@@ -148,13 +149,21 @@ service cloud.firestore {
             || get(/databases/$(database)/documents/requests/$(id)).data.status == 'certificate_returned');
 
       // Feature 06: a technical manager reviews a submitted certificate —
-      // only the review fields, and only while it's awaiting review.
+      // only the review fields (the QR code issued with an approval included),
+      // and only while it's awaiting review.
       allow update: if hasRole('technical_manager')
         && get(/databases/$(database)/documents/requests/$(id)).data.status == 'certificate_submitted'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
              'reviewNote', 'reviewerComments', 'reviewerName', 'reviewerLicense',
              'sentTo', 'signature', 'reviewedAt',
+             'certificateNumber', 'verificationCode', 'qrData',
            ]);
+
+      // The coordinator sends an approved certificate on to the client —
+      // recording who it went to, and nothing else.
+      allow update: if hasRole('coordinator')
+        && get(/databases/$(database)/documents/requests/$(id)).data.status == 'certificate_approved'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sentTo']);
 
       allow delete: if false;
     }
@@ -246,8 +255,8 @@ service cloud.firestore {
       // with a reason. Only the status and review fields may change — never
       // the time or price — and the review is stamped with their own uid
       // and the server time. A return needs a note; an approval carries
-      // none.
-      allow update: if hasRole('coordinator')
+      // none. An admin (the management dashboard) may decide too.
+      allow update: if (hasRole('coordinator') || hasRole('admin'))
         && resource.data.get('status', 'pending') == 'pending'
         && request.resource.data.status in ['approved', 'returned']
         && request.resource.data.reviewedBy == request.auth.uid
@@ -318,8 +327,9 @@ service cloud.firestore {
         || hasRole('admin');
 
       // Only coordinators maintain the roster (BR-02.4/02.9's spirit —
-      // matching senders and keeping client records is their job).
-      allow create, update: if hasRole('coordinator');
+      // matching senders and keeping client records is their job). Admins
+      // may too, so the management dashboard can create clients.
+      allow create, update: if hasRole('coordinator') || hasRole('admin');
       allow delete: if false;
     }
 

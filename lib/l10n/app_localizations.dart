@@ -770,12 +770,6 @@ abstract class AppLocalizations {
   /// **'Quotations'**
   String get navQuotations;
 
-  /// No description provided for @navClients.
-  ///
-  /// In en, this message translates to:
-  /// **'Clients'**
-  String get navClients;
-
   /// No description provided for @searchRequestsHint.
   ///
   /// In en, this message translates to:
@@ -1712,335 +1706,17 @@ abstract class AppLocalizations {
   /// **'Respond to client'**
   String get respondToClientTitle;
 
-  /// No description provided for @clientsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Clients'**
-  String get clientsTitle;
-
-  /// No description provided for @addClient.
-  ///
-  /// In en, this message translates to:
-  /// **'Add client'**
-  String get addClient;
-
-  /// No description provided for @searchClientsHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search company, contact or email'**
-  String get searchClientsHint;
-
-  /// No description provided for @clientsFilterAll.
-  ///
-  /// In en, this message translates to:
-  /// **'All'**
-  String get clientsFilterAll;
-
-  /// No description provided for @clientsFilterOpenJobs.
-  ///
-  /// In en, this message translates to:
-  /// **'Open jobs'**
-  String get clientsFilterOpenJobs;
-
-  /// No description provided for @clientsFilterDueSoon.
-  ///
-  /// In en, this message translates to:
-  /// **'Due soon'**
-  String get clientsFilterDueSoon;
-
-  /// No description provided for @clientsSortedByActivity.
-  ///
-  /// In en, this message translates to:
-  /// **'Sorted by latest activity'**
-  String get clientsSortedByActivity;
-
-  /// No description provided for @equipmentCountChip.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{1 equipment} other{{count} equipment}}'**
-  String equipmentCountChip(int count);
-
-  /// No description provided for @openJobsCountChip.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{1 open job} other{{count} open jobs}}'**
-  String openJobsCountChip(int count);
-
-  /// No description provided for @dueSoonCountChip.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} due in 30 days'**
-  String dueSoonCountChip(int count);
-
-  /// No description provided for @newSenderNeedsClient.
-  ///
-  /// In en, this message translates to:
-  /// **'New sender needs a client'**
-  String get newSenderNeedsClient;
-
-  /// No description provided for @matchAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Match'**
-  String get matchAction;
-
-  /// No description provided for @clientsEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'No clients yet.'**
-  String get clientsEmpty;
-
-  /// No description provided for @clientDetailEdit.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit'**
-  String get clientDetailEdit;
-
-  /// No description provided for @newRequestButton.
-  ///
-  /// In en, this message translates to:
-  /// **'New request'**
-  String get newRequestButton;
-
-  /// No description provided for @callAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Call'**
-  String get callAction;
-
-  /// No description provided for @emailAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Email'**
-  String get emailAction;
-
-  /// No description provided for @phoneCopied.
-  ///
-  /// In en, this message translates to:
-  /// **'Phone number copied.'**
-  String get phoneCopied;
-
-  /// No description provided for @emailCopied.
-  ///
-  /// In en, this message translates to:
-  /// **'Email copied.'**
-  String get emailCopied;
-
-  /// No description provided for @noPhoneNumber.
-  ///
-  /// In en, this message translates to:
-  /// **'No phone number on file.'**
-  String get noPhoneNumber;
-
-  /// No description provided for @noEmailOnFile.
-  ///
-  /// In en, this message translates to:
-  /// **'No email on file.'**
-  String get noEmailOnFile;
-
-  /// No description provided for @equipmentStatLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Equipment'**
-  String get equipmentStatLabel;
-
-  /// No description provided for @openJobsStatLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Open jobs'**
-  String get openJobsStatLabel;
-
-  /// No description provided for @dueSoonStatLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Due in 30 days'**
-  String get dueSoonStatLabel;
-
-  /// No description provided for @contactsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Contacts'**
-  String get contactsTitle;
-
-  /// No description provided for @addContactAction.
-  ///
-  /// In en, this message translates to:
-  /// **'+ Add'**
-  String get addContactAction;
-
-  /// No description provided for @mainContactBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'Main'**
-  String get mainContactBadge;
-
-  /// No description provided for @certificatesSentToLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Certificates are sent to'**
-  String get certificatesSentToLabel;
-
-  /// No description provided for @changeAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Change'**
-  String get changeAction;
-
-  /// No description provided for @noCertificatesEmail.
-  ///
-  /// In en, this message translates to:
-  /// **'Not set'**
-  String get noCertificatesEmail;
-
-  /// No description provided for @historyTabRequests.
-  ///
-  /// In en, this message translates to:
-  /// **'Requests'**
-  String get historyTabRequests;
-
-  /// No description provided for @historyTabEquipment.
-  ///
-  /// In en, this message translates to:
-  /// **'Equipment'**
-  String get historyTabEquipment;
-
-  /// No description provided for @historyTabCertificates.
-  ///
-  /// In en, this message translates to:
-  /// **'Certificates'**
-  String get historyTabCertificates;
-
-  /// No description provided for @clientHistoryEmptyRequests.
-  ///
-  /// In en, this message translates to:
-  /// **'No requests from this client yet.'**
-  String get clientHistoryEmptyRequests;
-
-  /// No description provided for @clientHistoryEmptyEquipment.
-  ///
-  /// In en, this message translates to:
-  /// **'No equipment on record yet.'**
-  String get clientHistoryEmptyEquipment;
-
-  /// No description provided for @clientHistoryEmptyCertificates.
-  ///
-  /// In en, this message translates to:
-  /// **'Certificates aren\'t tracked yet.'**
-  String get clientHistoryEmptyCertificates;
-
-  /// No description provided for @addClientSheetTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Add client'**
-  String get addClientSheetTitle;
-
-  /// No description provided for @companyNameLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Company name'**
-  String get companyNameLabel;
-
-  /// No description provided for @contactNameLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Contact name'**
-  String get contactNameLabel;
-
-  /// No description provided for @roleLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Role'**
-  String get roleLabel;
-
-  /// No description provided for @emailLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Email'**
-  String get emailLabel;
-
-  /// No description provided for @phoneLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Phone'**
-  String get phoneLabel;
-
-  /// No description provided for @createAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Create'**
-  String get createAction;
-
-  /// No description provided for @errorCompanyNameRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter the company name.'**
-  String get errorCompanyNameRequired;
-
-  /// No description provided for @errorContactNameRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter the contact\'s name.'**
-  String get errorContactNameRequired;
-
   /// No description provided for @errorLocationRequired.
   ///
   /// In en, this message translates to:
   /// **'Enter the location.'**
   String get errorLocationRequired;
 
-  /// No description provided for @clientCreated.
-  ///
-  /// In en, this message translates to:
-  /// **'Client added.'**
-  String get clientCreated;
-
-  /// No description provided for @addContactSheetTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Add contact'**
-  String get addContactSheetTitle;
-
-  /// No description provided for @contactAdded.
-  ///
-  /// In en, this message translates to:
-  /// **'Contact added.'**
-  String get contactAdded;
-
-  /// No description provided for @matchSheetTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Match to a client'**
-  String get matchSheetTitle;
-
-  /// No description provided for @matchNewClientOption.
-  ///
-  /// In en, this message translates to:
-  /// **'New client'**
-  String get matchNewClientOption;
-
-  /// No description provided for @clientMatched.
-  ///
-  /// In en, this message translates to:
-  /// **'Matched to client.'**
-  String get clientMatched;
-
-  /// No description provided for @certificatesEmailUpdated.
-  ///
-  /// In en, this message translates to:
-  /// **'Certificates email updated.'**
-  String get certificatesEmailUpdated;
-
   /// No description provided for @navQueue.
   ///
   /// In en, this message translates to:
   /// **'Queue'**
   String get navQueue;
-
-  /// No description provided for @navInspectors.
-  ///
-  /// In en, this message translates to:
-  /// **'Inspectors'**
-  String get navInspectors;
 
   /// No description provided for @navMore.
   ///
@@ -2192,59 +1868,11 @@ abstract class AppLocalizations {
   /// **'Inspector assigned.'**
   String get assignmentSuccessMessage;
 
-  /// No description provided for @inspectorsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Inspectors'**
-  String get inspectorsTitle;
-
-  /// No description provided for @searchInspectorsHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search by name'**
-  String get searchInspectorsHint;
-
   /// No description provided for @filterAll.
   ///
   /// In en, this message translates to:
   /// **'All'**
   String get filterAll;
-
-  /// No description provided for @statFreeToday.
-  ///
-  /// In en, this message translates to:
-  /// **'Free today'**
-  String get statFreeToday;
-
-  /// No description provided for @statBusy.
-  ///
-  /// In en, this message translates to:
-  /// **'Busy'**
-  String get statBusy;
-
-  /// No description provided for @statOnLeave.
-  ///
-  /// In en, this message translates to:
-  /// **'On leave'**
-  String get statOnLeave;
-
-  /// No description provided for @freeBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'Free'**
-  String get freeBadge;
-
-  /// No description provided for @busyBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'Busy'**
-  String get busyBadge;
-
-  /// No description provided for @onLeaveBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'Leave'**
-  String get onLeaveBadge;
 
   /// No description provided for @onLeaveUntilLabel.
   ///
@@ -2252,173 +1880,11 @@ abstract class AppLocalizations {
   /// **'On leave until {date}'**
   String onLeaveUntilLabel(String date);
 
-  /// No description provided for @todayLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Today'**
-  String get todayLabel;
-
-  /// No description provided for @slotsOfCapacity.
-  ///
-  /// In en, this message translates to:
-  /// **'{used} of {capacity} slots'**
-  String slotsOfCapacity(int used, int capacity);
-
-  /// No description provided for @nowLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Now:'**
-  String get nowLabel;
-
-  /// No description provided for @nextLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Next:'**
-  String get nextLabel;
-
-  /// No description provided for @licenseExpiresInDays.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} license expires in {days} days'**
-  String licenseExpiresInDays(String name, int days);
-
-  /// No description provided for @emptyInspectorsRoster.
-  ///
-  /// In en, this message translates to:
-  /// **'No inspectors match.'**
-  String get emptyInspectorsRoster;
-
-  /// No description provided for @assignAJobAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Assign a job'**
-  String get assignAJobAction;
-
-  /// No description provided for @pickJobToAssignTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Assign a job'**
-  String get pickJobToAssignTitle;
-
-  /// No description provided for @chatAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Chat'**
-  String get chatAction;
-
-  /// No description provided for @doneThisMonthLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Done this month'**
-  String get doneThisMonthLabel;
-
-  /// No description provided for @onTimeLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'On time'**
-  String get onTimeLabel;
-
-  /// No description provided for @returnedLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Returned'**
-  String get returnedLabel;
-
-  /// No description provided for @thisWeekTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'This week'**
-  String get thisWeekTitle;
-
-  /// No description provided for @tasksPerDayCaption.
-  ///
-  /// In en, this message translates to:
-  /// **'Tasks per day · red = fully booked'**
-  String get tasksPerDayCaption;
-
-  /// No description provided for @offLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'off'**
-  String get offLabel;
-
-  /// No description provided for @qualificationsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Qualifications'**
-  String get qualificationsTitle;
-
-  /// No description provided for @validToLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Valid to {date}'**
-  String validToLabel(String date);
-
-  /// No description provided for @expiresOnLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Expires {date}'**
-  String expiresOnLabel(String date);
-
-  /// No description provided for @upcomingTasksTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Upcoming tasks'**
-  String get upcomingTasksTitle;
-
-  /// No description provided for @seeAllAction.
-  ///
-  /// In en, this message translates to:
-  /// **'See all'**
-  String get seeAllAction;
-
-  /// No description provided for @emptyUpcomingTasks.
-  ///
-  /// In en, this message translates to:
-  /// **'No upcoming tasks.'**
-  String get emptyUpcomingTasks;
-
   /// No description provided for @taskAcceptedBadge.
   ///
   /// In en, this message translates to:
   /// **'Accepted'**
   String get taskAcceptedBadge;
-
-  /// No description provided for @taskNotAcceptedBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'Not accepted'**
-  String get taskNotAcceptedBadge;
-
-  /// No description provided for @allTasksTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'All tasks'**
-  String get allTasksTitle;
-
-  /// No description provided for @markLeaveAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark leave'**
-  String get markLeaveAction;
-
-  /// No description provided for @leaveMarkedMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Leave marked.'**
-  String get leaveMarkedMessage;
-
-  /// No description provided for @onSiteNowBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'On site now'**
-  String get onSiteNowBadge;
-
-  /// No description provided for @scheduleFreeAllDayLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Free all day'**
-  String get scheduleFreeAllDayLabel;
 
   /// No description provided for @navTasks.
   ///
@@ -3245,13 +2711,13 @@ abstract class AppLocalizations {
   /// No description provided for @approveAndSendAction.
   ///
   /// In en, this message translates to:
-  /// **'Approve & send to client'**
+  /// **'Approve certificate'**
   String get approveAndSendAction;
 
   /// No description provided for @approveRequirementsHint.
   ///
   /// In en, this message translates to:
-  /// **'Add your signature and a valid email to approve.'**
+  /// **'Add your signature to approve.'**
   String get approveRequirementsHint;
 
   /// No description provided for @confirmApproveTitle.
@@ -3263,8 +2729,8 @@ abstract class AppLocalizations {
   /// No description provided for @confirmApproveMessage.
   ///
   /// In en, this message translates to:
-  /// **'It will be signed as {name} and marked as sent to {email}.'**
-  String confirmApproveMessage(String name, String email);
+  /// **'It will be signed as {name} and passed to the coordinator to send to the client.'**
+  String confirmApproveMessage(String name);
 
   /// No description provided for @approveConfirmAction.
   ///
@@ -3305,8 +2771,56 @@ abstract class AppLocalizations {
   /// No description provided for @certificateApprovedMessage.
   ///
   /// In en, this message translates to:
-  /// **'Certificate approved and signed.'**
+  /// **'Certificate approved and signed. The coordinator will send it to the client.'**
   String get certificateApprovedMessage;
+
+  /// No description provided for @statToSend.
+  ///
+  /// In en, this message translates to:
+  /// **'To send'**
+  String get statToSend;
+
+  /// No description provided for @sendToClientAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to client'**
+  String get sendToClientAction;
+
+  /// No description provided for @sendCertificateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send certificate'**
+  String get sendCertificateTitle;
+
+  /// No description provided for @sendCertificateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Download the signed PDF, email it to the client, then mark it as sent.'**
+  String get sendCertificateHint;
+
+  /// No description provided for @confirmSendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as sent?'**
+  String get confirmSendTitle;
+
+  /// No description provided for @confirmSendMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The certificate will be marked as sent to {email}.'**
+  String confirmSendMessage(String email);
+
+  /// No description provided for @certificateSentMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate marked as sent to the client.'**
+  String get certificateSentMessage;
+
+  /// No description provided for @awaitingCoordinatorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'With the coordinator to send'**
+  String get awaitingCoordinatorLabel;
 
   /// No description provided for @certificateReturnedMessage.
   ///
@@ -3500,36 +3014,6 @@ abstract class AppLocalizations {
   /// **'{minutes}m'**
   String durationMinutes(int minutes);
 
-  /// No description provided for @navTimesheets.
-  ///
-  /// In en, this message translates to:
-  /// **'Timesheets'**
-  String get navTimesheets;
-
-  /// No description provided for @timesheetReviewTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Timesheets'**
-  String get timesheetReviewTitle;
-
-  /// No description provided for @timesheetAwaitingApprovalLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Awaiting approval'**
-  String get timesheetAwaitingApprovalLabel;
-
-  /// No description provided for @timesheetPendingValueLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Pending value'**
-  String get timesheetPendingValueLabel;
-
-  /// No description provided for @timesheetFilterPending.
-  ///
-  /// In en, this message translates to:
-  /// **'Pending'**
-  String get timesheetFilterPending;
-
   /// No description provided for @timesheetStatusPending.
   ///
   /// In en, this message translates to:
@@ -3565,48 +3049,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Approved — can\'t be changed'**
   String get timesheetLockedTooltip;
-
-  /// No description provided for @timesheetApproveTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Approve this entry?'**
-  String get timesheetApproveTitle;
-
-  /// No description provided for @timesheetApproveMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} logged {time} at {price}. Once approved it can\'t be changed.'**
-  String timesheetApproveMessage(String name, String time, String price);
-
-  /// No description provided for @timesheetApprovedMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Entry approved.'**
-  String get timesheetApprovedMessage;
-
-  /// No description provided for @timesheetReturnedMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Returned to the inspector.'**
-  String get timesheetReturnedMessage;
-
-  /// No description provided for @timesheetReturnReasonHint.
-  ///
-  /// In en, this message translates to:
-  /// **'e.g. This price is too high for a half-day job'**
-  String get timesheetReturnReasonHint;
-
-  /// No description provided for @timesheetReviewEmptyPending.
-  ///
-  /// In en, this message translates to:
-  /// **'Nothing is waiting for approval.'**
-  String get timesheetReviewEmptyPending;
-
-  /// No description provided for @timesheetReviewEmptyOther.
-  ///
-  /// In en, this message translates to:
-  /// **'No entries here yet.'**
-  String get timesheetReviewEmptyOther;
 
   /// No description provided for @timesheetActivitiesLabel.
   ///
@@ -3649,17 +3091,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Incl. {amount} transportation'**
   String timesheetIncludingTransportation(String amount);
-
-  /// No description provided for @timesheetApproveMessageWithTransport.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} logged {time} at {price}, plus {transport} transportation. Once approved it can\'t be changed.'**
-  String timesheetApproveMessageWithTransport(
-    String name,
-    String time,
-    String price,
-    String transport,
-  );
 
   /// No description provided for @timesheetActivityReport.
   ///

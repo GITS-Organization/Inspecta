@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspecta/core/enums/job_status.dart';
-import 'package:inspecta/features/auth/domain/entities/user.dart';
-import 'package:inspecta/features/auth/domain/entities/user_role.dart';
 import 'package:inspecta/features/timesheet/domain/entities/timesheet_activity.dart';
 import 'package:inspecta/features/timesheet/domain/entities/timesheet_entry.dart';
 import 'package:inspecta/features/timesheet/domain/entities/timesheet_entry_status.dart';
 import 'package:inspecta/features/timesheet/domain/entities/timesheet_expense.dart';
 import 'package:inspecta/features/timesheet/domain/entities/timesheet_row.dart';
-import 'package:inspecta/features/timesheet/presentation/bloc/timesheet_review_cubit.dart';
-import 'package:inspecta/features/timesheet/presentation/widgets/timesheet_review_card.dart';
 import 'package:inspecta/features/timesheet/presentation/widgets/timesheet_task_card.dart';
 import 'package:inspecta/features/requests/presentation/widgets/status_chip.dart';
 import 'package:inspecta/l10n/app_localizations.dart';
@@ -256,113 +252,6 @@ void main() {
 
         expect(edits, 1);
       });
-    });
-  });
-
-  group('TimesheetReviewCard (the coordinator\'s)', () {
-    const karim = AppUser(id: 'insp-1', name: 'Karim Adel', email: 'karim@inspecta.test', role: UserRole.inspector);
-
-    Future<void> pumpCard(
-      WidgetTester tester, {
-      required TimesheetEntry entry,
-      bool busy = false,
-      VoidCallback? onApprove,
-      VoidCallback? onReturn,
-    }) => _pump(
-      tester,
-      TimesheetReviewCard(
-        item: TimesheetReviewItem(entry: entry, request: _request, inspector: karim),
-        busy: busy,
-        onApprove: onApprove ?? () {},
-        onReturn: onReturn ?? () {},
-      ),
-    );
-
-    testWidgets('shows who logged what for which job, and what it comes to', (tester) async {
-      await pumpCard(tester, entry: sampleEntry(minutes: 90, pricePiastres: 22500, hourlyRatePiastres: 15000));
-
-      expect(find.text('Karim Adel'), findsOneWidget);
-      expect(find.text('KA'), findsOneWidget);
-      expect(find.textContaining('Delta Steel Co.'), findsOneWidget);
-      expect(find.text('1h 30m'), findsOneWidget);
-      expect(find.text('EGP 225.00'), findsOneWidget);
-    });
-
-    testWidgets('puts the total up front when there are transportation costs', (tester) async {
-      await pumpCard(tester, entry: _busyEntry);
-
-      expect(find.text('Total'), findsOneWidget);
-      expect(find.text('EGP 1,185.00'), findsOneWidget);
-      expect(find.text('Price EGP 825.00\n+ EGP 360.00 transport'), findsOneWidget);
-    });
-
-    testWidgets('keeps the working behind Details, for checking before deciding', (tester) async {
-      await pumpCard(tester, entry: _busyEntry);
-      expect(find.text('Inspection & load testing'), findsNothing);
-
-      await tester.tap(find.text('Details'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Inspection & load testing'), findsOneWidget);
-      expect(find.text('Unpaid break'), findsOneWidget);
-      expect(find.text('External transportation'), findsOneWidget);
-      expect(find.text('5h 30m × EGP 150.00 per hour'), findsOneWidget);
-    });
-
-    testWidgets('a pending entry offers Return and Approve, and needs no status label', (tester) async {
-      var approved = 0;
-      var returned = 0;
-      await pumpCard(tester, entry: sampleEntry(), onApprove: () => approved++, onReturn: () => returned++);
-
-      await tester.tap(find.text('Approve'));
-      await tester.tap(find.text('Return'));
-
-      expect((approved, returned), (1, 1));
-      expect(find.text('Awaiting approval'), findsNothing);
-    });
-
-    testWidgets('both buttons are disabled while a decision is saving', (tester) async {
-      var taps = 0;
-      await pumpCard(tester, entry: sampleEntry(), busy: true, onApprove: () => taps++, onReturn: () => taps++);
-
-      await tester.tap(find.text('Return'));
-      await tester.tap(find.byType(CircularProgressIndicator));
-
-      expect(taps, 0);
-    });
-
-    testWidgets('an approved entry has no buttons, and says so', (tester) async {
-      await pumpCard(tester, entry: sampleEntry(status: TimesheetEntryStatus.approved, reviewerName: 'Mona Salem'));
-
-      expect(find.text('Approve'), findsNothing);
-      expect(find.text('Return'), findsNothing);
-      expect(find.text('Approved'), findsOneWidget);
-    });
-
-    testWidgets('a returned entry shows the reason that was given', (tester) async {
-      await pumpCard(
-        tester,
-        entry: sampleEntry(status: TimesheetEntryStatus.returned, reviewerName: 'Mona Salem', reviewNote: 'Too high'),
-      );
-
-      expect(find.text('Returned by Mona Salem'), findsOneWidget);
-      expect(find.text('Too high'), findsOneWidget);
-      expect(find.text('Approve'), findsNothing);
-    });
-
-    testWidgets('copes with a job and inspector that have not loaded', (tester) async {
-      await _pump(
-        tester,
-        TimesheetReviewCard(
-          item: TimesheetReviewItem(entry: sampleEntry(requestId: 'REQ-77')),
-          busy: false,
-          onApprove: () {},
-          onReturn: () {},
-        ),
-      );
-
-      expect(find.text('REQ-77'), findsOneWidget);
-      expect(find.text('?'), findsOneWidget);
     });
   });
 }

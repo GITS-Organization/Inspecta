@@ -62,4 +62,8 @@ class CertificateRemoteDataSource {
     ...model.toReviewJson(),
     'reviewedAt': FieldValue.serverTimestamp(),
   }, SetOptions(merge: true));
+
+  /// The coordinator sending an approved certificate on: just who it went to.
+  Future<void> saveSentTo(String requestId, String email) =>
+      _doc(requestId).set({'sentTo': email}, SetOptions(merge: true));
 }

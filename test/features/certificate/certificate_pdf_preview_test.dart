@@ -68,12 +68,15 @@ void main() {
     expect(find.text('Download PDF'), findsOneWidget);
   });
 
-  for (final role in [UserRole.coordinator, UserRole.admin]) {
-    testWidgets('$role gets no download', (tester) async {
-      await open(tester, userWith(role));
-      expect(find.text('Download PDF'), findsNothing);
-    });
-  }
+  testWidgets('coordinator gets the download button, to send the PDF on', (tester) async {
+    await open(tester, userWith(UserRole.coordinator));
+    expect(find.text('Download PDF'), findsOneWidget);
+  });
+
+  testWidgets('admin gets no download', (tester) async {
+    await open(tester, userWith(UserRole.admin));
+    expect(find.text('Download PDF'), findsNothing);
+  });
 
   testWidgets('no signed-in user gets no download', (tester) async {
     await open(tester, null);

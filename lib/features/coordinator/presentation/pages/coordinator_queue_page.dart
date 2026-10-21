@@ -16,9 +16,11 @@ import '../bloc/coordinator_queue_cubit.dart';
 import '../widgets/assignment_card.dart';
 import '../widgets/coordinator_queue_header.dart';
 import 'assign_inspector_page.dart';
+import 'send_certificate_page.dart';
 
-/// Feature 04 §5's coordinator queue: every job waiting on an inspector
-/// or already scheduled/running, newest-due first.
+/// Feature 04 §5's coordinator queue: every job waiting on an inspector,
+/// already scheduled/running, or approved and waiting to be sent to the
+/// client, newest-due first.
 class CoordinatorQueuePage extends StatelessWidget {
   final VoidCallback onOpenProfile;
 
@@ -53,6 +55,12 @@ class _Body extends StatelessWidget {
   void _open(BuildContext context, InspectionRequest request) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => AssignInspectorPage(request: request)),
+    );
+  }
+
+  void _send(BuildContext context, InspectionRequest request) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => SendCertificatePage(request: request)),
     );
   }
 
@@ -98,6 +106,7 @@ class _Body extends StatelessWidget {
                       request: request,
                       inspectorName: state.inspectorName(request.inspectorId),
                       onAssign: () => _open(context, request),
+                      onSend: () => _send(context, request),
                     );
                   },
                 ),

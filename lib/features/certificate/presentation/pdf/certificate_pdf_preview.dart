@@ -13,7 +13,8 @@ import 'certificate_pdf_builder.dart';
 /// Opens the certificate's PDF in the full-screen preview. Used wherever the
 /// app offers "View PDF" / "Preview".
 ///
-/// Only a technical manager can download the PDF from there; everyone else
+/// Only a technical manager (who signs it) and a coordinator (who sends it on)
+/// can download the PDF from there; everyone else
 /// (inspectors included) gets a view-only preview.
 Future<void> previewCertificatePdf(
   BuildContext context, {
@@ -22,7 +23,8 @@ Future<void> previewCertificatePdf(
 }) {
   final t = AppLocalizations.of(context)!;
   final number = certNumberFor(request);
-  final canDownload = context.read<AuthCubit>().user?.role == UserRole.technicalManager;
+  final role = context.read<AuthCubit>().user?.role;
+  final canDownload = role == UserRole.technicalManager || role == UserRole.coordinator;
   return PdfPreviewPage.open(
     context,
     title: t.certificateTitle,

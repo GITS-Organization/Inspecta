@@ -18,18 +18,13 @@ import 'features/auth/presentation/bloc/sign_in_cubit.dart';
 import 'features/clients/data/datasources/clients_remote_datasource.dart';
 import 'features/clients/data/repositories/clients_repository_impl.dart';
 import 'features/clients/domain/repositories/clients_repository.dart';
-import 'features/clients/domain/usecases/add_contact.dart';
-import 'features/clients/domain/usecases/create_client.dart';
 import 'features/clients/domain/usecases/get_client_detail.dart';
-import 'features/clients/domain/usecases/get_clients.dart';
-import 'features/clients/domain/usecases/set_certificates_email.dart';
-import 'features/clients/presentation/bloc/client_detail_cubit.dart';
-import 'features/clients/presentation/bloc/clients_list_cubit.dart';
 import 'features/auth/domain/entities/user.dart';
 import 'features/certificate/data/datasources/certificate_remote_datasource.dart';
 import 'features/certificate/data/repositories/certificate_repository_impl.dart';
 import 'features/certificate/domain/repositories/certificate_repository.dart';
 import 'features/certificate/domain/usecases/approve_certificate.dart';
+import 'features/certificate/domain/usecases/send_certificate_to_client.dart';
 import 'features/certificate/domain/usecases/return_certificate.dart';
 import 'features/certificate/domain/usecases/save_certificate_draft.dart';
 import 'features/certificate/domain/usecases/submit_certificate.dart';
@@ -41,11 +36,9 @@ import 'features/coordinator/data/datasources/inspectors_remote_datasource.dart'
 import 'features/coordinator/data/repositories/coordinator_repository_impl.dart';
 import 'features/coordinator/domain/repositories/coordinator_repository.dart';
 import 'features/coordinator/domain/usecases/get_inspectors.dart';
-import 'features/coordinator/domain/usecases/mark_inspector_leave.dart';
 import 'features/coordinator/presentation/bloc/assign_inspector_cubit.dart';
 import 'features/coordinator/presentation/bloc/coordinator_queue_cubit.dart';
-import 'features/coordinator/presentation/bloc/inspector_detail_cubit.dart';
-import 'features/coordinator/presentation/bloc/inspectors_list_cubit.dart';
+import 'features/coordinator/presentation/bloc/send_certificate_cubit.dart';
 import 'features/inspector/presentation/bloc/certificates_list_cubit.dart';
 import 'features/inspector/presentation/bloc/inspector_tasks_cubit.dart';
 import 'features/quotation/data/datasources/quotation_remote_datasource.dart';
@@ -84,15 +77,11 @@ import 'features/technical_manager/presentation/bloc/review_queue_cubit.dart';
 import 'features/timesheet/data/datasources/timesheet_remote_datasource.dart';
 import 'features/timesheet/data/repositories/timesheet_repository_impl.dart';
 import 'features/timesheet/domain/repositories/timesheet_repository.dart';
-import 'features/timesheet/domain/usecases/approve_timesheet_entry.dart';
-import 'features/timesheet/domain/usecases/return_timesheet_entry.dart';
 import 'features/timesheet/domain/usecases/save_hourly_rate.dart';
 import 'features/timesheet/domain/usecases/save_timesheet_entry.dart';
-import 'features/timesheet/domain/usecases/watch_all_timesheets.dart';
 import 'features/timesheet/domain/usecases/watch_hourly_rate.dart';
 import 'features/timesheet/domain/usecases/watch_timesheet.dart';
 import 'features/timesheet/presentation/bloc/timesheet_cubit.dart';
-import 'features/timesheet/presentation/bloc/timesheet_review_cubit.dart';
 
 final getIt = GetIt.instance;
 
@@ -187,19 +176,7 @@ void _registerClients() {
     ..registerLazySingleton<ClientsRepository>(
       () => ClientsRepositoryImpl(getIt()),
     )
-    ..registerLazySingleton(() => GetClients(getIt()))
-    ..registerLazySingleton(() => GetClientDetail(getIt()))
-    ..registerLazySingleton(() => CreateClient(getIt()))
-    ..registerLazySingleton(() => AddContact(getIt()))
-    ..registerLazySingleton(() => SetCertificatesEmail(getIt()))
-    ..registerFactory(() => ClientsListCubit(getIt(), getIt()))
-    ..registerFactoryParam<ClientDetailCubit, String, void>(
-      (clientId, _) => ClientDetailCubit(
-        clientId: clientId,
-        getClientDetail: getIt(),
-        getRequests: getIt(),
-      ),
-    );
+    ..registerLazySingleton(() => GetClientDetail(getIt()));
 }
 
 void _registerCoordinator() {
@@ -210,21 +187,20 @@ void _registerCoordinator() {
     )
     ..registerLazySingleton(() => GetInspectors(getIt()))
     ..registerFactory(() => CoordinatorQueueCubit(getIt(), getIt()))
+    ..registerFactoryParam<SendCertificateCubit, InspectionRequest, void>(
+      (request, _) => SendCertificateCubit(
+        request: request,
+        watchCertificate: getIt(),
+        getClientDetail: getIt(),
+        sendCertificateToClient: getIt(),
+      ),
+    )
     ..registerFactoryParam<AssignInspectorCubit, InspectionRequest, String?>(
       (request, preselectedInspectorId) => AssignInspectorCubit(
         request: request,
         preselectedInspectorId: preselectedInspectorId,
         getInspectors: getIt(),
         assignInspector: getIt(),
-      ),
-    )
-    ..registerFactory(() => InspectorsListCubit(getIt(), getIt()))
-    ..registerLazySingleton(() => MarkInspectorLeave(getIt()))
-    ..registerFactoryParam<InspectorDetailCubit, AppUser, void>(
-      (inspector, _) => InspectorDetailCubit(
-        inspector: inspector,
-        getRequests: getIt(),
-        markInspectorLeave: getIt(),
       ),
     );
 }
@@ -261,6 +237,7 @@ void _registerCertificate() {
     ..registerLazySingleton(() => SaveCertificateDraft(getIt()))
     ..registerLazySingleton(() => SubmitCertificate(getIt()))
     ..registerLazySingleton(() => ApproveCertificate(getIt()))
+    ..registerLazySingleton(() => SendCertificateToClient(getIt()))
     ..registerLazySingleton(() => ReturnCertificate(getIt()))
     ..registerFactoryParam<CertificateCubit, InspectionRequest, void>(
       (request, _) => CertificateCubit(
@@ -287,7 +264,6 @@ void _registerTechnicalManager() {
         reviewerName: reviewerName,
         managerId: getIt<AuthCubit>().user?.id ?? '',
         watchCertificate: getIt(),
-        getClientDetail: getIt(),
         approveCertificate: getIt(),
         returnCertificate: getIt(),
         watchSignature: getIt(),
@@ -304,9 +280,6 @@ void _registerTimesheet() {
     ..registerLazySingleton(() => SaveTimesheetEntry(getIt()))
     ..registerLazySingleton(() => WatchHourlyRate(getIt()))
     ..registerLazySingleton(() => SaveHourlyRate(getIt()))
-    ..registerLazySingleton(() => WatchAllTimesheets(getIt()))
-    ..registerLazySingleton(() => ApproveTimesheetEntry(getIt()))
-    ..registerLazySingleton(() => ReturnTimesheetEntry(getIt()))
     ..registerFactory(
       () => TimesheetCubit(
         inspectorId: getIt<AuthCubit>().user!.id,
@@ -315,17 +288,6 @@ void _registerTimesheet() {
         watchHourlyRate: getIt(),
         saveEntry: getIt(),
         saveHourlyRate: getIt(),
-      ),
-    )
-    ..registerFactory(
-      () => TimesheetReviewCubit(
-        reviewerId: getIt<AuthCubit>().user!.id,
-        reviewerName: getIt<AuthCubit>().user!.name,
-        watchAllTimesheets: getIt(),
-        getRequests: getIt(),
-        getInspectors: getIt(),
-        approveEntry: getIt(),
-        returnEntry: getIt(),
       ),
     );
 }

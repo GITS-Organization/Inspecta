@@ -6,9 +6,6 @@ import 'package:inspecta/features/certificate/domain/repositories/certificate_re
 import 'package:inspecta/features/certificate/domain/usecases/approve_certificate.dart';
 import 'package:inspecta/features/certificate/domain/usecases/return_certificate.dart';
 import 'package:inspecta/features/certificate/domain/usecases/watch_certificate.dart';
-import 'package:inspecta/features/clients/domain/entities/client.dart';
-import 'package:inspecta/features/clients/domain/repositories/clients_repository.dart';
-import 'package:inspecta/features/clients/domain/usecases/get_client_detail.dart';
 import 'package:inspecta/features/technical_manager/domain/repositories/signature_repository.dart';
 import 'package:inspecta/features/technical_manager/domain/usecases/save_signature.dart';
 import 'package:inspecta/features/technical_manager/domain/usecases/watch_signature.dart';
@@ -25,11 +22,6 @@ class _FakeCertificateRepository extends Fake implements CertificateRepository {
 
   @override
   Future<void> approve(Certificate certificate) async => approved.add(certificate);
-}
-
-class _FakeClientsRepository extends Fake implements ClientsRepository {
-  @override
-  Future<Client?> getById(String id) async => null;
 }
 
 class _FakeSignatureRepository implements SignatureRepository {
@@ -64,7 +56,6 @@ void main() {
       managerId: managerId,
       reviewerName: 'Mahmoud Nasr',
       watchCertificate: WatchCertificate(certificates),
-      getClientDetail: GetClientDetail(_FakeClientsRepository()),
       approveCertificate: ApproveCertificate(certificates),
       returnCertificate: ReturnCertificate(certificates),
       watchSignature: WatchSignature(signatures),
@@ -73,7 +64,6 @@ void main() {
     certificates.certificate.add(const Certificate(requestId: 'REQ-1', inspectorId: 'insp-1'));
     if (savedSignature != null) signatures.signature.add(savedSignature);
     await settle();
-    cubit.setEmail('client@example.test');
   }
 
   setUp(() {
@@ -99,7 +89,17 @@ void main() {
       expect(approved.signatureStrokes, _saved);
       expect(approved.reviewerName, 'Mahmoud Nasr');
       expect(approved.reviewerLicense, isNull);
-      expect(approved.sentTo, 'client@example.test');
+      expect(approved.sentTo, isNull);
+    });
+
+    test('issues the certificate number, a verification code and the QR text with the approval', () async {
+      await cubit.approve();
+
+      final approved = certificates.approved.single;
+      expect(approved.certificateNumber, startsWith('CERT-'));
+      expect(approved.verificationCode, matches(RegExp(r'^[A-Z2-9]{4}(-[A-Z2-9]{4}){2}$')));
+      expect(approved.qrData, contains('Verification code: ${approved.verificationCode}'));
+      expect(approved.qrData, contains('Certificate no: ${approved.certificateNumber}'));
     });
 
     test('uses the saved signature even if something was drawn on the pad', () async {

@@ -52,6 +52,14 @@ class Certificate extends Equatable {
   /// redraws at any size.
   final List<List<double>> signatureStrokes;
 
+  /// Issued when the technical manager approves: the certificate's number,
+  /// a random code that identifies it, and the exact text its QR code
+  /// carries. Stored so the PDF and the management dashboard show the same
+  /// QR. Null until approval.
+  final String? certificateNumber;
+  final String? verificationCode;
+  final String? qrData;
+
   const Certificate({
     required this.requestId,
     required this.inspectorId,
@@ -69,6 +77,9 @@ class Certificate extends Equatable {
     this.sentTo,
     this.reviewedAt,
     this.signatureStrokes = const [],
+    this.certificateNumber,
+    this.verificationCode,
+    this.qrData,
   });
 
   bool get isSigned => signatureStrokes.any((stroke) => stroke.length >= 4);
@@ -139,6 +150,9 @@ class Certificate extends Equatable {
       sentTo: sentTo,
       reviewedAt: reviewedAt,
       signatureStrokes: signatureStrokes,
+      certificateNumber: certificateNumber,
+      verificationCode: verificationCode,
+      qrData: qrData,
     );
   }
 
@@ -166,6 +180,9 @@ class Certificate extends Equatable {
     String? reviewerLicense,
     String? sentTo,
     List<List<double>>? signatureStrokes,
+    String? certificateNumber,
+    String? verificationCode,
+    String? qrData,
   }) {
     return Certificate(
       requestId: requestId,
@@ -184,6 +201,9 @@ class Certificate extends Equatable {
       sentTo: sentTo,
       reviewedAt: reviewedAt,
       signatureStrokes: signatureStrokes ?? const [],
+      certificateNumber: certificateNumber ?? this.certificateNumber,
+      verificationCode: verificationCode ?? this.verificationCode,
+      qrData: qrData ?? this.qrData,
     );
   }
 
@@ -205,5 +225,8 @@ class Certificate extends Equatable {
     sentTo,
     reviewedAt,
     signatureStrokes,
+    certificateNumber,
+    verificationCode,
+    qrData,
   ];
 }

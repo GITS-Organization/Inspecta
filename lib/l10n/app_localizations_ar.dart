@@ -393,9 +393,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navQuotations => 'العروض';
 
   @override
-  String get navClients => 'العملاء';
-
-  @override
   String get searchRequestsHint => 'ابحث بالعميل أو المعدة أو الرقم';
 
   @override
@@ -934,176 +931,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get respondToClientTitle => 'الرد على العميل';
 
   @override
-  String get clientsTitle => 'العملاء';
-
-  @override
-  String get addClient => 'إضافة عميل';
-
-  @override
-  String get searchClientsHint =>
-      'ابحث بالشركة أو جهة الاتصال أو البريد الإلكتروني';
-
-  @override
-  String get clientsFilterAll => 'الكل';
-
-  @override
-  String get clientsFilterOpenJobs => 'مهام مفتوحة';
-
-  @override
-  String get clientsFilterDueSoon => 'قريبة الاستحقاق';
-
-  @override
-  String get clientsSortedByActivity => 'مرتبة حسب آخر نشاط';
-
-  @override
-  String equipmentCountChip(int count) {
-    return '$count معدة';
-  }
-
-  @override
-  String openJobsCountChip(int count) {
-    return '$count مهمة مفتوحة';
-  }
-
-  @override
-  String dueSoonCountChip(int count) {
-    return '$count تستحق خلال 30 يومًا';
-  }
-
-  @override
-  String get newSenderNeedsClient => 'مرسل جديد يحتاج إلى عميل';
-
-  @override
-  String get matchAction => 'ربط';
-
-  @override
-  String get clientsEmpty => 'لا يوجد عملاء بعد.';
-
-  @override
-  String get clientDetailEdit => 'تعديل';
-
-  @override
-  String get newRequestButton => 'طلب جديد';
-
-  @override
-  String get callAction => 'اتصال';
-
-  @override
-  String get emailAction => 'بريد إلكتروني';
-
-  @override
-  String get phoneCopied => 'تم نسخ رقم الهاتف.';
-
-  @override
-  String get emailCopied => 'تم نسخ البريد الإلكتروني.';
-
-  @override
-  String get noPhoneNumber => 'لا يوجد رقم هاتف مسجل.';
-
-  @override
-  String get noEmailOnFile => 'لا يوجد بريد إلكتروني مسجل.';
-
-  @override
-  String get equipmentStatLabel => 'المعدات';
-
-  @override
-  String get openJobsStatLabel => 'مهام مفتوحة';
-
-  @override
-  String get dueSoonStatLabel => 'تستحق خلال 30 يومًا';
-
-  @override
-  String get contactsTitle => 'جهات الاتصال';
-
-  @override
-  String get addContactAction => '+ إضافة';
-
-  @override
-  String get mainContactBadge => 'رئيسي';
-
-  @override
-  String get certificatesSentToLabel => 'تُرسل الشهادات إلى';
-
-  @override
-  String get changeAction => 'تغيير';
-
-  @override
-  String get noCertificatesEmail => 'غير محدد';
-
-  @override
-  String get historyTabRequests => 'الطلبات';
-
-  @override
-  String get historyTabEquipment => 'المعدات';
-
-  @override
-  String get historyTabCertificates => 'الشهادات';
-
-  @override
-  String get clientHistoryEmptyRequests => 'لا توجد طلبات من هذا العميل بعد.';
-
-  @override
-  String get clientHistoryEmptyEquipment => 'لا توجد معدات مسجلة بعد.';
-
-  @override
-  String get clientHistoryEmptyCertificates => 'الشهادات غير متتبعة بعد.';
-
-  @override
-  String get addClientSheetTitle => 'إضافة عميل';
-
-  @override
-  String get companyNameLabel => 'اسم الشركة';
-
-  @override
-  String get contactNameLabel => 'اسم جهة الاتصال';
-
-  @override
-  String get roleLabel => 'المسمى الوظيفي';
-
-  @override
-  String get emailLabel => 'البريد الإلكتروني';
-
-  @override
-  String get phoneLabel => 'الهاتف';
-
-  @override
-  String get createAction => 'إنشاء';
-
-  @override
-  String get errorCompanyNameRequired => 'أدخل اسم الشركة.';
-
-  @override
-  String get errorContactNameRequired => 'أدخل اسم جهة الاتصال.';
-
-  @override
   String get errorLocationRequired => 'أدخل الموقع.';
 
   @override
-  String get clientCreated => 'تمت إضافة العميل.';
-
-  @override
-  String get addContactSheetTitle => 'إضافة جهة اتصال';
-
-  @override
-  String get contactAdded => 'تمت إضافة جهة الاتصال.';
-
-  @override
-  String get matchSheetTitle => 'ربط بعميل';
-
-  @override
-  String get matchNewClientOption => 'عميل جديد';
-
-  @override
-  String get clientMatched => 'تم الربط بالعميل.';
-
-  @override
-  String get certificatesEmailUpdated => 'تم تحديث بريد الشهادات.';
-
-  @override
   String get navQueue => 'القائمة';
-
-  @override
-  String get navInspectors => 'المفتشون';
 
   @override
   String get navMore => 'المزيد';
@@ -1189,31 +1020,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get assignmentSuccessMessage => 'تم تعيين المفتش.';
 
   @override
-  String get inspectorsTitle => 'المفتشون';
-
-  @override
-  String get searchInspectorsHint => 'ابحث بالاسم';
-
-  @override
   String get filterAll => 'الكل';
-
-  @override
-  String get statFreeToday => 'متاح اليوم';
-
-  @override
-  String get statBusy => 'مشغول';
-
-  @override
-  String get statOnLeave => 'في إجازة';
-
-  @override
-  String get freeBadge => 'متاح';
-
-  @override
-  String get busyBadge => 'مشغول';
-
-  @override
-  String get onLeaveBadge => 'إجازة';
 
   @override
   String onLeaveUntilLabel(String date) {
@@ -1221,97 +1028,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get todayLabel => 'اليوم';
-
-  @override
-  String slotsOfCapacity(int used, int capacity) {
-    return '$used من $capacity مهام';
-  }
-
-  @override
-  String get nowLabel => 'الآن:';
-
-  @override
-  String get nextLabel => 'التالي:';
-
-  @override
-  String licenseExpiresInDays(String name, int days) {
-    return 'ترخيص $name ينتهي خلال $days أيام';
-  }
-
-  @override
-  String get emptyInspectorsRoster => 'لا يوجد مفتشون مطابقون.';
-
-  @override
-  String get assignAJobAction => 'تعيين مهمة';
-
-  @override
-  String get pickJobToAssignTitle => 'تعيين مهمة';
-
-  @override
-  String get chatAction => 'محادثة';
-
-  @override
-  String get doneThisMonthLabel => 'المنجز هذا الشهر';
-
-  @override
-  String get onTimeLabel => 'في الموعد';
-
-  @override
-  String get returnedLabel => 'مرتجع';
-
-  @override
-  String get thisWeekTitle => 'هذا الأسبوع';
-
-  @override
-  String get tasksPerDayCaption =>
-      'عدد المهام يوميًا · الأحمر يعني اكتمال الحجز';
-
-  @override
-  String get offLabel => 'إجازة';
-
-  @override
-  String get qualificationsTitle => 'المؤهلات';
-
-  @override
-  String validToLabel(String date) {
-    return 'ساري حتى $date';
-  }
-
-  @override
-  String expiresOnLabel(String date) {
-    return 'ينتهي في $date';
-  }
-
-  @override
-  String get upcomingTasksTitle => 'المهام القادمة';
-
-  @override
-  String get seeAllAction => 'عرض الكل';
-
-  @override
-  String get emptyUpcomingTasks => 'لا توجد مهام قادمة.';
-
-  @override
   String get taskAcceptedBadge => 'مقبولة';
-
-  @override
-  String get taskNotAcceptedBadge => 'غير مقبولة';
-
-  @override
-  String get allTasksTitle => 'كل المهام';
-
-  @override
-  String get markLeaveAction => 'تسجيل إجازة';
-
-  @override
-  String get leaveMarkedMessage => 'تم تسجيل الإجازة.';
-
-  @override
-  String get onSiteNowBadge => 'في الموقع الآن';
-
-  @override
-  String get scheduleFreeAllDayLabel => 'متفرغ طوال اليوم';
 
   @override
   String get navTasks => 'المهام';
@@ -1759,17 +1476,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get returnAction => 'إعادة';
 
   @override
-  String get approveAndSendAction => 'اعتماد وإرسال للعميل';
+  String get approveAndSendAction => 'اعتماد الشهادة';
 
   @override
-  String get approveRequirementsHint => 'أضف توقيعك وبريدًا صالحًا للاعتماد.';
+  String get approveRequirementsHint => 'أضف توقيعك للاعتماد.';
 
   @override
   String get confirmApproveTitle => 'اعتماد هذه الشهادة؟';
 
   @override
-  String confirmApproveMessage(String name, String email) {
-    return 'سيتم توقيعها باسم $name وتسجيلها كمرسلة إلى $email.';
+  String confirmApproveMessage(String name) {
+    return 'سيتم توقيعها باسم $name وتحويلها إلى المنسق لإرسالها إلى العميل.';
   }
 
   @override
@@ -1791,7 +1508,35 @@ class AppLocalizationsAr extends AppLocalizations {
   String get returnConfirmAction => 'إعادة';
 
   @override
-  String get certificateApprovedMessage => 'تم اعتماد الشهادة وتوقيعها.';
+  String get certificateApprovedMessage =>
+      'تم اعتماد الشهادة وتوقيعها. سيرسلها المنسق إلى العميل.';
+
+  @override
+  String get statToSend => 'للإرسال';
+
+  @override
+  String get sendToClientAction => 'إرسال للعميل';
+
+  @override
+  String get sendCertificateTitle => 'إرسال الشهادة';
+
+  @override
+  String get sendCertificateHint =>
+      'نزّل ملف PDF الموقّع وأرسله إلى العميل بالبريد، ثم سجّله كمرسل.';
+
+  @override
+  String get confirmSendTitle => 'تسجيلها كمرسلة؟';
+
+  @override
+  String confirmSendMessage(String email) {
+    return 'ستُسجَّل الشهادة كمرسلة إلى $email.';
+  }
+
+  @override
+  String get certificateSentMessage => 'تم تسجيل الشهادة كمرسلة إلى العميل.';
+
+  @override
+  String get awaitingCoordinatorLabel => 'لدى المنسق للإرسال';
 
   @override
   String get certificateReturnedMessage => 'أُعيدت الشهادة إلى المفتش.';
@@ -1900,21 +1645,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get navTimesheets => 'سجلات الساعات';
-
-  @override
-  String get timesheetReviewTitle => 'سجلات الساعات';
-
-  @override
-  String get timesheetAwaitingApprovalLabel => 'بانتظار الموافقة';
-
-  @override
-  String get timesheetPendingValueLabel => 'القيمة المعلّقة';
-
-  @override
-  String get timesheetFilterPending => 'المعلّقة';
-
-  @override
   String get timesheetStatusPending => 'بانتظار الموافقة';
 
   @override
@@ -1937,29 +1667,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get timesheetLockedTooltip => 'تمت الموافقة — لا يمكن تعديلها';
 
   @override
-  String get timesheetApproveTitle => 'الموافقة على هذا السجل؟';
-
-  @override
-  String timesheetApproveMessage(String name, String time, String price) {
-    return 'سجّل $name $time بسعر $price. بعد الموافقة لا يمكن تعديله.';
-  }
-
-  @override
-  String get timesheetApprovedMessage => 'تمت الموافقة على السجل.';
-
-  @override
-  String get timesheetReturnedMessage => 'تمت إعادته إلى المفتش.';
-
-  @override
-  String get timesheetReturnReasonHint => 'مثال: هذا السعر مرتفع لمهمة نصف يوم';
-
-  @override
-  String get timesheetReviewEmptyPending => 'لا يوجد شيء بانتظار الموافقة.';
-
-  @override
-  String get timesheetReviewEmptyOther => 'لا توجد سجلات هنا بعد.';
-
-  @override
   String get timesheetActivitiesLabel => 'كيف قُضي الوقت';
 
   @override
@@ -1980,16 +1687,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String timesheetIncludingTransportation(String amount) {
     return 'يشمل $amount نقل';
-  }
-
-  @override
-  String timesheetApproveMessageWithTransport(
-    String name,
-    String time,
-    String price,
-    String transport,
-  ) {
-    return 'سجّل $name $time بسعر $price، بالإضافة إلى $transport نقل. بعد الموافقة لا يمكن تعديله.';
   }
 
   @override

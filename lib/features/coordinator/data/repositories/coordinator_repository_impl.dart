@@ -32,15 +32,6 @@ class CoordinatorRepositoryImpl implements CoordinatorRepository {
         });
   }
 
-  @override
-  Future<void> markOnLeave(String inspectorId, DateTime? until) async {
-    try {
-      await _remote.markOnLeave(inspectorId, until);
-    } catch (e) {
-      throw _mapError(e);
-    }
-  }
-
   CoordinatorFailure _mapError(Object error) {
     if (error is CoordinatorFailure) return error;
     if (error is FirebaseException) {

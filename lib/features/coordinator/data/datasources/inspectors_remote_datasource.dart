@@ -20,12 +20,4 @@ class InspectorsRemoteDataSource {
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => UserModel.fromJson(doc.id, doc.data())).toList());
   }
-
-  /// Just the `onLeaveUntil` field — `firestore.rules` scopes a
-  /// coordinator's write to exactly this key on an inspector's profile.
-  Future<void> markOnLeave(String inspectorId, DateTime? until) {
-    return _firestore.collection(collection).doc(inspectorId).update({
-      'onLeaveUntil': until == null ? null : Timestamp.fromDate(until),
-    });
-  }
 }

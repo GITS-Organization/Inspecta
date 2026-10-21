@@ -19,6 +19,15 @@ class Client extends Equatable {
   final List<ClientEquipmentItem> equipment;
   final DateTime createdAt;
 
+  /// VAT / tax registration number. Set from the management dashboard,
+  /// which is where clients are created; this app only reads it.
+  final String? taxNumber;
+
+  /// Where [location] is on the map, placed in the dashboard. Both null
+  /// until someone places it.
+  final double? latitude;
+  final double? longitude;
+
   const Client({
     required this.id,
     required this.companyName,
@@ -27,7 +36,12 @@ class Client extends Equatable {
     this.contacts = const [],
     this.certificatesEmail,
     this.equipment = const [],
+    this.taxNumber,
+    this.latitude,
+    this.longitude,
   });
+
+  bool get hasCoordinates => latitude != null && longitude != null;
 
   ClientContact? get mainContact {
     if (contacts.isEmpty) return null;
@@ -48,5 +62,8 @@ class Client extends Equatable {
     certificatesEmail,
     equipment,
     createdAt,
+    taxNumber,
+    latitude,
+    longitude,
   ];
 }

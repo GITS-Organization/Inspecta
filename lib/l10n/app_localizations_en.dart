@@ -388,9 +388,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navQuotations => 'Quotations';
 
   @override
-  String get navClients => 'Clients';
-
-  @override
   String get searchRequestsHint => 'Search client, equipment or ID';
 
   @override
@@ -926,188 +923,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get respondToClientTitle => 'Respond to client';
 
   @override
-  String get clientsTitle => 'Clients';
-
-  @override
-  String get addClient => 'Add client';
-
-  @override
-  String get searchClientsHint => 'Search company, contact or email';
-
-  @override
-  String get clientsFilterAll => 'All';
-
-  @override
-  String get clientsFilterOpenJobs => 'Open jobs';
-
-  @override
-  String get clientsFilterDueSoon => 'Due soon';
-
-  @override
-  String get clientsSortedByActivity => 'Sorted by latest activity';
-
-  @override
-  String equipmentCountChip(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count equipment',
-      one: '1 equipment',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String openJobsCountChip(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count open jobs',
-      one: '1 open job',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String dueSoonCountChip(int count) {
-    return '$count due in 30 days';
-  }
-
-  @override
-  String get newSenderNeedsClient => 'New sender needs a client';
-
-  @override
-  String get matchAction => 'Match';
-
-  @override
-  String get clientsEmpty => 'No clients yet.';
-
-  @override
-  String get clientDetailEdit => 'Edit';
-
-  @override
-  String get newRequestButton => 'New request';
-
-  @override
-  String get callAction => 'Call';
-
-  @override
-  String get emailAction => 'Email';
-
-  @override
-  String get phoneCopied => 'Phone number copied.';
-
-  @override
-  String get emailCopied => 'Email copied.';
-
-  @override
-  String get noPhoneNumber => 'No phone number on file.';
-
-  @override
-  String get noEmailOnFile => 'No email on file.';
-
-  @override
-  String get equipmentStatLabel => 'Equipment';
-
-  @override
-  String get openJobsStatLabel => 'Open jobs';
-
-  @override
-  String get dueSoonStatLabel => 'Due in 30 days';
-
-  @override
-  String get contactsTitle => 'Contacts';
-
-  @override
-  String get addContactAction => '+ Add';
-
-  @override
-  String get mainContactBadge => 'Main';
-
-  @override
-  String get certificatesSentToLabel => 'Certificates are sent to';
-
-  @override
-  String get changeAction => 'Change';
-
-  @override
-  String get noCertificatesEmail => 'Not set';
-
-  @override
-  String get historyTabRequests => 'Requests';
-
-  @override
-  String get historyTabEquipment => 'Equipment';
-
-  @override
-  String get historyTabCertificates => 'Certificates';
-
-  @override
-  String get clientHistoryEmptyRequests => 'No requests from this client yet.';
-
-  @override
-  String get clientHistoryEmptyEquipment => 'No equipment on record yet.';
-
-  @override
-  String get clientHistoryEmptyCertificates =>
-      'Certificates aren\'t tracked yet.';
-
-  @override
-  String get addClientSheetTitle => 'Add client';
-
-  @override
-  String get companyNameLabel => 'Company name';
-
-  @override
-  String get contactNameLabel => 'Contact name';
-
-  @override
-  String get roleLabel => 'Role';
-
-  @override
-  String get emailLabel => 'Email';
-
-  @override
-  String get phoneLabel => 'Phone';
-
-  @override
-  String get createAction => 'Create';
-
-  @override
-  String get errorCompanyNameRequired => 'Enter the company name.';
-
-  @override
-  String get errorContactNameRequired => 'Enter the contact\'s name.';
-
-  @override
   String get errorLocationRequired => 'Enter the location.';
 
   @override
-  String get clientCreated => 'Client added.';
-
-  @override
-  String get addContactSheetTitle => 'Add contact';
-
-  @override
-  String get contactAdded => 'Contact added.';
-
-  @override
-  String get matchSheetTitle => 'Match to a client';
-
-  @override
-  String get matchNewClientOption => 'New client';
-
-  @override
-  String get clientMatched => 'Matched to client.';
-
-  @override
-  String get certificatesEmailUpdated => 'Certificates email updated.';
-
-  @override
   String get navQueue => 'Queue';
-
-  @override
-  String get navInspectors => 'Inspectors';
 
   @override
   String get navMore => 'More';
@@ -1193,31 +1012,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assignmentSuccessMessage => 'Inspector assigned.';
 
   @override
-  String get inspectorsTitle => 'Inspectors';
-
-  @override
-  String get searchInspectorsHint => 'Search by name';
-
-  @override
   String get filterAll => 'All';
-
-  @override
-  String get statFreeToday => 'Free today';
-
-  @override
-  String get statBusy => 'Busy';
-
-  @override
-  String get statOnLeave => 'On leave';
-
-  @override
-  String get freeBadge => 'Free';
-
-  @override
-  String get busyBadge => 'Busy';
-
-  @override
-  String get onLeaveBadge => 'Leave';
 
   @override
   String onLeaveUntilLabel(String date) {
@@ -1225,96 +1020,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get todayLabel => 'Today';
-
-  @override
-  String slotsOfCapacity(int used, int capacity) {
-    return '$used of $capacity slots';
-  }
-
-  @override
-  String get nowLabel => 'Now:';
-
-  @override
-  String get nextLabel => 'Next:';
-
-  @override
-  String licenseExpiresInDays(String name, int days) {
-    return '$name license expires in $days days';
-  }
-
-  @override
-  String get emptyInspectorsRoster => 'No inspectors match.';
-
-  @override
-  String get assignAJobAction => 'Assign a job';
-
-  @override
-  String get pickJobToAssignTitle => 'Assign a job';
-
-  @override
-  String get chatAction => 'Chat';
-
-  @override
-  String get doneThisMonthLabel => 'Done this month';
-
-  @override
-  String get onTimeLabel => 'On time';
-
-  @override
-  String get returnedLabel => 'Returned';
-
-  @override
-  String get thisWeekTitle => 'This week';
-
-  @override
-  String get tasksPerDayCaption => 'Tasks per day · red = fully booked';
-
-  @override
-  String get offLabel => 'off';
-
-  @override
-  String get qualificationsTitle => 'Qualifications';
-
-  @override
-  String validToLabel(String date) {
-    return 'Valid to $date';
-  }
-
-  @override
-  String expiresOnLabel(String date) {
-    return 'Expires $date';
-  }
-
-  @override
-  String get upcomingTasksTitle => 'Upcoming tasks';
-
-  @override
-  String get seeAllAction => 'See all';
-
-  @override
-  String get emptyUpcomingTasks => 'No upcoming tasks.';
-
-  @override
   String get taskAcceptedBadge => 'Accepted';
-
-  @override
-  String get taskNotAcceptedBadge => 'Not accepted';
-
-  @override
-  String get allTasksTitle => 'All tasks';
-
-  @override
-  String get markLeaveAction => 'Mark leave';
-
-  @override
-  String get leaveMarkedMessage => 'Leave marked.';
-
-  @override
-  String get onSiteNowBadge => 'On site now';
-
-  @override
-  String get scheduleFreeAllDayLabel => 'Free all day';
 
   @override
   String get navTasks => 'Tasks';
@@ -1766,18 +1472,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get returnAction => 'Return';
 
   @override
-  String get approveAndSendAction => 'Approve & send to client';
+  String get approveAndSendAction => 'Approve certificate';
 
   @override
-  String get approveRequirementsHint =>
-      'Add your signature and a valid email to approve.';
+  String get approveRequirementsHint => 'Add your signature to approve.';
 
   @override
   String get confirmApproveTitle => 'Approve this certificate?';
 
   @override
-  String confirmApproveMessage(String name, String email) {
-    return 'It will be signed as $name and marked as sent to $email.';
+  String confirmApproveMessage(String name) {
+    return 'It will be signed as $name and passed to the coordinator to send to the client.';
   }
 
   @override
@@ -1801,7 +1506,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get returnConfirmAction => 'Return';
 
   @override
-  String get certificateApprovedMessage => 'Certificate approved and signed.';
+  String get certificateApprovedMessage =>
+      'Certificate approved and signed. The coordinator will send it to the client.';
+
+  @override
+  String get statToSend => 'To send';
+
+  @override
+  String get sendToClientAction => 'Send to client';
+
+  @override
+  String get sendCertificateTitle => 'Send certificate';
+
+  @override
+  String get sendCertificateHint =>
+      'Download the signed PDF, email it to the client, then mark it as sent.';
+
+  @override
+  String get confirmSendTitle => 'Mark as sent?';
+
+  @override
+  String confirmSendMessage(String email) {
+    return 'The certificate will be marked as sent to $email.';
+  }
+
+  @override
+  String get certificateSentMessage =>
+      'Certificate marked as sent to the client.';
+
+  @override
+  String get awaitingCoordinatorLabel => 'With the coordinator to send';
 
   @override
   String get certificateReturnedMessage =>
@@ -1913,21 +1647,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get navTimesheets => 'Timesheets';
-
-  @override
-  String get timesheetReviewTitle => 'Timesheets';
-
-  @override
-  String get timesheetAwaitingApprovalLabel => 'Awaiting approval';
-
-  @override
-  String get timesheetPendingValueLabel => 'Pending value';
-
-  @override
-  String get timesheetFilterPending => 'Pending';
-
-  @override
   String get timesheetStatusPending => 'Awaiting approval';
 
   @override
@@ -1950,30 +1669,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get timesheetLockedTooltip => 'Approved — can\'t be changed';
 
   @override
-  String get timesheetApproveTitle => 'Approve this entry?';
-
-  @override
-  String timesheetApproveMessage(String name, String time, String price) {
-    return '$name logged $time at $price. Once approved it can\'t be changed.';
-  }
-
-  @override
-  String get timesheetApprovedMessage => 'Entry approved.';
-
-  @override
-  String get timesheetReturnedMessage => 'Returned to the inspector.';
-
-  @override
-  String get timesheetReturnReasonHint =>
-      'e.g. This price is too high for a half-day job';
-
-  @override
-  String get timesheetReviewEmptyPending => 'Nothing is waiting for approval.';
-
-  @override
-  String get timesheetReviewEmptyOther => 'No entries here yet.';
-
-  @override
   String get timesheetActivitiesLabel => 'How the time was spent';
 
   @override
@@ -1994,16 +1689,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String timesheetIncludingTransportation(String amount) {
     return 'Incl. $amount transportation';
-  }
-
-  @override
-  String timesheetApproveMessageWithTransport(
-    String name,
-    String time,
-    String price,
-    String transport,
-  ) {
-    return '$name logged $time at $price, plus $transport transportation. Once approved it can\'t be changed.';
   }
 
   @override

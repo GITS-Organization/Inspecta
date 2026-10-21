@@ -89,6 +89,10 @@ class InspectionRequest extends Equatable {
       status == JobStatus.taskAccepted ||
       status == JobStatus.inProgress;
 
+  /// The technical manager has approved and signed the certificate and it is
+  /// back with the coordinator to send to the client.
+  bool get isAwaitingSend => status == JobStatus.certificateApproved;
+
   /// Card title: the first item's equipment, e.g. "Overhead crane — 10 t".
   /// A request always has at least one item once past intake, but a
   /// mid-edit manual draft could momentarily have none.

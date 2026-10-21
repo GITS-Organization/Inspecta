@@ -7,7 +7,6 @@ import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/loading.dart';
 import '../../../../core/shared/m_notice.dart';
-import '../../../../core/shared/m_text_field.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/presentation/bloc/auth_cubit.dart';
@@ -23,8 +22,9 @@ import '../widgets/review_summary_card.dart';
 import '../widgets/signature_card.dart';
 
 /// Feature 06's review screen: the reviewer reads the summary, adds
-/// comments, signs, and either approves (sending the signed PDF to the
-/// client) or returns the certificate to its inspector.
+/// comments, signs, and either approves (which issues the certificate's QR
+/// code and hands it to the coordinator to send to the client) or returns the
+/// certificate to its inspector.
 class CertificateReviewPage extends StatelessWidget {
   final InspectionRequest request;
   final String? inspectorName;
@@ -56,12 +56,10 @@ class _ReviewView extends StatefulWidget {
 
 class _ReviewViewState extends State<_ReviewView> {
   final _comments = TextEditingController();
-  final _email = TextEditingController();
 
   @override
   void dispose() {
     _comments.dispose();
-    _email.dispose();
     super.dispose();
   }
 
@@ -75,12 +73,6 @@ class _ReviewViewState extends State<_ReviewView> {
     final cubit = context.read<ReviewDetailCubit>();
     return MultiBlocListener(
       listeners: [
-        BlocListener<ReviewDetailCubit, ReviewDetailState>(
-          listenWhen: (previous, current) => previous.suggestedEmail != current.suggestedEmail,
-          listener: (context, state) {
-            if (_email.text.isEmpty && state.suggestedEmail != null) _email.text = state.suggestedEmail!;
-          },
-        ),
         BlocListener<ReviewDetailCubit, ReviewDetailState>(
           listenWhen: (previous, current) => previous.actionSeq != current.actionSeq,
           listener: (context, state) {
@@ -157,17 +149,6 @@ class _ReviewViewState extends State<_ReviewView> {
                         rememberSignature: state.rememberSignature,
                         onRememberChanged: cubit.setRememberSignature,
                         enabled: !state.isBusy,
-                      ),
-                      const SizedBox(height: 18),
-                      Text(t.sendSignedPdfToLabel, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
-                      const SizedBox(height: 8),
-                      MTextField(
-                        controller: _email,
-                        onChanged: cubit.setEmail,
-                        enabled: !state.isBusy,
-                        prefixIcon: Icons.mail_outline_rounded,
-                        keyboardType: TextInputType.emailAddress,
-                        hintText: t.emailHint,
                       ),
                       if (!state.canApprove) ...[
                         const SizedBox(height: 12),

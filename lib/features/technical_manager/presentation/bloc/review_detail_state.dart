@@ -11,11 +11,6 @@ class ReviewDetailState extends Equatable {
   /// The reviewer's profile name — printed on the certificate as the person
   /// signing it. Not entered on the review screen.
   final String reviewerName;
-  final String email;
-
-  /// The address [ReviewDetailCubit] looked up from the client, so the
-  /// screen can drop it into the email field once.
-  final String? suggestedEmail;
 
   /// What the reviewer has drawn on this screen — only used when they have no
   /// saved signature.
@@ -40,8 +35,6 @@ class ReviewDetailState extends Equatable {
     this.certificate,
     this.comments = '',
     this.reviewerName = '',
-    this.email = '',
-    this.suggestedEmail,
     this.strokes = const [],
     this.savedStrokes,
     this.rememberSignature = true,
@@ -67,17 +60,14 @@ class ReviewDetailState extends Equatable {
 
   bool get isSigned => _hasInk(signatureStrokes);
 
-  /// Signed and addressed — the certificate can't go out unsigned or to a
-  /// nonsense address.
-  bool get canApprove => certificate != null && !isSignatureLoading && isSigned && Validators.isEmail(email);
+  /// Signed — a certificate can't be approved without the reviewer's signature.
+  bool get canApprove => certificate != null && !isSignatureLoading && isSigned;
 
   ReviewDetailState copyWith({
     ReviewDetailStatus? status,
     Certificate? certificate,
     String? comments,
     String? reviewerName,
-    String? email,
-    String? suggestedEmail,
     List<List<double>>? strokes,
     List<List<double>>? savedStrokes,
     bool? rememberSignature,
@@ -93,8 +83,6 @@ class ReviewDetailState extends Equatable {
       certificate: certificate ?? this.certificate,
       comments: comments ?? this.comments,
       reviewerName: reviewerName ?? this.reviewerName,
-      email: email ?? this.email,
-      suggestedEmail: suggestedEmail ?? this.suggestedEmail,
       strokes: strokes ?? this.strokes,
       savedStrokes: savedStrokes ?? this.savedStrokes,
       rememberSignature: rememberSignature ?? this.rememberSignature,
@@ -113,8 +101,6 @@ class ReviewDetailState extends Equatable {
     certificate,
     comments,
     reviewerName,
-    email,
-    suggestedEmail,
     strokes,
     savedStrokes,
     rememberSignature,

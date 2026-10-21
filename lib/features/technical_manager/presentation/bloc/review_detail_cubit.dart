@@ -3,13 +3,14 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/utils/validators.dart';
+import '../../../certificate/domain/certificate_number.dart';
+import '../../../certificate/domain/certificate_verification.dart';
 import '../../../certificate/domain/entities/certificate.dart';
 import '../../../certificate/domain/entities/certificate_failure.dart';
 import '../../../certificate/domain/usecases/approve_certificate.dart';
 import '../../../certificate/domain/usecases/return_certificate.dart';
 import '../../../certificate/domain/usecases/watch_certificate.dart';
-import '../../../clients/domain/usecases/get_client_detail.dart';
+import '../../../certificate/presentation/pdf/certificate_pdf_builder.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../domain/usecases/save_signature.dart';
 import '../../domain/usecases/watch_signature.dart';
@@ -17,8 +18,9 @@ import '../../domain/usecases/watch_signature.dart';
 part 'review_detail_state.dart';
 
 /// Backs one certificate's review screen (Feature 06): the inspector's
-/// submitted certificate, plus the reviewer's own comments, signature and
-/// recipient — approved with all of them, or returned with a reason.
+/// submitted certificate, plus the reviewer's own comments and signature —
+/// approved with both (which also issues its QR code, and hands it to the
+/// coordinator to send to the client), or returned with a reason.
 ///
 /// The reviewer's name is their profile name, and their signature is the one
 /// saved in their profile when they have one — they only draw it here, once,
@@ -27,7 +29,6 @@ class ReviewDetailCubit extends Cubit<ReviewDetailState> {
   final InspectionRequest request;
   final String managerId;
   final WatchCertificate _watchCertificate;
-  final GetClientDetail _getClientDetail;
   final ApproveCertificate _approve;
   final ReturnCertificate _return;
   final WatchSignature _watchSignature;
@@ -41,13 +42,11 @@ class ReviewDetailCubit extends Cubit<ReviewDetailState> {
     required this.managerId,
     required String reviewerName,
     required WatchCertificate watchCertificate,
-    required GetClientDetail getClientDetail,
     required ApproveCertificate approveCertificate,
     required ReturnCertificate returnCertificate,
     required WatchSignature watchSignature,
     required SaveSignature saveSignature,
   }) : _watchCertificate = watchCertificate,
-       _getClientDetail = getClientDetail,
        _approve = approveCertificate,
        _return = returnCertificate,
        _watchSignature = watchSignature,
@@ -66,7 +65,6 @@ class ReviewDetailCubit extends Cubit<ReviewDetailState> {
       ),
       onError: (Object error) => emit(state.copyWith(status: ReviewDetailStatus.error)),
     );
-    _loadClientEmail();
   }
 
   void _watchSavedSignature() {
@@ -81,26 +79,7 @@ class ReviewDetailCubit extends Cubit<ReviewDetailState> {
     );
   }
 
-  /// Pre-fills "Send signed PDF to" with the client's certificates inbox —
-  /// the reviewer can still change it.
-  Future<void> _loadClientEmail() async {
-    final clientId = request.clientId;
-    if (clientId == null) return;
-    try {
-      final client = await _getClientDetail(clientId);
-      if (isClosed) return;
-      final email = client?.certificatesEmail ?? client?.mainContact?.email;
-      if (email != null && email.isNotEmpty && state.email.isEmpty) {
-        emit(state.copyWith(email: email, suggestedEmail: email));
-      }
-    } catch (_) {
-      // No suggestion — the field just starts empty.
-    }
-  }
-
   void setComments(String value) => emit(state.copyWith(comments: value));
-
-  void setEmail(String value) => emit(state.copyWith(email: value));
 
   void setStrokes(List<List<double>> strokes) => emit(state.copyWith(strokes: strokes));
 
@@ -114,12 +93,17 @@ class ReviewDetailCubit extends Cubit<ReviewDetailState> {
     emit(state.copyWith(isApproving: true));
     final comments = state.comments.trim();
     try {
+      // The QR is issued here, at the moment of approval, and stored on the
+      // certificate: the PDF and the dashboard both read the same text back.
+      final code = newVerificationCode();
       await _approve(
         certificate.withReview(
           reviewerComments: comments.isEmpty ? null : comments,
           reviewerName: state.reviewerName.trim(),
-          sentTo: state.email.trim(),
           signatureStrokes: state.signatureStrokes,
+          certificateNumber: certNumberFor(request),
+          verificationCode: code,
+          qrData: certificateQrData(request: request, certificate: certificate, verificationCode: code),
         ),
       );
       // Drawn here, and they asked to keep it: it's saved to their profile so

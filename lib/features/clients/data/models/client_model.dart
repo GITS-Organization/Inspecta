@@ -13,6 +13,9 @@ class ClientModel {
   final String? certificatesEmail;
   final List<ClientEquipmentItemModel> equipment;
   final DateTime createdAt;
+  final String? taxNumber;
+  final double? latitude;
+  final double? longitude;
 
   const ClientModel({
     required this.id,
@@ -22,6 +25,9 @@ class ClientModel {
     this.contacts = const [],
     this.certificatesEmail,
     this.equipment = const [],
+    this.taxNumber,
+    this.latitude,
+    this.longitude,
   });
 
   factory ClientModel.fromJson(String id, Map<String, dynamic> json) {
@@ -39,6 +45,13 @@ class ClientModel {
           .map(ClientEquipmentItemModel.fromJson)
           .toList(),
       createdAt: (json['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      // Written by the management dashboard; absent on older clients. An
+      // empty tax number is stored as '', which reads back as "none".
+      taxNumber: (json['taxNumber'] as String?)?.trim().isEmpty == true
+          ? null
+          : json['taxNumber'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
     );
   }
 
@@ -50,5 +63,8 @@ class ClientModel {
     certificatesEmail: certificatesEmail,
     equipment: equipment.map((e) => e.toEntity()).toList(),
     createdAt: createdAt,
+    taxNumber: taxNumber,
+    latitude: latitude,
+    longitude: longitude,
   );
 }

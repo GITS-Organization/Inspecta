@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../models/client_contact_model.dart';
 import '../models/client_model.dart';
 
 class ClientsRemoteDataSource {
@@ -27,31 +26,5 @@ class ClientsRemoteDataSource {
     final snapshot = await _collection.doc(id).get();
     final data = snapshot.data();
     return data == null ? null : ClientModel.fromJson(snapshot.id, data);
-  }
-
-  Future<String> createClient({
-    required String companyName,
-    required String location,
-    required ClientContactModel mainContact,
-  }) async {
-    final ref = await _collection.add({
-      'companyName': companyName,
-      'location': location,
-      'contacts': [mainContact.toJson()],
-      'certificatesEmail': null,
-      'equipment': const [],
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-    return ref.id;
-  }
-
-  Future<void> addContact(String clientId, ClientContactModel contact) {
-    return _collection.doc(clientId).update({
-      'contacts': FieldValue.arrayUnion([contact.toJson()]),
-    });
-  }
-
-  Future<void> setCertificatesEmail(String clientId, String email) {
-    return _collection.doc(clientId).update({'certificatesEmail': email});
   }
 }

@@ -20,11 +20,12 @@ class CoordinatorQueueState extends Equatable {
   });
 
   /// Every job still on the coordinator's radar: waiting on an inspector,
-  /// or already assigned/running — narrowed to [filter] when one is set,
+  /// already assigned/running, or approved and waiting to be sent to the
+  /// client — narrowed to [filter] when one is set,
   /// soonest due date first.
   List<InspectionRequest> get jobs {
     final visible = requests
-        .where((r) => (r.isReadyToAssign || r.isAssignedOrLater) && (filter?.matches(r) ?? true))
+        .where((r) => (r.isReadyToAssign || r.isAssignedOrLater || r.isAwaitingSend) && (filter?.matches(r) ?? true))
         .toList()
       ..sort((a, b) => _dueKey(a).compareTo(_dueKey(b)));
     return visible;
@@ -47,6 +48,8 @@ class CoordinatorQueueState extends Equatable {
   int get scheduledCount => countOf(QueueFilter.scheduled);
 
   int get inProgressCount => countOf(QueueFilter.inProgress);
+
+  int get toSendCount => countOf(QueueFilter.toSend);
 
   /// The assigned inspector's name for a job's card, or `null` while the
   /// roster is still loading (or the id no longer matches anyone).

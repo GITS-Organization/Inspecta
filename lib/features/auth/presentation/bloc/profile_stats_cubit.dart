@@ -117,7 +117,7 @@ class ProfileStatsCubit extends Cubit<ProfileStatsState> {
     var returned = 0;
     for (final certificate in certificates) {
       switch (statusOf[certificate.requestId]) {
-        case JobStatus.sentToClient:
+        case JobStatus.certificateApproved || JobStatus.sentToClient:
           sent++;
         case JobStatus.certificateReturned || JobStatus.certificateSubmitted:
           returned++;
@@ -159,6 +159,7 @@ class ProfileStatsCubit extends Cubit<ProfileStatsState> {
         JobStatus.inProgress,
         JobStatus.certificateSubmitted,
         JobStatus.certificateReturned,
+        JobStatus.certificateApproved,
         JobStatus.sentToClient,
       };
       next = next.copyWith(

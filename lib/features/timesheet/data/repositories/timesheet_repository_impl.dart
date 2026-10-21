@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/timesheet_entry.dart';
-import '../../domain/entities/timesheet_entry_status.dart';
 import '../../domain/entities/timesheet_failure.dart';
 import '../../domain/repositories/timesheet_repository.dart';
 import '../datasources/timesheet_remote_datasource.dart';
@@ -27,9 +26,6 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
   Future<void> saveHourlyRate(String inspectorId, int hourlyRatePiastres) =>
       _guard(() => _remote.saveHourlyRate(inspectorId, hourlyRatePiastres));
 
-  @override
-  Stream<List<TimesheetEntry>> watchAllEntries() => _entities(_remote.watchAllEntries());
-
   Stream<List<TimesheetEntry>> _entities(Stream<List<TimesheetEntryModel>> models) {
     return models
         .map((list) => [for (final model in list) model.toEntity()])
@@ -40,36 +36,6 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
 
   @override
   Future<void> saveEntry(TimesheetEntry entry) => _guard(() => _remote.save(TimesheetEntryModel.fromEntity(entry)));
-
-  @override
-  Future<void> approve({
-    required String requestId,
-    required String reviewerId,
-    required String reviewerName,
-  }) => _guard(
-    () => _remote.review(
-      requestId: requestId,
-      status: TimesheetEntryStatus.approved,
-      reviewerId: reviewerId,
-      reviewerName: reviewerName,
-    ),
-  );
-
-  @override
-  Future<void> sendBack({
-    required String requestId,
-    required String reviewerId,
-    required String reviewerName,
-    required String note,
-  }) => _guard(
-    () => _remote.review(
-      requestId: requestId,
-      status: TimesheetEntryStatus.returned,
-      reviewerId: reviewerId,
-      reviewerName: reviewerName,
-      note: note,
-    ),
-  );
 
   Future<void> _guard(Future<void> Function() action) async {
     try {

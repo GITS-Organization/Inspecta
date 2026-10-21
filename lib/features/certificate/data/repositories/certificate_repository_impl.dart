@@ -84,8 +84,22 @@ class CertificateRepositoryImpl implements CertificateRepository {
       await _remote.saveReview(CertificateModel.fromEntity(certificate));
       await _requestsRepository.updateStatus(
         certificate.requestId,
+        JobStatus.certificateApproved,
+        note: 'Approved by ${certificate.reviewerName} — QR ${certificate.verificationCode}',
+      );
+    } catch (e) {
+      throw _mapError(e);
+    }
+  }
+
+  @override
+  Future<void> markSentToClient(String requestId, {required String email}) async {
+    try {
+      await _remote.saveSentTo(requestId, email);
+      await _requestsRepository.updateStatus(
+        requestId,
         JobStatus.sentToClient,
-        note: 'Approved by ${certificate.reviewerName} — signed PDF for ${certificate.sentTo}',
+        note: 'Signed PDF sent to $email',
       );
     } catch (e) {
       throw _mapError(e);
