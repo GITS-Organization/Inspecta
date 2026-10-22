@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:inspecta/features/certificate/domain/certificate_verification.dart';
 import 'package:inspecta/features/certificate/domain/entities/certificate.dart';
 import 'package:inspecta/features/certificate/domain/repositories/certificate_repository.dart';
 import 'package:inspecta/features/certificate/domain/usecases/approve_certificate.dart';
@@ -92,14 +93,25 @@ void main() {
       expect(approved.sentTo, isNull);
     });
 
-    test('issues the certificate number, a verification code and the QR text with the approval', () async {
+    test('issues the certificate number, a verification code and the QR link with the approval', () async {
       await cubit.approve();
 
       final approved = certificates.approved.single;
       expect(approved.certificateNumber, startsWith('CERT-'));
       expect(approved.verificationCode, matches(RegExp(r'^[A-Z2-9]{4}(-[A-Z2-9]{4}){2}$')));
-      expect(approved.qrData, contains('Verification code: ${approved.verificationCode}'));
-      expect(approved.qrData, contains('Certificate no: ${approved.certificateNumber}'));
+      // The client scans this and lands on the dashboard's public page.
+      expect(
+        approved.qrData,
+        '$certificateVerifyBaseUrl/verify/${approved.requestId}?code=${approved.verificationCode}',
+      );
+    });
+
+    test('copies what the public page shows beside the certificate onto it', () async {
+      await cubit.approve();
+
+      final issuedFor = certificates.approved.single.issuedFor;
+      expect(issuedFor.keys, containsAll(['clientName', 'location', 'item']));
+      expect(issuedFor['clientName'], isNotEmpty);
     });
 
     test('uses the saved signature even if something was drawn on the pad', () async {

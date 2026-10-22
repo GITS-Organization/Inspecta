@@ -146,12 +146,28 @@ class QuotationRemoteDataSource {
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
+    // A new version replaces whichever one is still open (a counter being
+    // answered with a new price): read them before writing, so the new
+    // version is never among them.
+    final open = await _collection
+        .where('requestId', isEqualTo: requestId)
+        .where('status', whereIn: ['sent', 'countered'])
+        .get();
+
+    final batch = _firestore.batch();
     final existing = await _findDraft(requestId);
     if (existing != null) {
-      await existing.update(data);
+      batch.update(existing, data);
     } else {
-      await _collection.add({...data, 'createdAt': FieldValue.serverTimestamp()});
+      batch.set(_collection.doc(), {...data, 'createdAt': FieldValue.serverTimestamp()});
     }
+    for (final doc in open.docs) {
+      batch.update(doc.reference, {
+        'status': 'superseded',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
     return version;
   }
 

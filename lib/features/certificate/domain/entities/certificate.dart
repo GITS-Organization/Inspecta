@@ -60,6 +60,11 @@ class Certificate extends Equatable {
   final String? verificationCode;
   final String? qrData;
 
+  /// What a client who scans the QR sees beside the certificate, copied from
+  /// the job at approval (`clientName`, `location`, `item`) because the public
+  /// page can't read the request itself. Empty until approval.
+  final Map<String, String> issuedFor;
+
   const Certificate({
     required this.requestId,
     required this.inspectorId,
@@ -80,6 +85,7 @@ class Certificate extends Equatable {
     this.certificateNumber,
     this.verificationCode,
     this.qrData,
+    this.issuedFor = const {},
   });
 
   bool get isSigned => signatureStrokes.any((stroke) => stroke.length >= 4);
@@ -153,6 +159,7 @@ class Certificate extends Equatable {
       certificateNumber: certificateNumber,
       verificationCode: verificationCode,
       qrData: qrData,
+      issuedFor: issuedFor,
     );
   }
 
@@ -183,6 +190,7 @@ class Certificate extends Equatable {
     String? certificateNumber,
     String? verificationCode,
     String? qrData,
+    Map<String, String>? issuedFor,
   }) {
     return Certificate(
       requestId: requestId,
@@ -204,6 +212,7 @@ class Certificate extends Equatable {
       certificateNumber: certificateNumber ?? this.certificateNumber,
       verificationCode: verificationCode ?? this.verificationCode,
       qrData: qrData ?? this.qrData,
+      issuedFor: issuedFor ?? this.issuedFor,
     );
   }
 
@@ -228,5 +237,6 @@ class Certificate extends Equatable {
     certificateNumber,
     verificationCode,
     qrData,
+    issuedFor,
   ];
 }

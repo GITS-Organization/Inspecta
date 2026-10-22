@@ -2810,6 +2810,24 @@ abstract class AppLocalizations {
   /// **'The certificate will be marked as sent to {email}.'**
   String confirmSendMessage(String email);
 
+  /// No description provided for @previewFinalPdfAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview final PDF'**
+  String get previewFinalPdfAction;
+
+  /// No description provided for @verificationCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'QR verification code'**
+  String get verificationCodeLabel;
+
+  /// No description provided for @noVerificationCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved before QR codes were introduced, so its QR has no code.'**
+  String get noVerificationCodeHint;
+
   /// No description provided for @certificateSentMessage.
   ///
   /// In en, this message translates to:

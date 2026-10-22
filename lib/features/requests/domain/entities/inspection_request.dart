@@ -109,6 +109,12 @@ class InspectionRequest extends Equatable {
   bool get isReadyToQuote =>
       clientId != null && items.isNotEmpty && location.isNotEmpty;
 
+  /// Whether the reply panel (type, prices, validity, PDF proposal) applies:
+  /// a first quote while the request is New, or a new version once the
+  /// client has countered the last one.
+  bool get isQuotable =>
+      (isNew || status == JobStatus.clientCountered) && isReadyToQuote;
+
   @override
   List<Object?> get props => [
     id,

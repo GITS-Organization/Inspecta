@@ -94,7 +94,8 @@ class ReviewDetailCubit extends Cubit<ReviewDetailState> {
     final comments = state.comments.trim();
     try {
       // The QR is issued here, at the moment of approval, and stored on the
-      // certificate: the PDF and the dashboard both read the same text back.
+      // certificate: the PDF and the dashboard both read the same link back,
+      // and a client who scans it lands on the dashboard's public page.
       final code = newVerificationCode();
       await _approve(
         certificate.withReview(
@@ -103,7 +104,8 @@ class ReviewDetailCubit extends Cubit<ReviewDetailState> {
           signatureStrokes: state.signatureStrokes,
           certificateNumber: certNumberFor(request),
           verificationCode: code,
-          qrData: certificateQrData(request: request, certificate: certificate, verificationCode: code),
+          qrData: certificateQrData(request: request, verificationCode: code),
+          issuedFor: certificateIssuedFor(request: request, certificate: certificate),
         ),
       );
       // Drawn here, and they asked to keep it: it's saved to their profile so

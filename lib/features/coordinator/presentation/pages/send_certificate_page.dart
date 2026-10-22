@@ -130,6 +130,24 @@ class _SendViewState extends State<_SendView> {
                         certificate: certificate,
                         onViewPdf: () => _viewPdf(certificate),
                       ),
+                      const SizedBox(height: 14),
+                      _QrCodeCard(code: certificate.verificationCode),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 52,
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _viewPdf(certificate),
+                          icon: const Icon(Icons.picture_as_pdf_outlined),
+                          label: Text(t.previewFinalPdfAction),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColours.primaryDark,
+                            side: const BorderSide(color: AppColours.primaryColor, width: 1.5),
+                            textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 15),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 18),
                       Text(t.sendSignedPdfToLabel, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
                       const SizedBox(height: 8),
@@ -170,6 +188,59 @@ class _SendViewState extends State<_SendView> {
 
   Future<void> _viewPdf(Certificate certificate) {
     return previewCertificatePdf(context, request: widget.request, certificate: certificate);
+  }
+}
+
+/// The code the technical manager's approval issued — what the QR on the PDF
+/// (and on the dashboard) carries — or a note when the certificate predates
+/// QR codes.
+class _QrCodeCard extends StatelessWidget {
+  final String? code;
+
+  const _QrCodeCard({required this.code});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final issued = code != null;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: issued ? AppColours.successBackground : AppColours.chipAmberBackground,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.qr_code_2_rounded,
+            size: 32,
+            color: issued ? AppColours.successIcon : AppColours.chipAmberText,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(t.verificationCodeLabel, style: AppTextStyles.caption),
+                const SizedBox(height: 2),
+                Text(
+                  code ?? t.noVerificationCodeHint,
+                  style: issued
+                      ? const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColours.successText,
+                        )
+                      : AppTextStyles.subtitle.copyWith(fontSize: 13, color: AppColours.chipAmberText),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

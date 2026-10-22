@@ -26,6 +26,7 @@ class CertificateModel {
   final String? certificateNumber;
   final String? verificationCode;
   final String? qrData;
+  final Map<String, String> issuedFor;
 
   const CertificateModel({
     required this.requestId,
@@ -47,6 +48,7 @@ class CertificateModel {
     this.certificateNumber,
     this.verificationCode,
     this.qrData,
+    this.issuedFor = const {},
   });
 
   factory CertificateModel.fromEntity(Certificate certificate) {
@@ -70,6 +72,7 @@ class CertificateModel {
       certificateNumber: certificate.certificateNumber,
       verificationCode: certificate.verificationCode,
       qrData: certificate.qrData,
+      issuedFor: certificate.issuedFor,
     );
   }
 
@@ -110,6 +113,10 @@ class CertificateModel {
       certificateNumber: json['certificateNumber'] as String?,
       verificationCode: json['verificationCode'] as String?,
       qrData: json['qrData'] as String?,
+      issuedFor: {
+        for (final entry in (json['issuedFor'] as Map<String, dynamic>? ?? const {}).entries)
+          if (entry.value is String) entry.key: entry.value as String,
+      },
       // Firestore can't nest arrays, so each stroke is stored as {'p': [...]}.
       signatureStrokes: [
         for (final stroke in (json['signature'] as List<dynamic>? ?? const []))
@@ -152,6 +159,7 @@ class CertificateModel {
       'certificateNumber': certificateNumber,
       'verificationCode': verificationCode,
       'qrData': qrData,
+      'issuedFor': issuedFor,
     },
     'signature': [
       for (final stroke in signatureStrokes) {'p': stroke},
@@ -178,5 +186,6 @@ class CertificateModel {
     certificateNumber: certificateNumber,
     verificationCode: verificationCode,
     qrData: qrData,
+    issuedFor: issuedFor,
   );
 }

@@ -1533,6 +1533,16 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get previewFinalPdfAction => 'معاينة ملف PDF النهائي';
+
+  @override
+  String get verificationCodeLabel => 'رمز التحقق في QR';
+
+  @override
+  String get noVerificationCodeHint =>
+      'تم اعتمادها قبل إضافة رموز QR، لذا لا يحتوي رمزها على كود.';
+
+  @override
   String get certificateSentMessage => 'تم تسجيل الشهادة كمرسلة إلى العميل.';
 
   @override

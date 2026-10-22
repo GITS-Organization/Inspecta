@@ -19,6 +19,7 @@ import 'features/clients/data/datasources/clients_remote_datasource.dart';
 import 'features/clients/data/repositories/clients_repository_impl.dart';
 import 'features/clients/domain/repositories/clients_repository.dart';
 import 'features/clients/domain/usecases/get_client_detail.dart';
+import 'features/clients/domain/usecases/get_clients.dart';
 import 'features/auth/domain/entities/user.dart';
 import 'features/certificate/data/datasources/certificate_remote_datasource.dart';
 import 'features/certificate/data/repositories/certificate_repository_impl.dart';
@@ -176,6 +177,7 @@ void _registerClients() {
     ..registerLazySingleton<ClientsRepository>(
       () => ClientsRepositoryImpl(getIt()),
     )
+    ..registerLazySingleton(() => GetClients(getIt()))
     ..registerLazySingleton(() => GetClientDetail(getIt()));
 }
 

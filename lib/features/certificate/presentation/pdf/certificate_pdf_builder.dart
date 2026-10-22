@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../domain/certificate_number.dart';
 import '../../domain/certificate_template.dart';
+import '../../domain/certificate_verification.dart';
 import '../../domain/entities/certificate.dart';
 import '../../domain/entities/certificate_result.dart';
 import '../../domain/entities/checklist_answer.dart';
@@ -251,29 +252,36 @@ class _Report {
         null => 'N/A',
       };
 
-  /// What the QR code carries: the text stored when the technical manager
+  /// What the QR code carries: the link stored when the technical manager
   /// approved (the same one the dashboard shows), or — for a draft still being
-  /// previewed — what it would say without a verification code yet.
-  String get qrData => c.qrData ?? qrPayload();
+  /// previewed — a plain summary, since there's no public page for it yet.
+  String get qrData => c.qrData ?? _draftSummary;
 
-  String qrPayload({String? verificationCode}) => [
+  String get _draftSummary => [
     _issuerName,
     'Certificate no: $number',
     'Item: $item',
     'Serial: ${text(CertText.serialNumber)}',
     'Examination: ${date(CertDate.examination)}',
-    if (verificationCode != null) 'Verification code: $verificationCode',
   ].join('\n');
 }
 
-/// The text for [certificate]'s QR code once [verificationCode] has been issued
-/// for it. Written to the certificate on approval so the PDF and the
-/// management dashboard both draw the same code.
-String certificateQrData({
+/// The link for [request]'s certificate QR once [verificationCode] has been
+/// issued for it. Written to the certificate on approval so the PDF and the
+/// management dashboard both draw the same code, and a client who scans it
+/// opens their certificate on the dashboard.
+String certificateQrData({required InspectionRequest request, required String verificationCode}) =>
+    certificateVerifyUrl(requestId: request.id, verificationCode: verificationCode);
+
+/// What the public verification page shows beside the certificate — the job's
+/// client, location and equipment — copied onto the certificate at approval.
+Map<String, String> certificateIssuedFor({
   required InspectionRequest request,
   required Certificate certificate,
-  required String verificationCode,
-}) => _Report(request, certificate).qrPayload(verificationCode: verificationCode);
+}) {
+  final report = _Report(request, certificate);
+  return {'clientName': request.clientName, 'location': request.location, 'item': report.item};
+}
 
 // ---------------------------------------------------------------------------
 // Body.

@@ -1531,6 +1531,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get previewFinalPdfAction => 'Preview final PDF';
+
+  @override
+  String get verificationCodeLabel => 'QR verification code';
+
+  @override
+  String get noVerificationCodeHint =>
+      'Approved before QR codes were introduced, so its QR has no code.';
+
+  @override
   String get certificateSentMessage =>
       'Certificate marked as sent to the client.';
 

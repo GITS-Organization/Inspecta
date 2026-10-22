@@ -61,6 +61,15 @@ void main() {
       expect(sampleRequest(items: const []).isReadyToQuote, isFalse);
     });
 
+    test('isQuotable: a first quote while New, or a new version after a counter', () {
+      expect(sampleRequest(status: JobStatus.requestReceived).isQuotable, isTrue);
+      expect(sampleRequest(status: JobStatus.quoteDraft).isQuotable, isTrue);
+      expect(sampleRequest(status: JobStatus.clientCountered).isQuotable, isTrue);
+      expect(sampleRequest(status: JobStatus.quoteSent).isQuotable, isFalse);
+      expect(sampleRequest(status: JobStatus.quoteAccepted).isQuotable, isFalse);
+      expect(sampleRequest(status: JobStatus.clientCountered, items: const []).isQuotable, isFalse);
+    });
+
     test('isNewClient reflects a missing client match (BR-02.4)', () {
       expect(sampleRequest(clientId: null).isNewClient, isTrue);
       expect(sampleRequest().isNewClient, isFalse);

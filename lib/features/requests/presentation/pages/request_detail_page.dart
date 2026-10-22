@@ -36,9 +36,11 @@ class RequestDetailPage extends StatelessWidget {
 
   const RequestDetailPage({super.key, required this.request});
 
-  /// Whether this request can still receive a first reply here — it
-  /// hasn't been quoted yet (BR-02.5) and has enough data to quote.
-  bool get _quotable => request.isNew && request.isReadyToQuote;
+  /// Whether this request can receive a reply here — a first quote (it
+  /// hasn't been quoted yet, BR-02.5) or a new version after the client's
+  /// counter ("Send new price" on the quote detail) — and has enough data
+  /// to quote.
+  bool get _quotable => request.isQuotable;
 
   @override
   Widget build(BuildContext context) {

@@ -128,6 +128,13 @@ service cloud.firestore {
         return get(/databases/$(database)/documents/requests/$(id)).data.inspectorId == request.auth.uid;
       }
 
+      // The public verification page (the dashboard's /verify/{id}, opened by
+      // scanning the QR on a certificate the client was sent): anyone may read
+      // ONE issued certificate by its document id — an unguessable job id, put
+      // in the QR — and nobody can list or query certificates without signing
+      // in. A certificate counts as issued once approval gave it a code.
+      allow get: if resource.data.get('verificationCode', '') != '';
+
       allow read: if hasRole('coordinator')
         || hasRole('technical_manager')
         || hasRole('admin')
@@ -156,7 +163,7 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
              'reviewNote', 'reviewerComments', 'reviewerName', 'reviewerLicense',
              'sentTo', 'signature', 'reviewedAt',
-             'certificateNumber', 'verificationCode', 'qrData',
+             'certificateNumber', 'verificationCode', 'qrData', 'issuedFor',
            ]);
 
       // The coordinator sends an approved certificate on to the client —
