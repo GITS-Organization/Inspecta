@@ -56,7 +56,7 @@ class _RequestsInboxViewState extends State<_RequestsInboxView> {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: AppColours.background,
         body: Column(

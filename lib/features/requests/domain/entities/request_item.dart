@@ -18,6 +18,10 @@ class RequestItem extends Equatable {
   final String? capacity;
   final int quantity;
 
+  /// Where this particular item sits, when it differs from the request's
+  /// site-wide [InspectionRequest.location].
+  final String? location;
+
   const RequestItem({
     required this.id,
     required this.type,
@@ -28,6 +32,7 @@ class RequestItem extends Equatable {
     this.prNumber,
     this.capacity,
     this.quantity = 1,
+    this.location,
   });
 
   /// "Overhead crane — 10 t" for a card title; just the type if there's no
@@ -47,5 +52,6 @@ class RequestItem extends Equatable {
     prNumber,
     capacity,
     quantity,
+    location,
   ];
 }

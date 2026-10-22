@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
+import '../../../../core/shared/m_card.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/quotation.dart';
 
@@ -29,28 +30,15 @@ class QuoteRespondSection extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     final nextVersion = t.quoteVersionLabel((current.version ?? 0) + 1);
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppColours.ink.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
+    return MCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.respondToClientTitle, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
-          const SizedBox(height: 10),
+          Text(t.respondToClientTitle, style: AppTextStyles.sectionTitle),
+          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 54,
             child: ElevatedButton.icon(
               onPressed: onSendNewPrice,
               icon: const Icon(Icons.post_add_rounded, size: 18),
@@ -59,7 +47,7 @@ class QuoteRespondSection extends StatelessWidget {
                 backgroundColor: AppColours.primaryColor,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 15),
+                textStyle: AppTextStyles.buttonLabel,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
@@ -68,15 +56,15 @@ class QuoteRespondSection extends StatelessWidget {
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
-              height: 52,
+              height: 54,
               child: OutlinedButton.icon(
                 onPressed: onAcceptClientPrice,
                 icon: const Icon(Icons.check_rounded, size: 20),
                 label: Text(t.acceptClientPrice),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColours.successIcon,
-                  side: const BorderSide(color: AppColours.successBorder, width: 1.5),
-                  textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 15),
+                  side: const BorderSide(color: AppColours.successBorder),
+                  textStyle: AppTextStyles.buttonLabel,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
               ),
@@ -91,8 +79,8 @@ class QuoteRespondSection extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: onLogOtherReply,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColours.inkBody,
-                      side: const BorderSide(color: AppColours.border, width: 1.5),
+                      foregroundColor: AppColours.ink,
+                      side: const BorderSide(color: AppColours.border),
                       textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
@@ -108,7 +96,7 @@ class QuoteRespondSection extends StatelessWidget {
                     onPressed: onMarkDeclined,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColours.dangerText,
-                      side: const BorderSide(color: AppColours.dangerBorder, width: 1.5),
+                      side: const BorderSide(color: AppColours.dangerBorder),
                       textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),

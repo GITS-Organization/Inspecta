@@ -18,9 +18,12 @@ class MBackButton extends StatelessWidget {
       tooltip: tooltip ?? AppLocalizations.of(context)!.back,
       style: IconButton.styleFrom(
         fixedSize: const Size.square(44),
-        backgroundColor: AppColours.surfaceMuted,
+        backgroundColor: Colors.white,
         foregroundColor: AppColours.ink,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: AppColours.border),
+        ),
       ),
       // Flips automatically in RTL.
       icon: const Icon(Icons.chevron_left_rounded, size: 26),

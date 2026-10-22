@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
+import '../../../../core/shared/m_card.dart';
 import '../../../../core/utils/currency.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
@@ -41,25 +42,13 @@ class QuoteHistoryTimeline extends StatelessWidget {
       if (awaitingCoordinator) _yourResponseStep(t),
     ];
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppColours.ink.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
+    return MCard(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.negotiationHistoryTitle, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
-          const SizedBox(height: 8),
+          Text(t.negotiationHistoryTitle, style: AppTextStyles.sectionTitle),
+          const SizedBox(height: 16),
           for (var i = 0; i < steps.length; i++)
             _TimelineRow(step: steps[i], showLine: i != steps.length - 1),
         ],
@@ -240,7 +229,7 @@ class _TimelineRow extends StatelessWidget {
                   child: Container(
                     width: 2,
                     margin: const EdgeInsets.symmetric(vertical: 4),
-                    color: AppColours.border,
+                    color: AppColours.borderSubtle,
                   ),
                 ),
             ],
@@ -265,7 +254,7 @@ class _TimelineRow extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
                         color: step.noteBackground ?? AppColours.surfaceMuted,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: Text(
                         '"${step.note}"',

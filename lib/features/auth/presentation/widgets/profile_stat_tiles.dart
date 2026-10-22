@@ -18,22 +18,21 @@ class ProfileStatTiles extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     return MCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            t.profileThisMonth,
-            style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.4),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              for (var i = 0; i < stats.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
-                Expanded(child: _Stat(value: stats[i].$1, label: stats[i].$2)),
+          Text(t.profileThisMonth, style: AppTextStyles.sectionTitle),
+          const SizedBox(height: 16),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < stats.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  Expanded(child: _Stat(value: stats[i].$1, label: stats[i].$2)),
+                ],
               ],
-            ],
+            ),
           ),
         ],
       ),
@@ -49,20 +48,29 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value?.toString() ?? '—',
-          style: AppTextStyles.cardTitle.copyWith(fontSize: 22, color: AppColours.primaryDark),
-        ),
-        Text(
-          label,
-          style: AppTextStyles.subtitle.copyWith(fontSize: 12, fontWeight: FontWeight.w600),
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppColours.surfaceMuted,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value?.toString() ?? '—',
+            style: AppTextStyles.pageTitle.copyWith(fontSize: 28, height: 32 / 28, color: AppColours.navy),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            maxLines: 2,
+            style: AppTextStyles.caption.copyWith(fontSize: 12, height: 16 / 12, fontWeight: FontWeight.w600),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 }

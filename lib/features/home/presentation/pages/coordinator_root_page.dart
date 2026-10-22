@@ -34,7 +34,7 @@ class _CoordinatorRootPageState extends State<CoordinatorRootPage> {
 
   Widget _page(CoordinatorTab tab) => switch (tab) {
     CoordinatorTab.requests => RequestsInboxPage(onOpenProfile: () => _select(CoordinatorTab.more)),
-    CoordinatorTab.quotations => const QuotationsListPage(),
+    CoordinatorTab.quotations => QuotationsListPage(onOpenProfile: () => _select(CoordinatorTab.more)),
     CoordinatorTab.queue => CoordinatorQueuePage(onOpenProfile: () => _select(CoordinatorTab.more)),
     CoordinatorTab.more => const ProfilePage(),
   };

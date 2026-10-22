@@ -9,12 +9,13 @@ import '../../../../core/shared/loading.dart';
 import '../../../../core/shared/m_notice.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../auth/presentation/widgets/user_app_header.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
 import '../bloc/coordinator_queue_cubit.dart';
 import '../widgets/assignment_card.dart';
-import '../widgets/coordinator_queue_header.dart';
+import '../widgets/coordinator_queue_filters.dart';
 import 'assign_inspector_page.dart';
 import 'send_certificate_page.dart';
 
@@ -31,17 +32,19 @@ class CoordinatorQueuePage extends StatelessWidget {
     return BlocProvider(
       create: (_) => getIt<CoordinatorQueueCubit>()..start(),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
+        value: SystemUiOverlayStyle.dark,
         child: Scaffold(
           backgroundColor: AppColours.background,
-          body: SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                CoordinatorQueueHeader(onOpenProfile: onOpenProfile),
-                const Expanded(child: _Body()),
-              ],
-            ),
+          body: Column(
+            children: [
+              UserAppHeader(
+                title: AppLocalizations.of(context)!.navQueue,
+                onOpenProfile: onOpenProfile,
+              ),
+              const SizedBox(height: 12),
+              const CoordinatorQueueFilters(),
+              const Expanded(child: _Body()),
+            ],
           ),
         ),
       ),
@@ -80,12 +83,14 @@ class _Body extends StatelessWidget {
         return CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
               sliver: SliverToBoxAdapter(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
-                    Text(t.coordinatorQueueHeading, style: AppTextStyles.cardTitle.copyWith(fontSize: 18)),
+                    Text(t.coordinatorQueueHeading, style: AppTextStyles.sectionTitle),
                     Text(t.byDueDate, style: AppTextStyles.caption),
                   ],
                 ),
@@ -95,7 +100,7 @@ class _Body extends StatelessWidget {
               SliverFillRemaining(hasScrollBody: false, child: _EmptyState(filtered: state.filter != null))
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, AppLayout.bottomNavClearance),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, AppLayout.bottomNavClearance),
                 sliver: SliverList.separated(
                   itemCount: jobs.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 12),

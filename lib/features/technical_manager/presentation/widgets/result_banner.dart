@@ -22,12 +22,12 @@ class ResultBanner extends StatelessWidget {
     final detail = certificate.defectSummary;
     final (background, accent) = switch (result) {
       CertificateResult.safeToOperate => (AppColours.chipGreenBackground, AppColours.successIcon),
-      CertificateResult.safeWithConditions => (AppColours.primarySoft, AppColours.primaryDark),
+      CertificateResult.safeWithConditions => (AppColours.primaryTint, AppColours.primaryDark),
       CertificateResult.notSafe => (AppColours.chipRedBackground, AppColours.errorIcon),
     };
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(14)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

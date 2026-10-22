@@ -25,18 +25,18 @@ class ReturnedCertificateRow extends StatelessWidget {
         final note = snapshot.data?.reviewNote?.trim() ?? '';
         return Material(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           child: InkWell(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             onTap: onOpen,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
                   Container(
                     width: 48,
                     height: 48,
-                    decoration: const BoxDecoration(color: AppColours.errorBackground, shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: AppColours.errorBackground, borderRadius: BorderRadius.circular(14)),
                     child: const Icon(Icons.undo_rounded, color: AppColours.errorIcon),
                   ),
                   const SizedBox(width: 14),
@@ -49,13 +49,14 @@ class ReturnedCertificateRow extends StatelessWidget {
                           '${request.equipmentTitle} — ${request.clientName}',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.cardTitle.copyWith(fontSize: 16),
+                          style: AppTextStyles.cardTitle,
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           note.isEmpty ? t.returnedToInspector : t.returnedToInspectorNote(note),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.subtitle.copyWith(fontSize: 13),
+                          style: AppTextStyles.caption.copyWith(height: 18 / 13),
                         ),
                       ],
                     ),

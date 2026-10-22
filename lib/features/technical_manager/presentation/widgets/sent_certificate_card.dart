@@ -40,13 +40,10 @@ class SentCertificateCard extends StatelessWidget {
         final result = certificate?.finalResult;
         final sentTo = certificate?.sentTo;
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(color: AppColours.ink.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 6)),
-            ],
+            borderRadius: BorderRadius.circular(24),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,28 +54,38 @@ class SentCertificateCard extends StatelessWidget {
                 children: [
                   if (result != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(color: result.badgeBackground, borderRadius: BorderRadius.circular(999)),
                       child: Text(result.badgeLabel(t), style: AppTextStyles.badge.copyWith(color: result.badgeText)),
                     )
                   else
                     const SizedBox.shrink(),
-                  Text(
-                    certNumberFor(request),
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: AppColours.inkMuted),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      certNumberFor(request),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.24,
+                        height: 16 / 12,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              Text('${request.equipmentTitle} — ${request.clientName}', style: AppTextStyles.cardTitle.copyWith(fontSize: 17)),
+              Text('${request.equipmentTitle} — ${request.clientName}', style: AppTextStyles.cardTitle),
               if (request.status == JobStatus.certificateApproved) ...[
                 const SizedBox(height: 2),
-                Text(t.awaitingCoordinatorLabel, style: AppTextStyles.subtitle.copyWith(fontSize: 13)),
+                Text(t.awaitingCoordinatorLabel, style: AppTextStyles.caption.copyWith(height: 18 / 13)),
               ] else if (sentTo != null && sentTo.isNotEmpty) ...[
                 const SizedBox(height: 2),
-                Text(t.sentToLabel(sentTo), style: AppTextStyles.subtitle.copyWith(fontSize: 13)),
+                Text(t.sentToLabel(sentTo), style: AppTextStyles.caption.copyWith(height: 18 / 13)),
               ],
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Align(
                 alignment: AlignmentDirectional.centerEnd,
                 child: GestureDetector(

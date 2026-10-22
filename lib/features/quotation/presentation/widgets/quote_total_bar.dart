@@ -27,11 +27,12 @@ class QuoteTotalBar extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
+      minimum: const EdgeInsets.only(bottom: 6),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: AppColours.border)),
+          border: Border(top: BorderSide(color: AppColours.borderSubtle)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -42,7 +43,16 @@ class QuoteTotalBar extends StatelessWidget {
               textBaseline: TextBaseline.alphabetic,
               children: [
                 Text(t.totalForUnits(unitsLabel), style: AppTextStyles.subtitle),
-                Text(totalText, style: AppTextStyles.cardTitle.copyWith(fontSize: 20)),
+                Text(
+                  totalText,
+                  style: AppTextStyles.cardTitle.copyWith(
+                    fontSize: 22,
+                    height: 28 / 22,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.22,
+                    color: AppColours.navy,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -51,10 +61,10 @@ class QuoteTotalBar extends StatelessWidget {
                 OutlinedButton(
                   onPressed: onSaveDraft,
                   style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 52),
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    foregroundColor: AppColours.primaryDark,
-                    side: const BorderSide(color: AppColours.primaryTint, width: 1.5),
+                    minimumSize: const Size(0, 54),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    foregroundColor: AppColours.ink,
+                    side: const BorderSide(color: AppColours.border),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -62,15 +72,14 @@ class QuoteTotalBar extends StatelessWidget {
                   child: Text(
                     t.saveDraft,
                     style: AppTextStyles.buttonLabel.copyWith(
-                      color: AppColours.primaryDark,
-                      fontSize: 15,
+                      color: onSaveDraft == null ? AppColours.inkMuted : AppColours.ink,
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: SizedBox(
-                    height: 52,
+                    height: 54,
                     child: FilledButton(
                       onPressed: onSend,
                       style: FilledButton.styleFrom(
@@ -87,10 +96,7 @@ class QuoteTotalBar extends StatelessWidget {
                                 color: Colors.white,
                               ),
                             )
-                          : Text(
-                              t.sendQuotation,
-                              style: AppTextStyles.buttonLabel.copyWith(fontSize: 15),
-                            ),
+                          : Text(t.sendQuotation, style: AppTextStyles.buttonLabel),
                     ),
                   ),
                 ),

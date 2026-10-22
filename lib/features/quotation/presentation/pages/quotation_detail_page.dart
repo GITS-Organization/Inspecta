@@ -7,6 +7,7 @@ import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/loading.dart';
 import '../../../../core/shared/m_back_button.dart';
 import '../../../../core/shared/m_notice.dart';
+import '../../../../core/widgets/app_header.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
@@ -115,12 +116,7 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
 
               return Column(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      border: Border(bottom: BorderSide(color: AppColours.border)),
-                    ),
+                  AppBanner(
                     child: Row(
                       children: [
                         const MBackButton(),
@@ -132,17 +128,25 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
                             children: [
                               Text(
                                 current?.id ?? t.quoteDetailTitle,
-                                style: const TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 12,
-                                  color: AppColours.inkMuted,
-                                ),
+                                maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.caption.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.24,
+                                  height: 16 / 12,
+                                  fontSize: 12,
+                                ),
                               ),
+                              const SizedBox(height: 2),
                               Text(
                                 current?.clientName ?? '',
-                                style: AppTextStyles.cardTitle.copyWith(fontSize: 18),
+                                maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.sectionTitle.copyWith(
+                                  fontSize: 22,
+                                  height: 28 / 22,
+                                  letterSpacing: -0.22,
+                                ),
                               ),
                             ],
                           ),
@@ -178,15 +182,15 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
                         }
 
                         return ListView(
-                          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                           children: [
                             QuoteDetailInfoCard(
                               current: current,
                               onOpenRequest: () => _openRequest(state.request),
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 12),
                             QuoteHistoryTimeline(request: state.request, versions: state.versions),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 12),
                             if (current.type == ReplyType.offer && state.request != null) ...[
                               SizedBox(
                                 width: double.infinity,
@@ -203,9 +207,18 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
                                   ),
                                   icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
                                   label: Text(t.previewProposal),
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: AppColours.ink,
+                                    side: const BorderSide(color: AppColours.border),
+                                    textStyle: AppTextStyles.buttonLabel,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 12),
                             ],
                             if (current.status == QuotationStatus.accepted)
                               MNotice(
@@ -250,7 +263,7 @@ class _YourTurnChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: AppColours.chipBlueBackground,
         borderRadius: BorderRadius.circular(999),

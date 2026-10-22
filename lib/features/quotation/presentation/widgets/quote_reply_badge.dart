@@ -24,7 +24,7 @@ class QuoteReplyBadge extends StatelessWidget {
         ? t.quoteBadgeCounterOffer
         : t.quoteBadgeQuestion;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: AppColours.chipBlueBackground,
         borderRadius: BorderRadius.circular(999),

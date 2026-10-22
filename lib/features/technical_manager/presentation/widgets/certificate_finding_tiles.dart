@@ -61,7 +61,7 @@ class CertificateFindingTiles extends StatelessWidget {
             foreground: checkForeground,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Expanded(
           child: _FindingTile(
             value: yesNo(existing),
@@ -70,7 +70,7 @@ class CertificateFindingTiles extends StatelessWidget {
             foreground: existingForeground,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Expanded(
           child: _FindingTile(
             value: yesNo(potential),
@@ -96,13 +96,13 @@ class _FindingTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
-      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(14)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             value,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: foreground),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: foreground),
           ),
           const SizedBox(height: 2),
           Text(

@@ -140,6 +140,24 @@ abstract class AppLocalizations {
   /// **'Digital inspections, certificates and requests — all in one place.'**
   String get splashHint;
 
+  /// No description provided for @loginHeroEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'INSPECTION MANAGEMENT'**
+  String get loginHeroEyebrow;
+
+  /// No description provided for @loginHeroLine1.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspect smarter.'**
+  String get loginHeroLine1;
+
+  /// No description provided for @loginHeroLine2.
+  ///
+  /// In en, this message translates to:
+  /// **'Certify faster.'**
+  String get loginHeroLine2;
+
   /// No description provided for @signInTitle.
   ///
   /// In en, this message translates to:
@@ -937,6 +955,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Location'**
   String get locationLabel;
+
+  /// No description provided for @clientLocationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Client location'**
+  String get clientLocationLabel;
+
+  /// No description provided for @equipmentLocationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment location'**
+  String get equipmentLocationLabel;
+
+  /// No description provided for @equipmentItemOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Item {number} of {total}'**
+  String equipmentItemOf(int number, int total);
+
+  /// No description provided for @prNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'PR number'**
+  String get prNumberLabel;
 
   /// No description provided for @preferredDateLabel.
   ///

@@ -63,6 +63,10 @@ class ItemInformationSection extends StatelessWidget {
   }
 }
 
+/// The item's function check: a panel with three large result cards — Pass,
+/// Fail, N/A — each in its own colour. The chosen one fills in and its
+/// result is echoed as a pill beside the title, so the outcome reads at a
+/// glance without hunting for the highlighted option.
 class _FunctionCheck extends StatelessWidget {
   const _FunctionCheck();
 
@@ -72,40 +76,158 @@ class _FunctionCheck extends StatelessWidget {
     return BlocSelector<CertificateCubit, CertificateState, ChecklistAnswer>(
       selector: (state) => state.certificate?.functionCheck ?? ChecklistAnswer.unanswered,
       builder: (context, answer) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(t.functionCheckLabel, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(color: AppColours.surfaceMuted, borderRadius: BorderRadius.circular(14)),
-              child: CertificateSegmented<ChecklistAnswer>(
-                value: answer,
-                options: [
-                  CertificateSegmentOption(
-                    label: ChecklistAnswer.pass.label(t),
-                    value: ChecklistAnswer.pass,
-                    selectedColor: AppColours.successIcon,
+        final cubit = context.read<CertificateCubit>();
+        final style = _AnswerStyle.of(answer);
+
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColours.surfaceMuted,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.fact_check_outlined, size: 20, color: AppColours.primaryDark),
                   ),
-                  CertificateSegmentOption(
-                    label: ChecklistAnswer.fail.label(t),
-                    value: ChecklistAnswer.fail,
-                    selectedColor: AppColours.errorIcon,
-                  ),
-                  CertificateSegmentOption(
-                    label: ChecklistAnswer.na.label(t),
-                    value: ChecklistAnswer.na,
-                    selectedColor: AppColours.inkMuted,
-                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(t.functionCheckLabel, style: AppTextStyles.cardTitle)),
+                  if (style != null)
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      child: Container(
+                        key: ValueKey(answer),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(color: style.background, borderRadius: BorderRadius.circular(999)),
+                        child: Text(
+                          answer.label(t),
+                          style: AppTextStyles.badge.copyWith(color: style.foreground),
+                        ),
+                      ),
+                    ),
                 ],
-                onChanged: context.read<CertificateCubit>().setFunctionCheck,
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  for (final option in const [ChecklistAnswer.pass, ChecklistAnswer.fail, ChecklistAnswer.na]) ...[
+                    if (option != ChecklistAnswer.pass) const SizedBox(width: 8),
+                    Expanded(
+                      child: _AnswerCard(
+                        answer: option,
+                        label: option.label(t),
+                        selected: answer == option,
+                        onTap: () => cubit.setFunctionCheck(option),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
         );
       },
+    );
+  }
+}
+
+/// The colours and icons for one function-check result.
+class _AnswerStyle {
+  final Color background;
+  final Color foreground;
+  final Color border;
+  final IconData icon;
+  final IconData selectedIcon;
+
+  const _AnswerStyle({
+    required this.background,
+    required this.foreground,
+    required this.border,
+    required this.icon,
+    required this.selectedIcon,
+  });
+
+  /// Null while unanswered.
+  static _AnswerStyle? of(ChecklistAnswer answer) => switch (answer) {
+    ChecklistAnswer.pass => const _AnswerStyle(
+      background: AppColours.successBackground,
+      foreground: AppColours.successText,
+      border: AppColours.successIcon,
+      icon: Icons.check_circle_outline_rounded,
+      selectedIcon: Icons.check_circle_rounded,
+    ),
+    ChecklistAnswer.fail => const _AnswerStyle(
+      background: AppColours.errorBackground,
+      foreground: AppColours.errorText,
+      border: AppColours.errorIcon,
+      icon: Icons.cancel_outlined,
+      selectedIcon: Icons.cancel_rounded,
+    ),
+    ChecklistAnswer.na => const _AnswerStyle(
+      background: AppColours.borderSubtle,
+      foreground: AppColours.ink,
+      border: AppColours.inkMuted,
+      icon: Icons.remove_circle_outline_rounded,
+      selectedIcon: Icons.remove_circle_rounded,
+    ),
+    ChecklistAnswer.unanswered => null,
+  };
+}
+
+class _AnswerCard extends StatelessWidget {
+  final ChecklistAnswer answer;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _AnswerCard({required this.answer, required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final style = _AnswerStyle.of(answer)!;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          height: 76,
+          decoration: BoxDecoration(
+            color: selected ? style.background : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: selected ? style.border : AppColours.border, width: selected ? 2 : 1),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                selected ? style.selectedIcon : style.icon,
+                size: 26,
+                color: selected ? style.border : AppColours.inkMuted,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: AppTextStyles.caption.copyWith(
+                  fontSize: 13,
+                  height: 1,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? style.foreground : AppColours.ink,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

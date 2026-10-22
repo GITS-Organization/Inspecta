@@ -17,15 +17,15 @@ class NewTaskBanner extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppColours.primarySoft, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: AppColours.primaryTint, borderRadius: BorderRadius.circular(20)),
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 40,
+            height: 40,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-            child: const Icon(Icons.notifications_none_rounded, size: 18, color: AppColours.primaryDark),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Icons.notifications_none_rounded, size: 20, color: AppColours.primaryDark),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -33,7 +33,7 @@ class NewTaskBanner extends StatelessWidget {
               TextSpan(
                 style: AppTextStyles.subtitle.copyWith(fontSize: 14, color: AppColours.inkBody),
                 children: [
-                  TextSpan(text: '${t.newTaskLabel} ', style: const TextStyle(fontWeight: FontWeight.w800)),
+                  TextSpan(text: '${t.newTaskLabel} ', style: const TextStyle(fontWeight: FontWeight.w700)),
                   TextSpan(text: t.fromYourCoordinatorLabel),
                 ],
               ),
@@ -44,8 +44,8 @@ class NewTaskBanner extends StatelessWidget {
             onPressed: onOpen,
             style: FilledButton.styleFrom(
               backgroundColor: AppColours.primaryColor,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
             child: Text(t.openAction, style: AppTextStyles.buttonLabel.copyWith(fontSize: 14)),
           ),

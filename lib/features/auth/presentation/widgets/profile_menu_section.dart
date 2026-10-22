@@ -18,14 +18,14 @@ class ProfileAccountSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     return MCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
       child: Column(
         children: [
-          const SizedBox(height: 10),
           Align(
             alignment: AlignmentDirectional.centerStart,
-            child: Text(t.accountSectionTitle, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
+            child: Text(t.accountSectionTitle, style: AppTextStyles.sectionTitle),
           ),
+          const SizedBox(height: 8),
           ProfileMenuRow(
             icon: Icons.person_outline_rounded,
             label: t.personalInfoLabel,
@@ -63,7 +63,7 @@ class ProfileHelpSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     return MCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
       child: Column(
         children: [
           ProfileMenuRow(
@@ -103,7 +103,7 @@ class ProfileMenuRow extends StatelessWidget {
     super.key,
     required this.icon,
     required this.label,
-    this.tint = AppColours.primarySoft,
+    this.tint = AppColours.primaryTint,
     this.iconColor = AppColours.primaryDark,
     this.trailing,
     this.onTap,
@@ -113,24 +113,24 @@ class ProfileMenuRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final row = Container(
-      constraints: const BoxConstraints(minHeight: 54),
+      constraints: const BoxConstraints(minHeight: 60),
       decoration: isLast
           ? null
           : const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColours.surfaceMuted)),
+              border: Border(bottom: BorderSide(color: AppColours.borderSubtle)),
             ),
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 40,
+            height: 40,
             alignment: Alignment.center,
-            decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, size: 18, color: iconColor),
+            decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, size: 20, color: iconColor),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
-            child: Text(label, style: AppTextStyles.emphasis.copyWith(fontSize: 14)),
+            child: Text(label, style: AppTextStyles.cardTitle),
           ),
           if (trailing != null) trailing!,
           if (onTap != null) ...[

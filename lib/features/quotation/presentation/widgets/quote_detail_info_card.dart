@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
+import '../../../../core/shared/m_card.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/quotation.dart';
 import '../../domain/entities/quote_board_tab.dart';
@@ -28,51 +29,42 @@ class QuoteDetailInfoCard extends StatelessWidget {
     final tab = QuoteBoardTabX.of(current) ?? QuoteBoardTab.open;
     final validUntil = current.validUntil;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppColours.ink.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
+    return MCard(
       child: Column(
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _Field(label: t.equipmentLabel, value: current.equipmentSummary),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _Field(
-                  label: t.requestLabel,
-                  value: current.requestNumber,
-                  onTap: onOpenRequest,
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _Field(label: t.equipmentLabel, value: current.equipmentSummary),
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _Field(
+                    label: t.requestLabel,
+                    value: current.requestNumber,
+                    onTap: onOpenRequest,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 14),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _Field(label: t.statusLabel, value: tab.label(t))),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _Field(
-                  label: t.validUntilLabel(t.quoteVersionLabel(current.version ?? 0)),
-                  value: validUntil == null ? '—' : dateFormat.format(validUntil),
+          const SizedBox(height: 8),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: _Field(label: t.statusLabel, value: tab.label(t))),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _Field(
+                    label: t.validUntilLabel(t.quoteVersionLabel(current.version ?? 0)),
+                    value: validUntil == null ? '—' : dateFormat.format(validUntil),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -89,23 +81,37 @@ class _Field extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(label, style: AppTextStyles.caption, overflow: TextOverflow.ellipsis),
-        const SizedBox(height: 3),
-        Text(
-          value,
-          style: AppTextStyles.emphasis.copyWith(
-            fontSize: 14,
-            color: onTap == null ? AppColours.ink : AppColours.primaryDark,
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.caption.copyWith(fontSize: 12, height: 16 / 12),
+            overflow: TextOverflow.ellipsis,
           ),
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
+          const SizedBox(height: 3),
+          Text(
+            value,
+            maxLines: 2,
+            style: AppTextStyles.emphasis.copyWith(
+              fontSize: 14,
+              height: 20 / 14,
+              color: onTap == null ? AppColours.ink : AppColours.primaryDark,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
-    if (onTap == null) return content;
-    return InkWell(borderRadius: BorderRadius.circular(8), onTap: onTap, child: content);
+    return Material(
+      color: AppColours.surfaceMuted,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: onTap == null ? content : InkWell(onTap: onTap, child: content),
+    );
   }
 }

@@ -40,7 +40,7 @@ class _CardTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Text(title, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
+      child: Text(title, style: AppTextStyles.sectionTitle),
     );
   }
 }
@@ -58,13 +58,13 @@ class _SettingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final row = Container(
-      constraints: const BoxConstraints(minHeight: 52),
+      constraints: const BoxConstraints(minHeight: 56),
       padding: const EdgeInsets.symmetric(vertical: 8),
-      alignment: Alignment.centerLeft,
+      alignment: AlignmentDirectional.centerStart,
       child: Row(
         children: [
           Expanded(
-            child: Text(label, style: AppTextStyles.emphasis.copyWith(fontSize: 14)),
+            child: Text(label, style: AppTextStyles.cardTitle.copyWith(fontSize: 14)),
           ),
           Text(
             value,
@@ -90,7 +90,7 @@ class _DividedRows extends StatelessWidget {
     return Column(
       children: [
         for (var i = 0; i < rows.length; i++) ...[
-          if (i > 0) const Divider(height: 1, color: AppColours.surfaceMuted),
+          if (i > 0) const Divider(height: 1, color: AppColours.borderSubtle),
           rows[i],
         ],
       ],
@@ -107,11 +107,10 @@ class _QuotationDefaultsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     return MCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 10),
           _CardTitle(t.quotationDefaultsTitle),
           _DividedRows([
             _SettingRow(label: t.quoteValidForLabel, value: t.validityDaysOption(14)),
@@ -158,7 +157,7 @@ class _MyWorkCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: AppColours.primarySoft,
+                          color: AppColours.primaryTint,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
@@ -177,9 +176,9 @@ class _MyWorkCard extends StatelessWidget {
             child: OutlinedButton(
               onPressed: onComingSoon,
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColours.primaryDark,
-                side: const BorderSide(color: AppColours.primaryTint, width: 1.5),
-                textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 14, color: AppColours.primaryDark),
+                foregroundColor: AppColours.ink,
+                side: const BorderSide(color: AppColours.border),
+                textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 14, color: AppColours.ink),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               child: Text(t.requestLeaveAction),
@@ -271,10 +270,11 @@ class _MySignatureView extends StatelessWidget {
                   TextButton(
                     onPressed: state.isLoaded ? () => showSignatureEditSheet(context) : null,
                     style: TextButton.styleFrom(
-                      backgroundColor: AppColours.surfaceMuted,
+                      backgroundColor: AppColours.primaryTint,
                       foregroundColor: AppColours.primaryDark,
                       textStyle: AppTextStyles.badge,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                     ),
                     child: Text(t.updateAction),
                   ),
@@ -286,9 +286,9 @@ class _MySignatureView extends StatelessWidget {
                 height: 96,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppColours.primarySoft,
+                  color: AppColours.surfaceMuted,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColours.primaryTint, width: 1.5),
+                  border: Border.all(color: AppColours.border),
                 ),
                 child: state.hasSignature
                     ? SignaturePreview(strokes: state.strokes!)

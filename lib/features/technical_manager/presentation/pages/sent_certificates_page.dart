@@ -28,17 +28,14 @@ class SentCertificatesPage extends StatelessWidget {
     return BlocProvider(
       create: (_) => getIt<ReviewQueueCubit>()..start(),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
+        value: SystemUiOverlayStyle.dark,
         child: Scaffold(
           backgroundColor: AppColours.background,
-          body: SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                ReviewHeader(title: t.sentCertificatesTitle, onOpenProfile: onOpenProfile),
-                const Expanded(child: _Body()),
-              ],
-            ),
+          body: Column(
+            children: [
+              ReviewHeader(title: t.sentCertificatesTitle, onOpenProfile: onOpenProfile),
+              const Expanded(child: _Body()),
+            ],
           ),
         ),
       ),
@@ -66,7 +63,7 @@ class _Body extends StatelessWidget {
           return Center(child: Text(t.emptySentCertificates, style: AppTextStyles.subtitle));
         }
         return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, AppLayout.bottomNavClearance),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, AppLayout.bottomNavClearance),
           itemCount: sent.length,
           separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemBuilder: (context, index) => SentCertificateCard(key: ValueKey(sent[index].id), request: sent[index]),

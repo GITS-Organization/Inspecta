@@ -40,13 +40,10 @@ class ReviewCertificateCard extends StatelessWidget {
           _ => '',
         };
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(color: AppColours.ink.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 6)),
-            ],
+            borderRadius: BorderRadius.circular(24),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,28 +54,38 @@ class ReviewCertificateCard extends StatelessWidget {
                 children: [
                   if (result != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(color: result.badgeBackground, borderRadius: BorderRadius.circular(999)),
                       child: Text(result.badgeLabel(t), style: AppTextStyles.badge.copyWith(color: result.badgeText)),
                     )
                   else
                     const SizedBox.shrink(),
-                  Text(
-                    certNumberFor(request),
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: AppColours.inkMuted),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      certNumberFor(request),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.24,
+                        height: 16 / 12,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              Text('${request.equipmentTitle} — ${request.clientName}', style: AppTextStyles.cardTitle.copyWith(fontSize: 17)),
+              Text('${request.equipmentTitle} — ${request.clientName}', style: AppTextStyles.cardTitle),
               if (subtitle.isNotEmpty) ...[
                 const SizedBox(height: 2),
-                Text(subtitle, style: AppTextStyles.subtitle.copyWith(fontSize: 13)),
+                Text(subtitle, style: AppTextStyles.caption.copyWith(height: 18 / 13)),
               ],
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
-                height: 46,
+                height: 48,
                 child: result.needsAttention
                     ? FilledButton(
                         onPressed: onOpen,
@@ -86,18 +93,18 @@ class ReviewCertificateCard extends StatelessWidget {
                           backgroundColor: AppColours.primaryColor,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
-                        child: Text(t.reviewAndSignAction, style: AppTextStyles.buttonLabel.copyWith(fontSize: 15)),
+                        child: Text(t.reviewAndSignAction, style: AppTextStyles.buttonLabel),
                       )
                     : OutlinedButton(
                         onPressed: onOpen,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColours.primaryDark,
-                          side: const BorderSide(color: AppColours.primaryTint, width: 1.5),
+                          foregroundColor: AppColours.ink,
+                          side: const BorderSide(color: AppColours.border),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         child: Text(
                           t.reviewAndSignAction,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                          style: AppTextStyles.buttonLabel.copyWith(color: AppColours.ink),
                         ),
                       ),
               ),

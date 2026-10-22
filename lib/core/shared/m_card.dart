@@ -13,7 +13,7 @@ class MCard extends StatelessWidget {
     super.key,
     required this.child,
     this.color = Colors.white,
-    this.borderRadius = 20,
+    this.borderRadius = 24,
     this.padding = const EdgeInsets.all(20),
   });
 

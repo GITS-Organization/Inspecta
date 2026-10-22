@@ -39,22 +39,14 @@ class _CardShell extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppColours.ink.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-          BoxShadow(color: AppColours.ink.withValues(alpha: 0.04), blurRadius: 2),
-        ],
+        borderRadius: BorderRadius.circular(24),
       ),
       clipBehavior: Clip.antiAlias,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          child: Padding(padding: const EdgeInsets.all(16), child: child),
+          child: Padding(padding: const EdgeInsets.all(20), child: child),
         ),
       ),
     );
@@ -69,13 +61,13 @@ class _IconTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 44,
-      height: 44,
+      width: 48,
+      height: 48,
       decoration: BoxDecoration(
-        color: AppColours.primarySoft,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColours.primaryTint,
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Icon(icon, size: 22, color: AppColours.primaryDark),
+      child: Icon(icon, size: 22, color: AppColours.primaryColor),
     );
   }
 }
@@ -91,7 +83,7 @@ class _ReplyRow extends StatelessWidget {
     return Row(
       children: [
         const _IconTile(Icons.mail_outline_rounded),
-        const SizedBox(width: 12),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,9 +94,10 @@ class _ReplyRow extends StatelessWidget {
                 style: AppTextStyles.cardTitle,
                 overflow: TextOverflow.ellipsis,
               ),
+              const SizedBox(height: 2),
               Text(
                 request.lastReplySnippet ?? request.equipmentTitle,
-                style: AppTextStyles.subtitle,
+                style: AppTextStyles.caption.copyWith(height: 18 / 13),
                 overflow: TextOverflow.ellipsis,
               ),
             ],
@@ -112,7 +105,7 @@ class _ReplyRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: AppColours.chipBlueBackground,
             borderRadius: BorderRadius.circular(999),
@@ -145,7 +138,7 @@ class _FullCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const _IconTile(Icons.precision_manufacturing_outlined),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,16 +146,16 @@ class _FullCard extends StatelessWidget {
                 children: [
                   Text(
                     request.equipmentTitle,
-                    style: AppTextStyles.cardTitle.copyWith(fontSize: 16),
+                    style: AppTextStyles.cardTitle,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
                   Row(
                     children: [
                       Flexible(
                         child: Text(
                           '${request.clientName} · ${t.unitsCount(request.totalUnits)}',
-                          style: AppTextStyles.subtitle,
+                          style: AppTextStyles.caption.copyWith(height: 18 / 13),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -185,11 +178,11 @@ class _FullCard extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         Row(
           children: [
             _MetaItem(icon: Icons.location_on_outlined, label: request.location),
-            const SizedBox(width: 16),
+            const SizedBox(width: 20),
             _MetaItem(
               icon: Icons.schedule_outlined,
               label: RelativeDuration.since(request.receivedAt).label(t),
@@ -197,7 +190,7 @@ class _FullCard extends StatelessWidget {
           ],
         ),
         if (request.isNew) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           _ReviewCta(primary: request.status == JobStatus.requestReceived),
         ],
       ],
@@ -246,7 +239,7 @@ class _MetaItem extends StatelessWidget {
           Flexible(
             child: Text(
               label,
-              style: AppTextStyles.subtitle.copyWith(fontSize: 13),
+              style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w400, height: 18 / 13),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -267,11 +260,16 @@ class _ReviewCta extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final label = primary ? t.reviewAndQuote : t.continueQuote;
-    const height = 46.0;
+    const height = 48.0;
     final child = Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(label, style: AppTextStyles.buttonLabel.copyWith(fontSize: 15)),
+        Text(
+          label,
+          style: AppTextStyles.buttonLabel.copyWith(
+            color: primary ? Colors.white : AppColours.ink,
+          ),
+        ),
         if (primary) ...[
           const SizedBox(width: 8),
           const Icon(Icons.arrow_forward_rounded, size: 18, color: Colors.white),
@@ -291,7 +289,7 @@ class _ReviewCta extends StatelessWidget {
                   backgroundColor: AppColours.primaryColor,
                   disabledBackgroundColor: AppColours.primaryColor,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
                 child: child,
@@ -300,16 +298,13 @@ class _ReviewCta extends StatelessWidget {
                 onPressed: null,
                 style: OutlinedButton.styleFrom(
                   backgroundColor: Colors.white,
-                  disabledForegroundColor: AppColours.primaryDark,
-                  side: const BorderSide(color: AppColours.primaryTint, width: 1.5),
+                  disabledForegroundColor: AppColours.ink,
+                  side: const BorderSide(color: AppColours.border),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: DefaultTextStyle.merge(
-                  style: const TextStyle(color: AppColours.primaryDark),
-                  child: child,
-                ),
+                child: child,
               ),
       ),
     );

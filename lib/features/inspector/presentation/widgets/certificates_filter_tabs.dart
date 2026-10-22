@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/consts/app_colors.dart';
-import '../../../../core/consts/app_text_styles.dart';
+import '../../../../core/widgets/app_filter_chip.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../bloc/certificates_list_cubit.dart';
 
-/// Action / Submitted / Sent / All — Action shows a red badge with its
-/// count (Feature 05).
+/// The Certificates tab's one filter row: Action / Submitted / Sent / All,
+/// as chips with a live count. Action is the inspector's to-do list, so its
+/// count is red when there is one (Feature 05).
 class CertificatesFilterTabs extends StatelessWidget {
   const CertificatesFilterTabs({super.key});
 
@@ -17,95 +17,31 @@ class CertificatesFilterTabs extends StatelessWidget {
     return BlocBuilder<CertificatesListCubit, CertificatesListState>(
       builder: (context, state) {
         final cubit = context.read<CertificatesListCubit>();
-        return Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(color: AppColours.surfaceMuted, borderRadius: BorderRadius.circular(14)),
-          child: Row(
+        Widget chip(CertificatesFilter filter, String label, {int count = 0, bool alert = false}) => AppFilterChip(
+          label: label,
+          count: count,
+          alert: alert,
+          selected: state.filter == filter,
+          onTap: () => cubit.setFilter(filter),
+        );
+
+        return SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
-              Expanded(
-                child: _Tab(
-                  label: t.filterActionTab,
-                  badgeCount: state.actionCount,
-                  selected: state.filter == CertificatesFilter.action,
-                  onTap: () => cubit.setFilter(CertificatesFilter.action),
-                ),
-              ),
-              Expanded(
-                child: _Tab(
-                  label: t.filterSubmittedTab,
-                  selected: state.filter == CertificatesFilter.submitted,
-                  onTap: () => cubit.setFilter(CertificatesFilter.submitted),
-                ),
-              ),
-              Expanded(
-                child: _Tab(
-                  label: t.filterSentTab,
-                  selected: state.filter == CertificatesFilter.sent,
-                  onTap: () => cubit.setFilter(CertificatesFilter.sent),
-                ),
-              ),
-              Expanded(
-                child: _Tab(
-                  label: t.filterAll,
-                  selected: state.filter == CertificatesFilter.all,
-                  onTap: () => cubit.setFilter(CertificatesFilter.all),
-                ),
-              ),
+              chip(CertificatesFilter.action, t.filterActionTab, count: state.actionCount, alert: true),
+              const SizedBox(width: 8),
+              chip(CertificatesFilter.submitted, t.filterSubmittedTab, count: state.submittedCount),
+              const SizedBox(width: 8),
+              chip(CertificatesFilter.sent, t.filterSentTab, count: state.sentCount),
+              const SizedBox(width: 8),
+              chip(CertificatesFilter.all, t.filterAll),
             ],
           ),
         );
       },
-    );
-  }
-}
-
-class _Tab extends StatelessWidget {
-  final String label;
-  final int? badgeCount;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _Tab({required this.label, this.badgeCount, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? Colors.white : Colors.transparent,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Container(
-          height: 40,
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: AppTextStyles.badge.copyWith(
-                  fontSize: 12,
-                  color: selected ? AppColours.primaryDark : AppColours.inkSecondary,
-                ),
-              ),
-              if (badgeCount != null && badgeCount! > 0) ...[
-                const SizedBox(width: 5),
-                Container(
-                  constraints: const BoxConstraints(minWidth: 17),
-                  height: 17,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(color: AppColours.errorIcon, shape: BoxShape.circle),
-                  child: Text(
-                    '$badgeCount',
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

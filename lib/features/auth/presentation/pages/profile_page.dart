@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_layout.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/framework/app_info.dart';
+import '../../../../core/shared/m_back_button.dart';
+import '../../../../core/widgets/app_header.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/user.dart';
@@ -108,7 +111,9 @@ class _ProfileView extends StatelessWidget {
     final user = context.select((AuthCubit cubit) => cubit.user);
     if (user == null) return const SizedBox.shrink();
 
-    return Scaffold(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
       backgroundColor: AppColours.background,
       body: ListView(
         padding: EdgeInsets.zero,
@@ -116,9 +121,9 @@ class _ProfileView extends StatelessWidget {
           _ProfileHeader(user: user, onEdit: () => _comingSoon(context), onClose: onClose),
           Padding(
             padding: EdgeInsets.fromLTRB(
-              20,
-              14,
-              20,
+              16,
+              12,
+              16,
               onClose == null ? AppLayout.bottomNavClearance : 28,
             ),
             child: Column(
@@ -131,16 +136,18 @@ class _ProfileView extends StatelessWidget {
                         : ProfileStatTiles(stats: tiles);
                   },
                 ),
-                const SizedBox(height: 14),
-                ProfileRoleCard(user: user, onComingSoon: () => _comingSoon(context)),
-                if (user.role != UserRole.admin) const SizedBox(height: 14),
-                if (navigationSection != null) ...[navigationSection!, const SizedBox(height: 14)],
+                if (user.role != UserRole.admin) ...[
+                  const SizedBox(height: 12),
+                  ProfileRoleCard(user: user, onComingSoon: () => _comingSoon(context)),
+                ],
+                if (navigationSection != null) ...[const SizedBox(height: 12), navigationSection!],
+                const SizedBox(height: 12),
                 ProfileAccountSection(onComingSoon: () => _comingSoon(context)),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 ProfileHelpSection(onComingSoon: () => _comingSoon(context)),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 SizedBox(
-                  height: 52,
+                  height: 54,
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: () => _confirmSignOut(context),
@@ -149,7 +156,7 @@ class _ProfileView extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColours.dangerText,
                       backgroundColor: Colors.white,
-                      side: const BorderSide(color: AppColours.dangerBorder, width: 1.5),
+                      side: const BorderSide(color: AppColours.dangerBorder),
                       textStyle: AppTextStyles.buttonLabel.copyWith(color: AppColours.dangerText),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
@@ -165,10 +172,14 @@ class _ProfileView extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 }
 
+/// The banner: an optional back button, the screen title and an Edit
+/// button, then who's signed in — navy avatar with a camera badge, name,
+/// role pill and email.
 class _ProfileHeader extends StatelessWidget {
   final AppUser user;
   final VoidCallback onEdit;
@@ -179,87 +190,72 @@ class _ProfileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    return Container(
-      padding: EdgeInsets.fromLTRB(20, MediaQuery.paddingOf(context).top + 14, 20, 28),
-      decoration: const BoxDecoration(
-        color: AppColours.primaryColor,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
-      ),
+    return AppBanner(
+      topInset: MediaQuery.paddingOf(context).top,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               if (onClose != null) ...[
-                Material(
-                  color: Colors.white.withValues(alpha: 0.16),
-                  shape: const CircleBorder(),
-                  child: IconButton(
-                    onPressed: onClose,
-                    tooltip: t.back,
-                    icon: const Icon(Icons.chevron_left_rounded, color: Colors.white),
-                  ),
-                ),
-                const SizedBox(width: 4),
+                MBackButton(onPressed: onClose),
+                const SizedBox(width: 12),
               ],
-              Expanded(
-                child: Text(
-                  t.profile,
-                  style: AppTextStyles.cardTitle.copyWith(color: Colors.white, fontSize: 20),
+              Expanded(child: Text(t.profile, style: AppTextStyles.pageTitle)),
+              Material(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: const BorderSide(color: AppColours.border),
                 ),
-              ),
-              SizedBox(
-                height: 40,
-                child: TextButton(
-                  onPressed: onEdit,
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.16),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: onEdit,
+                  child: Container(
+                    height: 44,
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: Text(
+                      t.editAction,
+                      style: AppTextStyles.buttonLabel.copyWith(fontSize: 14, color: AppColours.ink),
+                    ),
                   ),
-                  child: Text(t.editAction),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  CircleAvatar(
-                    radius: 38,
-                    backgroundColor: Colors.white,
+                  Container(
+                    width: 72,
+                    height: 72,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(color: AppColours.navy, shape: BoxShape.circle),
                     child: Text(
                       user.initials,
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: AppColours.primaryDark,
-                      ),
+                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white),
                     ),
                   ),
-                  Positioned(
-                    right: -2,
-                    bottom: -2,
+                  PositionedDirectional(
+                    end: -4,
+                    bottom: -4,
                     child: Tooltip(
                       message: t.changePhotoAction,
                       child: Material(
                         color: Colors.white,
-                        shape: const CircleBorder(
-                          side: BorderSide(color: AppColours.primaryColor, width: 3),
-                        ),
+                        shape: const CircleBorder(side: BorderSide(color: AppColours.border)),
                         child: InkWell(
                           customBorder: const CircleBorder(),
                           onTap: onEdit,
                           child: const SizedBox(
-                            width: 32,
-                            height: 32,
-                            child: Icon(Icons.camera_alt_outlined, size: 16, color: AppColours.primaryDark),
+                            width: 30,
+                            height: 30,
+                            child: Icon(Icons.camera_alt_outlined, size: 15, color: AppColours.ink),
                           ),
                         ),
                       ),
@@ -275,26 +271,25 @@ class _ProfileHeader extends StatelessWidget {
                   children: [
                     Text(
                       user.name,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.pageTitle.copyWith(color: Colors.white, fontSize: 20),
+                      style: AppTextStyles.sectionTitle.copyWith(fontSize: 22, height: 28 / 22, letterSpacing: -0.22),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColours.primaryTint,
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: Text(
-                        user.role.label(t),
-                        style: AppTextStyles.badge.copyWith(color: AppColours.primaryDark),
-                      ),
+                      child: Text(user.role.label(t), style: AppTextStyles.badge.copyWith(color: AppColours.primaryDark)),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
                       user.email,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.caption.copyWith(color: AppColours.onPrimaryMuted),
+                      style: AppTextStyles.caption.copyWith(fontSize: 12, height: 16 / 12),
                     ),
                   ],
                 ),

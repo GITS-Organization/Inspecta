@@ -26,10 +26,11 @@ class ISearchField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColours.border),
       ),
       child: Row(
         children: [
@@ -45,13 +46,13 @@ class ISearchField extends StatelessWidget {
               controller: controller,
               onChanged: onChanged,
               textAlignVertical: TextAlignVertical.center,
-              style: AppTextStyles.input.copyWith(fontSize: 15),
+              style: AppTextStyles.input.copyWith(fontSize: 14),
               decoration: InputDecoration(
                 border: InputBorder.none,
                 isCollapsed: true,
                 hintText: hintText,
                 hintStyle: AppTextStyles.input.copyWith(
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: FontWeight.w400,
                   color: AppColours.inkMuted,
                 ),

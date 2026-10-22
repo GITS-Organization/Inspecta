@@ -7,19 +7,22 @@ import '../../../../core/consts/app_layout.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/shared/loading.dart';
 import '../../../../core/shared/m_notice.dart';
+import '../../../../core/shared/m_search_field.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../auth/presentation/widgets/user_app_header.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
 import '../bloc/certificates_list_cubit.dart';
 import '../widgets/certificate_list_card.dart';
 import '../widgets/certificates_filter_tabs.dart';
-import '../widgets/certificates_list_header.dart';
 
 /// Feature 05's Certificates tab: every job with a certificate underway
 /// or done, bucketed by status, searchable.
 class InspectorCertificatesPage extends StatefulWidget {
-  const InspectorCertificatesPage({super.key});
+  final VoidCallback? onOpenProfile;
+
+  const InspectorCertificatesPage({super.key, this.onOpenProfile});
 
   @override
   State<InspectorCertificatesPage> createState() => _InspectorCertificatesPageState();
@@ -36,24 +39,31 @@ class _InspectorCertificatesPageState extends State<InspectorCertificatesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     return BlocProvider(
       create: (_) => getIt<CertificatesListCubit>()..start(),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
+        value: SystemUiOverlayStyle.dark,
         child: Scaffold(
           backgroundColor: AppColours.background,
-          body: SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                CertificatesListHeader(searchController: _searchController),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(20, 14, 20, 10),
-                  child: CertificatesFilterTabs(),
+          body: Column(
+            children: [
+              Builder(
+                builder: (context) => UserAppHeader(
+                  title: t.myCertificatesTitle,
+                  onOpenProfile: widget.onOpenProfile,
+                  bottom: ISearchField(
+                    controller: _searchController,
+                    onChanged: context.read<CertificatesListCubit>().setQuery,
+                    hintText: t.searchCertificatesHint,
+                  ),
                 ),
-                const Expanded(child: _Body()),
-              ],
-            ),
+              ),
+              const SizedBox(height: 12),
+              const CertificatesFilterTabs(),
+              const SizedBox(height: 12),
+              const Expanded(child: _Body()),
+            ],
           ),
         ),
       ),
@@ -82,7 +92,7 @@ class _Body extends StatelessWidget {
         }
 
         return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, AppLayout.bottomNavClearance),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, AppLayout.bottomNavClearance),
           itemCount: visible.length,
           separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemBuilder: (context, index) {

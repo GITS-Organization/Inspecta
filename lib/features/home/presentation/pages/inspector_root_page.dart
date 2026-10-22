@@ -18,15 +18,17 @@ class InspectorRootPage extends StatefulWidget {
 class _InspectorRootPageState extends State<InspectorRootPage> {
   InspectorTab _tab = InspectorTab.tasks;
 
+  void _openProfile() => setState(() => _tab = InspectorTab.profile);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
         index: _tab.index,
         children: [
-          const InspectorTasksPage(),
-          const InspectorCertificatesPage(),
-          const InspectorTimesheetPage(),
+          InspectorTasksPage(onOpenProfile: _openProfile),
+          InspectorCertificatesPage(onOpenProfile: _openProfile),
+          InspectorTimesheetPage(onOpenProfile: _openProfile),
           const ProfilePage(),
         ],
       ),

@@ -31,6 +31,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get splashHint => 'فحوصات رقمية وشهادات وطلبات — كل ذلك في مكان واحد.';
 
   @override
+  String get loginHeroEyebrow => 'إدارة الفحص';
+
+  @override
+  String get loginHeroLine1 => 'افحص بذكاء.';
+
+  @override
+  String get loginHeroLine2 => 'اعتمد بسرعة.';
+
+  @override
   String get signInTitle => 'مرحبًا بعودتك';
 
   @override
@@ -492,6 +501,20 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get locationLabel => 'الموقع';
+
+  @override
+  String get clientLocationLabel => 'موقع العميل';
+
+  @override
+  String get equipmentLocationLabel => 'موقع المعدة';
+
+  @override
+  String equipmentItemOf(int number, int total) {
+    return 'المعدة $number من $total';
+  }
+
+  @override
+  String get prNumberLabel => 'رقم طلب الشراء';
 
   @override
   String get preferredDateLabel => 'التاريخ المفضل';

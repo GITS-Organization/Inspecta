@@ -43,12 +43,11 @@ class _QuotationReplyCardState extends State<QuotationReplyCard> {
     final state = cubit.state;
 
     return MCard(
-      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(t.howDoYouWantToReply, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
+          Text(t.howDoYouWantToReply, style: AppTextStyles.sectionTitle),
           const SizedBox(height: 12),
           ReplyOptionTile(
             title: t.replyAccept,
@@ -56,14 +55,14 @@ class _QuotationReplyCardState extends State<QuotationReplyCard> {
             selected: state.replyType == ReplyType.accept,
             onTap: () => cubit.selectReplyType(ReplyType.accept),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           ReplyOptionTile(
             title: t.replyOffer,
             subtitle: t.replyOfferSubtitle,
             selected: state.replyType == ReplyType.offer,
             onTap: () => cubit.selectReplyType(ReplyType.offer),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           ReplyOptionTile(
             title: t.replyReject,
             subtitle: t.replyRejectSubtitle,
@@ -114,6 +113,12 @@ class _QuotationReplyCardState extends State<QuotationReplyCard> {
                 ),
                 icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
                 label: Text(t.previewProposal),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColours.ink,
+                  side: const BorderSide(color: AppColours.border),
+                  textStyle: AppTextStyles.buttonLabel,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
               ),
             ),
           ],
@@ -157,18 +162,18 @@ class _DropdownBox<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 54,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColours.border, width: 1.5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColours.border),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
           value: value,
           isExpanded: true,
-          style: AppTextStyles.input,
+          style: AppTextStyles.input.copyWith(fontSize: 15),
           items: items
               .map((item) => DropdownMenuItem(value: item, child: Text(labelOf(item), overflow: TextOverflow.ellipsis)))
               .toList(),
@@ -210,25 +215,24 @@ class _MessageField extends StatelessWidget {
           onChanged: onChanged,
           minLines: 2,
           maxLines: 4,
-          style: AppTextStyles.input.copyWith(fontWeight: FontWeight.w400),
+          style: AppTextStyles.input.copyWith(fontSize: 14, height: 20 / 14, fontWeight: FontWeight.w400),
           decoration: InputDecoration(
             isDense: true,
-            contentPadding: const EdgeInsets.all(12),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColours.border, width: 1.5),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColours.border),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
                 color: hasError ? AppColours.errorIcon : AppColours.border,
-                width: 1.5,
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
                 color: hasError ? AppColours.errorIcon : AppColours.primaryColor,
                 width: 2,

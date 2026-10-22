@@ -10,6 +10,7 @@ class RequestItemModel {
   final String? prNumber;
   final String? capacity;
   final int quantity;
+  final String? location;
 
   const RequestItemModel({
     required this.id,
@@ -21,6 +22,7 @@ class RequestItemModel {
     this.prNumber,
     this.capacity,
     this.quantity = 1,
+    this.location,
   });
 
   factory RequestItemModel.fromJson(Map<String, dynamic> json) {
@@ -34,6 +36,7 @@ class RequestItemModel {
       prNumber: json['prNumber'] as String?,
       capacity: json['capacity'] as String?,
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      location: json['location'] as String?,
     );
   }
 
@@ -47,6 +50,7 @@ class RequestItemModel {
     'prNumber': prNumber,
     'capacity': capacity,
     'quantity': quantity,
+    'location': location,
   };
 
   RequestItem toEntity() => RequestItem(
@@ -59,5 +63,6 @@ class RequestItemModel {
     prNumber: prNumber,
     capacity: capacity,
     quantity: quantity,
+    location: location,
   );
 }

@@ -10,16 +10,26 @@ class AppTextStyles {
 
   /// Large bold screen heading (e.g. "Welcome back", "Reset your password").
   static const TextStyle pageTitle = TextStyle(
-    fontSize: 30,
-    fontWeight: FontWeight.w800,
-    letterSpacing: -0.3,
+    fontSize: 32,
+    height: 38 / 32,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.64,
     color: AppColours.ink,
   );
 
-  /// Bold heading for a card or list item (e.g. a client's name).
+  /// Heading above a list section (e.g. "Needs your reply").
+  static const TextStyle sectionTitle = TextStyle(
+    fontSize: 18,
+    height: 24 / 18,
+    fontWeight: FontWeight.w600,
+    color: AppColours.ink,
+  );
+
+  /// Heading for a card or list item (e.g. a client's name).
   static const TextStyle cardTitle = TextStyle(
     fontSize: 15,
-    fontWeight: FontWeight.w800,
+    height: 22 / 15,
+    fontWeight: FontWeight.w600,
     color: AppColours.ink,
   );
 
@@ -46,7 +56,7 @@ class AppTextStyles {
   /// Bold label above a form field.
   static const TextStyle fieldLabel = TextStyle(
     fontSize: 14,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w600,
     color: AppColours.ink,
   );
 
@@ -73,12 +83,13 @@ class AppTextStyles {
 
   /// Bold white label for a filled primary button.
   static const TextStyle buttonLabel = TextStyle(
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: FontWeight.w700,
+    letterSpacing: -0.3,
     color: Colors.white,
   );
 
-  /// Bold small label for a status badge or priority chip; colour is
-  /// applied per-instance with [TextStyle.copyWith].
-  static const TextStyle badge = TextStyle(fontSize: 12, fontWeight: FontWeight.w700);
+  /// Small label for a status badge or priority chip; colour is applied
+  /// per-instance with [TextStyle.copyWith].
+  static const TextStyle badge = TextStyle(fontSize: 12, height: 16 / 12, fontWeight: FontWeight.w600);
 }

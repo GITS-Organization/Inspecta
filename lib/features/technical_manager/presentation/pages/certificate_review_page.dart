@@ -37,7 +37,7 @@ class CertificateReviewPage extends StatelessWidget {
     return BlocProvider(
       create: (_) => getIt<ReviewDetailCubit>(param1: request, param2: reviewer?.name ?? '')..start(),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
+        value: SystemUiOverlayStyle.dark,
         child: _ReviewView(request: request, inspectorName: inspectorName),
       ),
     );
@@ -127,20 +127,20 @@ class _ReviewViewState extends State<_ReviewView> {
                   }
                   if (certificate == null) return const SizedBox.shrink();
                   return ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                     children: [
                       ReviewSummaryCard(
                         request: widget.request,
                         certificate: certificate,
                         onViewPdf: () => _viewPdf(certificate),
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 12),
                       ReviewCommentsField(
                         controller: _comments,
                         onChanged: cubit.setComments,
                         enabled: !state.isBusy,
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 12),
                       SignatureCard(
                         savedStrokes: state.savedStrokes,
                         strokes: state.strokes,

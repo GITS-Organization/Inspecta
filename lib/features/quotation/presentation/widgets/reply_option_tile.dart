@@ -11,7 +11,8 @@ class ReplyOptionTile extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  /// Red styling for the Reject option, matching the mockup.
+  /// Red styling for the Reject option: its title stays red even when
+  /// unselected.
   final bool danger;
 
   const ReplyOptionTile({
@@ -26,7 +27,11 @@ class ReplyOptionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = danger ? AppColours.errorIcon : AppColours.primaryColor;
-    final titleColor = selected ? accent : AppColours.ink;
+    final titleColor = danger
+        ? AppColours.errorText
+        : selected
+        ? AppColours.primaryDark
+        : AppColours.ink;
 
     return Semantics(
       button: true,
@@ -35,37 +40,31 @@ class ReplyOptionTile extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Container(
-          padding: const EdgeInsets.all(14),
+          padding: EdgeInsets.symmetric(horizontal: selected ? 13 : 14, vertical: selected ? 11 : 12),
           decoration: BoxDecoration(
-            color: selected ? AppColours.primarySoft : Colors.white,
+            color: selected ? (danger ? AppColours.errorBackground : AppColours.primaryTint) : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: selected ? accent : AppColours.surfaceMuted,
-              width: selected ? 2 : 1.5,
+              color: selected ? accent : AppColours.border,
+              width: selected ? 2 : 1,
             ),
           ),
           child: Row(
             children: [
               Icon(
                 selected ? Icons.radio_button_checked : Icons.radio_button_off,
-                size: 22,
+                size: 20,
                 color: selected ? accent : AppColours.inkMuted,
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      title,
-                      style: AppTextStyles.cardTitle.copyWith(
-                        fontSize: 15,
-                        color: titleColor,
-                      ),
-                    ),
+                    Text(title, style: AppTextStyles.cardTitle.copyWith(color: titleColor)),
                     const SizedBox(height: 2),
-                    Text(subtitle, style: AppTextStyles.subtitle),
+                    Text(subtitle, style: AppTextStyles.caption.copyWith(height: 18 / 13)),
                   ],
                 ),
               ),

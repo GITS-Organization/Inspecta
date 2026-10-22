@@ -22,32 +22,31 @@ import '../widgets/timesheet_task_card.dart';
 /// The inspector's Timesheet tab: the jobs they've accepted this month,
 /// each with the time they spent and the price they set for it.
 class InspectorTimesheetPage extends StatelessWidget {
-  const InspectorTimesheetPage({super.key});
+  final VoidCallback? onOpenProfile;
+
+  const InspectorTimesheetPage({super.key, this.onOpenProfile});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => getIt<TimesheetCubit>()..start(),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
+        value: SystemUiOverlayStyle.dark,
         child: Scaffold(
           backgroundColor: AppColours.background,
-          body: SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                const TimesheetHeader(),
-                Expanded(
-                  child: BlocBuilder<TimesheetCubit, TimesheetState>(
-                    builder: (context, state) => switch (state.status) {
-                      TimesheetStatus.loading => Loading.loader(context),
-                      TimesheetStatus.error => _ErrorState(failure: state.failure!),
-                      TimesheetStatus.ready => _TimesheetList(rows: state.rows, hourlyRatePiastres: state.hourlyRatePiastres),
-                    },
-                  ),
+          body: Column(
+            children: [
+              TimesheetHeader(onOpenProfile: onOpenProfile),
+              Expanded(
+                child: BlocBuilder<TimesheetCubit, TimesheetState>(
+                  builder: (context, state) => switch (state.status) {
+                    TimesheetStatus.loading => Loading.loader(context),
+                    TimesheetStatus.error => _ErrorState(failure: state.failure!),
+                    TimesheetStatus.ready => _TimesheetList(rows: state.rows, hourlyRatePiastres: state.hourlyRatePiastres),
+                  },
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -98,9 +97,12 @@ class _TimesheetList extends StatelessWidget {
 
     final loggedCount = rows.where((row) => row.isLogged).length;
     final children = <Widget>[
-      Text(
-        t.timesheetLoggedProgress(loggedCount, rows.length),
-        style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Text(
+          t.timesheetLoggedProgress(loggedCount, rows.length),
+          style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
+        ),
       ),
     ];
 
@@ -110,10 +112,10 @@ class _TimesheetList extends StatelessWidget {
       if (currentDay == null || !_sameDay(currentDay, day)) {
         children.add(
           Padding(
-            padding: EdgeInsets.only(top: currentDay == null ? 12 : 20, bottom: 10),
+            padding: EdgeInsets.only(left: 4, top: currentDay == null ? 12 : 20, bottom: 12),
             child: Text(
               DateFormat('EEEE, d MMMM', locale).format(day),
-              style: AppTextStyles.fieldLabel.copyWith(color: AppColours.inkSecondary),
+              style: AppTextStyles.sectionTitle,
             ),
           ),
         );
@@ -125,7 +127,7 @@ class _TimesheetList extends StatelessWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, AppLayout.bottomNavClearance),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, AppLayout.bottomNavClearance),
       children: children,
     );
   }

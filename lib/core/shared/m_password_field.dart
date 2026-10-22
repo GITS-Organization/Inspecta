@@ -13,6 +13,10 @@ class MPasswordField extends StatefulWidget {
   final bool enabled;
   final String? errorText;
   final String? label;
+  final String? hintText;
+
+  /// Light-on-dark styling, as on [MTextField].
+  final bool glass;
 
   const MPasswordField({
     super.key,
@@ -22,6 +26,8 @@ class MPasswordField extends StatefulWidget {
     this.enabled = true,
     this.errorText,
     this.label,
+    this.hintText,
+    this.glass = false,
   });
 
   @override
@@ -43,6 +49,8 @@ class _MPasswordFieldState extends State<MPasswordField> {
       enabled: widget.enabled,
       errorText: widget.errorText,
       label: widget.label,
+      hintText: widget.hintText,
+      glass: widget.glass,
       obscureText: _obscureText,
       prefixIcon: Icons.lock_outline_rounded,
       keyboardType: TextInputType.visiblePassword,
@@ -51,7 +59,7 @@ class _MPasswordFieldState extends State<MPasswordField> {
       trailing: IconButton(
         onPressed: _toggleObscureText,
         tooltip: _obscureText ? t.showPassword : t.hidePassword,
-        color: AppColours.inkSecondary,
+        color: widget.glass ? Colors.white.withValues(alpha: 0.75) : AppColours.inkSecondary,
         iconSize: 20,
         icon: Icon(
           _obscureText

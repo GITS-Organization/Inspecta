@@ -13,6 +13,7 @@ import '../../../../core/shared/loading.dart';
 import '../../../../core/shared/m_notice.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../auth/presentation/widgets/user_app_header.dart';
 import '../../../certificate/presentation/pages/certificate_page.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
@@ -20,31 +21,35 @@ import '../../../requests/presentation/widgets/requests_labels.dart';
 import '../bloc/inspector_tasks_cubit.dart';
 import '../widgets/decline_task_dialog.dart';
 import '../widgets/inspector_task_card.dart';
-import '../widgets/inspector_tasks_header.dart';
+import '../widgets/inspector_tasks_filters.dart';
 import '../widgets/new_task_banner.dart';
 
 /// Feature 05's Tasks tab: Today, Upcoming and Overdue lists (chosen from the
 /// header's tiles), a nudge toward any job the inspector hasn't responded to
 /// yet, and the task cards.
 class InspectorTasksPage extends StatelessWidget {
-  const InspectorTasksPage({super.key});
+  final VoidCallback? onOpenProfile;
+
+  const InspectorTasksPage({super.key, this.onOpenProfile});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => getIt<InspectorTasksCubit>()..start(),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
+        value: SystemUiOverlayStyle.dark,
         child: Scaffold(
           backgroundColor: AppColours.background,
-          body: SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                const InspectorTasksHeader(),
-                const Expanded(child: _Body()),
-              ],
-            ),
+          body: Column(
+            children: [
+              UserAppHeader(
+                title: AppLocalizations.of(context)!.navTasks,
+                onOpenProfile: onOpenProfile,
+              ),
+              const SizedBox(height: 12),
+              const InspectorTasksFilters(),
+              const Expanded(child: _Body()),
+            ],
           ),
         ),
       ),
@@ -137,11 +142,11 @@ class _BodyState extends State<_Body> {
             : DateFormat('EEEE, d MMM', locale).format(day);
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, AppLayout.bottomNavClearance),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, AppLayout.bottomNavClearance),
           children: [
             if (banner != null) ...[
               NewTaskBanner(onOpen: () => _openFirstNeedsResponse(state)),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
             ],
             if (tasks.isEmpty)
               _EmptyState(filter: state.filter)
@@ -150,9 +155,12 @@ class _BodyState extends State<_Body> {
                 // Upcoming jobs are grouped under the day they're due.
                 if (state.filter == TasksFilter.upcoming &&
                     (i == 0 || !DateUtils.isSameDay(tasks[i - 1].scheduledAt, tasks[i].scheduledAt))) ...[
-                  if (i > 0) const SizedBox(height: 18),
-                  Text(dayLabel(tasks[i].scheduledAt!), style: AppTextStyles.cardTitle.copyWith(fontSize: 15)),
-                  const SizedBox(height: 10),
+                  if (i > 0) const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(dayLabel(tasks[i].scheduledAt!), style: AppTextStyles.sectionTitle),
+                  ),
+                  const SizedBox(height: 12),
                 ] else if (i > 0)
                   const SizedBox(height: 12),
                 KeyedSubtree(

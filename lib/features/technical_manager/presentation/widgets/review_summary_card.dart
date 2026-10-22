@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
+import '../../../../core/shared/m_card.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../certificate/domain/certificate_template.dart';
 import '../../../certificate/domain/entities/certificate.dart';
@@ -12,12 +13,15 @@ import 'result_banner.dart';
 
 /// What the reviewer is signing off: client, equipment, when it was
 /// inspected and when it's next due, the key findings and the verdict.
+///
+/// [onViewPdf] adds a "View full PDF" link beside the title; leave it null
+/// when the screen already has a PDF button of its own.
 class ReviewSummaryCard extends StatelessWidget {
   final InspectionRequest request;
   final Certificate certificate;
-  final VoidCallback onViewPdf;
+  final VoidCallback? onViewPdf;
 
-  const ReviewSummaryCard({super.key, required this.request, required this.certificate, required this.onViewPdf});
+  const ReviewSummaryCard({super.key, required this.request, required this.certificate, this.onViewPdf});
 
   @override
   Widget build(BuildContext context) {
@@ -28,15 +32,7 @@ class ReviewSummaryCard extends StatelessWidget {
     final inspected = certificate.dateOf(CertDate.examination) ?? request.scheduledAt ?? request.receivedAt;
     final nextDue =
         certificate.dateOf(CertDate.nextExamination) ?? DateTime(inspected.year + 1, inspected.month, inspected.day);
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(color: AppColours.ink.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 6)),
-        ],
-      ),
+    return MCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -44,34 +40,39 @@ class ReviewSummaryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(t.reviewSummaryTitle, style: AppTextStyles.cardTitle.copyWith(fontSize: 19)),
-              GestureDetector(
-                onTap: onViewPdf,
-                child: Text(t.viewFullPdfAction, style: AppTextStyles.link.copyWith(fontSize: 14)),
-              ),
+              Text(t.reviewSummaryTitle, style: AppTextStyles.sectionTitle),
+              if (onViewPdf != null)
+                GestureDetector(
+                  onTap: onViewPdf,
+                  child: Text(t.viewFullPdfAction, style: AppTextStyles.link.copyWith(fontSize: 14)),
+                ),
             ],
           ),
-          const SizedBox(height: 14),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _Fact(label: t.clientLabel, value: request.clientName)),
-              const SizedBox(width: 12),
-              Expanded(child: _Fact(label: t.equipmentLabel, value: request.equipmentTitle)),
-            ],
+          const SizedBox(height: 16),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: _Fact(label: t.clientLabel, value: request.clientName)),
+                const SizedBox(width: 8),
+                Expanded(child: _Fact(label: t.equipmentLabel, value: request.equipmentTitle)),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _Fact(label: t.inspectedLabel, value: DateFormat('d MMM yyyy', locale).format(inspected)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _Fact(label: t.nextDueLabel, value: DateFormat('MMM yyyy', locale).format(nextDue)),
-              ),
-            ],
+          const SizedBox(height: 8),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _Fact(label: t.inspectedLabel, value: DateFormat('d MMM yyyy', locale).format(inspected)),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _Fact(label: t.nextDueLabel, value: DateFormat('MMM yyyy', locale).format(nextDue)),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
           CertificateFindingTiles(certificate: certificate),
@@ -91,14 +92,27 @@ class _Fact extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(label, style: AppTextStyles.caption),
-        const SizedBox(height: 2),
-        Text(value, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColours.surfaceMuted,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: AppTextStyles.caption.copyWith(fontSize: 12, height: 16 / 12)),
+          const SizedBox(height: 3),
+          Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.emphasis.copyWith(fontSize: 14, height: 20 / 14),
+          ),
+        ],
+      ),
     );
   }
 }

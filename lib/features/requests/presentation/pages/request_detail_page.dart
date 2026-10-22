@@ -8,6 +8,7 @@ import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/m_back_button.dart';
 import '../../../../core/shared/m_card.dart';
 import '../../../../core/shared/m_notice.dart';
+import '../../../../core/widgets/app_header.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../quotation/presentation/bloc/quotation_form_cubit.dart';
@@ -52,10 +53,13 @@ class RequestDetailPage extends StatelessWidget {
           child: Column(
             children: [
               _Header(request: request),
-              Expanded(child: _Body(request: request, quotable: _quotable)),
+              Expanded(
+                child: _Body(request: request, quotable: _quotable),
+              ),
               if (_quotable)
                 QuotationFooter(
-                  unitsLabel: AppLocalizations.of(context)!.unitsCount(request.totalUnits),
+                  unitsLabel: AppLocalizations.of(context)!
+                      .unitsCount(request.totalUnits),
                   // The request has left New/Negotiating for the coordinator
                   // once sent or rejected — back to the inbox.
                   onSent: () => Navigator.of(context).pop(),
@@ -79,30 +83,35 @@ class _Body extends StatelessWidget {
   const _Body({required this.request, required this.quotable});
 
   void _notBuiltYet(BuildContext context) {
-    MToast.showError(message: AppLocalizations.of(context)!.quotationBackendNotBuiltYet);
+    MToast.showError(
+      message: AppLocalizations.of(context)!.quotationBackendNotBuiltYet,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       children: [
         if (request.emailPreview != null || request.emailFrom != null) ...[
           EmailSummaryCard(
             request: request,
             onReadFullEmail: () => _notBuiltYet(context),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
         ],
-        EquipmentGrid(items: request.items, preferredDate: request.preferredDate),
-        const SizedBox(height: 14),
-        _LocationCard(location: request.location),
+        EquipmentGrid(
+          items: request.items,
+          preferredDate: request.preferredDate,
+          location: request.location,
+          clientId: request.clientId,
+        ),
         if (request.accessNotes != null && request.accessNotes!.isNotEmpty) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           _NotesCard(notes: request.accessNotes!),
         ],
         if (quotable) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           const QuotationReplyCard(),
         ],
       ],
@@ -121,12 +130,20 @@ class _NotReadyNotice extends StatelessWidget {
       context,
       onSubmit: ({required location, required items}) async {
         try {
-          await getIt<CompleteIntake>()(requestId: request.id, location: location, items: items);
+          await getIt<CompleteIntake>()(
+            requestId: request.id,
+            location: location,
+            items: items,
+          );
           if (context.mounted) MToast.showSuccess(message: t.requestCompleted);
           return true;
         } catch (e) {
           if (context.mounted) {
-            MToast.showError(message: e is RequestsFailure ? e.code.message(t) : t.actionFailed);
+            MToast.showError(
+              message: e is RequestsFailure
+                  ? e.code.message(t)
+                  : t.actionFailed,
+            );
           }
           return false;
         }
@@ -162,10 +179,14 @@ class _NotReadyNotice extends StatelessWidget {
               child: OutlinedButton(
                 onPressed: () => _complete(context),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColours.primaryDark,
-                  side: const BorderSide(color: AppColours.primaryTint, width: 1.5),
-                  textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 14, color: AppColours.primaryDark),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  foregroundColor: AppColours.ink,
+                  side: const BorderSide(color: AppColours.border),
+                  textStyle: AppTextStyles.buttonLabel.copyWith(
+                    color: AppColours.ink,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
                 child: Text(t.completeRequestAction),
               ),
@@ -198,7 +219,8 @@ class _MovedOnNotice extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     final status = request.status;
     final reason = request.rejectReason;
-    final message = status == JobStatus.quoteRejected && reason != null && reason.isNotEmpty
+    final message =
+        status == JobStatus.quoteRejected && reason != null && reason.isNotEmpty
         ? t.requestRejectedReasonMessage(reason)
         : t.requestMovedOnMessage(status.label(t));
 
@@ -212,7 +234,11 @@ class _MovedOnNotice extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          MNotice(type: _typeFor(status), title: status.label(t), message: message),
+          MNotice(
+            type: _typeFor(status),
+            title: status.label(t),
+            message: message,
+          ),
           const SizedBox(height: 12),
           SizedBox(
             height: 48,
@@ -225,10 +251,14 @@ class _MovedOnNotice extends StatelessWidget {
               icon: const Icon(Icons.description_outlined, size: 18),
               label: Text(t.viewInQuotationsAction),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColours.primaryDark,
-                side: const BorderSide(color: AppColours.primaryTint, width: 1.5),
-                textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 14, color: AppColours.primaryDark),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                foregroundColor: AppColours.ink,
+                side: const BorderSide(color: AppColours.border),
+                textStyle: AppTextStyles.buttonLabel.copyWith(
+                  color: AppColours.ink,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
           ),
@@ -245,12 +275,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: AppColours.border)),
-      ),
+    return AppBanner(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -266,16 +291,24 @@ class _Header extends StatelessWidget {
                   children: [
                     Text(
                       request.id,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.24,
+                        height: 16 / 12,
                         fontSize: 12,
-                        color: AppColours.inkMuted,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       request.equipmentTitle,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.cardTitle.copyWith(fontSize: 18),
+                      style: AppTextStyles.sectionTitle.copyWith(
+                        fontSize: 22,
+                        height: 28 / 22,
+                        letterSpacing: -0.22,
+                      ),
                     ),
                   ],
                 ),
@@ -284,36 +317,6 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           JobStepper(status: request.status),
-        ],
-      ),
-    );
-  }
-}
-
-class _LocationCard extends StatelessWidget {
-  final String location;
-
-  const _LocationCard({required this.location});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    return MCard(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          const Icon(Icons.location_on_outlined, size: 20, color: AppColours.primaryDark),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(t.locationLabel, style: AppTextStyles.caption),
-                Text(location, style: AppTextStyles.emphasis.copyWith(fontSize: 14)),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -329,14 +332,19 @@ class _NotesCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     return MCard(
-      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(t.accessNotesLabel, style: AppTextStyles.caption),
           const SizedBox(height: 4),
-          Text(notes, style: AppTextStyles.body),
+          Text(
+            notes,
+            style: AppTextStyles.body.copyWith(
+              height: 22 / 14,
+              color: AppColours.ink,
+            ),
+          ),
         ],
       ),
     );

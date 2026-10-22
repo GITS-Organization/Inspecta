@@ -42,45 +42,49 @@ class ReviewFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: AppColours.border)),
+        border: Border(top: BorderSide(color: AppColours.borderSubtle)),
       ),
-      child: BlocBuilder<ReviewDetailCubit, ReviewDetailState>(
-        builder: (context, state) {
-          return Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: SizedBox(
-                  height: 56,
-                  child: OutlinedButton(
-                    onPressed: state.certificate == null || state.isBusy ? null : () => _return(context),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColours.dangerText,
-                      side: const BorderSide(color: AppColours.dangerBorder, width: 1.5),
-                      textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.only(bottom: 6),
+        child: BlocBuilder<ReviewDetailCubit, ReviewDetailState>(
+          builder: (context, state) {
+            return Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: SizedBox(
+                    height: 54,
+                    child: OutlinedButton(
+                      onPressed: state.certificate == null || state.isBusy ? null : () => _return(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColours.dangerText,
+                        side: const BorderSide(color: AppColours.dangerBorder),
+                        textStyle: AppTextStyles.buttonLabel,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: state.isReturning
+                          ? const SizedBox.square(dimension: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
+                          : Text(t.returnAction),
                     ),
-                    child: state.isReturning
-                        ? const SizedBox.square(dimension: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
-                        : Text(t.returnAction),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 5,
-                child: MPrimaryButton(
-                  label: t.approveAndSendAction,
-                  loading: state.isApproving,
-                  onPressed: state.canApprove && !state.isBusy ? () => _confirmApprove(context) : null,
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 5,
+                  child: MPrimaryButton(
+                    label: t.approveAndSendAction,
+                    loading: state.isApproving,
+                    onPressed: state.canApprove && !state.isBusy ? () => _confirmApprove(context) : null,
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

@@ -4,11 +4,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
+import '../../../../core/enums/job_status.dart';
 import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/loading.dart';
+import '../../../../core/shared/m_back_button.dart';
+import '../../../../core/shared/m_card.dart';
 import '../../../../core/shared/m_notice.dart';
-import '../../../../core/shared/m_primary_button.dart';
 import '../../../../core/shared/m_text_field.dart';
+import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/network_painter.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../certificate/domain/certificate_number.dart';
@@ -16,6 +20,8 @@ import '../../../certificate/domain/entities/certificate.dart';
 import '../../../certificate/presentation/pdf/certificate_pdf_preview.dart';
 import '../../../certificate/presentation/widgets/certificate_labels.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
+import '../../../requests/presentation/widgets/job_stepper.dart';
+import '../../../requests/presentation/widgets/status_chip.dart';
 import '../../../technical_manager/presentation/widgets/review_summary_card.dart';
 import '../bloc/send_certificate_cubit.dart';
 
@@ -32,7 +38,7 @@ class SendCertificatePage extends StatelessWidget {
     return BlocProvider(
       create: (_) => getIt<SendCertificateCubit>(param1: request)..start(),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
+        value: SystemUiOverlayStyle.dark,
         child: _SendView(request: request),
       ),
     );
@@ -123,60 +129,81 @@ class _SendViewState extends State<_SendView> {
                   final certificate = state.certificate;
                   if (certificate == null) return const SizedBox.shrink();
                   return ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                     children: [
-                      ReviewSummaryCard(
-                        request: request,
-                        certificate: certificate,
+                      _CertificatePass(
+                        status: request.status,
+                        code: certificate.verificationCode,
                         onViewPdf: () => _viewPdf(certificate),
                       ),
-                      const SizedBox(height: 14),
-                      _QrCodeCard(code: certificate.verificationCode),
                       const SizedBox(height: 12),
-                      SizedBox(
-                        height: 52,
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () => _viewPdf(certificate),
-                          icon: const Icon(Icons.picture_as_pdf_outlined),
-                          label: Text(t.previewFinalPdfAction),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColours.primaryDark,
-                            side: const BorderSide(color: AppColours.primaryColor, width: 1.5),
-                            textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 15),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
+                      ReviewSummaryCard(request: request, certificate: certificate),
+                      const SizedBox(height: 12),
+                      MCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(t.sendSignedPdfToLabel, style: AppTextStyles.sectionTitle),
+                            const SizedBox(height: 12),
+                            MTextField(
+                              controller: _email,
+                              onChanged: context.read<SendCertificateCubit>().setEmail,
+                              enabled: !state.isSending,
+                              prefixIcon: Icons.mail_outline_rounded,
+                              keyboardType: TextInputType.emailAddress,
+                              hintText: t.emailHint,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(t.sendCertificateHint, style: AppTextStyles.caption),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 18),
-                      Text(t.sendSignedPdfToLabel, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
-                      const SizedBox(height: 8),
-                      MTextField(
-                        controller: _email,
-                        onChanged: context.read<SendCertificateCubit>().setEmail,
-                        enabled: !state.isSending,
-                        prefixIcon: Icons.mail_outline_rounded,
-                        keyboardType: TextInputType.emailAddress,
-                        hintText: t.emailHint,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(t.sendCertificateHint, style: AppTextStyles.caption),
                     ],
                   );
                 },
               ),
             ),
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                border: Border(top: BorderSide(color: AppColours.border)),
+                border: Border(top: BorderSide(color: AppColours.borderSubtle)),
               ),
-              child: BlocBuilder<SendCertificateCubit, SendCertificateState>(
-                builder: (context, state) => MPrimaryButton(
-                  label: t.sendToClientAction,
-                  loading: state.isSending,
-                  onPressed: state.canSend ? _confirmSend : null,
+              child: SafeArea(
+                top: false,
+                minimum: const EdgeInsets.only(bottom: 6),
+                child: BlocBuilder<SendCertificateCubit, SendCertificateState>(
+                  builder: (context, state) {
+                    final enabled = state.canSend && !state.isSending;
+                    return SizedBox(
+                      height: 54,
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: enabled ? _confirmSend : null,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColours.primaryColor,
+                          disabledBackgroundColor: state.isSending
+                              ? AppColours.primaryColor
+                              : AppColours.primaryColor.withValues(alpha: 0.4),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: state.isSending
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.send_rounded, size: 18, color: Colors.white),
+                                  const SizedBox(width: 8),
+                                  Text(t.sendToClientAction, style: AppTextStyles.buttonLabel),
+                                ],
+                              ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -191,59 +218,136 @@ class _SendViewState extends State<_SendView> {
   }
 }
 
-/// The code the technical manager's approval issued — what the QR on the PDF
-/// (and on the dashboard) carries — or a note when the certificate predates
-/// QR codes.
-class _QrCodeCard extends StatelessWidget {
+/// The certificate as a navy "pass": the approved status, the verification
+/// code the technical manager's approval issued (what the QR on the PDF
+/// and on the dashboard carries) — or a note when the certificate predates
+/// QR codes — and the button to preview the final signed PDF.
+class _CertificatePass extends StatelessWidget {
+  final JobStatus status;
   final String? code;
+  final VoidCallback onViewPdf;
 
-  const _QrCodeCard({required this.code});
+  const _CertificatePass({required this.status, required this.code, required this.onViewPdf});
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final issued = code != null;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: issued ? AppColours.successBackground : AppColours.chipAmberBackground,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.qr_code_2_rounded,
-            size: 32,
-            color: issued ? AppColours.successIcon : AppColours.chipAmberText,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(t.verificationCodeLabel, style: AppTextStyles.caption),
-                const SizedBox(height: 2),
-                Text(
-                  code ?? t.noVerificationCodeHint,
-                  style: issued
-                      ? const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppColours.successText,
-                        )
-                      : AppTextStyles.subtitle.copyWith(fontSize: 13, color: AppColours.chipAmberText),
-                ),
-              ],
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(color: AppColours.navy),
+        child: Stack(
+          children: [
+            const Positioned.fill(
+              child: IgnorePointer(child: AnimatedNetwork(nodes: 10)),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.verified_rounded, size: 14, color: AppColours.successOnNavy),
+                        const SizedBox(width: 6),
+                        Text(
+                          status.label(t),
+                          style: AppTextStyles.badge.copyWith(color: AppColours.successOnNavy),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          Icons.qr_code_2_rounded,
+                          size: 36,
+                          color: issued ? AppColours.navy : AppColours.inkMuted,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              t.verificationCodeLabel,
+                              style: AppTextStyles.caption.copyWith(
+                                fontSize: 12,
+                                height: 16 / 12,
+                                color: AppColours.onNavyMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              code ?? t.noVerificationCodeHint,
+                              style: issued
+                                  ? const TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 20,
+                                      height: 28 / 20,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 1,
+                                      color: Colors.white,
+                                    )
+                                  : AppTextStyles.subtitle.copyWith(
+                                      fontSize: 13,
+                                      color: AppColours.amberOnPrimary,
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 48,
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: onViewPdf,
+                      icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                      label: Text(t.previewFinalPdfAction),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColours.navy,
+                        textStyle: AppTextStyles.buttonLabel,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
+/// The banner: back button, certificate number and client, the title, and
+/// the job's progress row — which, with the certificate approved, shows
+/// everything done up to Certify and only "Sent" left.
 class _Header extends StatelessWidget {
   final InspectionRequest request;
 
@@ -252,56 +356,50 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    return Container(
-      padding: EdgeInsets.fromLTRB(20, MediaQuery.paddingOf(context).top + 16, 20, 20),
-      decoration: const BoxDecoration(
-        color: AppColours.primaryColor,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
-      ),
-      child: Row(
+    return AppBanner(
+      topInset: MediaQuery.paddingOf(context).top,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            tooltip: t.back,
-            style: IconButton.styleFrom(
-              fixedSize: const Size.square(44),
-              backgroundColor: Colors.white.withValues(alpha: 0.16),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-            icon: const Icon(Icons.chevron_left_rounded, size: 26),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(request.clientName, style: AppTextStyles.caption.copyWith(color: AppColours.onPrimaryMuted)),
-                Text(
-                  t.sendCertificateTitle,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.cardTitle.copyWith(color: Colors.white, fontSize: 21),
+          Row(
+            children: [
+              const MBackButton(),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${certNumberFor(request)} · ${request.clientName}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.24,
+                        height: 16 / 12,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      t.sendCertificateTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.sectionTitle.copyWith(
+                        fontSize: 22,
+                        height: 28 / 22,
+                        letterSpacing: -0.22,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              certNumberFor(request),
-              style: const TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
               ),
-            ),
+            ],
           ),
+          const SizedBox(height: 18),
+          JobStepper(status: request.status),
         ],
       ),
     );

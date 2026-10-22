@@ -13,7 +13,6 @@ import '../../domain/entities/requests_tab.dart';
 import '../bloc/requests_list_cubit.dart';
 import 'request_card.dart';
 import 'requests_labels.dart';
-import 'requests_tab_bar.dart';
 
 /// The tab bar, section heading, and the live, filtered list of request
 /// cards — with loading, error, and empty states.
@@ -39,29 +38,22 @@ class RequestsListView extends StatelessWidget {
         return CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
-              sliver: SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: RequestsTabBar(
-                    selected: state.tab,
-                    countOf: state.countOf,
-                    onChanged: context.read<RequestsListCubit>().setTab,
-                  ),
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
               sliver: SliverToBoxAdapter(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
-                      _heading(t, state.tab),
-                      style: AppTextStyles.cardTitle.copyWith(fontSize: 18),
+                      t.tabCount(
+                        _heading(t, state.tab),
+                        state.countOf(state.tab),
+                      ),
+                      style: AppTextStyles.sectionTitle.copyWith(
+                        fontSize: 14
+                      ),
                     ),
-                    Text(t.newestFirst, style: AppTextStyles.caption),
                   ],
                 ),
               ),
@@ -74,9 +66,9 @@ class RequestsListView extends StatelessWidget {
             else
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(
-                  20,
+                  16,
                   0,
-                  20,
+                  16,
                   AppLayout.bottomNavClearance,
                 ),
                 sliver: SliverList.separated(
@@ -126,9 +118,17 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.inbox_outlined, size: 40, color: AppColours.inkMuted),
+            const Icon(
+              Icons.inbox_outlined,
+              size: 40,
+              color: AppColours.inkMuted,
+            ),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center, style: AppTextStyles.subtitle),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.subtitle,
+            ),
           ],
         ),
       ),

@@ -33,27 +33,24 @@ class ReviewQueuePage extends StatelessWidget {
     return BlocProvider(
       create: (_) => getIt<ReviewQueueCubit>()..start(),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
+        value: SystemUiOverlayStyle.dark,
         child: Scaffold(
           backgroundColor: AppColours.background,
-          body: SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                ReviewHeader(
-                  title: t.reviewQueueTitle,
-                  onOpenProfile: onOpenProfile,
-                  child: BlocBuilder<ReviewQueueCubit, ReviewQueueState>(
-                    builder: (context, state) => ReviewStatTiles(
-                      toReview: state.toReview.length,
-                      returned: state.returned.length,
-                      sent: state.sent.length,
-                    ),
+          body: Column(
+            children: [
+              ReviewHeader(
+                title: t.reviewQueueTitle,
+                onOpenProfile: onOpenProfile,
+                child: BlocBuilder<ReviewQueueCubit, ReviewQueueState>(
+                  builder: (context, state) => ReviewStatTiles(
+                    toReview: state.toReview.length,
+                    returned: state.returned.length,
+                    sent: state.sent.length,
                   ),
                 ),
-                const Expanded(child: _Body()),
-              ],
-            ),
+              ),
+              const Expanded(child: _Body()),
+            ],
           ),
         ),
       ),
@@ -93,9 +90,12 @@ class _Body extends StatelessWidget {
         final toReview = state.toReview;
         final returned = state.returned;
         return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, AppLayout.bottomNavClearance),
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, AppLayout.bottomNavClearance),
           children: [
-            Text(t.waitingForSignatureTitle, style: AppTextStyles.cardTitle.copyWith(fontSize: 18)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(t.waitingForSignatureTitle, style: AppTextStyles.sectionTitle),
+            ),
             const SizedBox(height: 12),
             if (toReview.isEmpty)
               Padding(

@@ -36,14 +36,7 @@ class QuoteBoardCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppColours.ink.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(24),
       ),
       clipBehavior: Clip.antiAlias,
       child: Material(
@@ -51,7 +44,7 @@ class QuoteBoardCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -67,10 +60,11 @@ class QuoteBoardCard extends StatelessWidget {
                               ? t.quoteDraftLabel
                               : t.quoteVersionLabel(quotation.version!),
                         ),
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
+                        style: AppTextStyles.caption.copyWith(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.24,
+                          height: 16 / 12,
                           fontSize: 12,
-                          color: AppColours.inkMuted,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -84,18 +78,18 @@ class QuoteBoardCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   quotation.clientName,
-                  style: AppTextStyles.cardTitle.copyWith(fontSize: 16),
+                  style: AppTextStyles.cardTitle,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   '${quotation.equipmentSummary} · ${quotation.requestNumber}',
-                  style: AppTextStyles.subtitle,
+                  style: AppTextStyles.caption.copyWith(height: 18 / 13),
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 _PriceSection(t: t, quotation: quotation),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
@@ -161,7 +155,7 @@ class _PriceSection extends StatelessWidget {
                 valueColor: AppColours.ink,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: _PriceBox(
                 label: t.clientAsksLabel,
@@ -180,10 +174,10 @@ class _PriceSection extends StatelessWidget {
     if (note != null && note.isNotEmpty) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: AppColours.surfaceMuted,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Text(
           '"$note"',
@@ -200,7 +194,7 @@ class _PriceSection extends StatelessWidget {
         if (quotation.totalPiastres != null)
           Text(
             Currency.formatEgp(quotation.totalPiastres!),
-            style: AppTextStyles.cardTitle.copyWith(fontSize: 16),
+            style: AppTextStyles.sectionTitle.copyWith(fontWeight: FontWeight.w700),
           )
         else
           Text(quotation.type.label(t), style: AppTextStyles.emphasis),
@@ -228,8 +222,8 @@ class _PriceBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(14)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -263,10 +257,10 @@ class _ActionButton extends StatelessWidget {
           backgroundColor: AppColours.primaryColor,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 22),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
-        child: Text(label, style: AppTextStyles.badge.copyWith(fontSize: 15, color: Colors.white)),
+        child: Text(label, style: AppTextStyles.buttonLabel.copyWith(fontSize: 14)),
       ),
     );
   }

@@ -4,7 +4,7 @@ import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// The header's three counts: certificates to review (emphasised),
+/// The header's three counts: certificates to review (the navy tile),
 /// returned and sent.
 class ReviewStatTiles extends StatelessWidget {
   final int toReview;
@@ -38,10 +38,11 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: emphasised ? Colors.white : Colors.white.withValues(alpha: 0.16),
+        color: emphasised ? AppColours.navy : Colors.white,
         borderRadius: BorderRadius.circular(14),
+        border: emphasised ? null : Border.all(color: AppColours.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,17 +51,21 @@ class _StatTile extends StatelessWidget {
           Text(
             '$value',
             style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: emphasised ? AppColours.chipAmberTextStrong : Colors.white,
+              fontSize: 24,
+              height: 28 / 24,
+              fontWeight: FontWeight.w700,
+              color: emphasised ? Colors.white : AppColours.ink,
             ),
           ),
           Text(
             label,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.caption.copyWith(
+              fontSize: 12,
+              height: 16 / 12,
               fontWeight: FontWeight.w600,
-              color: emphasised ? AppColours.inkSecondary : AppColours.onPrimaryMuted,
+              color: emphasised ? AppColours.onNavyMuted : AppColours.inkMuted,
             ),
           ),
         ],

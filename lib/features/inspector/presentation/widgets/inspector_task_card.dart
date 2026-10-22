@@ -44,14 +44,10 @@ class InspectorTaskCard extends StatelessWidget {
     final needsResponse = task.status == JobStatus.assigned;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(color: AppColours.ink.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 6)),
-          BoxShadow(color: AppColours.ink.withValues(alpha: 0.04), blurRadius: 2),
-        ],
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,7 +62,7 @@ class InspectorTaskCard extends StatelessWidget {
                       ? '—'
                       : DateFormat(showDate ? 'EEE, d MMM · HH:mm' : 'HH:mm', locale).format(scheduledAt),
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.cardTitle.copyWith(fontSize: 18, color: AppColours.primaryDark),
+                  style: AppTextStyles.sectionTitle.copyWith(fontSize: 20, height: 26 / 20, fontWeight: FontWeight.w700),
                 ),
               ),
               const SizedBox(width: 8),
@@ -76,7 +72,7 @@ class InspectorTaskCard extends StatelessWidget {
           if (overdueDays > 0) ...[
             const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(color: AppColours.chipRedBackground, borderRadius: BorderRadius.circular(999)),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -91,19 +87,42 @@ class InspectorTaskCard extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 10),
-          Text(task.equipmentTitle, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
-          const SizedBox(height: 4),
+          const SizedBox(height: 16),
           Row(
             children: [
-              const Icon(Icons.location_on_outlined, size: 15, color: AppColours.inkMuted),
-              const SizedBox(width: 4),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(color: AppColours.primaryTint, borderRadius: BorderRadius.circular(14)),
+                child: const Icon(Icons.precision_manufacturing_outlined, size: 22, color: AppColours.primaryColor),
+              ),
+              const SizedBox(width: 14),
               Expanded(
-                child: Text(task.location, style: AppTextStyles.subtitle, overflow: TextOverflow.ellipsis),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(task.equipmentTitle, style: AppTextStyles.cardTitle, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_outlined, size: 15, color: AppColours.inkMuted),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            task.location,
+                            style: AppTextStyles.caption.copyWith(height: 18 / 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           if (needsResponse)
             Row(
               children: [
@@ -114,9 +133,9 @@ class InspectorTaskCard extends StatelessWidget {
                       onPressed: submitting ? null : onDecline,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColours.dangerText,
-                        side: const BorderSide(color: AppColours.dangerBorder, width: 1.5),
+                        side: const BorderSide(color: AppColours.dangerBorder),
                         textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 14, color: AppColours.dangerText),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       child: Text(t.declineAction),
                     ),
@@ -130,7 +149,7 @@ class InspectorTaskCard extends StatelessWidget {
                       onPressed: submitting ? null : onAccept,
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColours.primaryColor,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       child: Text(t.acceptAction, style: AppTextStyles.buttonLabel.copyWith(fontSize: 14)),
                     ),
@@ -148,9 +167,9 @@ class InspectorTaskCard extends StatelessWidget {
                     onPressed: onNavigate,
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.zero,
-                      foregroundColor: AppColours.primaryDark,
-                      side: const BorderSide(color: AppColours.primaryTint, width: 1.5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      foregroundColor: AppColours.ink,
+                      side: const BorderSide(color: AppColours.border),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     child: const Icon(Icons.near_me_outlined, size: 18),
                   ),
@@ -163,7 +182,7 @@ class InspectorTaskCard extends StatelessWidget {
                       onPressed: submitting ? null : onContinueCertificate,
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColours.primaryColor,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       child: Text(
                         t.continueCertificateAction,
@@ -194,7 +213,7 @@ class _StatusBadge extends StatelessWidget {
       _ => (AppColours.chipBlueBackground, AppColours.chipBlueText, t.taskInProgressBadge),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(999)),
       child: Text(label, style: AppTextStyles.badge.copyWith(color: textColor)),
     );

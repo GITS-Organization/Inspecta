@@ -52,22 +52,19 @@ class _CardShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final content = Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(24),
         border: borderColor != null ? Border.all(color: borderColor!, width: 1.5) : null,
-        boxShadow: [
-          BoxShadow(color: AppColours.ink.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 6)),
-        ],
       ),
       child: child,
     );
     if (onTap == null) return content;
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(borderRadius: BorderRadius.circular(18), onTap: onTap, child: content),
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(borderRadius: BorderRadius.circular(24), onTap: onTap, child: content),
     );
   }
 }
@@ -90,12 +87,22 @@ class _TopRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          left,
-          style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: AppColours.inkMuted),
+        Flexible(
+          child: Text(
+            left,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.caption.copyWith(
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.24,
+              height: 16 / 12,
+              fontSize: 12,
+            ),
+          ),
         ),
+        const SizedBox(width: 8),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(color: badgeBackground, borderRadius: BorderRadius.circular(999)),
           child: Text(badgeLabel, style: AppTextStyles.badge.copyWith(color: badgeText)),
         ),
@@ -116,8 +123,9 @@ class _TitleBlock extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(title, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
-        Text(subtitle, style: AppTextStyles.subtitle.copyWith(fontSize: 13), overflow: TextOverflow.ellipsis),
+        Text(title, style: AppTextStyles.cardTitle),
+        const SizedBox(height: 2),
+        Text(subtitle, style: AppTextStyles.caption.copyWith(height: 18 / 13), overflow: TextOverflow.ellipsis),
       ],
     );
   }
@@ -153,10 +161,10 @@ class _ReturnedCard extends StatelessWidget {
           if (note != null && note.isNotEmpty) ...[
             const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: AppColours.chipAmberBackground.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Text(
                 '"$note"',
@@ -175,8 +183,8 @@ class _ReturnedCard extends StatelessWidget {
                 ),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColours.primaryColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 child: Text(t.fixAndResubmitAction, style: AppTextStyles.buttonLabel.copyWith(fontSize: 14)),
               ),
@@ -216,11 +224,11 @@ class _DraftCard extends StatelessWidget {
           _TitleBlock(title: request.equipmentTitle, subtitle: request.location),
           const SizedBox(height: 10),
           ClipRRect(
-            borderRadius: BorderRadius.circular(3),
+            borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: percent / 100,
-              minHeight: 6,
-              backgroundColor: AppColours.surfaceMuted,
+              minHeight: 8,
+              backgroundColor: AppColours.borderSubtle,
               valueColor: const AlwaysStoppedAnimation(AppColours.primaryColor),
             ),
           ),
@@ -234,10 +242,10 @@ class _DraftCard extends StatelessWidget {
                   MaterialPageRoute<void>(builder: (_) => CertificatePage(request: request)),
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColours.primaryDark,
-                  side: const BorderSide(color: AppColours.primaryTint, width: 1.5),
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  foregroundColor: AppColours.ink,
+                  side: const BorderSide(color: AppColours.border),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 child: Text(t.continueCertificateAction, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
               ),

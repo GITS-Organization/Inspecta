@@ -50,12 +50,12 @@ class _PriceFieldState extends State<PriceField> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          height: 54,
+          height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: borderColor, width: _focusNode.hasFocus ? 2 : 1.5),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: borderColor, width: _focusNode.hasFocus ? 2 : 1),
           ),
           child: Row(
             children: [
@@ -63,11 +63,11 @@ class _PriceFieldState extends State<PriceField> {
                 'EGP',
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   color: AppColours.inkMuted,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: TextField(
                   controller: widget.controller,
@@ -78,7 +78,7 @@ class _PriceFieldState extends State<PriceField> {
                     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
                   ],
                   textAlignVertical: TextAlignVertical.center,
-                  style: AppTextStyles.input,
+                  style: AppTextStyles.input.copyWith(fontWeight: FontWeight.w600),
                   decoration: const InputDecoration(
                     border: InputBorder.none,
                     isCollapsed: true,

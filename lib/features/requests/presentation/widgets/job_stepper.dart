@@ -60,25 +60,21 @@ class _Step extends StatelessWidget {
   Widget build(BuildContext context) {
     final done = index < current;
     final active = index == current;
-    final color = done
-        ? AppColours.successIcon
-        : active
-        ? AppColours.primaryColor
-        : AppColours.inkMuted;
+    final fill = done ? AppColours.successIcon : AppColours.primaryColor;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 26,
-          height: 26,
+          width: 28,
+          height: 28,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: done || active ? color : Colors.transparent,
+            color: done || active ? fill : Colors.white,
             border: done || active ? null : Border.all(color: AppColours.border, width: 2),
             boxShadow: active
-                ? [BoxShadow(color: AppColours.primaryTint, spreadRadius: 4)]
+                ? const [BoxShadow(color: AppColours.primaryTint, spreadRadius: 4)]
                 : null,
           ),
           child: done
@@ -96,11 +92,16 @@ class _Step extends StatelessWidget {
         Text(
           label,
           textAlign: TextAlign.center,
+          maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 11,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-            color: active ? AppColours.primaryDark : AppColours.inkSecondary,
+            fontWeight: active ? FontWeight.w700 : (done ? FontWeight.w600 : FontWeight.w500),
+            color: done
+                ? AppColours.successText
+                : active
+                ? AppColours.primaryDark
+                : AppColours.inkMuted,
           ),
         ),
       ],

@@ -40,14 +40,10 @@ class _TimesheetTaskCardState extends State<TimesheetTaskCard> {
     final entry = widget.row.entry;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(color: AppColours.ink.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 6)),
-          BoxShadow(color: AppColours.ink.withValues(alpha: 0.04), blurRadius: 2),
-        ],
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,7 +59,7 @@ class _TimesheetTaskCardState extends State<TimesheetTaskCard> {
                     children: [
                       TextSpan(
                         text: DateFormat('HH:mm', locale).format(request.scheduledAt!),
-                        style: const TextStyle(color: AppColours.primaryDark, fontWeight: FontWeight.w800),
+                        style: const TextStyle(color: AppColours.ink, fontWeight: FontWeight.w700),
                       ),
                       TextSpan(text: ' · ${request.status.label(t)}'),
                     ],
@@ -80,15 +76,15 @@ class _TimesheetTaskCardState extends State<TimesheetTaskCard> {
             ],
           ),
           const SizedBox(height: 8),
-          Text(request.equipmentTitle, style: AppTextStyles.cardTitle.copyWith(fontSize: 17)),
+          Text(request.equipmentTitle, style: AppTextStyles.cardTitle),
           const SizedBox(height: 2),
           Text(
             '${request.clientName} · ${request.location}',
-            style: AppTextStyles.subtitle,
+            style: AppTextStyles.caption.copyWith(height: 18 / 13),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           if (entry == null)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -100,10 +96,10 @@ class _TimesheetTaskCardState extends State<TimesheetTaskCard> {
                   icon: const Icon(Icons.add_rounded, size: 20),
                   label: Text(t.addTimeAndPriceAction),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColours.primaryDark,
-                    side: const BorderSide(color: AppColours.primaryTint, width: 1.5),
+                    foregroundColor: AppColours.ink,
+                    side: const BorderSide(color: AppColours.border),
                     textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
               ),

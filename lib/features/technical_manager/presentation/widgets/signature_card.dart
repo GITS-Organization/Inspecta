@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
+import '../../../../core/shared/m_card.dart';
 import '../../../../l10n/app_localizations.dart';
 import 'signature_pad.dart';
 
@@ -34,15 +35,7 @@ class SignatureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(color: AppColours.ink.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 6)),
-        ],
-      ),
+    return MCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -59,12 +52,16 @@ class SignatureCard extends StatelessWidget {
   }
 
   List<Widget> _saved(AppLocalizations t) => [
-    Text(t.savedSignatureTitle, style: AppTextStyles.cardTitle.copyWith(fontSize: 19)),
-    const SizedBox(height: 14),
+    Text(t.savedSignatureTitle, style: AppTextStyles.sectionTitle),
+    const SizedBox(height: 16),
     Container(
       height: 110,
       width: double.infinity,
-      decoration: BoxDecoration(color: AppColours.primarySoft, borderRadius: BorderRadius.circular(18)),
+      decoration: BoxDecoration(
+        color: AppColours.surfaceMuted,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColours.border),
+      ),
       child: SignaturePreview(strokes: savedStrokes!),
     ),
     const SizedBox(height: 10),
@@ -75,20 +72,20 @@ class SignatureCard extends StatelessWidget {
     Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(t.signHereTitle, style: AppTextStyles.cardTitle.copyWith(fontSize: 19)),
+        Text(t.signHereTitle, style: AppTextStyles.sectionTitle),
         TextButton(
           onPressed: enabled && strokes.isNotEmpty ? onClear : null,
           style: TextButton.styleFrom(
-            backgroundColor: AppColours.primarySoft,
+            backgroundColor: AppColours.primaryTint,
             foregroundColor: AppColours.primaryDark,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
           ),
           child: Text(t.clearAction, style: const TextStyle(fontWeight: FontWeight.w700)),
         ),
       ],
     ),
-    const SizedBox(height: 14),
+    const SizedBox(height: 16),
     SizedBox(
       height: 160,
       child: SignaturePad(strokes: strokes, onChanged: onStrokesChanged, enabled: enabled),

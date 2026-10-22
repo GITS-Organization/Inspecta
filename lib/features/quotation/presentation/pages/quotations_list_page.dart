@@ -3,18 +3,20 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/consts/app_colors.dart';
+import '../../../../core/consts/app_layout.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/loading.dart';
 import '../../../../core/shared/m_notice.dart';
+import '../../../../core/shared/m_search_field.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../auth/presentation/widgets/user_app_header.dart';
 import '../../domain/entities/quotation.dart';
 import '../../domain/entities/quotation_failure.dart';
 import '../../domain/entities/quote_board_tab.dart';
 import '../../domain/usecases/send_reminder.dart';
 import '../bloc/quotations_list_cubit.dart';
-import '../widgets/quotations_header.dart';
 import '../widgets/quote_board_card.dart';
 import '../widgets/quote_board_tab_bar.dart';
 import '../widgets/quote_value_summary.dart';
@@ -27,19 +29,23 @@ import 'quotation_detail_page.dart';
 /// Search covers client, request id, and quote number; date-range and
 /// client filter dropdowns from the original ask aren't built yet.
 class QuotationsListPage extends StatelessWidget {
-  const QuotationsListPage({super.key});
+  final VoidCallback? onOpenProfile;
+
+  const QuotationsListPage({super.key, this.onOpenProfile});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => getIt<QuotationsListCubit>()..start(),
-      child: const _QuotationsBoardView(),
+      child: _QuotationsBoardView(onOpenProfile: onOpenProfile),
     );
   }
 }
 
 class _QuotationsBoardView extends StatefulWidget {
-  const _QuotationsBoardView();
+  final VoidCallback? onOpenProfile;
+
+  const _QuotationsBoardView({this.onOpenProfile});
 
   @override
   State<_QuotationsBoardView> createState() => _QuotationsBoardViewState();
@@ -82,25 +88,34 @@ class _QuotationsBoardViewState extends State<_QuotationsBoardView> {
     final cubit = context.read<QuotationsListCubit>();
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: AppColours.background,
         body: Column(
           children: [
+            UserAppHeader(
+              title: t.quotationsTitle,
+              onOpenProfile: widget.onOpenProfile,
+              bottom: ISearchField(
+                controller: _searchController,
+                onChanged: cubit.setQuery,
+                hintText: t.searchQuotesHint,
+              ),
+            ),
+            const SizedBox(height: 12),
             BlocBuilder<QuotationsListCubit, QuotationsListState>(
-              buildWhen: (previous, current) => previous.board != current.board,
-              builder: (context, state) {
-                return QuotationsHeader(
-                  searchController: _searchController,
-                  onSearchChanged: cubit.setQuery,
-                  awaitingClient: state.countOf(QuoteBoardTab.open),
-                  clientReplied: state.countOf(QuoteBoardTab.replied),
-                  expiringSoon: state.expiringSoonCount,
-                  acceptedThisMonth: state.acceptedThisMonthCount,
-                  onTab: cubit.setTab,
-                  onExpiringSoon: cubit.showExpiringSoon,
-                );
-              },
+              buildWhen: (previous, current) =>
+                  previous.board != current.board ||
+                  previous.tab != current.tab ||
+                  previous.onlyExpiringSoon != current.onlyExpiringSoon,
+              builder: (context, state) => QuoteBoardTabBar(
+                selected: state.tab,
+                expiringSoonSelected: state.onlyExpiringSoon,
+                expiringSoonCount: state.expiringSoonCount,
+                countOf: state.countOf,
+                onChanged: cubit.setTab,
+                onExpiringSoon: cubit.showExpiringSoon,
+              ),
             ),
             Expanded(
               child: BlocBuilder<QuotationsListCubit, QuotationsListState>(
@@ -132,20 +147,15 @@ class _QuotationsBoardViewState extends State<_QuotationsBoardView> {
 
                   final visible = state.visible;
                   return ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, AppLayout.bottomNavClearance),
                     children: [
-                      if (!state.onlyExpiringSoon) ...[
-                        QuoteBoardTabBar(
-                          selected: state.tab,
-                          countOf: state.countOf,
-                          onChanged: cubit.setTab,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: QuoteValueSummary(
+                          openTotalPiastres: state.openTotalPiastres,
                         ),
-                        const SizedBox(height: 14),
-                      ],
-                      QuoteValueSummary(
-                        openTotalPiastres: state.openTotalPiastres,
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
                       if (visible.isEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 32),

@@ -32,6 +32,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Digital inspections, certificates and requests — all in one place.';
 
   @override
+  String get loginHeroEyebrow => 'INSPECTION MANAGEMENT';
+
+  @override
+  String get loginHeroLine1 => 'Inspect smarter.';
+
+  @override
+  String get loginHeroLine2 => 'Certify faster.';
+
+  @override
   String get signInTitle => 'Welcome back';
 
   @override
@@ -485,6 +494,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get locationLabel => 'Location';
+
+  @override
+  String get clientLocationLabel => 'Client location';
+
+  @override
+  String get equipmentLocationLabel => 'Equipment location';
+
+  @override
+  String equipmentItemOf(int number, int total) {
+    return 'Item $number of $total';
+  }
+
+  @override
+  String get prNumberLabel => 'PR number';
 
   @override
   String get preferredDateLabel => 'Preferred date';

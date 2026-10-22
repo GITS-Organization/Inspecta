@@ -36,7 +36,7 @@ class AssignmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tappable = request.isReadyToAssign || request.isAwaitingSend;
     final content = Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: request.isReadyToAssign
           ? _ReadyToAssign(request: request)
           : request.isAwaitingSend
@@ -47,11 +47,7 @@ class AssignmentCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(color: AppColours.ink.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 6)),
-          BoxShadow(color: AppColours.ink.withValues(alpha: 0.04), blurRadius: 2),
-        ],
+        borderRadius: BorderRadius.circular(24),
       ),
       clipBehavior: Clip.antiAlias,
       child: tappable
@@ -60,6 +56,54 @@ class AssignmentCard extends StatelessWidget {
               child: InkWell(onTap: request.isReadyToAssign ? onAssign : onSend, child: content),
             )
           : content,
+    );
+  }
+}
+
+/// The request id above a card's title: plain, slightly spaced caps-weight
+/// text rather than monospace.
+class _RequestId extends StatelessWidget {
+  final String id;
+
+  const _RequestId(this.id);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      id,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: AppTextStyles.caption.copyWith(
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.24,
+        height: 16 / 12,
+        fontSize: 12,
+      ),
+    );
+  }
+}
+
+/// The card's filled call-to-action. Purely visual: the whole card already
+/// navigates on tap.
+class _CardCta extends StatelessWidget {
+  final String label;
+
+  const _CardCta(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      width: double.infinity,
+      child: FilledButton(
+        onPressed: null,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColours.primaryColor,
+          disabledBackgroundColor: AppColours.primaryColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        child: IgnorePointer(child: Text(label, style: AppTextStyles.buttonLabel)),
+      ),
     );
   }
 }
@@ -83,41 +127,24 @@ class _ReadyToSend extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             StatusChip(status: request.status),
-            Text(
-              request.id,
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: AppColours.inkMuted),
-            ),
+            const SizedBox(width: 8),
+            Flexible(child: _RequestId(request.id)),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Text(
           request.equipmentTitle,
-          style: AppTextStyles.cardTitle.copyWith(fontSize: 16),
+          style: AppTextStyles.cardTitle,
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 2),
         Text(
           [request.clientName, if (name != null) name].join(' · '),
-          style: AppTextStyles.subtitle,
+          style: AppTextStyles.caption.copyWith(height: 18 / 13),
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 46,
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: null,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColours.primaryColor,
-              disabledBackgroundColor: AppColours.primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            // Purely visual: the whole card already navigates on tap.
-            child: IgnorePointer(
-              child: Text(t.sendToClientAction, style: AppTextStyles.buttonLabel.copyWith(fontSize: 15)),
-            ),
-          ),
-        ),
+        const SizedBox(height: 16),
+        _CardCta(t.sendToClientAction),
       ],
     );
   }
@@ -144,41 +171,24 @@ class _ReadyToAssign extends StatelessWidget {
               _DueBadge(label: due.dueLabel(t))
             else
               const SizedBox.shrink(),
-            Text(
-              request.id,
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: AppColours.inkMuted),
-            ),
+            const SizedBox(width: 8),
+            Flexible(child: _RequestId(request.id)),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Text(
           request.equipmentTitle,
-          style: AppTextStyles.cardTitle.copyWith(fontSize: 16),
+          style: AppTextStyles.cardTitle,
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 2),
         Text(
           '${request.clientName} · ${request.location}',
-          style: AppTextStyles.subtitle,
+          style: AppTextStyles.caption.copyWith(height: 18 / 13),
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 46,
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: null,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColours.primaryColor,
-              disabledBackgroundColor: AppColours.primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            // Purely visual: the whole card already navigates on tap.
-            child: IgnorePointer(
-              child: Text(t.assignInspectorAction, style: AppTextStyles.buttonLabel.copyWith(fontSize: 15)),
-            ),
-          ),
-        ),
+        const SizedBox(height: 16),
+        _CardCta(t.assignInspectorAction),
       ],
     );
   }
@@ -198,36 +208,39 @@ class _Assigned extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
     final scheduledAt = request.scheduledAt;
     final name = inspectorName;
 
     return Row(
       children: [
         Container(
-          width: 40,
-          height: 40,
+          width: 48,
+          height: 48,
           alignment: Alignment.center,
-          decoration: BoxDecoration(color: AppColours.successBackground, borderRadius: BorderRadius.circular(999)),
+          decoration: const BoxDecoration(
+            color: AppColours.successBackground,
+            shape: BoxShape.circle,
+          ),
           child: Text(
             name == null ? '?' : _initialsOf(name),
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColours.successIcon),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColours.successText),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(request.equipmentTitle, style: AppTextStyles.cardTitle.copyWith(fontSize: 15)),
+              Text(request.equipmentTitle, style: AppTextStyles.cardTitle, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 2),
               Text(
                 [
                   if (name != null) name,
                   if (scheduledAt != null)
                     DateFormat('EEE HH:mm', Localizations.localeOf(context).languageCode).format(scheduledAt),
                 ].join(' · '),
-                style: AppTextStyles.subtitle.copyWith(fontSize: 13),
+                style: AppTextStyles.caption.copyWith(height: 18 / 13),
                 overflow: TextOverflow.ellipsis,
               ),
             ],
@@ -248,7 +261,7 @@ class _DueBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(color: AppColours.chipRedBackground, borderRadius: BorderRadius.circular(999)),
       child: Text(label, style: AppTextStyles.badge.copyWith(color: AppColours.chipRedText)),
     );

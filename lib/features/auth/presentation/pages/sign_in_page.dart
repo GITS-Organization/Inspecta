@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +18,7 @@ import '../bloc/auth_cubit.dart';
 import '../bloc/sign_in_cubit.dart';
 import '../widgets/auth_labels.dart';
 import 'forgot_password_page.dart';
+import 'login_hero.dart';
 
 /// US-01.1 / US-01.2: email + password sign in with "Keep me signed in".
 class SignInPage extends StatelessWidget {
@@ -121,28 +122,63 @@ class _SignInViewState extends State<_SignInView> {
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light,
         child: Scaffold(
-          backgroundColor: Colors.white,
-          body: CustomScrollView(
-            slivers: [
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Column(
-                  children: [
-                    const _Header(),
-                    Expanded(child: _buildForm(t)),
-                    SafeArea(
-                      top: false,
-                      minimum: const EdgeInsets.fromLTRB(28, 0, 28, 28),
-                      child: Text(
-                        t.noAccount,
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.caption,
+          backgroundColor: AppColours.navy,
+          body: LoginHero(
+            child: CustomScrollView(
+              slivers: [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Column(
+                    children: [
+                      SafeArea(
+                        bottom: false,
+                        minimum: const EdgeInsets.only(top: 16),
+                        child: const Padding(
+                          padding: EdgeInsets.fromLTRB(28, 24, 28, 28),
+                          child: LoginIntro(),
+                        ),
                       ),
-                    ),
-                  ],
+                      const Spacer(),
+
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 20),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.28),
+                              blurRadius: 40,
+                              offset: const Offset(0, 16),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(28),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                            child: ColoredBox(
+                              color: Colors.white.withValues(alpha: 0.88),
+                              child: _buildForm(t),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SafeArea(
+                        top: false,
+                        minimum: const EdgeInsets.fromLTRB(28, 20, 28, 24),
+                        child: Text(
+                          t.noAccount,
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColours.onNavyMuted,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -157,17 +193,32 @@ class _SignInViewState extends State<_SignInView> {
         final failure = cubit.failure;
 
         return Padding(
-          padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
+          padding: const EdgeInsets.fromLTRB(24, 36, 24, 36),
           child: AutofillGroup(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Text(
+                  t.signInTitle,
+                  style: AppTextStyles.sectionTitle.copyWith(
+                    fontSize: 26,
+                    height: 32 / 26,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  t.signInSubtitle,
+                  style: AppTextStyles.caption.copyWith(
+                    fontSize: 14,
+                    height: 20 / 14,
+                  ),
+                ),
+                const SizedBox(height: 32),
                 if (failure != null) ...[
                   MNotice(type: MNoticeType.error, message: failure.message(t)),
                   const SizedBox(height: 18),
                 ],
-
-                const SizedBox(height: 8),
 
                 MTextField(
                   controller: _emailController,
@@ -184,10 +235,11 @@ class _SignInViewState extends State<_SignInView> {
                   errorText: _emailError,
                   onChanged: _onChanged,
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 24),
                 MPasswordField(
                   controller: _passwordController,
                   label: t.password,
+                  hintText: '********',
                   enabled: !submitting,
                   errorText: _passwordError,
                   onChanged: _onChanged,
@@ -217,7 +269,7 @@ class _SignInViewState extends State<_SignInView> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 28),
 
                 MPrimaryButton(
                   label: t.signIn,
@@ -229,63 +281,6 @@ class _SignInViewState extends State<_SignInView> {
           ),
         );
       },
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header();
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    final topInset = MediaQuery.paddingOf(context).top;
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(28, math.max(56, topInset + 32), 28, 64),
-      decoration: const BoxDecoration(
-        color: AppColours.primaryColor,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColours.ink.withValues(alpha: 0.18),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.verified_user_outlined,
-              size: 34,
-              color: AppColours.primaryDark,
-            ),
-          ),
-          const SizedBox(height: 22),
-          Text(
-            t.signInTitle,
-            style: AppTextStyles.pageTitle.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            t.signInSubtitle,
-            style: AppTextStyles.body.copyWith(
-              color: AppColours.onPrimaryMuted,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
