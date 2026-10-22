@@ -21,7 +21,12 @@ class ReviewSummaryCard extends StatelessWidget {
   final Certificate certificate;
   final VoidCallback? onViewPdf;
 
-  const ReviewSummaryCard({super.key, required this.request, required this.certificate, this.onViewPdf});
+  const ReviewSummaryCard({
+    super.key,
+    required this.request,
+    required this.certificate,
+    this.onViewPdf,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,9 +34,13 @@ class ReviewSummaryCard extends StatelessWidget {
     final locale = Localizations.localeOf(context).languageCode;
     // The dates the inspector put on the certificate; a certificate from
     // before that template falls back to the job's own schedule.
-    final inspected = certificate.dateOf(CertDate.examination) ?? request.scheduledAt ?? request.receivedAt;
+    final inspected =
+        certificate.dateOf(CertDate.examination) ??
+        request.scheduledAt ??
+        request.receivedAt;
     final nextDue =
-        certificate.dateOf(CertDate.nextExamination) ?? DateTime(inspected.year + 1, inspected.month, inspected.day);
+        certificate.dateOf(CertDate.nextExamination) ??
+        DateTime(inspected.year + 1, inspected.month, inspected.day);
     return MCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,11 +49,17 @@ class ReviewSummaryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(t.reviewSummaryTitle, style: AppTextStyles.sectionTitle),
+              Text(
+                t.reviewSummaryTitle,
+                style: AppTextStyles.sectionTitle.copyWith(fontSize: 14),
+              ),
               if (onViewPdf != null)
                 GestureDetector(
                   onTap: onViewPdf,
-                  child: Text(t.viewFullPdfAction, style: AppTextStyles.link.copyWith(fontSize: 14)),
+                  child: Text(
+                    t.viewFullPdfAction,
+                    style: AppTextStyles.link.copyWith(fontSize: 14),
+                  ),
                 ),
             ],
           ),
@@ -53,9 +68,16 @@ class ReviewSummaryCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(child: _Fact(label: t.clientLabel, value: request.clientName)),
+                Expanded(
+                  child: _Fact(label: t.clientLabel, value: request.clientName),
+                ),
                 const SizedBox(width: 8),
-                Expanded(child: _Fact(label: t.equipmentLabel, value: request.equipmentTitle)),
+                Expanded(
+                  child: _Fact(
+                    label: t.equipmentLabel,
+                    value: request.equipmentTitle,
+                  ),
+                ),
               ],
             ),
           ),
@@ -65,11 +87,17 @@ class ReviewSummaryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
-                  child: _Fact(label: t.inspectedLabel, value: DateFormat('d MMM yyyy', locale).format(inspected)),
+                  child: _Fact(
+                    label: t.inspectedLabel,
+                    value: DateFormat('d MMM yyyy', locale).format(inspected),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _Fact(label: t.nextDueLabel, value: DateFormat('MMM yyyy', locale).format(nextDue)),
+                  child: _Fact(
+                    label: t.nextDueLabel,
+                    value: DateFormat('MMM yyyy', locale).format(nextDue),
+                  ),
                 ),
               ],
             ),
@@ -103,13 +131,22 @@ class _Fact extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: AppTextStyles.caption.copyWith(fontSize: 12, height: 16 / 12)),
+          Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              fontSize: 12,
+              height: 16 / 12,
+            ),
+          ),
           const SizedBox(height: 3),
           Text(
             value,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.emphasis.copyWith(fontSize: 14, height: 20 / 14),
+            style: AppTextStyles.emphasis.copyWith(
+              fontSize: 14,
+              height: 20 / 14,
+            ),
           ),
         ],
       ),

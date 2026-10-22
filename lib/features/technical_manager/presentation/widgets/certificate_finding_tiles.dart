@@ -18,10 +18,22 @@ class CertificateFindingTiles extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final (checkBackground, checkForeground) = switch (certificate.functionCheck) {
-      ChecklistAnswer.pass => (AppColours.chipGreenBackground, AppColours.chipGreenText),
-      ChecklistAnswer.fail => (AppColours.chipRedBackground, AppColours.chipRedText),
-      ChecklistAnswer.na || ChecklistAnswer.unanswered => (AppColours.surfaceMuted, AppColours.inkSecondary),
+    final (
+      checkBackground,
+      checkForeground,
+    ) = switch (certificate.functionCheck) {
+      ChecklistAnswer.pass => (
+        AppColours.chipGreenBackground,
+        AppColours.chipGreenText,
+      ),
+      ChecklistAnswer.fail => (
+        AppColours.chipRedBackground,
+        AppColours.chipRedText,
+      ),
+      ChecklistAnswer.na || ChecklistAnswer.unanswered => (
+        AppColours.surfaceMuted,
+        AppColours.inkSecondary,
+      ),
     };
 
     String yesNo(bool? answer) => switch (answer) {
@@ -31,12 +43,15 @@ class CertificateFindingTiles extends StatelessWidget {
     };
 
     // A "yes" is the thing to look at, so it takes the warning colour.
-    (Color, Color) danger(bool? answer, {required Color warnBackground, required Color warnForeground}) =>
-        switch (answer) {
-          true => (warnBackground, warnForeground),
-          false => (AppColours.chipGreenBackground, AppColours.chipGreenText),
-          null => (AppColours.surfaceMuted, AppColours.inkSecondary),
-        };
+    (Color, Color) danger(
+      bool? answer, {
+      required Color warnBackground,
+      required Color warnForeground,
+    }) => switch (answer) {
+      true => (warnBackground, warnForeground),
+      false => (AppColours.chipGreenBackground, AppColours.chipGreenText),
+      null => (AppColours.surfaceMuted, AppColours.inkSecondary),
+    };
 
     final existing = certificate.answerOf(CertQuestion.existingDanger);
     final potential = certificate.answerOf(CertQuestion.futureDanger);
@@ -90,25 +105,41 @@ class _FindingTile extends StatelessWidget {
   final Color background;
   final Color foreground;
 
-  const _FindingTile({required this.value, required this.label, required this.background, required this.foreground});
+  const _FindingTile({
+    required this.value,
+    required this.label,
+    required this.background,
+    required this.foreground,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
-      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             value,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: foreground),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: foreground,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
             textAlign: TextAlign.center,
-            style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600, color: foreground),
+            style: AppTextStyles.caption.copyWith(
+              fontWeight: FontWeight.w600,
+              color: foreground,
+              fontSize: 12,
+            ),
           ),
         ],
       ),

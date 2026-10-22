@@ -157,7 +157,7 @@ class _SignInViewState extends State<_SignInView> {
                           child: BackdropFilter(
                             filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
                             child: ColoredBox(
-                              color: Colors.white.withValues(alpha: 0.88),
+                              color: Colors.white,
                               child: _buildForm(t),
                             ),
                           ),
@@ -214,7 +214,7 @@ class _SignInViewState extends State<_SignInView> {
                     height: 20 / 14,
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 60),
                 if (failure != null) ...[
                   MNotice(type: MNoticeType.error, message: failure.message(t)),
                   const SizedBox(height: 18),
@@ -239,7 +239,7 @@ class _SignInViewState extends State<_SignInView> {
                 MPasswordField(
                   controller: _passwordController,
                   label: t.password,
-                  hintText: 'Enter your password',
+                  hintText: 'enter your password',
                   enabled: !submitting,
                   errorText: _passwordError,
                   onChanged: _onChanged,

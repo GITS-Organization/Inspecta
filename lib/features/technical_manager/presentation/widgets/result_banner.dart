@@ -21,18 +21,32 @@ class ResultBanner extends StatelessWidget {
     if (result == null) return const SizedBox.shrink();
     final detail = certificate.defectSummary;
     final (background, accent) = switch (result) {
-      CertificateResult.safeToOperate => (AppColours.chipGreenBackground, AppColours.successIcon),
-      CertificateResult.safeWithConditions => (AppColours.primaryTint, AppColours.primaryDark),
-      CertificateResult.notSafe => (AppColours.chipRedBackground, AppColours.errorIcon),
+      CertificateResult.safeToOperate => (
+        AppColours.chipGreenBackground,
+        AppColours.successIcon,
+      ),
+      CertificateResult.safeWithConditions => (
+        AppColours.primaryTint,
+        AppColours.primaryDark,
+      ),
+      CertificateResult.notSafe => (
+        AppColours.chipRedBackground,
+        AppColours.errorIcon,
+      ),
     };
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            result == CertificateResult.safeToOperate ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded,
+            result == CertificateResult.safeToOperate
+                ? Icons.check_circle_outline_rounded
+                : Icons.info_outline_rounded,
             size: 22,
             color: accent,
           ),
@@ -42,10 +56,22 @@ class ResultBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(result.title(t), style: AppTextStyles.cardTitle.copyWith(fontSize: 15, color: accent)),
+                Text(
+                  result.title(t),
+                  style: AppTextStyles.cardTitle.copyWith(
+                    fontSize: 15,
+                    color: accent,
+                  ),
+                ),
                 if (detail != null) ...[
                   const SizedBox(height: 4),
-                  Text(detail, style: AppTextStyles.body.copyWith(fontSize: 14, color: AppColours.inkBody)),
+                  Text(
+                    detail,
+                    style: AppTextStyles.body.copyWith(
+                      fontSize: 13,
+                      color: AppColours.inkBody,
+                    ),
+                  ),
                 ],
               ],
             ),

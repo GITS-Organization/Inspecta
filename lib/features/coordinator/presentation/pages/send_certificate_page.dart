@@ -72,8 +72,14 @@ class _SendViewState extends State<_SendView> {
         title: Text(t.confirmSendTitle),
         content: Text(t.confirmSendMessage(cubit.state.email.trim())),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(t.cancel)),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(t.sendToClientAction)),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(t.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(t.sendToClientAction),
+          ),
         ],
       ),
     );
@@ -87,13 +93,17 @@ class _SendViewState extends State<_SendView> {
     return MultiBlocListener(
       listeners: [
         BlocListener<SendCertificateCubit, SendCertificateState>(
-          listenWhen: (previous, current) => previous.suggestedEmail != current.suggestedEmail,
+          listenWhen: (previous, current) =>
+              previous.suggestedEmail != current.suggestedEmail,
           listener: (context, state) {
-            if (_email.text.isEmpty && state.suggestedEmail != null) _email.text = state.suggestedEmail!;
+            if (_email.text.isEmpty && state.suggestedEmail != null) {
+              _email.text = state.suggestedEmail!;
+            }
           },
         ),
         BlocListener<SendCertificateCubit, SendCertificateState>(
-          listenWhen: (previous, current) => previous.actionSeq != current.actionSeq,
+          listenWhen: (previous, current) =>
+              previous.actionSeq != current.actionSeq,
           listener: (context, state) {
             if (state.lastActionSuccess) {
               MToast.showSuccess(message: t.certificateSentMessage);
@@ -120,7 +130,10 @@ class _SendViewState extends State<_SendView> {
                       return Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
-                          child: MNotice(type: MNoticeType.error, message: t.certificateNotFound),
+                          child: MNotice(
+                            type: MNoticeType.error,
+                            message: t.certificateNotFound,
+                          ),
                         ),
                       );
                     case SendCertificateStatus.ready:
@@ -137,25 +150,38 @@ class _SendViewState extends State<_SendView> {
                         onViewPdf: () => _viewPdf(certificate),
                       ),
                       const SizedBox(height: 12),
-                      ReviewSummaryCard(request: request, certificate: certificate),
+                      ReviewSummaryCard(
+                        request: request,
+                        certificate: certificate,
+                      ),
                       const SizedBox(height: 12),
                       MCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(t.sendSignedPdfToLabel, style: AppTextStyles.sectionTitle),
+                            Text(
+                              t.sendSignedPdfToLabel,
+                              style: AppTextStyles.sectionTitle.copyWith(
+                                fontSize: 14,
+                              ),
+                            ),
                             const SizedBox(height: 12),
                             MTextField(
                               controller: _email,
-                              onChanged: context.read<SendCertificateCubit>().setEmail,
+                              onChanged: context
+                                  .read<SendCertificateCubit>()
+                                  .setEmail,
                               enabled: !state.isSending,
                               prefixIcon: Icons.mail_outline_rounded,
                               keyboardType: TextInputType.emailAddress,
                               hintText: t.emailHint,
                             ),
                             const SizedBox(height: 12),
-                            Text(t.sendCertificateHint, style: AppTextStyles.caption),
+                            Text(
+                              t.sendCertificateHint,
+                              style: AppTextStyles.caption,
+                            ),
                           ],
                         ),
                       ),
@@ -186,19 +212,31 @@ class _SendViewState extends State<_SendView> {
                           disabledBackgroundColor: state.isSending
                               ? AppColours.primaryColor
                               : AppColours.primaryColor.withValues(alpha: 0.4),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                         child: state.isSending
                             ? const SizedBox.square(
                                 dimension: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
                               )
                             : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.send_rounded, size: 18, color: Colors.white),
+                                  const Icon(
+                                    Icons.send_rounded,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
                                   const SizedBox(width: 8),
-                                  Text(t.sendToClientAction, style: AppTextStyles.buttonLabel),
+                                  Text(
+                                    t.sendToClientAction,
+                                    style: AppTextStyles.buttonLabel,
+                                  ),
                                 ],
                               ),
                       ),
@@ -214,7 +252,11 @@ class _SendViewState extends State<_SendView> {
   }
 
   Future<void> _viewPdf(Certificate certificate) {
-    return previewCertificatePdf(context, request: widget.request, certificate: certificate);
+    return previewCertificatePdf(
+      context,
+      request: widget.request,
+      certificate: certificate,
+    );
   }
 }
 
@@ -227,7 +269,11 @@ class _CertificatePass extends StatelessWidget {
   final String? code;
   final VoidCallback onViewPdf;
 
-  const _CertificatePass({required this.status, required this.code, required this.onViewPdf});
+  const _CertificatePass({
+    required this.status,
+    required this.code,
+    required this.onViewPdf,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -250,7 +296,10 @@ class _CertificatePass extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(999),
@@ -258,11 +307,17 @@ class _CertificatePass extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.verified_rounded, size: 14, color: AppColours.successOnNavy),
+                        const Icon(
+                          Icons.verified_rounded,
+                          size: 14,
+                          color: AppColours.successOnNavy,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           status.label(t),
-                          style: AppTextStyles.badge.copyWith(color: AppColours.successOnNavy),
+                          style: AppTextStyles.badge.copyWith(
+                            color: AppColours.successOnNavy,
+                          ),
                         ),
                       ],
                     ),
@@ -331,7 +386,9 @@ class _CertificatePass extends StatelessWidget {
                         backgroundColor: Colors.white,
                         foregroundColor: AppColours.navy,
                         textStyle: AppTextStyles.buttonLabel,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                     ),
                   ),
