@@ -20,7 +20,7 @@ class SplashWelcomeTitle extends StatelessWidget {
         children: [
           TextSpan(text: '${t.splashWelcome} '),
           const TextSpan(
-            text: 'Inspecta',
+            text: 'Integrity',
             style: TextStyle(color: AppColours.amberOnPrimary),
           ),
         ],

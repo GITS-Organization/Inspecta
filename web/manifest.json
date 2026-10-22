@@ -1,6 +1,6 @@
 {
-    "name": "inspecta",
-    "short_name": "inspecta",
+    "name": "Integrity",
+    "short_name": "Integrity",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#2563EB",

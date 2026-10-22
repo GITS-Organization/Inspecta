@@ -239,7 +239,7 @@ class _SignInViewState extends State<_SignInView> {
                 MPasswordField(
                   controller: _passwordController,
                   label: t.password,
-                  hintText: '********',
+                  hintText: 'Enter your password',
                   enabled: !submitting,
                   errorText: _passwordError,
                   onChanged: _onChanged,

@@ -58,6 +58,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
         child: FlowBuilder<AppCubit>(
           builder: (context, state, cubit) {
             return MaterialApp(
+              title: 'Integrity',
               theme: cubit.appThemeMode.themeData(cubit.locale.languageCode),
               debugShowCheckedModeBanner: false,
               scaffoldMessengerKey: MToast.messengerKey,
