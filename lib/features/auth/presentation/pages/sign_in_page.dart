@@ -141,7 +141,7 @@ class _SignInViewState extends State<_SignInView> {
                       const Spacer(),
 
                       Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 20),
+                        margin: const EdgeInsets.symmetric(horizontal: 30),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(28),
                           boxShadow: [
