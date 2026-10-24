@@ -21,6 +21,7 @@ class QuotationModel {
   final DateTime? validUntil;
   final String? message;
   final List<String> notes;
+  final List<String> scopeOfWork;
   final String? status;
   final DateTime? sentAt;
   final String createdBy;
@@ -47,6 +48,7 @@ class QuotationModel {
     this.validUntil,
     this.message,
     this.notes = const [],
+    this.scopeOfWork = const [],
     this.status,
     this.sentAt,
     this.clientResponseOutcome,
@@ -74,6 +76,7 @@ class QuotationModel {
       validUntil: (json['validUntil'] as Timestamp?)?.toDate(),
       message: json['message'] as String?,
       notes: (json['notes'] as List<dynamic>? ?? const []).whereType<String>().toList(),
+      scopeOfWork: (json['scopeOfWork'] as List<dynamic>? ?? const []).whereType<String>().toList(),
       status: json['status'] as String?,
       sentAt: (json['sentAt'] as Timestamp?)?.toDate(),
       createdBy: json['createdBy'] as String? ?? '',
@@ -105,6 +108,7 @@ class QuotationModel {
       validUntil: validUntil,
       message: message,
       notes: notes,
+      scopeOfWork: scopeOfWork,
       status: quotationStatus,
       sentAt: sentAt,
       createdBy: createdBy,

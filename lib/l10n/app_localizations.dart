@@ -458,24 +458,6 @@ abstract class AppLocalizations {
   /// **'Change photo'**
   String get changePhotoAction;
 
-  /// No description provided for @quotationDefaultsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Quotation defaults'**
-  String get quotationDefaultsTitle;
-
-  /// No description provided for @quoteValidForLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Quote valid for'**
-  String get quoteValidForLabel;
-
-  /// No description provided for @standardPriceListLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Standard price list'**
-  String get standardPriceListLabel;
-
   /// No description provided for @viewAction.
   ///
   /// In en, this message translates to:
@@ -1219,6 +1201,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter a price per unit.'**
   String get errorPriceRequired;
+
+  /// No description provided for @errorScopeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one point to the scope of work.'**
+  String get errorScopeRequired;
 
   /// No description provided for @errorReasonRequired.
   ///
@@ -3278,35 +3266,29 @@ abstract class AppLocalizations {
   /// **'Technical and Commercial Proposal'**
   String get proposalTitle;
 
-  /// No description provided for @pricingUnitLabel.
+  /// No description provided for @fixedPricePerVisit.
   ///
   /// In en, this message translates to:
-  /// **'Unit of pricing'**
-  String get pricingUnitLabel;
+  /// **'Fixed price per visit'**
+  String get fixedPricePerVisit;
 
-  /// No description provided for @pricingUnitPerVisit.
+  /// No description provided for @scopeOfWorkLabel.
   ///
   /// In en, this message translates to:
-  /// **'Per visit'**
-  String get pricingUnitPerVisit;
+  /// **'Scope of work'**
+  String get scopeOfWorkLabel;
 
-  /// No description provided for @pricingUnitPerDay.
+  /// No description provided for @scopeOfWorkEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Per day'**
-  String get pricingUnitPerDay;
+  /// **'No points yet — add what the visit covers'**
+  String get scopeOfWorkEmpty;
 
-  /// No description provided for @pricingUnitPerHour.
+  /// No description provided for @addScopePoint.
   ///
   /// In en, this message translates to:
-  /// **'Per hour'**
-  String get pricingUnitPerHour;
-
-  /// No description provided for @pricingUnitPerItem.
-  ///
-  /// In en, this message translates to:
-  /// **'Per item'**
-  String get pricingUnitPerItem;
+  /// **'Add a point'**
+  String get addScopePoint;
 
   /// No description provided for @proposalNotesLabel.
   ///
@@ -3329,7 +3311,7 @@ abstract class AppLocalizations {
   /// No description provided for @removeNote.
   ///
   /// In en, this message translates to:
-  /// **'Remove note'**
+  /// **'Remove point'**
   String get removeNote;
 
   /// No description provided for @proposalNotesCount.

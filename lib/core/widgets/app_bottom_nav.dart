@@ -11,12 +11,6 @@ class AppNavItem {
   const AppNavItem({required this.icon, required this.label});
 }
 
-/// The role shells' floating navy bar: a full-width, fully rounded dark pill.
-/// The active destination is a white pill holding its icon and label; every
-/// other destination is just its icon. Switching destinations animates — the
-/// white pill's width slides from one tile to the next while its label
-/// fades and grows in. Pass it as a `Scaffold`'s `bottomNavigationBar`; it
-/// adds its own margin and safe-area padding.
 class AppBottomNav extends StatelessWidget {
   /// The selected tile's share of the bar's inner width.
   static const _selectedShare = 0.44;
@@ -122,9 +116,12 @@ class _NavTile extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TweenAnimationBuilder<Color?>(
-                    tween: ColorTween(end: selected ? AppColours.navy : AppColours.onNavyMuted),
+                    tween: ColorTween(
+                      end: selected ? AppColours.navy : AppColours.onNavyMuted,
+                    ),
                     duration: _duration,
-                    builder: (context, color, _) => Icon(item.icon, size: 22, color: color),
+                    builder: (context, color, _) =>
+                        Icon(item.icon, size: 22, color: color),
                   ),
                   // The label's width animates from zero, so the pill grows
                   // around it instead of the text popping in.

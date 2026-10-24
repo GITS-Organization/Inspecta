@@ -201,15 +201,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changePhotoAction => 'Change photo';
 
   @override
-  String get quotationDefaultsTitle => 'Quotation defaults';
-
-  @override
-  String get quoteValidForLabel => 'Quote valid for';
-
-  @override
-  String get standardPriceListLabel => 'Standard price list';
-
-  @override
   String get viewAction => 'View';
 
   @override
@@ -639,6 +630,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorPriceRequired => 'Enter a price per unit.';
+
+  @override
+  String get errorScopeRequired =>
+      'Add at least one point to the scope of work.';
 
   @override
   String get errorReasonRequired => 'Tell the client why you\'re rejecting.';
@@ -1798,19 +1793,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get proposalTitle => 'Technical and Commercial Proposal';
 
   @override
-  String get pricingUnitLabel => 'Unit of pricing';
+  String get fixedPricePerVisit => 'Fixed price per visit';
 
   @override
-  String get pricingUnitPerVisit => 'Per visit';
+  String get scopeOfWorkLabel => 'Scope of work';
 
   @override
-  String get pricingUnitPerDay => 'Per day';
+  String get scopeOfWorkEmpty => 'No points yet — add what the visit covers';
 
   @override
-  String get pricingUnitPerHour => 'Per hour';
-
-  @override
-  String get pricingUnitPerItem => 'Per item';
+  String get addScopePoint => 'Add a point';
 
   @override
   String get proposalNotesLabel => 'Notes on the proposal';
@@ -1823,7 +1815,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addNote => 'Add a note';
 
   @override
-  String get removeNote => 'Remove note';
+  String get removeNote => 'Remove point';
 
   @override
   String proposalNotesCount(int count) {

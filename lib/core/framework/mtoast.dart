@@ -18,10 +18,7 @@ class MToast {
     _show(message: message, backgroundColor: AppColours.errorIcon);
   }
 
-  static void _show({
-    required String message,
-    required Color backgroundColor,
-  }) {
+  static void _show({required String message, required Color backgroundColor}) {
     final messenger = messengerKey.currentState;
     if (messenger == null) return;
     messenger

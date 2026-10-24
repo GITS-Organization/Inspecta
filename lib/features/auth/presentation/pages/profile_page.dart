@@ -19,16 +19,6 @@ import '../widgets/profile_menu_section.dart';
 import '../widgets/profile_role_card.dart';
 import '../widgets/profile_stat_tiles.dart';
 
-/// Name, role, this month's activity, role-specific settings, account
-/// actions and sign out. Never pushed as a new route: a role shell with
-/// its own bottom nav embeds this in place as a tab ([onClose] left
-/// null, matching its siblings — see `CoordinatorRootPage`); a role
-/// without one swaps it in for the home content instead, passing
-/// [onClose] to swap back (see `RoleHomePage`).
-///
-/// A shell whose bar has a "More" slot embeds this as that screen and passes
-/// [navigationSection] — a card of rows to its overflow screens — which shows
-/// after the role's own card, ahead of the Account card.
 class ProfilePage extends StatelessWidget {
   final VoidCallback? onClose;
   final Widget? navigationSection;
@@ -38,8 +28,12 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => getIt<ProfileStatsCubit>()..start(context.read<AuthCubit>().user),
-      child: _ProfileView(onClose: onClose, navigationSection: navigationSection),
+      create: (context) =>
+          getIt<ProfileStatsCubit>()..start(context.read<AuthCubit>().user),
+      child: _ProfileView(
+        onClose: onClose,
+        navigationSection: navigationSection,
+      ),
     );
   }
 }
@@ -52,9 +46,12 @@ class _ProfileView extends StatelessWidget {
 
   void _comingSoon(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(t.comingSoon), behavior: SnackBarBehavior.floating));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(t.comingSoon),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Future<void> _confirmSignOut(BuildContext context) async {
@@ -114,64 +111,83 @@ class _ProfileView extends StatelessWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-      backgroundColor: AppColours.background,
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          _ProfileHeader(user: user, onEdit: () => _comingSoon(context), onClose: onClose),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              16,
-              12,
-              16,
-              onClose == null ? AppLayout.bottomNavClearance : 28,
+        backgroundColor: AppColours.background,
+        body: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            _ProfileHeader(
+              user: user,
+              onEdit: () => _comingSoon(context),
+              onClose: onClose,
             ),
-            child: Column(
-              children: [
-                BlocBuilder<ProfileStatsCubit, ProfileStatsState>(
-                  builder: (context, stats) {
-                    final tiles = _statsFor(user.role, stats, t);
-                    return tiles.isEmpty
-                        ? const SizedBox.shrink()
-                        : ProfileStatTiles(stats: tiles);
-                  },
-                ),
-                if (user.role != UserRole.admin) ...[
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                12,
+                16,
+                onClose == null ? AppLayout.bottomNavClearance : 28,
+              ),
+              child: Column(
+                children: [
+                  BlocBuilder<ProfileStatsCubit, ProfileStatsState>(
+                    builder: (context, stats) {
+                      final tiles = _statsFor(user.role, stats, t);
+                      return tiles.isEmpty
+                          ? const SizedBox.shrink()
+                          : ProfileStatTiles(stats: tiles);
+                    },
+                  ),
+                  if (user.role != UserRole.admin &&
+                      user.role != UserRole.coordinator) ...[
+                    const SizedBox(height: 12),
+                    ProfileRoleCard(
+                      user: user,
+                      onComingSoon: () => _comingSoon(context),
+                    ),
+                  ],
+                  if (navigationSection != null) ...[
+                    const SizedBox(height: 12),
+                    navigationSection!,
+                  ],
                   const SizedBox(height: 12),
-                  ProfileRoleCard(user: user, onComingSoon: () => _comingSoon(context)),
-                ],
-                if (navigationSection != null) ...[const SizedBox(height: 12), navigationSection!],
-                const SizedBox(height: 12),
-                ProfileAccountSection(onComingSoon: () => _comingSoon(context)),
-                const SizedBox(height: 12),
-                ProfileHelpSection(onComingSoon: () => _comingSoon(context)),
-                const SizedBox(height: 20),
-                SizedBox(
-                  height: 54,
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _confirmSignOut(context),
-                    icon: const Icon(Icons.logout_rounded, size: 18),
-                    label: Text(t.signOut),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColours.dangerText,
-                      backgroundColor: Colors.white,
-                      side: const BorderSide(color: AppColours.dangerBorder),
-                      textStyle: AppTextStyles.buttonLabel.copyWith(color: AppColours.dangerText),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ProfileAccountSection(
+                    onComingSoon: () => _comingSoon(context),
+                  ),
+                  const SizedBox(height: 12),
+                  ProfileHelpSection(onComingSoon: () => _comingSoon(context)),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 54,
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _confirmSignOut(context),
+                      icon: const Icon(Icons.logout_rounded, size: 18),
+                      label: Text(t.signOut),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColours.dangerText,
+                        backgroundColor: Colors.white,
+                        side: const BorderSide(color: AppColours.dangerBorder),
+                        textStyle: AppTextStyles.buttonLabel.copyWith(
+                          color: AppColours.dangerText,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  t.versionLabel(AppInfo.version.isEmpty ? '1.0.0' : AppInfo.version),
-                  style: AppTextStyles.caption,
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  Text(
+                    t.versionLabel(
+                      AppInfo.version.isEmpty ? '1.0.0' : AppInfo.version,
+                    ),
+                    style: AppTextStyles.caption,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -185,7 +201,11 @@ class _ProfileHeader extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback? onClose;
 
-  const _ProfileHeader({required this.user, required this.onEdit, required this.onClose});
+  const _ProfileHeader({
+    required this.user,
+    required this.onEdit,
+    required this.onClose,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -217,7 +237,10 @@ class _ProfileHeader extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                     child: Text(
                       t.editAction,
-                      style: AppTextStyles.buttonLabel.copyWith(fontSize: 14, color: AppColours.ink),
+                      style: AppTextStyles.buttonLabel.copyWith(
+                        fontSize: 14,
+                        color: AppColours.ink,
+                      ),
                     ),
                   ),
                 ),
@@ -235,10 +258,17 @@ class _ProfileHeader extends StatelessWidget {
                     width: 72,
                     height: 72,
                     alignment: Alignment.center,
-                    decoration: const BoxDecoration(color: AppColours.navy, shape: BoxShape.circle),
+                    decoration: const BoxDecoration(
+                      color: AppColours.navy,
+                      shape: BoxShape.circle,
+                    ),
                     child: Text(
                       user.initials,
-                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white),
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   PositionedDirectional(
@@ -248,14 +278,20 @@ class _ProfileHeader extends StatelessWidget {
                       message: t.changePhotoAction,
                       child: Material(
                         color: Colors.white,
-                        shape: const CircleBorder(side: BorderSide(color: AppColours.border)),
+                        shape: const CircleBorder(
+                          side: BorderSide(color: AppColours.border),
+                        ),
                         child: InkWell(
                           customBorder: const CircleBorder(),
                           onTap: onEdit,
                           child: const SizedBox(
                             width: 30,
                             height: 30,
-                            child: Icon(Icons.camera_alt_outlined, size: 15, color: AppColours.ink),
+                            child: Icon(
+                              Icons.camera_alt_outlined,
+                              size: 15,
+                              color: AppColours.ink,
+                            ),
                           ),
                         ),
                       ),
@@ -273,23 +309,38 @@ class _ProfileHeader extends StatelessWidget {
                       user.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.sectionTitle.copyWith(fontSize: 22, height: 28 / 22, letterSpacing: -0.22),
+                      style: AppTextStyles.sectionTitle.copyWith(
+                        fontSize: 22,
+                        height: 28 / 22,
+                        letterSpacing: -0.22,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColours.primaryTint,
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: Text(user.role.label(t), style: AppTextStyles.badge.copyWith(color: AppColours.primaryDark)),
+                      child: Text(
+                        user.role.label(t),
+                        style: AppTextStyles.badge.copyWith(
+                          color: AppColours.primaryDark,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       user.email,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.caption.copyWith(fontSize: 12, height: 16 / 12),
+                      style: AppTextStyles.caption.copyWith(
+                        fontSize: 12,
+                        height: 16 / 12,
+                      ),
                     ),
                   ],
                 ),

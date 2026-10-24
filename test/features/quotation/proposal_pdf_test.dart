@@ -38,7 +38,6 @@ const _lines = [
     type: 'Air receiver',
     quantity: 2,
     unitPricePiastres: 850000,
-    pricingUnit: PricingUnit.perDay,
   ),
 ];
 
@@ -54,27 +53,39 @@ void main() {
     expect(proposalNumberFor(request, version: 3), endsWith('rev03'));
   });
 
+  Future<List<int>> render({List<String>? scopeOfWork}) => buildProposalPdf(
+    request: _request(),
+    lines: _lines,
+    scopeOfWork: scopeOfWork,
+    notes: defaultProposalNotes,
+    details: ProposalDetails(
+      proposalNumber: 'INT/417/2026 rev01',
+      quotationNumber: 'QT-2026-0142',
+      date: DateTime(2026, 9, 7),
+      validUntil: DateTime(2026, 9, 21),
+      attention: 'Eng. Reem',
+      preparedByName: 'Ahmed Rafat',
+      preparedByTitle: 'Coordinator',
+    ),
+  );
+
+  int pageCount(List<int> bytes) => RegExp('/Type */Page[^s]').allMatches(String.fromCharCodes(bytes)).length;
+
   test('renders the full ten-page proposal', () async {
-    final bytes = await buildProposalPdf(
-      request: _request(),
-      lines: _lines,
-      notes: defaultProposalNotes,
-      details: ProposalDetails(
-        proposalNumber: 'INT/417/2026 rev01',
-        quotationNumber: 'QT-2026-0142',
-        date: DateTime(2026, 9, 7),
-        validUntil: DateTime(2026, 9, 21),
-        attention: 'Eng. Reem',
-        preparedByName: 'Ahmed Rafat',
-        preparedByTitle: 'Coordinator',
-      ),
-    );
+    final bytes = await render();
 
     expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
-    expect(RegExp('/Type */Page[^s]').allMatches(String.fromCharCodes(bytes)).length, 10);
+    expect(pageCount(bytes), 10);
 
     // Set PROPOSAL_PDF_OUT to look at the result.
     final out = Platform.environment['PROPOSAL_PDF_OUT'];
     if (out != null) File(out).writeAsBytesSync(bytes);
+  });
+
+  test('prints the scope of work points above the notes, which may run onto another page', () async {
+    final bytes = await render(scopeOfWork: ['Visual inspection of the crane', 'Load test at 110% SWL']);
+
+    expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
+    expect(pageCount(bytes), greaterThanOrEqualTo(10));
   });
 }

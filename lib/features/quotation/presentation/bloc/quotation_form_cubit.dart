@@ -50,6 +50,10 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
     return total;
   }
 
+  /// The scope of work as it'll print: the points as edited, without blank ones.
+  List<String> get scopeOfWork =>
+      state.scopeOfWork.map((point) => point.trim()).where((point) => point.isNotEmpty).toList();
+
   /// The notes as they'll print: the points as edited, without blank ones.
   List<String> get notes =>
       state.notes.map((note) => note.trim()).where((note) => note.isNotEmpty).toList();
@@ -68,8 +72,7 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
   void changeLinePrice(String itemId, String value) =>
       emit(state.copyWith(linePrices: {...state.linePrices, itemId: value}));
 
-  void changeLineUnit(String itemId, PricingUnit unit) =>
-      emit(state.copyWith(lineUnits: {...state.lineUnits, itemId: unit}));
+  void changeScopeOfWork(List<String> value) => emit(state.copyWith(scopeOfWork: value));
 
   void changeNotes(List<String> value) => emit(state.copyWith(notes: value));
 
@@ -77,7 +80,7 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
 
   void changeMessage(String value) => emit(state.copyWith(message: value));
 
-  /// The offer's lines, each at its own entered price and pricing unit.
+  /// The offer's lines, each at its own entered price, per visit.
   List<QuoteLineItem> offerLines({bool priced = true}) {
     return request.items
         .map(
@@ -86,7 +89,7 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
             type: item.type,
             quantity: item.quantity,
             unitPricePiastres: priced ? (state.unitPriceOf(item.id) ?? 0) : 0,
-            pricingUnit: state.unitOf(item.id),
+            pricingUnit: PricingUnit.perVisit,
           ),
         )
         .toList();
@@ -112,6 +115,7 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
         validityDays: state.replyType == ReplyType.offer ? state.validityDays : null,
         message: state.message,
         notes: state.replyType == ReplyType.offer ? notes : null,
+        scopeOfWork: state.replyType == ReplyType.offer ? scopeOfWork : null,
       );
       _completeAction(QuotationAction.saveDraft, success: true);
     } catch (e) {
@@ -139,6 +143,7 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
         validityDays: state.replyType == ReplyType.offer ? state.validityDays : null,
         message: state.message,
         notes: state.replyType == ReplyType.offer ? notes : null,
+        scopeOfWork: state.replyType == ReplyType.offer ? scopeOfWork : null,
       );
       emit(state.copyWith(sentVersion: version));
       _completeAction(QuotationAction.send, success: true);

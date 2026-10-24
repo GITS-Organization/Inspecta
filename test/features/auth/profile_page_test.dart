@@ -105,13 +105,18 @@ void main() {
     expect(find.text('Coordinator'), findsOneWidget);
   });
 
-  testWidgets('puts the navigation section after the role card, ahead of the account card', (tester) async {
+  testWidgets('puts the navigation section ahead of the account card', (tester) async {
     await pumpPage(tester, navigationSection: const Text('NAV SECTION'));
 
     double top(String text) => tester.getTopLeft(find.text(text, skipOffstage: false)).dy;
 
-    expect(top('NAV SECTION'), greaterThan(top('Quotation defaults')));
     expect(top('NAV SECTION'), lessThan(top('Account')));
+  });
+
+  testWidgets('a coordinator has no role card (no quotation defaults)', (tester) async {
+    await pumpPage(tester);
+
+    expect(find.text('Quotation defaults', skipOffstage: false), findsNothing);
   });
 
   testWidgets('a coordinator has no "My areas" card', (tester) async {

@@ -196,7 +196,11 @@ class _BellButton extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  const Icon(Icons.notifications_none_rounded, size: 20, color: AppColours.ink),
+                  const Icon(
+                    Icons.notifications_none_rounded,
+                    size: 20,
+                    color: AppColours.ink,
+                  ),
                   if (unread > 0)
                     Positioned(
                       top: 9,

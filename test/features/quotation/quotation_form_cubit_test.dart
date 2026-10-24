@@ -32,10 +32,29 @@ void main() {
 
       cubit.selectReplyType(ReplyType.offer);
       cubit.changeLinePrice('item-1', '4500');
+      cubit.changeScopeOfWork(['Load test']);
 
       expect(cubit.state.unitPriceOf('item-1'), 450000);
       expect(cubit.totalPiastres, 900000);
       expect(cubit.state.isValid, isTrue);
+    });
+
+test('an offer needs at least one scope point before it can be sent', () async {
+      final cubit = buildCubit();
+      cubit.selectReplyType(ReplyType.offer);
+      cubit.changeLinePrice('item-1', '4500');
+      cubit.changeScopeOfWork(['   ']);
+
+      await cubit.send();
+
+      expect(cubit.state.showScopeError, isTrue);
+      expect(cubit.state.showPriceError, isFalse);
+      expect(quotationRepo.sendCalls, isEmpty);
+
+      cubit.changeScopeOfWork(['Load test']);
+      expect(cubit.state.showScopeError, isFalse);
+      await cubit.send();
+      expect(quotationRepo.sendCalls.single.scopeOfWork, ['Load test']);
     });
 
     test('an offer needs a price before it can be sent', () async {
@@ -73,12 +92,13 @@ void main() {
       final cubit = buildCubit();
       cubit.selectReplyType(ReplyType.offer);
       cubit.changeLinePrice('item-1', '4500');
-      cubit.changeLineUnit('item-1', PricingUnit.perDay);
+      cubit.changeScopeOfWork(['  Load test of both cranes  ', '   ']);
 
       await cubit.send();
 
       expect(quotationRepo.sendCalls.single.type, ReplyType.offer);
-      expect(quotationRepo.sendCalls.single.items.single.pricingUnit, PricingUnit.perDay);
+      expect(quotationRepo.sendCalls.single.items.single.pricingUnit, PricingUnit.perVisit);
+      expect(quotationRepo.sendCalls.single.scopeOfWork, ['Load test of both cranes']);
       expect(requestsRepo.statusUpdates.single.$1, cubit.request.id);
       expect(cubit.state.lastActionSuccess, isTrue);
       expect(cubit.state.sentVersion, 1);

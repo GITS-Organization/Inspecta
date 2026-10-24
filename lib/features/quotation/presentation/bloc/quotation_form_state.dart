@@ -4,9 +4,13 @@ enum QuotationAction { saveDraft, send }
 
 class QuotationFormState extends Equatable {
   final ReplyType? replyType;
-  /// Typed price (EGP) and pricing unit per request item, keyed by item id.
+  /// Typed price (EGP) per request item, keyed by item id — always a fixed
+  /// price per visit.
   final Map<String, String> linePrices;
-  final Map<String, PricingUnit> lineUnits;
+
+  /// The scope of work, one point each, typed in by the coordinator; printed
+  /// above the notes.
+  final List<String> scopeOfWork;
 
   /// The proposal's notes, one point each; [defaultProposalNotes] until edited.
   final List<String> notes;
@@ -33,7 +37,7 @@ class QuotationFormState extends Equatable {
   const QuotationFormState({
     this.replyType,
     this.linePrices = const {},
-    this.lineUnits = const {},
+    this.scopeOfWork = const [],
     this.notes = defaultProposalNotes,
     this.itemIds = const [],
     this.validityDays = 14,
@@ -49,8 +53,6 @@ class QuotationFormState extends Equatable {
 
   int? unitPriceOf(String itemId) => Currency.parsePiastres(linePrices[itemId] ?? '');
 
-  PricingUnit unitOf(String itemId) => lineUnits[itemId] ?? PricingUnit.perVisit;
-
   bool linePriceInvalid(String itemId) {
     final price = unitPriceOf(itemId);
     return price == null || price <= 0;
@@ -60,22 +62,28 @@ class QuotationFormState extends Equatable {
   bool get priceInvalid =>
       replyType == ReplyType.offer && itemIds.any(linePriceInvalid);
 
+  /// An offer needs at least one point of scope (blank points do not count).
+  bool get scopeInvalid =>
+      replyType == ReplyType.offer && scopeOfWork.every((point) => point.trim().isEmpty);
+
   bool get reasonInvalid => replyType == ReplyType.reject && message.trim().isEmpty;
 
   bool get showPriceError => submitted && priceInvalid;
 
+  bool get showScopeError => submitted && scopeInvalid;
+
   bool get showReasonError => submitted && reasonInvalid;
 
   /// Whether Send may be pressed at all (acceptance criterion 2 — reject
-  /// needs a reason, an offer needs a price).
-  bool get isValid => replyType != null && !priceInvalid && !reasonInvalid;
+  /// needs a reason, an offer needs a price and a scope of work).
+  bool get isValid => replyType != null && !priceInvalid && !scopeInvalid && !reasonInvalid;
 
   QuotationFormState copyWith({
     ReplyType? replyType,
     Map<String, String>? linePrices,
-    Map<String, PricingUnit>? lineUnits,
     List<String>? notes,
     int? validityDays,
+    List<String>? scopeOfWork,
     String? message,
     bool? submitted,
     bool? isSubmitting,
@@ -89,10 +97,10 @@ class QuotationFormState extends Equatable {
     return QuotationFormState(
       replyType: replyType ?? this.replyType,
       linePrices: linePrices ?? this.linePrices,
-      lineUnits: lineUnits ?? this.lineUnits,
       notes: notes ?? this.notes,
       itemIds: itemIds,
       validityDays: validityDays ?? this.validityDays,
+      scopeOfWork: scopeOfWork ?? this.scopeOfWork,
       message: message ?? this.message,
       submitted: submitted ?? this.submitted,
       isSubmitting: isSubmitting ?? this.isSubmitting,
@@ -108,10 +116,10 @@ class QuotationFormState extends Equatable {
   List<Object?> get props => [
     replyType,
     linePrices,
-    lineUnits,
     notes,
     itemIds,
     validityDays,
+    scopeOfWork,
     message,
     submitted,
     isSubmitting,

@@ -42,6 +42,7 @@ class QuotationRepositoryImpl implements QuotationRepository {
     int? validityDays,
     String? message,
     List<String>? notes,
+    List<String>? scopeOfWork,
   }) async {
     try {
       final model = await _remote.saveDraft(
@@ -54,6 +55,7 @@ class QuotationRepositoryImpl implements QuotationRepository {
         validityDays: validityDays,
         message: message,
         notes: notes,
+        scopeOfWork: scopeOfWork,
       );
       final entity = model.toEntity();
       if (entity == null) throw const QuotationFailure(QuotationFailureCode.unknown);
@@ -74,6 +76,7 @@ class QuotationRepositoryImpl implements QuotationRepository {
     int? validityDays,
     String? message,
     List<String>? notes,
+    List<String>? scopeOfWork,
   }) async {
     try {
       return await _remote.send(
@@ -86,6 +89,7 @@ class QuotationRepositoryImpl implements QuotationRepository {
         validityDays: validityDays,
         message: message,
         notes: notes,
+        scopeOfWork: scopeOfWork,
       );
     } catch (e) {
       throw _mapError(e);

@@ -18,6 +18,7 @@ class SaveDraft {
     int? validityDays,
     String? message,
     List<String>? notes,
+    List<String>? scopeOfWork,
   }) {
     return _repository.saveDraft(
       requestId: requestId,
@@ -29,6 +30,7 @@ class SaveDraft {
       validityDays: validityDays,
       message: message?.trim(),
       notes: notes,
+      scopeOfWork: scopeOfWork,
     );
   }
 }

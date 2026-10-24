@@ -13,17 +13,21 @@ import '../../domain/entities/user.dart';
 import '../../domain/entities/user_role.dart';
 
 /// The card under the "This month" stats that's specific to the signed-in
-/// user's role — or nothing, for a role with no such card ([UserRole.admin]).
+/// user's role — or nothing, for a role with no such card (admin, coordinator).
 class ProfileRoleCard extends StatelessWidget {
   final AppUser user;
   final VoidCallback onComingSoon;
 
-  const ProfileRoleCard({super.key, required this.user, required this.onComingSoon});
+  const ProfileRoleCard({
+    super.key,
+    required this.user,
+    required this.onComingSoon,
+  });
 
   @override
   Widget build(BuildContext context) {
     return switch (user.role) {
-      UserRole.coordinator => _QuotationDefaultsCard(onTap: onComingSoon),
+      UserRole.coordinator => const SizedBox.shrink(),
       UserRole.inspector => _MyWorkCard(user: user, onComingSoon: onComingSoon),
       UserRole.technicalManager => _MySignatureCard(user: user),
       UserRole.admin => const SizedBox.shrink(),
@@ -41,88 +45,6 @@ class _CardTitle extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(title, style: AppTextStyles.sectionTitle),
-    );
-  }
-}
-
-/// A label/value settings row. [emphasized] styles the value as a bold
-/// primary-coloured action link (e.g. "View", "Edit") instead of plain text.
-class _SettingRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool emphasized;
-  final VoidCallback? onTap;
-
-  const _SettingRow({required this.label, required this.value, this.emphasized = false, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final row = Container(
-      constraints: const BoxConstraints(minHeight: 56),
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      alignment: AlignmentDirectional.centerStart,
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(label, style: AppTextStyles.cardTitle.copyWith(fontSize: 14)),
-          ),
-          Text(
-            value,
-            style: emphasized
-                ? AppTextStyles.link
-                : AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-    if (onTap == null) return row;
-    return InkWell(onTap: onTap, child: row);
-  }
-}
-
-class _DividedRows extends StatelessWidget {
-  final List<Widget> rows;
-
-  const _DividedRows(this.rows);
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (var i = 0; i < rows.length; i++) ...[
-          if (i > 0) const Divider(height: 1, color: AppColours.borderSubtle),
-          rows[i],
-        ],
-      ],
-    );
-  }
-}
-
-class _QuotationDefaultsCard extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _QuotationDefaultsCard({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    return MCard(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _CardTitle(t.quotationDefaultsTitle),
-          _DividedRows([
-            _SettingRow(label: t.quoteValidForLabel, value: t.validityDaysOption(14)),
-            _SettingRow(
-              label: t.standardPriceListLabel,
-              value: t.viewAction,
-              emphasized: true,
-              onTap: onTap,
-            ),
-          ]),
-        ],
-      ),
     );
   }
 }
@@ -155,81 +77,24 @@ class _MyWorkCard extends StatelessWidget {
                   children: [
                     for (final q in user.qualifications)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColours.primaryTint,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
                           q.name,
-                          style: AppTextStyles.badge.copyWith(color: AppColours.primaryDark),
+                          style: AppTextStyles.badge.copyWith(
+                            color: AppColours.primaryDark,
+                          ),
                         ),
                       ),
                   ],
                 ),
-          const SizedBox(height: 16),
-          _AvailabilityToggle(onChanged: onComingSoon),
           const SizedBox(height: 12),
-          SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: onComingSoon,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColours.ink,
-                side: const BorderSide(color: AppColours.border),
-                textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 14, color: AppColours.ink),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: Text(t.requestLeaveAction),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Purely local (not persisted) — there's no per-user availability field
-/// on the backend yet, so this reflects the session only.
-class _AvailabilityToggle extends StatefulWidget {
-  final VoidCallback onChanged;
-
-  const _AvailabilityToggle({required this.onChanged});
-
-  @override
-  State<_AvailabilityToggle> createState() => _AvailabilityToggleState();
-}
-
-class _AvailabilityToggleState extends State<_AvailabilityToggle> {
-  bool _available = true;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      constraints: const BoxConstraints(minHeight: 48),
-      decoration: BoxDecoration(
-        color: AppColours.surfaceMuted,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              t.availableForTasksLabel,
-              style: AppTextStyles.emphasis.copyWith(fontSize: 14),
-            ),
-          ),
-          Switch(
-            value: _available,
-            activeTrackColor: AppColours.primaryColor,
-            onChanged: (value) {
-              setState(() => _available = value);
-              widget.onChanged();
-            },
-          ),
         ],
       ),
     );
@@ -268,13 +133,17 @@ class _MySignatureView extends StatelessWidget {
                 children: [
                   Expanded(child: _CardTitle(t.mySignatureTitle)),
                   TextButton(
-                    onPressed: state.isLoaded ? () => showSignatureEditSheet(context) : null,
+                    onPressed: state.isLoaded
+                        ? () => showSignatureEditSheet(context)
+                        : null,
                     style: TextButton.styleFrom(
                       backgroundColor: AppColours.primaryTint,
                       foregroundColor: AppColours.primaryDark,
                       textStyle: AppTextStyles.badge,
                       padding: const EdgeInsets.symmetric(horizontal: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
                     ),
                     child: Text(t.updateAction),
                   ),
@@ -295,11 +164,18 @@ class _MySignatureView extends StatelessWidget {
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.draw_outlined, size: 20, color: AppColours.primaryDark),
+                          const Icon(
+                            Icons.draw_outlined,
+                            size: 20,
+                            color: AppColours.primaryDark,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             state.isLoaded ? t.noSignatureLabel : '…',
-                            style: AppTextStyles.emphasis.copyWith(fontSize: 14, color: AppColours.primaryDark),
+                            style: AppTextStyles.emphasis.copyWith(
+                              fontSize: 14,
+                              color: AppColours.primaryDark,
+                            ),
                           ),
                         ],
                       ),

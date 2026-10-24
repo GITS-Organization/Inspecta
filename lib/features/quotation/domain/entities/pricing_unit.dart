@@ -1,10 +1,8 @@
 /// What a priced line is charged per — the "Unit of Pricing" column of the
-/// proposal's budget table.
+/// proposal's budget table. Every offer is a fixed price per visit; older
+/// quotations may have been saved with another unit, and read back as this.
 enum PricingUnit {
-  perVisit('per_visit', 'Per Visit'),
-  perDay('per_day', 'Per Day'),
-  perHour('per_hour', 'Per Hour'),
-  perItem('per_item', 'Per Item');
+  perVisit('per_visit', 'Per Visit');
 
   final String value;
 
@@ -14,10 +12,5 @@ enum PricingUnit {
 
   const PricingUnit(this.value, this.pdfLabel);
 
-  static PricingUnit fromValue(Object? value) {
-    for (final unit in values) {
-      if (unit.value == value) return unit;
-    }
-    return PricingUnit.perVisit;
-  }
+  static PricingUnit fromValue(Object? value) => PricingUnit.perVisit;
 }

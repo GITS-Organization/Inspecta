@@ -5,10 +5,7 @@ import '../consts/exports.dart';
 class MResponsiveWrapper extends StatelessWidget {
   final Widget child;
 
-  const MResponsiveWrapper({
-    super.key,
-    required this.child,
-  });
+  const MResponsiveWrapper({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -28,9 +25,8 @@ class MResponsiveWrapper extends StatelessWidget {
     required BuildContext context,
   }) {
     return MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-        textScaler: const TextScaler.linear(1.0),
-      ),
+      data: MediaQuery.of(context)
+          .copyWith(textScaler: const TextScaler.linear(1.0)),
       child: MaxWidthBox(
         maxWidth: 1200,
         backgroundColor: Theme.of(context).colorScheme.surfaceContainer,

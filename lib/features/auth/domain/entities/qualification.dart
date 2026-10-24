@@ -1,13 +1,8 @@
 import 'package:equatable/equatable.dart';
 
-/// One equipment category an inspector is certified for (e.g. "Lifts"),
-/// with the certificate's expiry — Feature 04's inspector roster shows
-/// this alongside qualification-based matching in the assign flow.
 class Qualification extends Equatable {
   final String name;
 
-  /// Null when there's no expiry on file (legacy data, or a qualification
-  /// that never expires).
   final DateTime? validUntil;
 
   const Qualification({required this.name, this.validUntil});
@@ -20,7 +15,8 @@ class Qualification extends Equatable {
         until.isBefore((now ?? DateTime.now()).add(window));
   }
 
-  bool isExpired({DateTime? now}) => validUntil != null && validUntil!.isBefore(now ?? DateTime.now());
+  bool isExpired({DateTime? now}) =>
+      validUntil != null && validUntil!.isBefore(now ?? DateTime.now());
 
   @override
   List<Object?> get props => [name, validUntil];

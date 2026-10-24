@@ -33,9 +33,13 @@ class AppFilterChip extends StatelessWidget {
     final Color foreground;
     final Color border;
     if (warning) {
-      background = selected ? AppColours.chipAmberText : AppColours.chipAmberBackground;
+      background = selected
+          ? AppColours.chipAmberText
+          : AppColours.chipAmberBackground;
       foreground = selected ? Colors.white : AppColours.chipAmberText;
-      border = selected ? AppColours.chipAmberText : AppColours.chipAmberBackground;
+      border = selected
+          ? AppColours.chipAmberText
+          : AppColours.chipAmberBackground;
     } else {
       background = selected ? AppColours.primaryColor : Colors.white;
       foreground = selected ? Colors.white : AppColours.ink;

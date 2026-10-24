@@ -91,5 +91,9 @@ class AppTextStyles {
 
   /// Small label for a status badge or priority chip; colour is applied
   /// per-instance with [TextStyle.copyWith].
-  static const TextStyle badge = TextStyle(fontSize: 12, height: 16 / 12, fontWeight: FontWeight.w600);
+  static const TextStyle badge = TextStyle(
+    fontSize: 12,
+    height: 16 / 12,
+    fontWeight: FontWeight.w600,
+  );
 }

@@ -2,10 +2,7 @@
 
 class Constants {
   /// Identity microservice base URL (auth: login, otp, password...).
-  static const String identityUrl = 'https://tvoy-identity.kabret.info';
-
-  /// CMS microservice base URL (static pages: terms, privacy, ...).
-  static const String cmsUrl = 'https://tvoy-cms.kabret.info';
+  static const String baseUrl = 'https://tvoy-identity.kabret.info';
 
   /// Notification microservice base URL (in-app notifications).
   static const String notificationUrl = 'https://tvoy-notification.kabret.info';

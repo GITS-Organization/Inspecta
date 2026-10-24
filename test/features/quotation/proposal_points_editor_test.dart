@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspecta/features/quotation/domain/proposal_terms.dart';
-import 'package:inspecta/features/quotation/presentation/widgets/proposal_notes_editor.dart';
+import 'package:inspecta/features/quotation/presentation/widgets/proposal_points_editor.dart';
 import 'package:inspecta/l10n/app_localizations.dart';
 
 void main() {
@@ -22,7 +22,16 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: SingleChildScrollView(
-            child: ProposalNotesEditor(initial: latest, onChanged: (notes) => latest = notes),
+            child: ProposalPointsEditor(
+              icon: Icons.sticky_note_2_outlined,
+              label: 'Notes on the proposal',
+              help: 'Tap a point to edit it.',
+              addLabel: 'Add a note',
+              initial: latest,
+              standard: defaultProposalNotes,
+              onChanged: (notes) => latest = notes,
+              summaryOf: (count, isStandard) => isStandard ? 'Standard notes · $count points' : '$count points',
+            ),
           ),
         ),
       ),
@@ -81,5 +90,44 @@ void main() {
     await tester.pumpAndSettle();
     expect(latest, defaultProposalNotes);
     expect(find.text('Reset to standard'), findsNothing);
+  });
+
+  testWidgets('without a standard list it starts open and empty, ready for points', (tester) async {
+    late List<String> scope;
+    scope = [];
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProposalPointsEditor(
+              icon: Icons.checklist_rounded,
+              label: 'Scope of work',
+              help: 'Tap a point to edit it.',
+              addLabel: 'Add a point',
+              initial: scope,
+              onChanged: (points) => scope = points,
+              summaryOf: (count, _) => count == 0 ? 'No points yet' : '$count points',
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('No points yet'), findsOneWidget);
+    expect(find.text('Add a point'), findsOneWidget);
+    expect(find.text('Reset to standard'), findsNothing);
+
+    await tester.tap(find.text('Add a point'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Visual inspection');
+    expect(scope, ['Visual inspection']);
   });
 }

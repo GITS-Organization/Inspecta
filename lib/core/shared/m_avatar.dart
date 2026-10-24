@@ -29,7 +29,11 @@ class MAvatar extends StatelessWidget {
       backgroundColor: color,
       child: Text(
         initial.toUpperCase(),
-        style: TextStyle(fontSize: radius * 0.73, fontWeight: FontWeight.w800, color: Colors.black87),
+        style: TextStyle(
+          fontSize: radius * 0.73,
+          fontWeight: FontWeight.w800,
+          color: Colors.black87,
+        ),
       ),
     );
   }

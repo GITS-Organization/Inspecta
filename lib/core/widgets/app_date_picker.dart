@@ -6,16 +6,6 @@ import '../../l10n/app_localizations.dart';
 import '../consts/app_colors.dart';
 import '../consts/app_text_styles.dart';
 
-/// The app's date picker dialog: a blue header showing the chosen date(s)
-/// over a month calendar, with Cancel / Confirm actions.
-///
-/// Open it with [pickDate] for a single day or [pickRange] for a start/end
-/// range; both resolve to null when the dialog is dismissed.
-///
-/// Days before `firstDate` can't be picked, and it defaults to today — a
-/// screen that needs past dates (a certificate's examination date, an
-/// overdue job) must pass an earlier `firstDate`. `lastDate` defaults to
-/// 1 January of the year after next.
 class AppDatePicker extends StatefulWidget {
   final bool _isRange;
   final String? title;

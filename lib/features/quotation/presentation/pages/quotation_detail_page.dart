@@ -201,6 +201,7 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
                                     request: state.request!,
                                     lines: current.items,
                                     notes: current.notes.isEmpty ? defaultProposalNotes : current.notes,
+                                    scopeOfWork: current.scopeOfWork,
                                     version: current.version ?? 1,
                                     date: current.sentAt ?? current.createdAt,
                                     validUntil: current.validUntil,

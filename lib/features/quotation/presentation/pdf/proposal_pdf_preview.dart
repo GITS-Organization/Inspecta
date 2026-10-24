@@ -48,6 +48,7 @@ Future<void> previewProposalPdf(
   required InspectionRequest request,
   required List<QuoteLineItem> lines,
   required List<String> notes,
+  List<String>? scopeOfWork,
   int version = 1,
   DateTime? date,
   DateTime? validUntil,
@@ -78,6 +79,7 @@ Future<void> previewProposalPdf(
         request: request,
         lines: lines,
         notes: notes,
+        scopeOfWork: scopeOfWork,
         details: ProposalDetails(
           proposalNumber: number,
           quotationNumber: quotationNumberFor(request, date: issued),

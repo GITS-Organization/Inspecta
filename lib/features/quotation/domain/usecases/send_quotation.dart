@@ -29,6 +29,7 @@ class SendQuotation {
     int? validityDays,
     String? message,
     List<String>? notes,
+    List<String>? scopeOfWork,
   }) async {
     final version = await _quotations.send(
       requestId: requestId,
@@ -40,6 +41,7 @@ class SendQuotation {
       validityDays: validityDays,
       message: message?.trim(),
       notes: notes,
+      scopeOfWork: scopeOfWork,
     );
 
     if (type == ReplyType.reject) {

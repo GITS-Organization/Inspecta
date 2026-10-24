@@ -77,10 +77,14 @@ class _MTextFieldState extends State<MTextField> {
     final borderColor = hasError
         ? (glass ? AppColours.glassError : AppColours.errorIcon)
         : focused
-        ? (glass ? Colors.white.withValues(alpha: 0.85) : AppColours.primaryColor)
+        ? (glass
+              ? Colors.white.withValues(alpha: 0.85)
+              : AppColours.primaryColor)
         : (glass ? Colors.white.withValues(alpha: 0.3) : AppColours.border);
     final textColor = glass ? Colors.white : null;
-    final mutedColor = glass ? Colors.white.withValues(alpha: 0.55) : AppColours.inkMuted;
+    final mutedColor = glass
+        ? Colors.white.withValues(alpha: 0.55)
+        : AppColours.inkMuted;
 
     final field = Container(
       width: double.infinity,
@@ -103,7 +107,9 @@ class _MTextFieldState extends State<MTextField> {
             Icon(
               widget.prefixIcon,
               size: 20,
-              color: glass ? Colors.white.withValues(alpha: 0.75) : AppColours.inkMuted,
+              color: glass
+                  ? Colors.white.withValues(alpha: 0.75)
+                  : AppColours.inkMuted,
             ),
             const SizedBox(width: 10),
           ],

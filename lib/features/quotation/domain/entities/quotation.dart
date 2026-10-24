@@ -36,6 +36,10 @@ class Quotation extends Equatable {
   /// The proposal's "Note that:" list as edited for this quotation; empty
   /// means the defaults (older quotations predate the field).
   final List<String> notes;
+
+  /// The scope of work the coordinator listed for this offer, printed above
+  /// the notes, one point each; empty when none was written.
+  final List<String> scopeOfWork;
   final QuotationStatus status;
   final DateTime? sentAt;
   final String createdBy;
@@ -68,6 +72,7 @@ class Quotation extends Equatable {
     this.validUntil,
     this.message,
     this.notes = const [],
+    this.scopeOfWork = const [],
     this.sentAt,
     this.clientResponseOutcome,
     this.clientCounterPricePiastres,
@@ -113,6 +118,7 @@ class Quotation extends Equatable {
     validUntil,
     message,
     notes,
+    scopeOfWork,
     status,
     sentAt,
     createdBy,

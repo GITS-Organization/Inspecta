@@ -177,7 +177,9 @@ class _PdfPreviewPageState extends State<PdfPreviewPage>
 
     // iPad anchors its share sheet to a rect; use the download button's.
     final box = _downloadKey.currentContext?.findRenderObject() as RenderBox?;
-    final bounds = box == null ? null : box.localToGlobal(Offset.zero) & box.size;
+    final bounds = box == null
+        ? null
+        : box.localToGlobal(Offset.zero) & box.size;
 
     setState(() => _isSaving = true);
     try {
@@ -205,7 +207,9 @@ class _PdfPreviewPageState extends State<PdfPreviewPage>
       final tap = _doubleTapAt;
       final scenePoint = _transform.toScene(tap);
       final width = context.size?.width ?? 0;
-      final tx = (tap.dx - s * scenePoint.dx).clamp(width * (1 - s), 0.0).toDouble();
+      final tx = (tap.dx - s * scenePoint.dx)
+          .clamp(width * (1 - s), 0.0)
+          .toDouble();
       final ty = math.min(tap.dy - s * scenePoint.dy, 0.0);
       target = Matrix4(s, 0, 0, 0, 0, s, 0, 0, 0, 0, 1, 0, tx, ty, 0, 1);
     }
@@ -282,7 +286,10 @@ class _PdfPreviewPageState extends State<PdfPreviewPage>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              MNotice(type: MNoticeType.error, message: t.pdfPreviewFailedMessage),
+              MNotice(
+                type: MNoticeType.error,
+                message: t.pdfPreviewFailedMessage,
+              ),
               const SizedBox(height: 12),
               TextButton(
                 onPressed: _load,

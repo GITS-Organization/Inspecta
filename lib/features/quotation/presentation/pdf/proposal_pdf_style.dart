@@ -396,3 +396,67 @@ List<pw.Widget> proposalNotesPanel(List<String> notes) {
       ),
   ];
 }
+
+/// The "Scope of work" panel above the notes: the same navy title bar, then
+/// one bulleted row per point the coordinator listed. Empty when none was.
+List<pw.Widget> proposalScopeOfWorkPanel(List<String>? scopeOfWork) {
+  final points = [
+    for (final point in scopeOfWork ?? const <String>[])
+      if (point.trim().isNotEmpty) point.trim(),
+  ];
+  if (points.isEmpty) return const [];
+
+  const side = pw.BorderSide(color: ProposalColors.border, width: 0.8);
+
+  return [
+    pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: const pw.BoxDecoration(
+        color: ProposalColors.navy,
+        borderRadius: pw.BorderRadius.only(topLeft: pw.Radius.circular(6), topRight: pw.Radius.circular(6)),
+      ),
+      child: pw.Row(
+        children: [
+          pw.Container(width: 5, height: 14, color: ProposalColors.green),
+          pw.SizedBox(width: 8),
+          pw.Text(
+            'SCOPE OF WORK',
+            style: pw.TextStyle(
+              fontSize: 10,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.white,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ],
+      ),
+    ),
+    for (var i = 0; i < points.length; i++)
+      pw.Container(
+        width: double.infinity,
+        padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: pw.BoxDecoration(
+          color: i.isOdd ? ProposalColors.rowAlt : PdfColors.white,
+          border: const pw.Border(left: side, right: side, bottom: side),
+        ),
+        child: pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Container(
+              width: 4,
+              height: 4,
+              margin: const pw.EdgeInsets.only(right: 10, top: 4, left: 5),
+              decoration: const pw.BoxDecoration(color: ProposalColors.green, shape: pw.BoxShape.circle),
+            ),
+            pw.Expanded(
+              child: pw.Text(
+                points[i],
+                style: pw.TextStyle(fontSize: 9, color: ProposalColors.ink, lineSpacing: 2),
+              ),
+            ),
+          ],
+        ),
+      ),
+  ];
+}

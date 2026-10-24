@@ -3,80 +3,106 @@ import 'package:flutter/material.dart';
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../domain/proposal_terms.dart';
 
-/// The notes printed under the proposal's budget table, as a card that stays
-/// folded until the coordinator wants to look: the standard terms are right
-/// for most quotes, and twelve open text boxes would bury the price fields.
+/// A list of points printed on the proposal — the scope of work, or the notes
+/// under the budget table — as a card that can be folded away.
 ///
-/// Unfolded, each note is a numbered row — tap it to edit in place, drag the
-/// handle to reorder, ✕ to remove — with "Add a note" and a reset to the
-/// standard list underneath.
-class ProposalNotesEditor extends StatefulWidget {
+/// Unfolded, each point is a numbered row — tap it to edit in place, drag the
+/// handle to reorder, ✕ to remove — with an "add" button underneath. When
+/// [standard] is given (the notes' default terms), the card starts folded,
+/// says whether the list is still the standard one, and offers a reset to it;
+/// without it (the scope of work, which starts empty) the card starts open.
+class ProposalPointsEditor extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final String help;
+  final String addLabel;
   final List<String> initial;
   final ValueChanged<List<String>> onChanged;
 
-  const ProposalNotesEditor({super.key, required this.initial, required this.onChanged});
+  /// The standard list this one resets to, when there is one.
+  final List<String>? standard;
+
+  /// Shown under the card, which turns red, when the list is not acceptable.
+  final String? errorText;
+
+  /// The folded card's second line, from the number of points and whether
+  /// they are still the [standard] ones.
+  final String Function(int count, bool isStandard) summaryOf;
+
+  const ProposalPointsEditor({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.help,
+    required this.addLabel,
+    required this.initial,
+    required this.onChanged,
+    required this.summaryOf,
+    this.standard,
+    this.errorText,
+  });
 
   @override
-  State<ProposalNotesEditor> createState() => _ProposalNotesEditorState();
+  State<ProposalPointsEditor> createState() => _ProposalPointsEditorState();
 }
 
-class _Note {
+class _Point {
   final int id;
   String text;
 
-  _Note(this.id, this.text);
+  _Point(this.id, this.text);
 }
 
-class _ProposalNotesEditorState extends State<ProposalNotesEditor> {
-  late final List<_Note> _notes;
+class _ProposalPointsEditorState extends State<ProposalPointsEditor> {
+  late final List<_Point> _points;
   int _nextId = 0;
-  bool _expanded = false;
+  late bool _expanded = widget.standard == null;
 
-  /// The note to open for editing as soon as it is built (a new one).
+  /// The point to open for editing as soon as it is built (a new one).
   int? _editNext;
 
   @override
   void initState() {
     super.initState();
-    _notes = [for (final text in widget.initial) _Note(_nextId++, text)];
+    _points = [for (final text in widget.initial) _Point(_nextId++, text)];
   }
 
   bool get _isStandard {
-    if (_notes.length != defaultProposalNotes.length) return false;
-    for (var i = 0; i < _notes.length; i++) {
-      if (_notes[i].text != defaultProposalNotes[i]) return false;
+    final standard = widget.standard;
+    if (standard == null || _points.length != standard.length) return false;
+    for (var i = 0; i < _points.length; i++) {
+      if (_points[i].text != standard[i]) return false;
     }
     return true;
   }
 
-  void _notify() => widget.onChanged([for (final note in _notes) note.text]);
+  void _notify() => widget.onChanged([for (final point in _points) point.text]);
 
-  void _edit(_Note note, String text) {
-    note.text = text;
+  void _edit(_Point point, String text) {
+    point.text = text;
     _notify();
   }
 
-  void _remove(_Note note) {
-    setState(() => _notes.remove(note));
+  void _remove(_Point point) {
+    setState(() => _points.remove(point));
     _notify();
   }
 
   void _add() {
-    final note = _Note(_nextId++, '');
+    final point = _Point(_nextId++, '');
     setState(() {
-      _notes.add(note);
-      _editNext = note.id;
+      _points.add(point);
+      _editNext = point.id;
     });
     _notify();
   }
 
   void _reset() {
     setState(() {
-      _notes
+      _points
         ..clear()
-        ..addAll([for (final text in defaultProposalNotes) _Note(_nextId++, text)]);
+        ..addAll([for (final text in widget.standard ?? const <String>[]) _Point(_nextId++, text)]);
     });
     _notify();
   }
@@ -84,7 +110,7 @@ class _ProposalNotesEditorState extends State<ProposalNotesEditor> {
   void _reorder(int from, int to) {
     setState(() {
       if (to > from) to -= 1;
-      _notes.insert(to, _notes.removeAt(from));
+      _points.insert(to, _points.removeAt(from));
     });
     _notify();
   }
@@ -95,11 +121,12 @@ class _ProposalNotesEditorState extends State<ProposalNotesEditor> {
     final editNext = _editNext;
     _editNext = null;
 
-    return Container(
+    final hasError = widget.errorText != null;
+    final card = Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColours.border, width: 1.5),
+        border: Border.all(color: hasError ? AppColours.errorIcon : AppColours.border, width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -112,16 +139,16 @@ class _ProposalNotesEditorState extends State<ProposalNotesEditor> {
               padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
               child: Row(
                 children: [
-                  const Icon(Icons.sticky_note_2_outlined, size: 20, color: AppColours.primaryColor),
+                  Icon(widget.icon, size: 20, color: AppColours.primaryColor),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(t.proposalNotesLabel, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
+                        Text(widget.label, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
                         const SizedBox(height: 2),
                         Text(
-                          _isStandard ? t.proposalNotesStandard(_notes.length) : t.proposalNotesCount(_notes.length),
+                          widget.summaryOf(_points.length, _isStandard),
                           style: AppTextStyles.caption,
                         ),
                       ],
@@ -140,27 +167,27 @@ class _ProposalNotesEditorState extends State<ProposalNotesEditor> {
             const Divider(height: 1, color: AppColours.border),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-              child: Text(t.proposalNotesHelp, style: AppTextStyles.caption),
+              child: Text(widget.help, style: AppTextStyles.caption),
             ),
             ReorderableListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               buildDefaultDragHandles: false,
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-              itemCount: _notes.length,
+              itemCount: _points.length,
               onReorder: _reorder,
               itemBuilder: (context, index) {
-                final note = _notes[index];
-                return _NoteRow(
-                  key: ValueKey(note.id),
+                final point = _points[index];
+                return _PointRow(
+                  key: ValueKey(point.id),
                   index: index,
-                  text: note.text,
-                  startEditing: note.id == editNext,
-                  onChanged: (text) => _edit(note, text),
+                  text: point.text,
+                  startEditing: point.id == editNext,
+                  onChanged: (text) => _edit(point, text),
                   onCommitted: () {
-                    if (note.text.trim().isEmpty) _remove(note);
+                    if (point.text.trim().isEmpty) _remove(point);
                   },
-                  onRemove: () => _remove(note),
+                  onRemove: () => _remove(point),
                 );
               },
             ),
@@ -171,10 +198,10 @@ class _ProposalNotesEditorState extends State<ProposalNotesEditor> {
                   TextButton.icon(
                     onPressed: _add,
                     icon: const Icon(Icons.add_rounded, size: 18),
-                    label: Text(t.addNote),
+                    label: Text(widget.addLabel),
                   ),
                   const Spacer(),
-                  if (!_isStandard)
+                  if (widget.standard != null && !_isStandard)
                     TextButton(
                       onPressed: _reset,
                       style: TextButton.styleFrom(foregroundColor: AppColours.inkMuted),
@@ -187,11 +214,28 @@ class _ProposalNotesEditorState extends State<ProposalNotesEditor> {
         ],
       ),
     );
+
+    if (!hasError) return card;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        card,
+        const SizedBox(height: 6),
+        Text(
+          widget.errorText!,
+          style: AppTextStyles.caption.copyWith(
+            color: AppColours.errorIcon,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 }
 
 /// One note: read-only text until tapped, then a field in its place.
-class _NoteRow extends StatefulWidget {
+class _PointRow extends StatefulWidget {
   final int index;
   final String text;
   final bool startEditing;
@@ -199,7 +243,7 @@ class _NoteRow extends StatefulWidget {
   final VoidCallback onCommitted;
   final VoidCallback onRemove;
 
-  const _NoteRow({
+  const _PointRow({
     super.key,
     required this.index,
     required this.text,
@@ -210,10 +254,10 @@ class _NoteRow extends StatefulWidget {
   });
 
   @override
-  State<_NoteRow> createState() => _NoteRowState();
+  State<_PointRow> createState() => _PointRowState();
 }
 
-class _NoteRowState extends State<_NoteRow> {
+class _PointRowState extends State<_PointRow> {
   late final TextEditingController _controller = TextEditingController(text: widget.text);
   final _focus = FocusNode();
   late bool _editing = widget.startEditing;

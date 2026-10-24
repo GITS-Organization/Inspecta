@@ -5,13 +5,13 @@ import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/shared/m_card.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../domain/entities/pricing_unit.dart';
 import '../../domain/entities/reply_type.dart';
+import '../../domain/proposal_terms.dart';
 import '../bloc/quotation_form_cubit.dart';
 import '../pdf/proposal_pdf_preview.dart';
 import 'price_field.dart';
-import 'proposal_notes_editor.dart';
-import 'quotation_labels.dart';
+import 'proposal_points_editor.dart';
+
 import 'reply_option_tile.dart';
 
 /// Feature 03 §5's "Reply panel (on Request detail)": Accept / Offer
@@ -76,10 +76,8 @@ class _QuotationReplyCardState extends State<QuotationReplyCard> {
               _LinePricing(
                 title: '${item.displayTitle} × ${item.quantity}',
                 controller: _priceControllers.putIfAbsent(item.id, TextEditingController.new),
-                unit: state.unitOf(item.id),
                 priceError: state.submitted && state.linePriceInvalid(item.id),
                 onPriceChanged: (value) => cubit.changeLinePrice(item.id, value),
-                onUnitChanged: (unit) => cubit.changeLineUnit(item.id, unit),
               ),
             ],
             const SizedBox(height: 14),
@@ -87,7 +85,28 @@ class _QuotationReplyCardState extends State<QuotationReplyCard> {
             const SizedBox(height: 6),
             _ValidityDropdown(value: state.validityDays, onChanged: cubit.changeValidity),
             const SizedBox(height: 14),
-            ProposalNotesEditor(initial: state.notes, onChanged: cubit.changeNotes),
+            ProposalPointsEditor(
+              icon: Icons.checklist_rounded,
+              label: t.scopeOfWorkLabel,
+              errorText: state.showScopeError ? t.errorScopeRequired : null,
+              help: t.proposalNotesHelp,
+              addLabel: t.addScopePoint,
+              initial: state.scopeOfWork,
+              onChanged: cubit.changeScopeOfWork,
+              summaryOf: (count, _) => count == 0 ? t.scopeOfWorkEmpty : t.proposalNotesCount(count),
+            ),
+            const SizedBox(height: 14),
+            ProposalPointsEditor(
+              icon: Icons.sticky_note_2_outlined,
+              label: t.proposalNotesLabel,
+              help: t.proposalNotesHelp,
+              addLabel: t.addNote,
+              initial: state.notes,
+              standard: defaultProposalNotes,
+              onChanged: cubit.changeNotes,
+              summaryOf: (count, isStandard) =>
+                  isStandard ? t.proposalNotesStandard(count) : t.proposalNotesCount(count),
+            ),
           ],
           if (state.replyType == ReplyType.offer || state.replyType == ReplyType.reject) ...[
             const SizedBox(height: 14),
@@ -108,6 +127,7 @@ class _QuotationReplyCardState extends State<QuotationReplyCard> {
                   context,
                   request: cubit.request,
                   lines: cubit.offerLines(),
+                  scopeOfWork: cubit.scopeOfWork,
                   notes: cubit.notes,
                   validityDays: state.validityDays,
                 ),
@@ -255,22 +275,18 @@ class _MessageField extends StatelessWidget {
   }
 }
 
-/// One request item's price and pricing unit.
+/// One request item's fixed price per visit.
 class _LinePricing extends StatelessWidget {
   final String title;
   final TextEditingController controller;
-  final PricingUnit unit;
   final bool priceError;
   final ValueChanged<String> onPriceChanged;
-  final ValueChanged<PricingUnit> onUnitChanged;
 
   const _LinePricing({
     required this.title,
     required this.controller,
-    required this.unit,
     required this.priceError,
     required this.onPriceChanged,
-    required this.onUnitChanged,
   });
 
   @override
@@ -282,29 +298,13 @@ class _LinePricing extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(title, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
+        const SizedBox(height: 2),
+        Text(t.fixedPricePerVisit, style: AppTextStyles.caption),
         const SizedBox(height: 6),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 3,
-              child: PriceField(
-                controller: controller,
-                onChanged: onPriceChanged,
-                errorText: priceError ? t.errorPriceRequired : null,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 2,
-              child: _DropdownBox<PricingUnit>(
-                value: unit,
-                items: PricingUnit.values,
-                labelOf: (unit) => unit.label(t),
-                onChanged: onUnitChanged,
-              ),
-            ),
-          ],
+        PriceField(
+          controller: controller,
+          onChanged: onPriceChanged,
+          errorText: priceError ? t.errorPriceRequired : null,
         ),
       ],
     );

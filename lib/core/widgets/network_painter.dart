@@ -2,14 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// Faint nodes, links and rings for a panel's background: the sign-in
-/// panel, the sidebar, and the app header. Fixed seed, so the layout does
-/// not shift on rebuild.
-///
-/// Pass an [animation] (0 → 1, repeating) and the nodes drift around their
-/// resting spots while the links stretch, fade and re-form between whichever
-/// ones are close. Every node completes whole orbits per cycle, so the loop
-/// has no seam. Without one it paints a still frame. See [AnimatedNetwork].
 class NetworkPainter extends CustomPainter {
   const NetworkPainter({
     this.nodes = 16,

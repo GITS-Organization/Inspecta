@@ -197,15 +197,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get changePhotoAction => 'تغيير الصورة';
 
   @override
-  String get quotationDefaultsTitle => 'إعدادات عروض الأسعار';
-
-  @override
-  String get quoteValidForLabel => 'صلاحية العرض';
-
-  @override
-  String get standardPriceListLabel => 'قائمة الأسعار القياسية';
-
-  @override
   String get viewAction => 'عرض';
 
   @override
@@ -646,6 +637,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get errorPriceRequired => 'أدخل سعرًا لكل وحدة.';
+
+  @override
+  String get errorScopeRequired => 'أضف نقطة واحدة على الأقل إلى نطاق العمل.';
 
   @override
   String get errorReasonRequired => 'أخبر العميل بسبب الرفض.';
@@ -1796,19 +1790,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get proposalTitle => 'العرض الفني والتجاري';
 
   @override
-  String get pricingUnitLabel => 'وحدة التسعير';
+  String get fixedPricePerVisit => 'سعر ثابت لكل زيارة';
 
   @override
-  String get pricingUnitPerVisit => 'لكل زيارة';
+  String get scopeOfWorkLabel => 'نطاق العمل';
 
   @override
-  String get pricingUnitPerDay => 'لكل يوم';
+  String get scopeOfWorkEmpty => 'لا توجد نقاط بعد — أضف ما تشمله الزيارة';
 
   @override
-  String get pricingUnitPerHour => 'لكل ساعة';
-
-  @override
-  String get pricingUnitPerItem => 'لكل بند';
+  String get addScopePoint => 'إضافة نقطة';
 
   @override
   String get proposalNotesLabel => 'ملاحظات العرض';
@@ -1821,7 +1812,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get addNote => 'إضافة ملاحظة';
 
   @override
-  String get removeNote => 'حذف الملاحظة';
+  String get removeNote => 'حذف النقطة';
 
   @override
   String proposalNotesCount(int count) {

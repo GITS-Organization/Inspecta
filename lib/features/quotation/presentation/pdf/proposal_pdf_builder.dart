@@ -47,6 +47,7 @@ Future<Uint8List> buildProposalPdf({
   required InspectionRequest request,
   required List<QuoteLineItem> lines,
   required List<String> notes,
+  List<String>? scopeOfWork,
   required ProposalDetails details,
 }) async {
   final regular = pw.Font.ttf(await rootBundle.load('assets/fonts/inter/Inter-Regular.ttf'));
@@ -105,7 +106,7 @@ Future<Uint8List> buildProposalPdf({
   contentPage(proposalIndustrialServicesPage);
   contentPage(proposalEnvironmentalServicesPage);
   contentPage(() => _scopePage(request));
-  contentPage(() => _budgetPage(request, lines, notes));
+  contentPage(() => _budgetPage(request, lines, scopeOfWork, notes));
   contentPage(proposalTermsPage);
   doc.addPage(
     pw.Page(
@@ -297,7 +298,12 @@ String _describe(RequestItem item) {
 
 String _egp(int piastres) => '${NumberFormat('#,##0.##', 'en').format(piastres / 100)} EGP';
 
-List<pw.Widget> _budgetPage(InspectionRequest request, List<QuoteLineItem> lines, List<String> notes) {
+List<pw.Widget> _budgetPage(
+  InspectionRequest request,
+  List<QuoteLineItem> lines,
+  List<String>? scopeOfWork,
+  List<String> notes,
+) {
   final grandTotal = lines.fold<int>(0, (sum, line) => sum + line.lineTotalPiastres);
 
   pw.Widget head(String text) => proposalCell(text, header: true, align: pw.Alignment.center, vertical: 8, fontSize: 8.5);
@@ -374,6 +380,10 @@ List<pw.Widget> _budgetPage(InspectionRequest request, List<QuoteLineItem> lines
       ),
     ),
     pw.SizedBox(height: 20),
+    if (scopeOfWork != null && scopeOfWork.any((point) => point.trim().isNotEmpty)) ...[
+      ...proposalScopeOfWorkPanel(scopeOfWork),
+      pw.SizedBox(height: 16),
+    ],
     ...proposalNotesPanel(notes),
   ];
 }

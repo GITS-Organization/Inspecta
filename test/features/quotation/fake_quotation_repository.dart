@@ -12,8 +12,8 @@ class FakeQuotationRepository implements QuotationRepository {
   QuotationFailure? recordResponseFailure;
   int nextVersion = 1;
 
-  final saveDraftCalls = <({ReplyType type, List<QuoteLineItem> items, String? message})>[];
-  final sendCalls = <({ReplyType type, List<QuoteLineItem> items, String? message})>[];
+  final saveDraftCalls = <({ReplyType type, List<QuoteLineItem> items, String? message, List<String>? scopeOfWork})>[];
+  final sendCalls = <({ReplyType type, List<QuoteLineItem> items, String? message, List<String>? scopeOfWork})>[];
   final responseCalls =
       <({String quotationId, ClientResponseOutcome outcome, int? clientPrice})>[];
   final reminderCalls = <String>[];
@@ -35,8 +35,9 @@ class FakeQuotationRepository implements QuotationRepository {
     int? validityDays,
     String? message,
     List<String>? notes,
+    List<String>? scopeOfWork,
   }) async {
-    saveDraftCalls.add((type: type, items: items, message: message));
+    saveDraftCalls.add((type: type, items: items, message: message, scopeOfWork: scopeOfWork));
     if (saveDraftFailure != null) throw saveDraftFailure!;
     return Quotation(
       id: 'q1',
@@ -63,8 +64,9 @@ class FakeQuotationRepository implements QuotationRepository {
     int? validityDays,
     String? message,
     List<String>? notes,
+    List<String>? scopeOfWork,
   }) async {
-    sendCalls.add((type: type, items: items, message: message));
+    sendCalls.add((type: type, items: items, message: message, scopeOfWork: scopeOfWork));
     if (sendFailure != null) throw sendFailure!;
     return nextVersion;
   }
