@@ -1,0 +1,68 @@
+@baseUrl = http://localhost:5238
+@token = {{accessToken}}
+@requestId = 00000000-0000-0000-0000-000000000000
+@clientId = 00000000-0000-0000-0000-000000000000
+
+### Login
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+	"email": "admin@example.com",
+	"password": "replace-with-local-secret"
+}
+
+### Current identity
+GET {{baseUrl}}/api/v1/auth/me
+Authorization: Bearer {{token}}
+
+### Create a client
+POST {{baseUrl}}/api/v1/clients
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+	"name": "Example Industrial Company",
+	"notes": "Local API smoke test",
+	"contacts": [
+		{ "name": "Operations Contact", "email": "operations@example.com", "phone": "+201000000000", "isPrimary": true }
+	]
+}
+
+### Create an inspection request
+POST {{baseUrl}}/api/v1/requests
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+	"clientId": "{{clientId}}",
+	"clientName": "Example Industrial Company",
+	"location": "Cairo",
+	"subject": "Crane inspection",
+	"items": [ { "name": "Overhead crane", "quantity": 1, "capacity": "10 t" } ]
+}
+
+### List requests visible to current user
+GET {{baseUrl}}/api/v1/requests
+Authorization: Bearer {{token}}
+
+### List quote revisions
+GET {{baseUrl}}/api/v1/requests/{{requestId}}/quotes
+Authorization: Bearer {{token}}
+
+### Get certificate
+GET {{baseUrl}}/api/v1/requests/{{requestId}}/certificate
+Authorization: Bearer {{token}}
+
+### Get timesheet
+GET {{baseUrl}}/api/v1/requests/{{requestId}}/timesheet
+Authorization: Bearer {{token}}
+
+### Logout
+POST {{baseUrl}}/api/v1/auth/logout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+	"refreshToken": "replace-with-refresh-token"
+}

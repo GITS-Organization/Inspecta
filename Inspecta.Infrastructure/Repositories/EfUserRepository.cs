@@ -1,0 +1,118 @@
+using Inspecta.Application.Interfaces;
+using Inspecta.Domain.Entities;
+using Inspecta.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace Inspecta.Infrastructure.Repositories;
+
+public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserRepository
+{
+    public Task<AppUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default) =>
+        dbContext.Users.SingleOrDefaultAsync(user => user.Email == email, cancellationToken);
+
+    public Task<AppUser?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        dbContext.Users.SingleOrDefaultAsync(user => user.Id == id, cancellationToken);
+
+    public Task<AppUser?> GetByFirebaseUidAsync(string firebaseUid, CancellationToken cancellationToken = default) =>
+        dbContext.Users.SingleOrDefaultAsync(user => user.FirebaseUid == firebaseUid, cancellationToken);
+
+    public async Task AddAsync(AppUser user, CancellationToken cancellationToken = default)
+    {
+        dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task SaveAsync(AppUser user, CancellationToken cancellationToken = default)
+    {
+        if (dbContext.Entry(user).State == EntityState.Detached)
+        {
+            dbContext.Users.Update(user);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<bool> DeactivateAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var user = await dbContext.Users.SingleOrDefaultAsync(user => user.Id == userId, cancellationToken);
+        if (user is null || !user.IsActive)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return false;
+        }
+
+        user.IsActive = false;
+        var tokens = await dbContext.RefreshTokens
+            .Where(token => token.UserId == userId && token.RevokedAt == null)
+            .ToListAsync(cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        foreach (var token in tokens) token.RevokedAt = now;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task SaveRefreshTokenAsync(RefreshToken refreshToken, CancellationToken cancellationToken = default)
+    {
+        dbContext.RefreshTokens.Add(refreshToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public Task<RefreshToken?> GetRefreshTokenByHashAsync(string tokenHash, CancellationToken cancellationToken = default) =>
+        dbContext.RefreshTokens.SingleOrDefaultAsync(token => token.TokenHash == tokenHash, cancellationToken);
+
+    public async Task<bool> RotateRefreshTokenAsync(
+        RefreshToken currentToken,
+        RefreshToken nextToken,
+        CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        var updated = await dbContext.RefreshTokens
+            .Where(token => token.Id == currentToken.Id && token.RevokedAt == null)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(token => token.RevokedAt, now)
+                .SetProperty(token => token.ReplacedByTokenHash, nextToken.TokenHash), cancellationToken);
+
+        if (updated == 0)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return false;
+        }
+
+        dbContext.RefreshTokens.Add(nextToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task RevokeRefreshTokenAsync(RefreshToken refreshToken, CancellationToken cancellationToken = default)
+    {
+        if (refreshToken.RevokedAt is null)
+        {
+            refreshToken.RevokedAt = DateTimeOffset.UtcNow;
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    public async Task RevokeRefreshTokenFamilyAsync(Guid familyId, CancellationToken cancellationToken = default)
+    {
+        var tokens = await dbContext.RefreshTokens
+            .Where(token => token.FamilyId == familyId && token.RevokedAt == null)
+            .ToListAsync(cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        foreach (var token in tokens) token.RevokedAt = now;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task RevokeAllRefreshTokensAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var tokens = await dbContext.RefreshTokens
+            .Where(token => token.UserId == userId && token.RevokedAt == null)
+            .ToListAsync(cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        foreach (var token in tokens) token.RevokedAt = now;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+}

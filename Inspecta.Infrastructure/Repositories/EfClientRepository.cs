@@ -1,0 +1,31 @@
+using Inspecta.Application.Interfaces;
+using Inspecta.Domain.Entities;
+using Inspecta.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace Inspecta.Infrastructure.Repositories;
+
+public sealed class EfClientRepository(InspectaDbContext dbContext) : IClientRepository
+{
+    public async Task AddAsync(Client client, CancellationToken cancellationToken = default)
+    {
+        dbContext.Clients.Add(client);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public Task<Client?> GetByIdAsync(Guid clientId, bool tracking, CancellationToken cancellationToken = default)
+    {
+        IQueryable<Client> query = dbContext.Clients.Include(client => client.Contacts);
+        if (!tracking) query = query.AsNoTracking();
+        return query.SingleOrDefaultAsync(client => client.Id == clientId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Client>> ListAsync(bool includeArchived, CancellationToken cancellationToken = default)
+    {
+        var query = dbContext.Clients.AsNoTracking().Include(client => client.Contacts).AsQueryable();
+        if (!includeArchived) query = query.Where(client => client.ArchivedAt == null);
+        return await query.OrderBy(client => client.Name).ToListAsync(cancellationToken);
+    }
+
+    public Task SaveAsync(CancellationToken cancellationToken = default) => dbContext.SaveChangesAsync(cancellationToken);
+}

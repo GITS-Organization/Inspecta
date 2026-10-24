@@ -33,6 +33,13 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# .NET build output and local backend databases
+**/bin/
+**/obj/
+Inspecta.Api/*.db*
+Inspecta.Infrastructure/*.db*
+.tools/
+
 # Symbolication related
 app.*.symbols
 

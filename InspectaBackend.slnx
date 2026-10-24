@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Inspecta.Api/Inspecta.Api.csproj" />
+  <Project Path="Inspecta.Application/Inspecta.Application.csproj" />
+  <Project Path="Inspecta.Domain.Tests/Inspecta.Domain.Tests.csproj" />
+  <Project Path="Inspecta.Domain/Inspecta.Domain.csproj" />
+  <Project Path="Inspecta.Infrastructure/Inspecta.Infrastructure.csproj" />
+</Solution>
