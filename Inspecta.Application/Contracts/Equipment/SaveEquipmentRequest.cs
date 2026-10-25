@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using Inspecta.Domain.Entities;
+using Inspecta.Domain.Enums;
 
 namespace Inspecta.Application.Contracts.Equipment;
 
@@ -9,6 +11,8 @@ public sealed record SaveEquipmentRequest
 
     [Required, MaxLength(200)]
     public required string Name { get; init; }
+
+    public ItemType? ItemType { get; init; }
 
     [MaxLength(200)]
     public string? Category { get; init; }
@@ -24,6 +28,19 @@ public sealed record SaveEquipmentRequest
 
     [MaxLength(100)]
     public string? Capacity { get; init; }
+
+    [MaxLength(500)]
+    public string? LocationInsideClientLocation { get; init; }
+
+    public string? Notes { get; init; }
+
+    public IReadOnlyList<string>? Labels { get; init; }
+
+    public IReadOnlyList<ItemDate>? Dates { get; init; }
+
+    public IReadOnlyList<ItemChecklistEntry>? Checklist { get; init; }
+
+    public IReadOnlyList<ItemAttachment>? Attachments { get; init; }
 }
 
 /// <summary>Inspection history update and next due date.</summary>

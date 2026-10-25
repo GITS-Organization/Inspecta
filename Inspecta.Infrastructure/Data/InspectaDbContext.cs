@@ -10,7 +10,7 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<ClientContact> ClientContacts => Set<ClientContact>();
-    public DbSet<Equipment> Equipment => Set<Equipment>();
+    public DbSet<Item> Items => Set<Item>();
     public DbSet<InspectionRequest> Requests => Set<InspectionRequest>();
     public DbSet<RequestItem> RequestItems => Set<RequestItem>();
     public DbSet<JobStatusHistory> JobStatusHistory => Set<JobStatusHistory>();
@@ -53,12 +53,20 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
         contact.Property(item => item.Name).HasMaxLength(200).IsRequired();
         contact.Property(item => item.Email).HasMaxLength(320);
 
-        var equipment = modelBuilder.Entity<Equipment>();
-        equipment.HasKey(item => item.Id);
-        equipment.Property(item => item.Name).HasMaxLength(200).IsRequired();
-        equipment.Property(item => item.LegacyId).HasMaxLength(128);
-        equipment.HasIndex(item => item.LegacyId).IsUnique();
-        equipment.HasOne<Client>().WithMany().HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.Restrict);
+        var item = modelBuilder.Entity<Item>();
+        item.ToTable("Items");
+        item.HasKey(item => item.Id);
+        item.Property(item => item.Name).HasMaxLength(200).IsRequired();
+        item.Property(item => item.LegacyId).HasMaxLength(128);
+        item.HasIndex(item => item.LegacyId).IsUnique();
+        item.Property(item => item.ItemType).HasConversion<string>().HasMaxLength(24);
+        item.Property(item => item.Status).HasConversion<string>().HasMaxLength(24);
+        item.Property(item => item.LastInspectionResult).HasConversion<string>().HasMaxLength(32);
+        item.Property(item => item.LabelsJson).IsRequired();
+        item.Property(item => item.DatesJson).IsRequired();
+        item.Property(item => item.ChecklistJson).IsRequired();
+        item.Property(item => item.AttachmentsJson).IsRequired();
+        item.HasOne<Client>().WithMany().HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.Restrict);
 
         var request = modelBuilder.Entity<InspectionRequest>();
         request.HasKey(item => item.Id);
@@ -67,6 +75,7 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
         request.Property(item => item.ClientName).HasMaxLength(200).IsRequired();
         request.Property(item => item.Location).HasMaxLength(500).IsRequired();
         request.Property(item => item.Status).HasConversion<string>().HasMaxLength(32);
+        request.Property(item => item.Source).HasConversion<string>().HasMaxLength(24);
         request.HasMany(item => item.Items).WithOne().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
         request.HasMany(item => item.History).WithOne().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
         request.HasOne<Client>().WithMany().HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.Restrict);
@@ -74,7 +83,7 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
         var requestItem = modelBuilder.Entity<RequestItem>();
         requestItem.HasKey(item => item.Id);
         requestItem.Property(item => item.Name).HasMaxLength(200).IsRequired();
-        requestItem.HasOne<Equipment>().WithMany().HasForeignKey(item => item.EquipmentId).OnDelete(DeleteBehavior.SetNull);
+        requestItem.HasOne<Item>().WithMany().HasForeignKey(item => item.EquipmentId).OnDelete(DeleteBehavior.SetNull);
 
         var history = modelBuilder.Entity<JobStatusHistory>();
         history.HasKey(item => item.Id);
@@ -85,6 +94,7 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
         var quote = modelBuilder.Entity<Quote>();
         quote.HasKey(item => item.Id);
         quote.Property(item => item.Status).HasConversion<string>().HasMaxLength(24);
+        quote.Property(item => item.Type).HasConversion<string>().HasMaxLength(24);
         quote.HasIndex(item => new { item.RequestId, item.Version }).IsUnique();
         quote.HasOne<InspectionRequest>().WithMany().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
 

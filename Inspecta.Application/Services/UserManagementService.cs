@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Inspecta.Application.Contracts.Auth;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
@@ -20,17 +19,20 @@ public sealed class UserManagementService(IUserRepository userRepository, IPassw
         }
         if (request.HourlyRatePiastres < 0) throw new ArgumentOutOfRangeException(nameof(request.HourlyRatePiastres));
 
-        var user = new AppUser
-        {
-            FirebaseUid = request.FirebaseUid,
-            Email = email,
-            FullName = request.FullName.Trim(),
-            Role = request.Role,
-            HourlyRatePiastres = request.HourlyRatePiastres,
-            QualificationsJson = JsonSerializer.Serialize(request.Qualifications.Select(value => value.Trim()).Where(value => value.Length > 0).Distinct())
-        };
-
-        user.PasswordHash = passwordService.Hash(user, request.Password);
+        var qualifications = request.Qualifications
+            .Select(value => value.Trim())
+            .Where(value => value.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(value => UserQualification.Create(value))
+            .ToArray();
+        var user = AppUser.Create(
+            request.FirebaseUid,
+            email,
+            request.FullName,
+            request.Role,
+            qualifications: qualifications,
+            hourlyRatePiastres: request.HourlyRatePiastres);
+        user.SetPasswordHash(passwordService.Hash(user, request.Password));
         await userRepository.AddAsync(user, cancellationToken);
         return ToResponse(user);
     }
@@ -49,12 +51,21 @@ public sealed class UserManagementService(IUserRepository userRepository, IPassw
             throw new ArgumentException("Leave end date must be in the future.", nameof(request.LeaveUntil));
         var user = await userRepository.GetByIdAsync(userId, cancellationToken)
             ?? throw new AuthException("user_not_found", "User was not found.", 404);
-        user.FullName = request.FullName.Trim();
-        user.Role = request.Role;
-        user.QualificationsJson = JsonSerializer.Serialize(request.Qualifications.Select(value => value.Trim()).Where(value => value.Length > 0).Distinct());
-        user.IsOnLeave = request.IsOnLeave;
-        user.LeaveUntil = request.IsOnLeave ? request.LeaveUntil : null;
-        user.HourlyRatePiastres = request.HourlyRatePiastres;
+        var qualifications = request.Qualifications
+            .Select(value => value.Trim())
+            .Where(value => value.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(value => UserQualification.Create(value))
+            .ToArray();
+        user.UpdateProfile(
+            request.FullName,
+            user.Phone,
+            qualifications,
+            request.Role,
+            request.IsOnLeave,
+            request.LeaveUntil,
+            request.HourlyRatePiastres,
+            user.SignatureImageId);
         await userRepository.SaveAsync(user, cancellationToken);
         return ToResponse(user);
     }
@@ -86,7 +97,7 @@ public sealed class UserManagementService(IUserRepository userRepository, IPassw
         user.FullName,
         user.Role,
         user.IsActive,
-        JsonSerializer.Deserialize<List<string>>(user.QualificationsJson) ?? [],
+        user.Qualifications.Select(qualification => qualification.Name).ToArray(),
         user.IsOnLeave,
         user.LeaveUntil,
         user.HourlyRatePiastres);

@@ -42,7 +42,7 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
             return false;
         }
 
-        user.IsActive = false;
+        user.Deactivate();
         var tokens = await dbContext.RefreshTokens
             .Where(token => token.UserId == userId && token.RevokedAt == null)
             .ToListAsync(cancellationToken);

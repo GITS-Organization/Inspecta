@@ -7,5 +7,6 @@ public enum QuoteStatus
     Countered,
     Accepted,
     Rejected,
-    Expired
+    Expired,
+    Superseded
 }

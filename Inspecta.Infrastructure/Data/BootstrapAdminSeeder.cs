@@ -31,14 +31,8 @@ public sealed class BootstrapAdminSeeder(InspectaDbContext dbContext, IConfigura
             return;
         }
 
-        var user = new AppUser
-        {
-            Email = normalizedEmail,
-            FirebaseUid = firebaseUid,
-            FullName = fullName.Trim(),
-            Role = UserRole.Admin
-        };
-        user.PasswordHash = new PasswordHasher<AppUser>().HashPassword(user, password);
+        var user = AppUser.Create(firebaseUid, normalizedEmail, fullName, UserRole.Admin);
+        user.SetPasswordHash(new PasswordHasher<AppUser>().HashPassword(user, password));
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync(cancellationToken);
     }

@@ -7,22 +7,22 @@ namespace Inspecta.Infrastructure.Repositories;
 
 public sealed class EfEquipmentRepository(InspectaDbContext dbContext) : IEquipmentRepository
 {
-    public async Task AddAsync(Equipment equipment, CancellationToken cancellationToken = default)
+    public async Task AddAsync(Item equipment, CancellationToken cancellationToken = default)
     {
-        dbContext.Equipment.Add(equipment);
+        dbContext.Items.Add(equipment);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public Task<Equipment?> GetByIdAsync(Guid equipmentId, bool tracking, CancellationToken cancellationToken = default)
+    public Task<Item?> GetByIdAsync(Guid equipmentId, bool tracking, CancellationToken cancellationToken = default)
     {
-        IQueryable<Equipment> query = dbContext.Equipment;
+        IQueryable<Item> query = dbContext.Items;
         if (!tracking) query = query.AsNoTracking();
         return query.SingleOrDefaultAsync(equipment => equipment.Id == equipmentId, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Equipment>> ListAsync(Guid? clientId, bool includeArchived, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Item>> ListAsync(Guid? clientId, bool includeArchived, CancellationToken cancellationToken = default)
     {
-        var query = dbContext.Equipment.AsNoTracking().AsQueryable();
+        var query = dbContext.Items.AsNoTracking().AsQueryable();
         if (clientId is Guid id) query = query.Where(equipment => equipment.ClientId == id);
         if (!includeArchived) query = query.Where(equipment => equipment.ArchivedAt == null);
         return await query.OrderBy(equipment => equipment.Name).ToListAsync(cancellationToken);

@@ -21,6 +21,14 @@ public sealed class TimesheetEntry
 
     public long ExpensesPiastres => Deserialize<Dictionary<string, long>>(ExpensesJson).Values.Sum();
     public long TotalPiastres => checked(PricePiastres + ExpensesPiastres);
+    public IReadOnlyList<TimesheetActivity> GetActivities() =>
+        Deserialize<Dictionary<string, int>>(ActivitiesJson)
+            .Select(entry => TimesheetActivity.Create(entry.Key, entry.Value))
+            .ToArray();
+    public IReadOnlyList<TimesheetExpense> GetExpenses() =>
+        Deserialize<Dictionary<string, long>>(ExpensesJson)
+            .Select(entry => TimesheetExpense.Create(entry.Key, entry.Value))
+            .ToArray();
 
     public static TimesheetEntry Priced(
         Guid requestId,
@@ -66,6 +74,7 @@ public sealed class TimesheetEntry
 
     public void Approve(Guid coordinatorId)
     {
+        if (coordinatorId == Guid.Empty) throw new ArgumentException("Reviewer is required.", nameof(coordinatorId));
         if (Status == TimesheetStatus.Approved) throw new InvalidOperationException("Timesheet is already approved.");
         Status = TimesheetStatus.Approved;
         ReviewNote = null;
@@ -75,6 +84,7 @@ public sealed class TimesheetEntry
 
     public void Return(Guid coordinatorId, string note)
     {
+        if (coordinatorId == Guid.Empty) throw new ArgumentException("Reviewer is required.", nameof(coordinatorId));
         if (Status == TimesheetStatus.Approved) throw new InvalidOperationException("Approved timesheets are locked.");
         if (string.IsNullOrWhiteSpace(note)) throw new ArgumentException("A return note is required.", nameof(note));
         Status = TimesheetStatus.Returned;
@@ -85,6 +95,12 @@ public sealed class TimesheetEntry
 
     private static void ValidateAmounts(IReadOnlyDictionary<string, int> activities, IReadOnlyDictionary<string, long> expenses)
     {
+        ArgumentNullException.ThrowIfNull(activities);
+        ArgumentNullException.ThrowIfNull(expenses);
+        if (activities.Keys.Any(string.IsNullOrWhiteSpace))
+            throw new ArgumentException("Activity names are required.", nameof(activities));
+        if (expenses.Keys.Any(string.IsNullOrWhiteSpace))
+            throw new ArgumentException("Expense names are required.", nameof(expenses));
         if (activities.Values.Any(value => value < 0)) throw new ArgumentOutOfRangeException(nameof(activities));
         if (expenses.Values.Any(value => value < 0)) throw new ArgumentOutOfRangeException(nameof(expenses));
     }

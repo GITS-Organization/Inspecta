@@ -61,6 +61,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Phone")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("QualificationsJson")
                         .IsRequired()
                         .HasMaxLength(4000)
@@ -69,6 +72,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SignatureImageId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -91,12 +97,24 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset?>("ArchivedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CertificatesEmail")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("REAL");
 
                     b.Property<string>("LegacyId")
                         .HasMaxLength(128)
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("Location")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("REAL");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -104,6 +122,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TaxNumber")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -138,63 +159,14 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<string>("Phone")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Role")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
 
                     b.ToTable("ClientContacts");
-                });
-
-            modelBuilder.Entity("Inspecta.Domain.Entities.Equipment", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset?>("ArchivedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Capacity")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Category")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("ClientId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset?>("LastInspectionAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("LegacyId")
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Manufacturer")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Model")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset?>("NextInspectionDueAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SerialNumber")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClientId");
-
-                    b.HasIndex("LegacyId")
-                        .IsUnique();
-
-                    b.ToTable("Equipment");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.InspectionCertificate", b =>
@@ -214,6 +186,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("EquipmentId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("FinalResult")
                         .HasMaxLength(32)
                         .HasColumnType("TEXT");
@@ -223,7 +198,20 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasMaxLength(24)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("HasAngle")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("InspectorId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IssuedForJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LegacyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("QrData")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("RequestId")
@@ -239,6 +227,15 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ReviewerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReviewerLicense")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReviewerName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("SentAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SentTo")
@@ -282,6 +279,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<string>("AssignmentNote")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTimeOffset?>("CertificateSubmittedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("ClientId")
                         .HasColumnType("TEXT");
 
@@ -296,8 +296,17 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("EmailFrom")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EmailPreview")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("EmailThreadId")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("HasUnreadClientReply")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("InspectorId")
                         .HasColumnType("TEXT");
@@ -323,6 +332,14 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset?>("ScheduledAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SeededBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -344,6 +361,121 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.ToTable("Requests");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.Item", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("ArchivedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AssetTag")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AttachmentsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Capacity")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Category")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("CertificateExpiryDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ChecklistJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DatesJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("HasAngle")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ItemType")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LabelsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("LastInspectedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("LastInspectionAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastInspectionResult")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LegacyId")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Location")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Manufacturer")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Model")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("NextInspectionDueAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerReference")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PrNumber")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SerialNumber")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("TEXT");
+
+                    b.Property<short?>("YearOfManufacture")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("LegacyId")
+                        .IsUnique();
+
+                    b.ToTable("Items", (string)null);
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.JobStatusHistory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -354,6 +486,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FromStatus")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LegacyId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Note")
@@ -385,7 +520,16 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<long>("AmountPiastres")
                         .HasColumnType("INTEGER");
 
+                    b.Property<long?>("ClientCounterPricePiastres")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ClientName")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ClientReply")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("ClientRespondedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -394,12 +538,46 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<Guid>("CreatedBy")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("EquipmentSummary")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ItemsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("LastReminderAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NotesJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("RequestId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestNumber")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("SentAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(24)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("SubtotalPiastres")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset>("ValidUntil")
@@ -464,12 +642,30 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<string>("Capacity")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Category")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("EquipmentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LegacyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Location")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Manufacturer")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Model")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PrNumber")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Quantity")
@@ -550,15 +746,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Inspecta.Domain.Entities.Equipment", b =>
-                {
-                    b.HasOne("Inspecta.Domain.Entities.Client", null)
-                        .WithMany()
-                        .HasForeignKey("ClientId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("Inspecta.Domain.Entities.InspectionCertificate", b =>
                 {
                     b.HasOne("Inspecta.Domain.Entities.InspectionRequest", null)
@@ -574,6 +761,15 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .WithMany()
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.Item", b =>
+                {
+                    b.HasOne("Inspecta.Domain.Entities.Client", null)
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.JobStatusHistory", b =>
@@ -607,7 +803,7 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("Inspecta.Domain.Entities.RequestItem", b =>
                 {
-                    b.HasOne("Inspecta.Domain.Entities.Equipment", null)
+                    b.HasOne("Inspecta.Domain.Entities.Item", null)
                         .WithMany()
                         .HasForeignKey("EquipmentId")
                         .OnDelete(DeleteBehavior.SetNull);

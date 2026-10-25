@@ -10,8 +10,12 @@ public sealed class EquipmentService(IEquipmentRepository equipmentRepository) :
     {
         if (!await equipmentRepository.ClientExistsAsync(request.ClientId, cancellationToken))
             throw new KeyNotFoundException("Client was not found or is archived.");
-        var equipment = Equipment.Create(request.ClientId, request.Name);
-        equipment.UpdateDetails(request.Name, request.Category, request.Manufacturer, request.Model, request.SerialNumber, request.Capacity);
+        var equipment = Item.Create(request.ClientId, request.Name);
+        equipment.UpdateDetails(
+            request.Name, request.Category, request.Manufacturer, request.Model, request.SerialNumber, request.Capacity,
+            request.ItemType ?? Inspecta.Domain.Enums.ItemType.Equipment,
+            request.LocationInsideClientLocation, request.Notes);
+        equipment.UpdateMetadata(request.Labels, request.Dates, request.Checklist, request.Attachments);
         await equipmentRepository.AddAsync(equipment, cancellationToken);
         return Map(equipment);
     }
@@ -30,7 +34,10 @@ public sealed class EquipmentService(IEquipmentRepository equipmentRepository) :
         var equipment = await equipmentRepository.GetByIdAsync(equipmentId, tracking: true, cancellationToken)
             ?? throw new KeyNotFoundException("Equipment was not found.");
         if (equipment.ClientId != request.ClientId) throw new InvalidOperationException("Equipment cannot be reassigned to another client.");
-        equipment.UpdateDetails(request.Name, request.Category, request.Manufacturer, request.Model, request.SerialNumber, request.Capacity);
+        equipment.UpdateDetails(
+            request.Name, request.Category, request.Manufacturer, request.Model, request.SerialNumber, request.Capacity,
+            request.ItemType, request.LocationInsideClientLocation, request.Notes);
+        equipment.UpdateMetadata(request.Labels, request.Dates, request.Checklist, request.Attachments);
         await equipmentRepository.SaveAsync(cancellationToken);
         return Map(equipment);
     }
@@ -51,8 +58,10 @@ public sealed class EquipmentService(IEquipmentRepository equipmentRepository) :
         await equipmentRepository.SaveAsync(cancellationToken);
     }
 
-    private static EquipmentResponse Map(Equipment equipment) => new(
+    private static EquipmentResponse Map(Item equipment) => new(
         equipment.Id, equipment.ClientId, equipment.Name, equipment.Category, equipment.Manufacturer,
-        equipment.Model, equipment.SerialNumber, equipment.Capacity, equipment.LastInspectionAt,
-        equipment.NextInspectionDueAt, equipment.ArchivedAt);
+        equipment.Model, equipment.SerialNumber, equipment.Capacity, equipment.ItemType,
+        equipment.LocationInsideClientLocation, equipment.Notes, equipment.GetLabels(), equipment.GetDates(),
+        equipment.GetChecklist(), equipment.GetAttachments(), equipment.CertificateExpiryDate,
+        equipment.LastInspectedOn, equipment.LastInspectionAt, equipment.NextInspectionDueAt, equipment.ArchivedAt);
 }

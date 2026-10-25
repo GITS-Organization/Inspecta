@@ -2,7 +2,6 @@ using Inspecta.Application.Contracts.Auth;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
 using Inspecta.Domain.Entities;
-using System.Text.Json;
 
 namespace Inspecta.Application.Services;
 
@@ -39,15 +38,13 @@ public class AuthService : IAuthService
 
         var (accessToken, accessTokenExpiresAt) = _accessTokenService.Create(user);
         var rawRefreshToken = CreateRefreshToken();
-        var refreshToken = new RefreshToken
-        {
-            UserId = user.Id,
-            TokenHash = HashToken(rawRefreshToken),
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(14)
-        };
+        var refreshToken = RefreshToken.Create(
+            user.Id,
+            HashToken(rawRefreshToken),
+            DateTimeOffset.UtcNow.AddDays(14));
 
         await _userRepository.SaveRefreshTokenAsync(refreshToken, cancellationToken);
-        user.LastLoginAt = DateTimeOffset.UtcNow;
+        user.RecordLogin();
         await _userRepository.SaveAsync(user, cancellationToken);
 
         return new AuthResult(accessToken, rawRefreshToken, accessTokenExpiresAt, ToResponse(user));
@@ -82,13 +79,11 @@ public class AuthService : IAuthService
 
         var rawRefreshToken = CreateRefreshToken();
 
-        var newRefreshToken = new RefreshToken
-        {
-            UserId = user.Id,
-            FamilyId = existingToken.FamilyId,
-            TokenHash = HashToken(rawRefreshToken),
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(14)
-        };
+        var newRefreshToken = RefreshToken.Create(
+            user.Id,
+            HashToken(rawRefreshToken),
+            DateTimeOffset.UtcNow.AddDays(14),
+            existingToken.FamilyId);
 
         if (!await _userRepository.RotateRefreshTokenAsync(existingToken, newRefreshToken, cancellationToken))
         {
@@ -129,7 +124,7 @@ public class AuthService : IAuthService
             user.FullName,
             user.Role,
             user.IsActive,
-            JsonSerializer.Deserialize<List<string>>(user.QualificationsJson) ?? [],
+            user.Qualifications.Select(qualification => qualification.Name).ToArray(),
             user.IsOnLeave,
             user.LeaveUntil,
             user.HourlyRatePiastres);
