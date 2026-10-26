@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: inspecta-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_HTTP_PORTS
+        value: "8080"
+      - key: PORT
+        value: "8080"
+      - key: ConnectionStrings__Inspecta
+        value: Data Source=/data/inspecta.db
+      - key: Jwt__SigningKey
+        generateValue: true
+      - key: Jwt__Issuer
+        value: Inspecta.Api
+      - key: Jwt__Audience
+        value: Inspecta.Client
+      - key: Swagger__Enabled
+        value: "true"
+      - key: BootstrapAdmin__Email
+        sync: false
+      - key: BootstrapAdmin__FullName
+        sync: false
+      - key: BootstrapAdmin__Password
+        sync: false

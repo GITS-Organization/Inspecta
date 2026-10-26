@@ -82,6 +82,14 @@ For a browser-based frontend on a different origin, set `CORS_ALLOWED_ORIGINS` t
 
 The default provider is SQLite on a persistent Docker volume, suitable for initial low-volume hosting. Assess PostgreSQL or SQL Server and rehearse provider-specific migrations before scaling or running multiple API replicas.
 
+## Deploying a test instance to Render
+
+The repository includes a [`render.yaml`](./render.yaml) Blueprint for the `backend` branch. In Render, choose **New > Blueprint**, connect this GitHub repository, select the `backend` branch, and review the Blueprint before deploying. It creates a Docker web service, configures `/health` as its health check, generates a JWT signing key, and asks for the initial Admin email, full name, and password.
+
+The Blueprint intentionally uses Render's **Free** plan for API testing. Free web services sleep when idle and have an ephemeral filesystem: the SQLite database can be erased when the service sleeps, restarts, or redeploys. Do not store real or important data in this test deployment. Render Free services cannot use persistent disks. To keep SQLite data, upgrade the service to a paid compute plan and attach a persistent disk mounted at `/data`; review Render's current pricing before upgrading. For a production deployment, use a managed database such as PostgreSQL or deploy to a VPS with persistent storage and backups.
+
+If creating the service manually instead of using the Blueprint, select the `backend` branch and Docker runtime with `Dockerfile` at the repository root. Set `ASPNETCORE_HTTP_PORTS=8080`, `PORT=8080`, `ConnectionStrings__Inspecta=Data Source=/data/inspecta.db`, `Jwt__Issuer=Inspecta.Api`, `Jwt__Audience=Inspecta.Client`, and `Swagger__Enabled=true`. Also set `Jwt__SigningKey` to a unique secret with at least 32 UTF-8 bytes and set all three `BootstrapAdmin__Email`, `BootstrapAdmin__FullName`, and `BootstrapAdmin__Password` values for the first deployment. Never commit these secrets. For Flutter Web, add `Cors__AllowedOriginsCsv` with the exact HTTPS origin of the deployed frontend; native Flutter apps do not need CORS.
+
 ## API request examples
 
 See [Inspecta.Api.http](./Inspecta.Api/Inspecta.Api.http) for example requests for every API endpoint. Replace the sample IDs and credentials with values from your environment. Enum values are JSON strings (for example `technical_manager`, `inspector`).
