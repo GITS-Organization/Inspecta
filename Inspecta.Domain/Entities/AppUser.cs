@@ -11,7 +11,8 @@ public class AppUser
     private AppUser() { }
 
     public Guid Id { get; private set; } = Guid.NewGuid();
-    public string FirebaseUid { get; private set; } = string.Empty;
+    public string? FirebaseUid { get; private set; }
+    public Guid? CompanyId { get; private set; }
     public string Email { get; private set; } = string.Empty;
     public string FullName { get; private set; } = string.Empty;
     public string Name => FullName;
@@ -43,7 +44,7 @@ public class AppUser
     }
 
     public static AppUser Create(
-        string firebaseUid,
+        string? firebaseUid,
         string email,
         string fullName,
         UserRole role,
@@ -53,10 +54,11 @@ public class AppUser
         string? signatureImageId = null,
         string? passwordHash = null,
         bool isActive = true,
-        DateTimeOffset? createdAt = null)
+        DateTimeOffset? createdAt = null,
+        Guid? companyId = null)
     {
-        if (string.IsNullOrWhiteSpace(firebaseUid))
-            throw new ArgumentException("Firebase user id is required.", nameof(firebaseUid));
+        if (firebaseUid is not null && string.IsNullOrWhiteSpace(firebaseUid))
+            throw new ArgumentException("Firebase user id cannot be empty.", nameof(firebaseUid));
         if (string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("Email is required.", nameof(email));
         if (string.IsNullOrWhiteSpace(fullName))
@@ -65,10 +67,13 @@ public class AppUser
             throw new ArgumentOutOfRangeException(nameof(role));
         if (hourlyRatePiastres < 0)
             throw new ArgumentOutOfRangeException(nameof(hourlyRatePiastres));
+        if (companyId == Guid.Empty)
+            throw new ArgumentException("Company id cannot be empty.", nameof(companyId));
 
         var user = new AppUser
         {
-            FirebaseUid = firebaseUid.Trim(),
+            FirebaseUid = Normalize(firebaseUid),
+            CompanyId = companyId,
             Email = email.Trim().ToLowerInvariant(),
             FullName = fullName.Trim(),
             Role = role,
@@ -145,6 +150,8 @@ public class AppUser
             throw new ArgumentOutOfRangeException(nameof(role));
         Role = role;
     }
+
+    public void AssignToCompany(Guid? companyId) => CompanyId = companyId;
 
     private sealed record QualificationData(string Name, DateOnly? ValidUntil);
 

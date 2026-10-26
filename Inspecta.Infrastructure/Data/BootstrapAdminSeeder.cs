@@ -15,18 +15,21 @@ public sealed class BootstrapAdminSeeder(InspectaDbContext dbContext, IConfigura
         var password = configuration["BootstrapAdmin:Password"];
         var firebaseUid = configuration["BootstrapAdmin:FirebaseUid"];
         var fullName = configuration["BootstrapAdmin:FullName"];
-        if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(password) && string.IsNullOrWhiteSpace(firebaseUid))
+        if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(password))
         {
             return;
         }
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(firebaseUid) || string.IsNullOrWhiteSpace(fullName))
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(fullName))
         {
-            throw new InvalidOperationException("Bootstrap admin requires Email, Password, FirebaseUid, and FullName settings together.");
+            throw new InvalidOperationException("Bootstrap admin requires Email, Password, and FullName settings together.");
         }
 
         UserManagementService.ValidatePassword(password);
         var normalizedEmail = email.Trim().ToLowerInvariant();
-        if (await dbContext.Users.AnyAsync(user => user.Email == normalizedEmail || user.FirebaseUid == firebaseUid, cancellationToken))
+        if (await dbContext.Users.AnyAsync(
+                user => user.Email == normalizedEmail ||
+                        (firebaseUid != null && user.FirebaseUid == firebaseUid),
+                cancellationToken))
         {
             return;
         }

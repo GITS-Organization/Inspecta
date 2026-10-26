@@ -10,6 +10,7 @@ public sealed record UpdateStaffProfileRequest
     public required string FullName { get; init; }
 
     public required UserRole Role { get; init; }
+    public Guid? CompanyId { get; init; }
     public IReadOnlyList<string> Qualifications { get; init; } = [];
     public bool IsOnLeave { get; init; }
     public DateTimeOffset? LeaveUntil { get; init; }

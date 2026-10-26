@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Inspecta.Domain\Inspecta.Domain.csproj" />
+    <ProjectReference Include="..\Inspecta.Application\Inspecta.Application.csproj" />
   </ItemGroup>
 
 </Project>

@@ -23,6 +23,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("CompanyId")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -32,7 +35,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FirebaseUid")
-                        .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
@@ -84,6 +86,8 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
                     b.HasIndex("FirebaseUid")
                         .IsUnique();
+
+                    b.HasIndex("CompanyId", "Role");
 
                     b.ToTable("Users");
                 });
@@ -167,6 +171,28 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasIndex("ClientId");
 
                     b.ToTable("ClientContacts");
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.Company", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Companies");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.InspectionCertificate", b =>
@@ -735,6 +761,14 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Timesheets");
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.AppUser", b =>
+                {
+                    b.HasOne("Inspecta.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.ClientContact", b =>

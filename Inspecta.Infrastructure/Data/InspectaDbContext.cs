@@ -7,6 +7,7 @@ namespace Inspecta.Infrastructure.Data;
 public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> options) : DbContext(options)
 {
     public DbSet<AppUser> Users => Set<AppUser>();
+    public DbSet<Company> Companies => Set<Company>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<ClientContact> ClientContacts => Set<ClientContact>();
@@ -24,12 +25,21 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
         user.HasKey(item => item.Id);
         user.Property(item => item.FirebaseUid).HasMaxLength(128);
         user.HasIndex(item => item.FirebaseUid).IsUnique();
+        user.HasIndex(item => new { item.CompanyId, item.Role });
+        user.HasOne<Company>()
+            .WithMany()
+            .HasForeignKey(item => item.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
         user.Property(item => item.Email).HasMaxLength(320).IsRequired();
         user.HasIndex(item => item.Email).IsUnique();
         user.Property(item => item.FullName).HasMaxLength(200).IsRequired();
         user.Property(item => item.PasswordHash).HasMaxLength(512).IsRequired();
         user.Property(item => item.Role).HasConversion<string>().HasMaxLength(32);
         user.Property(item => item.QualificationsJson).HasMaxLength(4000).IsRequired();
+
+        var company = modelBuilder.Entity<Company>();
+        company.HasKey(item => item.Id);
+        company.Property(item => item.Name).HasMaxLength(200).IsRequired();
 
         var refreshToken = modelBuilder.Entity<RefreshToken>();
         refreshToken.HasKey(item => item.Id);

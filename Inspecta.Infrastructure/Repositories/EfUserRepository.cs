@@ -1,5 +1,6 @@
 using Inspecta.Application.Interfaces;
 using Inspecta.Domain.Entities;
+using Inspecta.Domain.Enums;
 using Inspecta.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +16,19 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
 
     public Task<AppUser?> GetByFirebaseUidAsync(string firebaseUid, CancellationToken cancellationToken = default) =>
         dbContext.Users.SingleOrDefaultAsync(user => user.FirebaseUid == firebaseUid, cancellationToken);
+
+    public async Task<IReadOnlyList<AppUser>> ListAsync(
+        Guid? companyId = null,
+        UserRole? role = null,
+        bool? isActive = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = dbContext.Users.AsNoTracking().AsQueryable();
+        if (companyId is not null) query = query.Where(user => user.CompanyId == companyId);
+        if (role is not null) query = query.Where(user => user.Role == role);
+        if (isActive is not null) query = query.Where(user => user.IsActive == isActive);
+        return await query.OrderBy(user => user.FullName).ToListAsync(cancellationToken);
+    }
 
     public async Task AddAsync(AppUser user, CancellationToken cancellationToken = default)
     {

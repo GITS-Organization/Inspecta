@@ -1,5 +1,6 @@
 using Inspecta.Application.Contracts.Auth;
 using Inspecta.Application.Interfaces;
+using Inspecta.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,6 +11,18 @@ namespace Inspecta.Api.Controllers;
 [Route("api/v1/users")]
 public sealed class UsersController(IUserManagementService userManagementService) : ControllerBase
 {
+    [HttpGet]
+    [ProducesResponseType<IReadOnlyList<AuthUserResponse>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<AuthUserResponse>>> List(
+        [FromQuery] Guid? companyId,
+        [FromQuery] string? role,
+        [FromQuery] bool? isActive,
+        CancellationToken cancellationToken)
+    {
+        UserRole? parsedRole = role is null ? null : UserRoleParser.Parse(role);
+        return Ok(await userManagementService.ListAsync(companyId, parsedRole, isActive, cancellationToken));
+    }
+
     [HttpGet("{userId:guid}")]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

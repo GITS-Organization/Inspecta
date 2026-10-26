@@ -22,6 +22,7 @@ builder.Services.AddSwaggerGen();
 var connectionString = builder.Configuration.GetConnectionString("Inspecta") ?? "Data Source=inspecta.db";
 builder.Services.AddDbContext<InspectaDbContext>(options => options.UseSqlite(connectionString));
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
+builder.Services.AddScoped<ICompanyRepository, EfCompanyRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IRequestRepository, EfRequestRepository>();

@@ -127,7 +127,8 @@ public class AuthService : IAuthService
             user.Qualifications.Select(qualification => qualification.Name).ToArray(),
             user.IsOnLeave,
             user.LeaveUntil,
-            user.HourlyRatePiastres);
+            user.HourlyRatePiastres,
+            user.CompanyId);
 
     private static string CreateRefreshToken() =>
         Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(64))

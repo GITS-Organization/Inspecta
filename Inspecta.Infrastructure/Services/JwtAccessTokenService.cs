@@ -21,13 +21,14 @@ public sealed class JwtAccessTokenService(IConfiguration configuration) : IAcces
         }
 
         var expiresAt = DateTimeOffset.UtcNow.AddMinutes(configuration.GetValue("Jwt:AccessTokenMinutes", 10));
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim("role", RoleName(user.Role)),
-            new Claim("firebase_uid", user.FirebaseUid)
         };
+        if (user.FirebaseUid is not null)
+            claims.Add(new Claim("firebase_uid", user.FirebaseUid));
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
             SecurityAlgorithms.HmacSha256);
