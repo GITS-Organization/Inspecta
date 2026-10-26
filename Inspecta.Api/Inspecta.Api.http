@@ -33,11 +33,15 @@ Content-Type: application/json
   "refreshToken": "replace-with-refresh-token"
 }
 
-### List companies (Admin)
-GET {{baseUrl}}/api/v1/companies
+### List companies (Admin; optionally include soft-deleted companies)
+GET {{baseUrl}}/api/v1/companies?includeDeleted=false
 Authorization: Bearer {{token}}
 
-### Create a company and initial Technical Manager (Admin)
+### Get a company and its subscription state (Admin)
+GET {{baseUrl}}/api/v1/companies/{{companyId}}
+Authorization: Bearer {{token}}
+
+### Create a company and initial Technical Manager (Admin; defaults to one month)
 POST {{baseUrl}}/api/v1/companies
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -46,11 +50,36 @@ Content-Type: application/json
   "name": "Example Inspection Company",
   "managerEmail": "manager@example.com",
   "managerFullName": "Technical Manager",
-  "managerPassword": "Replace-With-Strong-Password"
+  "managerPassword": "Replace-With-Strong-Password",
+  "subscriptionMonths": 12
 }
 
-### List users (Admin; optional filters: companyId, role, isActive)
-GET {{baseUrl}}/api/v1/users?isActive=true
+### Activate/reactivate a company subscription (Admin; end date may be null for no expiry)
+PUT {{baseUrl}}/api/v1/companies/{{companyId}}/subscription
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "subscriptionStatus": "active",
+  "subscriptionEndDate": "2027-10-26T00:00:00Z"
+}
+
+### Suspend a company and its team (Admin)
+PUT {{baseUrl}}/api/v1/companies/{{companyId}}/subscription
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "subscriptionStatus": "suspended",
+  "subscriptionEndDate": "2027-10-26T00:00:00Z"
+}
+
+### Soft-delete a company and revoke all team refresh tokens (Admin)
+DELETE {{baseUrl}}/api/v1/companies/{{companyId}}
+Authorization: Bearer {{token}}
+
+### List users (Admin; optional filters: companyId, role, isActive, includeDeleted)
+GET {{baseUrl}}/api/v1/users?isActive=true&includeDeleted=false
 Authorization: Bearer {{token}}
 
 ### Create a user (Admin)
@@ -85,7 +114,16 @@ Content-Type: application/json
   "hourlyRatePiastres": 0
 }
 
-### Deactivate a user (Admin)
+### Enable or suspend a user without deleting its data (Admin)
+PUT {{baseUrl}}/api/v1/users/{{userId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+### Soft-delete a user (Admin; record is retained)
 DELETE {{baseUrl}}/api/v1/users/{{userId}}
 Authorization: Bearer {{token}}
 
@@ -123,7 +161,16 @@ Content-Type: application/json
   "hourlyRatePiastres": 0
 }
 
-### Deactivate team member
+### Enable or suspend a team member without deleting its data
+PUT {{baseUrl}}/api/v1/manager/team/{{userId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+### Soft-delete team member (record is retained)
 DELETE {{baseUrl}}/api/v1/manager/team/{{userId}}
 Authorization: Bearer {{token}}
 

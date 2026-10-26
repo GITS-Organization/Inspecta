@@ -8,15 +8,18 @@ namespace Inspecta.Application.Services;
 public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
+    private readonly ICompanyRepository _companyRepository;
     private readonly IPasswordService _passwordService;
     private readonly IAccessTokenService _accessTokenService;
 
     public AuthService(
         IUserRepository userRepository,
+        ICompanyRepository companyRepository,
         IPasswordService passwordService,
         IAccessTokenService accessTokenService)
     {
         _userRepository = userRepository;
+        _companyRepository = companyRepository;
         _passwordService = passwordService;
         _accessTokenService = accessTokenService;
     }
@@ -35,6 +38,7 @@ public class AuthService : IAuthService
         {
             throw new AuthException("account_disabled", "This account is disabled.", 403);
         }
+        await EnsureCompanySubscriptionActiveAsync(user, cancellationToken);
 
         var (accessToken, accessTokenExpiresAt) = _accessTokenService.Create(user);
         var rawRefreshToken = CreateRefreshToken();
@@ -76,6 +80,7 @@ public class AuthService : IAuthService
         {
             throw new AuthException("account_disabled", "This account is disabled.", 403);
         }
+        await EnsureCompanySubscriptionActiveAsync(user, cancellationToken);
 
         var rawRefreshToken = CreateRefreshToken();
 
@@ -127,7 +132,23 @@ public class AuthService : IAuthService
             user.IsOnLeave,
             user.LeaveUntil,
             user.HourlyRatePiastres,
-            user.CompanyId);
+            user.CompanyId,
+            user.CreatedById);
+
+    private async Task EnsureCompanySubscriptionActiveAsync(
+        AppUser user,
+        CancellationToken cancellationToken)
+    {
+        if (user.CompanyId is not Guid companyId)
+            return;
+
+        var company = await _companyRepository.GetByIdAsync(companyId, cancellationToken);
+        if (company is null || !company.HasActiveSubscription())
+            throw new AuthException(
+                "subscription_inactive",
+                "The company subscription is suspended, expired, or deleted.",
+                403);
+    }
 
     private static string CreateRefreshToken() =>
         Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(64))

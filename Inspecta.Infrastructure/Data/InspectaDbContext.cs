@@ -24,9 +24,14 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
         var user = modelBuilder.Entity<AppUser>();
         user.HasKey(item => item.Id);
         user.HasIndex(item => new { item.CompanyId, item.Role });
+        user.HasQueryFilter(item => !item.IsDeleted);
         user.HasOne<Company>()
             .WithMany()
             .HasForeignKey(item => item.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+        user.HasOne<AppUser>()
+            .WithMany()
+            .HasForeignKey(item => item.CreatedById)
             .OnDelete(DeleteBehavior.Restrict);
         user.Property(item => item.Email).HasMaxLength(320).IsRequired();
         user.HasIndex(item => item.Email).IsUnique();
@@ -38,12 +43,15 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
         var company = modelBuilder.Entity<Company>();
         company.HasKey(item => item.Id);
         company.Property(item => item.Name).HasMaxLength(200).IsRequired();
+        company.Property(item => item.SubscriptionStatus).HasConversion<string>().HasMaxLength(24);
+        company.HasQueryFilter(item => !item.IsDeleted);
 
         var refreshToken = modelBuilder.Entity<RefreshToken>();
         refreshToken.HasKey(item => item.Id);
         refreshToken.Property(item => item.TokenHash).HasMaxLength(64).IsRequired();
         refreshToken.HasIndex(item => item.TokenHash).IsUnique();
         refreshToken.HasIndex(item => new { item.UserId, item.FamilyId });
+        refreshToken.HasQueryFilter(item => item.User != null && !item.User.IsDeleted);
         refreshToken.HasOne(item => item.User)
             .WithMany(item => item.RefreshTokens)
             .HasForeignKey(item => item.UserId)

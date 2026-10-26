@@ -16,4 +16,8 @@ public sealed record CreateCompanyRequest
 
     [Required, MinLength(12), MaxLength(256)]
     public required string ManagerPassword { get; init; }
+
+    /// <summary>Subscription duration in months. Defaults to one month when omitted.</summary>
+    [Range(1, 120)]
+    public int SubscriptionMonths { get; init; } = 1;
 }

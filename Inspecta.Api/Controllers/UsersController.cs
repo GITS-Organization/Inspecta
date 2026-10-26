@@ -19,10 +19,11 @@ public sealed class UsersController(IUserManagementService userManagementService
         [FromQuery] Guid? companyId,
         [FromQuery] string? role,
         [FromQuery] bool? isActive,
+        [FromQuery] bool includeDeleted,
         CancellationToken cancellationToken)
     {
         UserRole? parsedRole = role is null ? null : UserRoleParser.Parse(role);
-        return Ok(await userManagementService.ListAsync(companyId, parsedRole, isActive, cancellationToken));
+        return Ok(await userManagementService.ListAsync(companyId, parsedRole, isActive, cancellationToken, includeDeleted));
     }
 
     /// <summary>Get a user's profile by identifier.</summary>
@@ -52,7 +53,20 @@ public sealed class UsersController(IUserManagementService userManagementService
     public async Task<ActionResult<AuthUserResponse>> UpdateProfile(Guid userId, UpdateStaffProfileRequest request, CancellationToken cancellationToken) =>
         Ok(await userManagementService.UpdateProfileAsync(userId, request, cancellationToken));
 
-    /// <summary>Deactivate a user and revoke their active refresh tokens.</summary>
+    /// <summary>Enable or disable a user account without deleting the user.</summary>
+    [HttpPut("{userId:guid}/status")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetStatus(
+        Guid userId,
+        SetUserStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        await userManagementService.SetUserActiveAsync(userId, request.IsActive, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Soft-delete a user and revoke their active refresh tokens.</summary>
     [HttpDelete("{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

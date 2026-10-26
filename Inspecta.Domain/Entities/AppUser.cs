@@ -12,6 +12,7 @@ public class AppUser
 
     public Guid Id { get; private set; } = Guid.NewGuid();
     public Guid? CompanyId { get; private set; }
+    public Guid? CreatedById { get; private set; }
     public string Email { get; private set; } = string.Empty;
     public string FullName { get; private set; } = string.Empty;
     public string Name => FullName;
@@ -26,6 +27,8 @@ public class AppUser
     public long HourlyRatePiastres { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastLoginAt { get; private set; }
+    public bool IsDeleted { get; private set; }
+    public DateTimeOffset? DeletedAt { get; private set; }
     public ICollection<RefreshToken> RefreshTokens { get; private set; } = new List<RefreshToken>();
 
     [NotMapped]
@@ -53,7 +56,8 @@ public class AppUser
         string? passwordHash = null,
         bool isActive = true,
         DateTimeOffset? createdAt = null,
-        Guid? companyId = null)
+        Guid? companyId = null,
+        Guid? createdById = null)
     {
         if (string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("Email is required.", nameof(email));
@@ -69,6 +73,7 @@ public class AppUser
         var user = new AppUser
         {
             CompanyId = companyId,
+            CreatedById = createdById,
             Email = email.Trim().ToLowerInvariant(),
             FullName = fullName.Trim(),
             Role = role,
@@ -138,6 +143,16 @@ public class AppUser
     public void Deactivate() => IsActive = false;
 
     public void Activate() => IsActive = true;
+
+    public void SoftDelete(DateTimeOffset? deletedAt = null)
+    {
+        if (IsDeleted)
+            return;
+
+        IsActive = false;
+        IsDeleted = true;
+        DeletedAt = deletedAt ?? DateTimeOffset.UtcNow;
+    }
 
     public void ChangeRole(UserRole role)
     {

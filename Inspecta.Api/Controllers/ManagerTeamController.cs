@@ -50,7 +50,24 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
         CancellationToken cancellationToken) =>
         Ok(await userManagementService.UpdateTeamMemberAsync(GetActorId(), userId, request, cancellationToken));
 
-    /// <summary>Deactivate a team member in the current manager's company.</summary>
+    /// <summary>Enable or disable a team member without deleting the account.</summary>
+    [HttpPut("{userId:guid}/status")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetStatus(
+        Guid userId,
+        SetUserStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        await userManagementService.SetTeamMemberActiveAsync(
+            GetActorId(),
+            userId,
+            request.IsActive,
+            cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Soft-delete a team member in the current manager's company.</summary>
     [HttpDelete("{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

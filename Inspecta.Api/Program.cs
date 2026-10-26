@@ -117,12 +117,33 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
             var dbContext = context.HttpContext.RequestServices.GetRequiredService<InspectaDbContext>();
             var currentUser = await dbContext.Users.AsNoTracking()
                 .Where(user => user.Id == userId)
-                .Select(user => new { user.IsActive, user.Role })
+                .Select(user => new { user.IsActive, user.Role, user.CompanyId })
                 .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
             if (currentUser is null || !currentUser.IsActive)
             {
                 context.Fail("Account is disabled or no longer exists.");
                 return;
+            }
+
+            if (currentUser.CompanyId is Guid companyId)
+            {
+                var company = await dbContext.Companies.IgnoreQueryFilters().AsNoTracking()
+                    .Where(item => item.Id == companyId)
+                    .Select(item => new
+                    {
+                        item.IsDeleted,
+                        item.SubscriptionStatus,
+                        item.SubscriptionEndDate
+                    })
+                    .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+                if (company is null ||
+                    company.IsDeleted ||
+                    company.SubscriptionStatus != Inspecta.Domain.Enums.SubscriptionStatus.Active ||
+                    company.SubscriptionEndDate is { } endDate && endDate <= DateTimeOffset.UtcNow)
+                {
+                    context.Fail("The company subscription is suspended, expired, or deleted.");
+                    return;
+                }
             }
 
             var tokenRole = context.Principal?.FindFirst("role")?.Value;

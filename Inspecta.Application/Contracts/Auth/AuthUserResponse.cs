@@ -13,4 +13,5 @@ public sealed record AuthUserResponse(
 	bool IsOnLeave,
 	DateTimeOffset? LeaveUntil,
 	long HourlyRatePiastres,
-	Guid? CompanyId);
+	Guid? CompanyId,
+	Guid? CreatedById);

@@ -9,7 +9,7 @@ namespace Inspecta.Infrastructure.Repositories;
 public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserRepository
 {
     public Task<AppUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default) =>
-        dbContext.Users.SingleOrDefaultAsync(user => user.Email == email, cancellationToken);
+        dbContext.Users.IgnoreQueryFilters().SingleOrDefaultAsync(user => user.Email == email, cancellationToken);
 
     public Task<AppUser?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         dbContext.Users.SingleOrDefaultAsync(user => user.Id == id, cancellationToken);
@@ -18,9 +18,12 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
         Guid? companyId = null,
         UserRole? role = null,
         bool? isActive = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool includeDeleted = false)
     {
-        var query = dbContext.Users.AsNoTracking().AsQueryable();
+        var query = includeDeleted
+            ? dbContext.Users.IgnoreQueryFilters().AsNoTracking()
+            : dbContext.Users.AsNoTracking();
         if (companyId is not null) query = query.Where(user => user.CompanyId == companyId);
         if (role is not null) query = query.Where(user => user.Role == role);
         if (isActive is not null) query = query.Where(user => user.IsActive == isActive);
@@ -43,17 +46,50 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<bool> DeactivateAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<bool> SetActiveAsync(
+        Guid userId,
+        bool isActive,
+        CancellationToken cancellationToken = default)
     {
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         var user = await dbContext.Users.SingleOrDefaultAsync(user => user.Id == userId, cancellationToken);
-        if (user is null || !user.IsActive)
+        if (user is null)
         {
             await transaction.RollbackAsync(cancellationToken);
             return false;
         }
 
-        user.Deactivate();
+        if (isActive)
+            user.Activate();
+        else
+            user.Deactivate();
+
+        if (!isActive)
+        {
+            var tokens = await dbContext.RefreshTokens
+                .Where(token => token.UserId == userId && token.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+            var now = DateTimeOffset.UtcNow;
+            foreach (var token in tokens) token.RevokedAt = now;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> SoftDeleteAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var user = await dbContext.Users.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(user => user.Id == userId, cancellationToken);
+        if (user is null || user.IsDeleted)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return false;
+        }
+
+        user.SoftDelete();
         var tokens = await dbContext.RefreshTokens
             .Where(token => token.UserId == userId && token.RevokedAt == null)
             .ToListAsync(cancellationToken);
