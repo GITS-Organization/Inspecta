@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Inspecta.Application.Contracts.Auth;
 
+/// <summary>Profile fields a technical manager may update for a team member.</summary>
 public sealed record UpdateTeamMemberRequest
 {
     [Required, MaxLength(200)]

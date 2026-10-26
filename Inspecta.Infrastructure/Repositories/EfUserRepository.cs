@@ -14,9 +14,6 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
     public Task<AppUser?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         dbContext.Users.SingleOrDefaultAsync(user => user.Id == id, cancellationToken);
 
-    public Task<AppUser?> GetByFirebaseUidAsync(string firebaseUid, CancellationToken cancellationToken = default) =>
-        dbContext.Users.SingleOrDefaultAsync(user => user.FirebaseUid == firebaseUid, cancellationToken);
-
     public async Task<IReadOnlyList<AppUser>> ListAsync(
         Guid? companyId = null,
         UserRole? role = null,

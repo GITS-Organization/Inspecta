@@ -4,7 +4,7 @@ using Inspecta.Domain.Enums;
 
 namespace Inspecta.Application.Contracts.Equipment;
 
-/// <summary>Equipment registry record linked to a client.</summary>
+/// <summary>Payload for creating or updating an inspection item linked to a client.</summary>
 public sealed record SaveEquipmentRequest
 {
     public required Guid ClientId { get; init; }

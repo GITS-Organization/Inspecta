@@ -6,16 +6,19 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Inspecta.Api.Controllers;
 
+/// <summary>Create and manage quote revisions for an inspection request.</summary>
 [ApiController]
 [Authorize(Roles = "admin,coordinator")]
 [Route("api/v1/requests/{requestId:guid}/quotes")]
 public sealed class QuotesController(IQuoteService quoteService) : ControllerBase
 {
+    /// <summary>List quote revisions for a request.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<QuoteResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<QuoteResponse>>> List(Guid requestId, CancellationToken cancellationToken) =>
         Ok(await quoteService.ListAsync(requestId, cancellationToken));
 
+    /// <summary>Create a quote revision.</summary>
     [HttpPost]
     [ProducesResponseType<QuoteResponse>(StatusCodes.Status201Created)]
     public async Task<ActionResult<QuoteResponse>> Create(Guid requestId, CreateQuoteRequest request, CancellationToken cancellationToken)
@@ -25,6 +28,7 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
         return CreatedAtAction(nameof(List), new { requestId }, quote);
     }
 
+    /// <summary>Send a draft quote to the client.</summary>
     [HttpPost("{quoteId:guid}/send")]
     [ProducesResponseType<QuoteResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<QuoteResponse>> Send(Guid requestId, Guid quoteId, CancellationToken cancellationToken)
@@ -33,6 +37,7 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
         return Ok(await quoteService.SendAsync(requestId, quoteId, actorId, cancellationToken));
     }
 
+    /// <summary>Record the client's decision on a quote.</summary>
     [HttpPost("{quoteId:guid}/decision")]
     [ProducesResponseType<QuoteResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<QuoteResponse>> Decision(Guid requestId, Guid quoteId, QuoteDecisionRequest request, CancellationToken cancellationToken)

@@ -27,8 +27,6 @@ public sealed class JwtAccessTokenService(IConfiguration configuration) : IAcces
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim("role", RoleName(user.Role)),
         };
-        if (user.FirebaseUid is not null)
-            claims.Add(new Claim("firebase_uid", user.FirebaseUid));
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
             SecurityAlgorithms.HmacSha256);

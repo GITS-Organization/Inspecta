@@ -3,7 +3,7 @@ using Inspecta.Domain.Enums;
 
 namespace Inspecta.Application.Contracts.Auth;
 
-/// <summary>Admin changes to a staff member's role and operational profile.</summary>
+/// <summary>Admin changes to a staff member's role, company, and operational profile.</summary>
 public sealed record UpdateStaffProfileRequest
 {
     [Required, MaxLength(200)]

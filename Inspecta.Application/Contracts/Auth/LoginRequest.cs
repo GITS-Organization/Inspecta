@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Inspecta.Application.Contracts.Auth;
 
+/// <summary>Email and password credentials for authentication.</summary>
 public sealed record LoginRequest
 {
 	[Required, EmailAddress, MaxLength(320)]

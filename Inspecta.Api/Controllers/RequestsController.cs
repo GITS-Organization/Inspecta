@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Inspecta.Api.Controllers;
 
+/// <summary>Manage inspection requests and their workflow transitions.</summary>
 [ApiController]
 [Authorize]
 [Route("api/v1/requests")]
 public sealed class RequestsController(IInspectionRequestService requestService) : ControllerBase
 {
+    /// <summary>List requests visible to the current user.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<RequestResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<RequestResponse>>> List(CancellationToken cancellationToken)
@@ -19,6 +21,7 @@ public sealed class RequestsController(IInspectionRequestService requestService)
         return Ok(await requestService.ListVisibleAsync(actorId, role, cancellationToken));
     }
 
+    /// <summary>Get a request visible to the current user.</summary>
     [HttpGet("{requestId:guid}")]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -29,6 +32,7 @@ public sealed class RequestsController(IInspectionRequestService requestService)
         return request is null ? NotFound() : Ok(request);
     }
 
+    /// <summary>Create an inspection request.</summary>
     [HttpPost]
     [Authorize(Roles = "admin,coordinator")]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status201Created)]
@@ -39,6 +43,7 @@ public sealed class RequestsController(IInspectionRequestService requestService)
         return CreatedAtAction(nameof(GetById), new { requestId = created.Id }, created);
     }
 
+    /// <summary>Advance a request to the requested workflow status.</summary>
     [HttpPost("{requestId:guid}/transitions")]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<RequestResponse>> Transition(Guid requestId, TransitionRequest request, CancellationToken cancellationToken)
@@ -47,6 +52,7 @@ public sealed class RequestsController(IInspectionRequestService requestService)
         return Ok(await requestService.TransitionAsync(requestId, actorId, role, request, cancellationToken));
     }
 
+    /// <summary>Assign an accepted request to an inspector.</summary>
     [HttpPost("{requestId:guid}/assignment")]
     [Authorize(Roles = "admin,coordinator")]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]

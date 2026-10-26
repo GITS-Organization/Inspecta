@@ -13,7 +13,6 @@ public sealed class BootstrapAdminSeeder(InspectaDbContext dbContext, IConfigura
     {
         var email = configuration["BootstrapAdmin:Email"];
         var password = configuration["BootstrapAdmin:Password"];
-        var firebaseUid = configuration["BootstrapAdmin:FirebaseUid"];
         var fullName = configuration["BootstrapAdmin:FullName"];
         if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(password))
         {
@@ -26,15 +25,12 @@ public sealed class BootstrapAdminSeeder(InspectaDbContext dbContext, IConfigura
 
         UserManagementService.ValidatePassword(password);
         var normalizedEmail = email.Trim().ToLowerInvariant();
-        if (await dbContext.Users.AnyAsync(
-                user => user.Email == normalizedEmail ||
-                        (firebaseUid != null && user.FirebaseUid == firebaseUid),
-                cancellationToken))
+        if (await dbContext.Users.AnyAsync(user => user.Email == normalizedEmail, cancellationToken))
         {
             return;
         }
 
-        var user = AppUser.Create(firebaseUid, normalizedEmail, fullName, UserRole.Admin);
+        var user = AppUser.Create(normalizedEmail, fullName, UserRole.Admin);
         user.SetPasswordHash(new PasswordHasher<AppUser>().HashPassword(user, password));
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync(cancellationToken);

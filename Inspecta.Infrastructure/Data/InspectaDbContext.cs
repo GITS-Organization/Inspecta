@@ -23,8 +23,6 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
     {
         var user = modelBuilder.Entity<AppUser>();
         user.HasKey(item => item.Id);
-        user.Property(item => item.FirebaseUid).HasMaxLength(128);
-        user.HasIndex(item => item.FirebaseUid).IsUnique();
         user.HasIndex(item => new { item.CompanyId, item.Role });
         user.HasOne<Company>()
             .WithMany()

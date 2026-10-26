@@ -3,7 +3,7 @@ using Inspecta.Domain.Enums;
 
 namespace Inspecta.Application.Contracts.Equipment;
 
-/// <summary>Equipment registry item and its latest inspection dates.</summary>
+/// <summary>Registered inspection item, metadata, and inspection dates.</summary>
 public sealed record EquipmentResponse(
     Guid Id,
     Guid ClientId,

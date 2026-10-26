@@ -5,16 +5,19 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Inspecta.Api.Controllers;
 
+/// <summary>Manage inspection items registered for clients.</summary>
 [ApiController]
 [Authorize(Roles = "admin,coordinator")]
 [Route("api/v1/equipment")]
 public sealed class EquipmentController(IEquipmentService equipmentService) : ControllerBase
 {
+    /// <summary>List items, optionally filtered by client and archive status.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<EquipmentResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<EquipmentResponse>>> List([FromQuery] Guid? clientId, [FromQuery] bool includeArchived, CancellationToken cancellationToken) =>
         Ok(await equipmentService.ListAsync(clientId, includeArchived, cancellationToken));
 
+    /// <summary>Get an item by identifier.</summary>
     [HttpGet("{equipmentId:guid}")]
     [ProducesResponseType<EquipmentResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -24,6 +27,7 @@ public sealed class EquipmentController(IEquipmentService equipmentService) : Co
         return equipment is null ? NotFound() : Ok(equipment);
     }
 
+    /// <summary>Create an item for a client.</summary>
     [HttpPost]
     [ProducesResponseType<EquipmentResponse>(StatusCodes.Status201Created)]
     public async Task<ActionResult<EquipmentResponse>> Create(SaveEquipmentRequest request, CancellationToken cancellationToken)
@@ -32,11 +36,13 @@ public sealed class EquipmentController(IEquipmentService equipmentService) : Co
         return CreatedAtAction(nameof(GetById), new { equipmentId = equipment.Id }, equipment);
     }
 
+    /// <summary>Update an item's registration and metadata.</summary>
     [HttpPut("{equipmentId:guid}")]
     [ProducesResponseType<EquipmentResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<EquipmentResponse>> Update(Guid equipmentId, SaveEquipmentRequest request, CancellationToken cancellationToken) =>
         Ok(await equipmentService.UpdateAsync(equipmentId, request, cancellationToken));
 
+    /// <summary>Record inspection dates for an item.</summary>
     [HttpPost("{equipmentId:guid}/inspections")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RecordInspection(Guid equipmentId, RecordEquipmentInspectionRequest request, CancellationToken cancellationToken)
@@ -45,6 +51,7 @@ public sealed class EquipmentController(IEquipmentService equipmentService) : Co
         return NoContent();
     }
 
+    /// <summary>Archive an item.</summary>
     [HttpDelete("{equipmentId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Archive(Guid equipmentId, CancellationToken cancellationToken)

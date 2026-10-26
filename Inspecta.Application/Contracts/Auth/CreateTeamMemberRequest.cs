@@ -3,6 +3,7 @@ using Inspecta.Domain.Enums;
 
 namespace Inspecta.Application.Contracts.Auth;
 
+/// <summary>Payload for creating a coordinator or inspector in a manager's company.</summary>
 public sealed record CreateTeamMemberRequest
 {
     [Required, EmailAddress, MaxLength(320)]

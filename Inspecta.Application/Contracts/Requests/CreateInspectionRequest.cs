@@ -24,7 +24,7 @@ public sealed record CreateInspectionRequest
     public IReadOnlyList<CreateRequestItem> Items { get; init; } = [];
 }
 
-/// <summary>One requested item of equipment.</summary>
+/// <summary>One item requested for inspection.</summary>
 public sealed record CreateRequestItem
 {
     [Required, MaxLength(200)]

@@ -34,10 +34,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasMaxLength(320)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("FirebaseUid")
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -82,9 +78,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
-                        .IsUnique();
-
-                    b.HasIndex("FirebaseUid")
                         .IsUnique();
 
                     b.HasIndex("CompanyId", "Role");

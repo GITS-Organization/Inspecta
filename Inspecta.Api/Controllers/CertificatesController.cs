@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Inspecta.Api.Controllers;
 
+/// <summary>Manage inspection certificates associated with a request.</summary>
 [ApiController]
 [Authorize]
 [Route("api/v1/requests/{requestId:guid}/certificate")]
 public sealed class CertificatesController(ICertificateService certificateService) : ControllerBase
 {
+    /// <summary>Get the certificate for a request.</summary>
     [HttpGet]
     [ProducesResponseType<CertificateResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -21,6 +23,7 @@ public sealed class CertificatesController(ICertificateService certificateServic
         return certificate is null ? NotFound() : Ok(certificate);
     }
 
+    /// <summary>Save the inspector's certificate draft.</summary>
     [HttpPut("draft")]
     [Authorize(Roles = "admin,inspector")]
     [ProducesResponseType<CertificateResponse>(StatusCodes.Status200OK)]
@@ -30,6 +33,7 @@ public sealed class CertificatesController(ICertificateService certificateServic
         return Ok(await certificateService.SaveDraftAsync(requestId, actorId, request, cancellationToken));
     }
 
+    /// <summary>Submit the certificate for technical review.</summary>
     [HttpPost("submit")]
     [Authorize(Roles = "admin,inspector")]
     [ProducesResponseType<CertificateResponse>(StatusCodes.Status200OK)]
@@ -39,6 +43,7 @@ public sealed class CertificatesController(ICertificateService certificateServic
         return Ok(await certificateService.SubmitAsync(requestId, actorId, cancellationToken));
     }
 
+    /// <summary>Approve or return a submitted certificate.</summary>
     [HttpPost("review")]
     [Authorize(Roles = "admin,technical_manager")]
     [ProducesResponseType<CertificateResponse>(StatusCodes.Status200OK)]

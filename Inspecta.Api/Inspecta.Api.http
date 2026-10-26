@@ -1,19 +1,134 @@
 @baseUrl = http://localhost:5238
-@token = {{accessToken}}
 @requestId = 00000000-0000-0000-0000-000000000000
 @clientId = 00000000-0000-0000-0000-000000000000
+@companyId = 00000000-0000-0000-0000-000000000000
+@userId = 00000000-0000-0000-0000-000000000000
+@itemId = 00000000-0000-0000-0000-000000000000
+@quoteId = 00000000-0000-0000-0000-000000000000
 
-### Login
+### Health
+GET {{baseUrl}}/health
+
+### @name login
 POST {{baseUrl}}/api/v1/auth/login
 Content-Type: application/json
 
 {
-	"email": "admin@example.com",
-	"password": "replace-with-local-secret"
+  "email": "admin@example.com",
+  "password": "Replace-With-Your-Admin-Password"
 }
+
+### Copy accessToken from the login response into this variable
+@token = replace-with-access-token
 
 ### Current identity
 GET {{baseUrl}}/api/v1/auth/me
+Authorization: Bearer {{token}}
+
+### Refresh tokens
+POST {{baseUrl}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "replace-with-refresh-token"
+}
+
+### List companies (Admin)
+GET {{baseUrl}}/api/v1/companies
+Authorization: Bearer {{token}}
+
+### Create a company and initial Technical Manager (Admin)
+POST {{baseUrl}}/api/v1/companies
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Example Inspection Company",
+  "managerEmail": "manager@example.com",
+  "managerFullName": "Technical Manager",
+  "managerPassword": "Replace-With-Strong-Password"
+}
+
+### List users (Admin; optional filters: companyId, role, isActive)
+GET {{baseUrl}}/api/v1/users?isActive=true
+Authorization: Bearer {{token}}
+
+### Create a user (Admin)
+POST {{baseUrl}}/api/v1/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "inspector@example.com",
+  "fullName": "Inspector",
+  "password": "Replace-With-Strong-Password",
+  "role": "inspector",
+  "companyId": "{{companyId}}"
+}
+
+### Get a user (Admin)
+GET {{baseUrl}}/api/v1/users/{{userId}}
+Authorization: Bearer {{token}}
+
+### Update a user profile (Admin)
+PUT {{baseUrl}}/api/v1/users/{{userId}}/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "fullName": "Inspector Updated",
+  "role": "inspector",
+  "companyId": "{{companyId}}",
+  "qualifications": [],
+  "isOnLeave": false,
+  "leaveUntil": null,
+  "hourlyRatePiastres": 0
+}
+
+### Deactivate a user (Admin)
+DELETE {{baseUrl}}/api/v1/users/{{userId}}
+Authorization: Bearer {{token}}
+
+### List current Technical Manager's team
+GET {{baseUrl}}/api/v1/manager/team
+Authorization: Bearer {{token}}
+
+### Create team member (Technical Manager; role must be coordinator or inspector)
+POST {{baseUrl}}/api/v1/manager/team
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "coordinator@example.com",
+  "fullName": "Coordinator",
+  "password": "Replace-With-Strong-Password",
+  "role": "coordinator",
+  "qualifications": [],
+  "hourlyRatePiastres": 0
+}
+
+### Get team member
+GET {{baseUrl}}/api/v1/manager/team/{{userId}}
+Authorization: Bearer {{token}}
+
+### Update team member
+PUT {{baseUrl}}/api/v1/manager/team/{{userId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "fullName": "Coordinator Updated",
+  "qualifications": [],
+  "isOnLeave": false,
+  "hourlyRatePiastres": 0
+}
+
+### Deactivate team member
+DELETE {{baseUrl}}/api/v1/manager/team/{{userId}}
+Authorization: Bearer {{token}}
+
+### List clients
+GET {{baseUrl}}/api/v1/clients?includeArchived=false
 Authorization: Bearer {{token}}
 
 ### Create a client
@@ -22,12 +137,73 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-	"name": "Example Industrial Company",
-	"notes": "Local API smoke test",
-	"contacts": [
-		{ "name": "Operations Contact", "email": "operations@example.com", "phone": "+201000000000", "isPrimary": true }
-	]
+  "name": "Example Client",
+  "notes": "Client notes",
+  "contacts": [
+    {
+      "name": "Operations Contact",
+      "email": "operations@example.com",
+      "phone": "+201000000000",
+      "isPrimary": true
+    }
+  ]
 }
+
+### Get a client
+GET {{baseUrl}}/api/v1/clients/{{clientId}}
+Authorization: Bearer {{token}}
+
+### Archive a client
+DELETE {{baseUrl}}/api/v1/clients/{{clientId}}
+Authorization: Bearer {{token}}
+
+### List items
+GET {{baseUrl}}/api/v1/equipment?clientId={{clientId}}&includeArchived=false
+Authorization: Bearer {{token}}
+
+### Create an item
+POST {{baseUrl}}/api/v1/equipment
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clientId": "{{clientId}}",
+  "name": "Overhead Crane",
+  "itemType": "equipment",
+  "locationInsideClientLocation": "Warehouse A, Bay 2",
+  "notes": "Annual inspection"
+}
+
+### Get an item
+GET {{baseUrl}}/api/v1/equipment/{{itemId}}
+Authorization: Bearer {{token}}
+
+### Update an item
+PUT {{baseUrl}}/api/v1/equipment/{{itemId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clientId": "{{clientId}}",
+  "name": "Overhead Crane",
+  "itemType": "equipment",
+  "locationInsideClientLocation": "Warehouse A, Bay 2",
+  "notes": "Updated notes"
+}
+
+### Record an item inspection
+POST {{baseUrl}}/api/v1/equipment/{{itemId}}/inspections
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "inspectedAt": "2026-10-26T09:00:00Z",
+  "nextDueAt": "2027-10-26T09:00:00Z"
+}
+
+### Archive an item
+DELETE {{baseUrl}}/api/v1/equipment/{{itemId}}
+Authorization: Bearer {{token}}
 
 ### Create an inspection request
 POST {{baseUrl}}/api/v1/requests
@@ -35,28 +211,134 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-	"clientId": "{{clientId}}",
-	"clientName": "Example Industrial Company",
-	"location": "Cairo",
-	"subject": "Crane inspection",
-	"items": [ { "name": "Overhead crane", "quantity": 1, "capacity": "10 t" } ]
+  "clientId": "{{clientId}}",
+  "clientName": "Example Client",
+  "location": "Cairo",
+  "subject": "Annual crane inspection",
+  "items": [
+    {
+      "name": "Overhead Crane",
+      "quantity": 1,
+      "capacity": "10 t"
+    }
+  ]
 }
 
 ### List requests visible to current user
 GET {{baseUrl}}/api/v1/requests
 Authorization: Bearer {{token}}
 
+### Get a request
+GET {{baseUrl}}/api/v1/requests/{{requestId}}
+Authorization: Bearer {{token}}
+
+### Transition a request
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/transitions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "quote_draft",
+  "note": "Request reviewed"
+}
+
+### Assign an inspector
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/assignment
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "inspectorId": "{{userId}}",
+  "scheduledAt": "2026-11-02T09:00:00Z",
+  "note": "Site visit"
+}
+
 ### List quote revisions
 GET {{baseUrl}}/api/v1/requests/{{requestId}}/quotes
 Authorization: Bearer {{token}}
 
-### Get certificate
+### Create a quote revision
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amountPiastres": 150000,
+  "validUntil": "2026-11-15T23:59:00Z"
+}
+
+### Send a quote
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/send
+Authorization: Bearer {{token}}
+
+### Record a quote decision
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/decision
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "decision": "accepted",
+  "note": "Approved by client"
+}
+
+### Get a certificate
 GET {{baseUrl}}/api/v1/requests/{{requestId}}/certificate
 Authorization: Bearer {{token}}
 
-### Get timesheet
+### Save a certificate draft
+PUT {{baseUrl}}/api/v1/requests/{{requestId}}/certificate/draft
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "texts": {},
+  "dates": {},
+  "answers": {},
+  "functionCheck": "unanswered",
+  "finalResult": null
+}
+
+### Submit a certificate
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/certificate/submit
+Authorization: Bearer {{token}}
+
+### Review a certificate
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/certificate/review
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "approve": false,
+  "note": "Please update the inspection details"
+}
+
+### Get a timesheet
 GET {{baseUrl}}/api/v1/requests/{{requestId}}/timesheet
 Authorization: Bearer {{token}}
+
+### Save a timesheet
+PUT {{baseUrl}}/api/v1/requests/{{requestId}}/timesheet
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "activities": {
+    "inspection": 120,
+    "travel": 30
+  },
+  "expenses": {
+    "transport": 250
+  }
+}
+
+### Review a timesheet
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/timesheet/review
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "approve": true
+}
 
 ### Logout
 POST {{baseUrl}}/api/v1/auth/logout
@@ -64,5 +346,5 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-	"refreshToken": "replace-with-refresh-token"
+  "refreshToken": "replace-with-refresh-token"
 }

@@ -6,9 +6,6 @@ namespace Inspecta.Application.Contracts.Auth;
 /// <summary>Payload for creating an internal staff account.</summary>
 public sealed record CreateStaffUserRequest
 {
-    [MaxLength(128)]
-    public string? FirebaseUid { get; init; }
-
     [Required, EmailAddress, MaxLength(320)]
     public required string Email { get; init; }
 

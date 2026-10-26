@@ -119,7 +119,6 @@ public class AuthService : IAuthService
     private static AuthUserResponse ToResponse(AppUser user) =>
         new(
             user.Id,
-            user.FirebaseUid,
             user.Email,
             user.FullName,
             user.Role,

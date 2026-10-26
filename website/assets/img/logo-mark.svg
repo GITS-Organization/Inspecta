@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Inspecta">
-  <rect width="512" height="512" rx="112" fill="#2563EB"/>
-  <g fill="none" stroke="#fff" stroke-width="33" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M339.8 162.3A121 121 0 1 0 347.6 340.6"/>
-    <path d="M200 254l43 44L383 160"/>
-  </g>
-</svg>

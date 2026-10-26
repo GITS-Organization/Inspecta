@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Inspecta.Api.Middleware;
+using Inspecta.Api.OpenApi;
 using Inspecta.Application.Interfaces;
 using Inspecta.Application.Services;
 using Inspecta.Infrastructure.Data;
@@ -8,6 +9,7 @@ using Inspecta.Infrastructure.Repositories;
 using Inspecta.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,7 +19,44 @@ builder.Services.AddExceptionHandler<AuthExceptionHandler>();
 builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.SnakeCaseLower)));
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+var csvOrigins = builder.Configuration["Cors:AllowedOriginsCsv"];
+var allowedOrigins = configuredOrigins
+    .Concat(string.IsNullOrWhiteSpace(csvOrigins)
+        ? []
+        : csvOrigins.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
+{
+    if (allowedOrigins.Length > 0)
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+}));
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Inspecta API",
+        Version = "v1",
+        Description = "JWT-secured API for Inspecta inspection workflows, companies, and user management."
+    });
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter a valid access token. The Bearer prefix is added automatically."
+    });
+    options.OperationFilter<AuthorizeOperationFilter>();
+
+    var xmlFile = $"{typeof(Program).Assembly.GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+        options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+});
+builder.Services.AddHealthChecks();
 
 var connectionString = builder.Configuration.GetConnectionString("Inspecta") ?? "Data Source=inspecta.db";
 builder.Services.AddDbContext<InspectaDbContext>(options => options.UseSqlite(connectionString));
@@ -47,7 +86,7 @@ if (string.IsNullOrWhiteSpace(signingKey) || Encoding.UTF8.GetByteCount(signingK
 }
 
 var issuer = builder.Configuration["Jwt:Issuer"] ?? "Inspecta.Api";
-var audience = builder.Configuration["Jwt:Audience"] ?? "Inspecta.Flutter";
+var audience = builder.Configuration["Jwt:Audience"] ?? "Inspecta.Client";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.MapInboundClaims = false;
@@ -114,7 +153,7 @@ await using (var scope = app.Services.CreateAsyncScope())
         .SeedAsync();
 }
 
-if (app.Environment.IsDevelopment())
+if (app.Configuration.GetValue("Swagger:Enabled", true))
 {
     app.UseSwagger();
     app.UseSwaggerUI();
@@ -123,9 +162,11 @@ if (app.Environment.IsDevelopment())
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseHttpsRedirection();
+app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHealthChecks("/health").AllowAnonymous();
 app.MapControllers();
 
 app.Run();

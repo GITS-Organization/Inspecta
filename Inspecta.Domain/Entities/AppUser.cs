@@ -11,7 +11,6 @@ public class AppUser
     private AppUser() { }
 
     public Guid Id { get; private set; } = Guid.NewGuid();
-    public string? FirebaseUid { get; private set; }
     public Guid? CompanyId { get; private set; }
     public string Email { get; private set; } = string.Empty;
     public string FullName { get; private set; } = string.Empty;
@@ -44,7 +43,6 @@ public class AppUser
     }
 
     public static AppUser Create(
-        string? firebaseUid,
         string email,
         string fullName,
         UserRole role,
@@ -57,8 +55,6 @@ public class AppUser
         DateTimeOffset? createdAt = null,
         Guid? companyId = null)
     {
-        if (firebaseUid is not null && string.IsNullOrWhiteSpace(firebaseUid))
-            throw new ArgumentException("Firebase user id cannot be empty.", nameof(firebaseUid));
         if (string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("Email is required.", nameof(email));
         if (string.IsNullOrWhiteSpace(fullName))
@@ -72,7 +68,6 @@ public class AppUser
 
         var user = new AppUser
         {
-            FirebaseUid = Normalize(firebaseUid),
             CompanyId = companyId,
             Email = email.Trim().ToLowerInvariant(),
             FullName = fullName.Trim(),

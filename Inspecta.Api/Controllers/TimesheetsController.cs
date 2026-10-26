@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Inspecta.Api.Controllers;
 
+/// <summary>Manage inspection timesheets and their review workflow.</summary>
 [ApiController]
 [Authorize]
 [Route("api/v1/requests/{requestId:guid}/timesheet")]
 public sealed class TimesheetsController(ITimesheetService timesheetService) : ControllerBase
 {
+    /// <summary>Get a request's timesheet.</summary>
     [HttpGet]
     [ProducesResponseType<TimesheetResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<TimesheetResponse>> Get(Guid requestId, CancellationToken cancellationToken)
@@ -20,6 +22,7 @@ public sealed class TimesheetsController(ITimesheetService timesheetService) : C
         return timesheet is null ? NotFound() : Ok(timesheet);
     }
 
+    /// <summary>Create or update an inspector's timesheet.</summary>
     [HttpPut]
     [Authorize(Roles = "admin,inspector")]
     [ProducesResponseType<TimesheetResponse>(StatusCodes.Status200OK)]
@@ -29,6 +32,7 @@ public sealed class TimesheetsController(ITimesheetService timesheetService) : C
         return Ok(await timesheetService.SaveAsync(requestId, actorId, request, cancellationToken));
     }
 
+    /// <summary>Approve or return a timesheet for correction.</summary>
     [HttpPost("review")]
     [Authorize(Roles = "admin,coordinator")]
     [ProducesResponseType<TimesheetResponse>(StatusCodes.Status200OK)]

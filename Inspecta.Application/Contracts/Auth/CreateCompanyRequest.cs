@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Inspecta.Application.Contracts.Auth;
 
+/// <summary>Payload for provisioning a company with its initial technical manager.</summary>
 public sealed record CreateCompanyRequest
 {
     [Required, MaxLength(200)]
@@ -15,7 +16,4 @@ public sealed record CreateCompanyRequest
 
     [Required, MinLength(12), MaxLength(256)]
     public required string ManagerPassword { get; init; }
-
-    [MaxLength(128)]
-    public string? ManagerFirebaseUid { get; init; }
 }

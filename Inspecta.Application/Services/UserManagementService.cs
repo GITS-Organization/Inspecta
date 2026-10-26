@@ -16,9 +16,6 @@ public sealed class UserManagementService(
         if (!Enum.IsDefined(request.Role)) throw new ArgumentException("User role is invalid.", nameof(request.Role));
         var email = request.Email.Trim().ToLowerInvariant();
         await EnsureEmailAvailableAsync(email, cancellationToken);
-        if (request.FirebaseUid is not null &&
-            await userRepository.GetByFirebaseUidAsync(request.FirebaseUid, cancellationToken) is not null)
-            throw new AuthException("account_exists", "Firebase UID is already registered.", 409);
         if (request.HourlyRatePiastres < 0) throw new ArgumentOutOfRangeException(nameof(request.HourlyRatePiastres));
         if (request.Role != UserRole.Admin &&
             (request.CompanyId is null || !await companyRepository.ExistsAsync(request.CompanyId.Value, cancellationToken)))
@@ -27,7 +24,6 @@ public sealed class UserManagementService(
             throw new AuthException("admin_company_not_allowed", "Admin accounts cannot be assigned to a company.", 400);
 
         var user = CreateUser(
-            request.FirebaseUid,
             email,
             request.FullName,
             request.Role,
@@ -113,13 +109,8 @@ public sealed class UserManagementService(
         ValidatePassword(request.ManagerPassword);
         var email = request.ManagerEmail.Trim().ToLowerInvariant();
         await EnsureEmailAvailableAsync(email, cancellationToken);
-        if (request.ManagerFirebaseUid is not null &&
-            await userRepository.GetByFirebaseUidAsync(request.ManagerFirebaseUid, cancellationToken) is not null)
-            throw new AuthException("account_exists", "Firebase UID is already registered.", 409);
-
         var company = Company.Create(request.Name);
         var manager = CreateUser(
-            request.ManagerFirebaseUid,
             email,
             request.ManagerFullName,
             UserRole.TechnicalManager,
@@ -168,7 +159,6 @@ public sealed class UserManagementService(
         var email = request.Email.Trim().ToLowerInvariant();
         await EnsureEmailAvailableAsync(email, cancellationToken);
         var user = CreateUser(
-            firebaseUid: null,
             email,
             request.FullName,
             request.Role,
@@ -245,7 +235,6 @@ public sealed class UserManagementService(
 
     private static AuthUserResponse ToResponse(AppUser user) => new(
         user.Id,
-        user.FirebaseUid,
         user.Email,
         user.FullName,
         user.Role,
@@ -284,7 +273,6 @@ public sealed class UserManagementService(
     }
 
     private AppUser CreateUser(
-        string? firebaseUid,
         string email,
         string fullName,
         UserRole role,
@@ -295,7 +283,6 @@ public sealed class UserManagementService(
     {
         ValidatePassword(password);
         var user = AppUser.Create(
-            firebaseUid,
             email,
             fullName,
             role,

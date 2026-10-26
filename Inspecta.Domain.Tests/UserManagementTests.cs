@@ -14,9 +14,9 @@ public sealed class UserManagementTests
     {
         var companyId = Guid.NewGuid();
         var otherCompanyId = Guid.NewGuid();
-        var manager = AppUser.Create(null, "manager@example.com", "Manager", UserRole.TechnicalManager, companyId: companyId);
-        var inScope = AppUser.Create(null, "inspector@example.com", "Inspector", UserRole.Inspector, companyId: companyId);
-        var outOfScope = AppUser.Create(null, "other@example.com", "Other", UserRole.Coordinator, companyId: otherCompanyId);
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager, companyId: companyId);
+        var inScope = AppUser.Create("inspector@example.com", "Inspector", UserRole.Inspector, companyId: companyId);
+        var outOfScope = AppUser.Create("other@example.com", "Other", UserRole.Coordinator, companyId: otherCompanyId);
         var users = new MemoryUserRepository(manager, inScope, outOfScope);
         var service = CreateService(users, new MemoryCompanyRepository(companyId, otherCompanyId));
 
@@ -31,7 +31,7 @@ public sealed class UserManagementTests
     public async Task TechnicalManagerCannotCreatePrivilegedRoles()
     {
         var companyId = Guid.NewGuid();
-        var manager = AppUser.Create(null, "manager@example.com", "Manager", UserRole.TechnicalManager, companyId: companyId);
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager, companyId: companyId);
         var service = CreateService(new MemoryUserRepository(manager), new MemoryCompanyRepository(companyId));
 
         var error = await Assert.ThrowsAsync<AuthException>(() => service.CreateTeamMemberAsync(
@@ -52,7 +52,7 @@ public sealed class UserManagementTests
     public async Task TechnicalManagerCreatesAllowedRolesInsideTheirCompany()
     {
         var companyId = Guid.NewGuid();
-        var manager = AppUser.Create(null, "manager@example.com", "Manager", UserRole.TechnicalManager, companyId: companyId);
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager, companyId: companyId);
         var users = new MemoryUserRepository(manager);
         var service = CreateService(users, new MemoryCompanyRepository(companyId));
 
@@ -68,7 +68,6 @@ public sealed class UserManagementTests
 
         Assert.Equal(UserRole.Inspector, created.Role);
         Assert.Equal(companyId, created.CompanyId);
-        Assert.Null(created.FirebaseUid);
     }
 
     [Fact]
@@ -95,7 +94,6 @@ public sealed class UserManagementTests
         });
 
         Assert.Equal("company_required", error.Code);
-        Assert.Null(created.FirebaseUid);
         Assert.Equal(companyId, created.CompanyId);
     }
 
@@ -143,9 +141,6 @@ public sealed class UserManagementTests
 
         public Task<AppUser?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
             Task.FromResult(_users.SingleOrDefault(user => user.Id == id));
-
-        public Task<AppUser?> GetByFirebaseUidAsync(string firebaseUid, CancellationToken cancellationToken = default) =>
-            Task.FromResult(_users.SingleOrDefault(user => user.FirebaseUid == firebaseUid));
 
         public Task<IReadOnlyList<AppUser>> ListAsync(
             Guid? companyId = null,

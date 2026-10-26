@@ -153,7 +153,6 @@ public sealed class DomainDataModelTests
             new UserQualification("Pressure vessels", new DateOnly(2028, 5, 31))
         };
         var user = AppUser.Create(
-            "firebase-user",
             "ADMIN@EXAMPLE.COM",
             "Admin",
             UserRole.Admin,
