@@ -7,7 +7,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
-      ConnectionStrings__Inspecta: Data Source=/data/inspecta.db
+      ConnectionStrings__Inspecta: ${INSPECTA_CONNECTION_STRING:?Set INSPECTA_CONNECTION_STRING}
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}
       Jwt__Issuer: ${JWT_ISSUER:-Inspecta.Api}
       Jwt__Audience: ${JWT_AUDIENCE:-Inspecta.Client}
@@ -18,8 +18,3 @@ services:
       BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:-}
     ports:
       - "${API_PORT:-8080}:8080"
-    volumes:
-      - inspecta-data:/data
-
-volumes:
-  inspecta-data:

@@ -58,8 +58,9 @@ builder.Services.AddSwaggerGen(options =>
 });
 builder.Services.AddHealthChecks();
 
-var connectionString = builder.Configuration.GetConnectionString("Inspecta") ?? "Data Source=inspecta.db";
-builder.Services.AddDbContext<InspectaDbContext>(options => options.UseSqlite(connectionString));
+var connectionString = builder.Configuration.GetConnectionString("Inspecta")
+    ?? throw new InvalidOperationException("Set the ConnectionStrings:Inspecta PostgreSQL connection string.");
+builder.Services.AddDbContext<InspectaDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();

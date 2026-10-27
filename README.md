@@ -46,6 +46,7 @@ dotnet user-secrets init --project .\Inspecta.Api\Inspecta.Api.csproj
 $randomBytes = New-Object byte[] 48
 [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($randomBytes)
 dotnet user-secrets set "Jwt:SigningKey" ([Convert]::ToBase64String($randomBytes)) --project .\Inspecta.Api\Inspecta.Api.csproj
+dotnet user-secrets set "ConnectionStrings:Inspecta" "Host=localhost;Database=inspecta;Username=postgres;Password=<local-password>" --project .\Inspecta.Api\Inspecta.Api.csproj
 dotnet user-secrets set "BootstrapAdmin:Email" "admin@example.com" --project .\Inspecta.Api\Inspecta.Api.csproj
 dotnet user-secrets set "BootstrapAdmin:FullName" "Inspecta Admin" --project .\Inspecta.Api\Inspecta.Api.csproj
 dotnet user-secrets set "BootstrapAdmin:Password" "<strong-password>" --project .\Inspecta.Api\Inspecta.Api.csproj
@@ -60,7 +61,7 @@ $env:Jwt__SigningKey = "<at-least-32-random-bytes>"
 dotnet run --project .\Inspecta.Api\Inspecta.Api.csproj
 ```
 
-Local Swagger is available at `http://localhost:5238/swagger`. EF Core applies migrations at startup. The default SQLite database is `Inspecta.Api/inspecta.db`.
+Run a local PostgreSQL instance before starting the API. Local connection strings belong in user secrets, not `appsettings.json`. Local Swagger is available at `http://localhost:5238/swagger`; EF Core applies PostgreSQL migrations at startup.
 
 ## Linux deployment with Docker
 
@@ -75,20 +76,20 @@ docker compose up --build -d
 ```
 
 4. Verify `http://localhost:8080/health`, then open `http://localhost:8080/swagger`.
-5. Put the API behind a TLS-enabled reverse proxy or the hosting platform's HTTPS ingress before exposing it publicly. Persist the `/data` volume and back it up.
+5. Put the API behind a TLS-enabled reverse proxy or the hosting platform's HTTPS ingress before exposing it publicly.
 
 Set `API_PORT` to change the host port. Production secrets must be supplied by the server's secret manager or environment rather than committed `.env` files. Configure `AllowedHosts`, `Jwt__Issuer`, and `Jwt__Audience` for the deployed domain/client.
 For a browser-based frontend on a different origin, set `CORS_ALLOWED_ORIGINS` to a comma-separated list of exact origins (scheme and host, such as `https://app.example.com`). Native clients and server-to-server consumers do not require CORS.
 
-The default provider is SQLite on a persistent Docker volume, suitable for initial low-volume hosting. Assess PostgreSQL or SQL Server and rehearse provider-specific migrations before scaling or running multiple API replicas.
+The API uses PostgreSQL. Set `INSPECTA_CONNECTION_STRING` to a PostgreSQL ADO.NET connection string before starting Docker Compose. Keep production credentials in the hosting provider's secret/environment settings, and use managed backups for important data.
 
 ## Deploying a test instance to Render
 
-The repository includes a [`render.yaml`](./render.yaml) Blueprint for the `backend` branch. In Render, choose **New > Blueprint**, connect this GitHub repository, select the `backend` branch, and review the Blueprint before deploying. It creates a Docker web service, configures `/health` as its health check, generates a JWT signing key, and asks for the initial Admin email, full name, and password.
+The repository includes a [`render.yaml`](./render.yaml) Blueprint for the `backend` branch. In Render, choose **New > Blueprint**, connect this GitHub repository, select the `backend` branch, and review the Blueprint before deploying. It creates a Docker web service, configures `/health` as its health check, generates a JWT signing key, and asks for the PostgreSQL connection string and initial Admin email, full name, and password.
 
-The Blueprint intentionally uses Render's **Free** plan for API testing. Free web services sleep when idle and have an ephemeral filesystem: the SQLite database can be erased when the service sleeps, restarts, or redeploys. Do not store real or important data in this test deployment. Render Free services cannot use persistent disks. To keep SQLite data, upgrade the service to a paid compute plan and attach a persistent disk mounted at `/data`; review Render's current pricing before upgrading. For a production deployment, use a managed database such as PostgreSQL or deploy to a VPS with persistent storage and backups.
+Create a PostgreSQL database in Render in the same region as the web service. Copy its internal connection details into `ConnectionStrings__Inspecta` using the ADO.NET format `Host=<host>;Port=5432;Database=<database>;Username=<user>;Password=<password>;SSL Mode=Require`. Review Render's current database pricing and free-tier limits before creating it. The API creates/updates schema from its PostgreSQL migrations on startup; this starts with an empty database and does not copy data from the old SQLite file.
 
-If creating the service manually instead of using the Blueprint, select the `backend` branch and Docker runtime with `Dockerfile` at the repository root. Set `ASPNETCORE_HTTP_PORTS=8080`, `PORT=8080`, `ConnectionStrings__Inspecta=Data Source=/data/inspecta.db`, `Jwt__Issuer=Inspecta.Api`, `Jwt__Audience=Inspecta.Client`, and `Swagger__Enabled=true`. Also set `Jwt__SigningKey` to a unique secret with at least 32 UTF-8 bytes and set all three `BootstrapAdmin__Email`, `BootstrapAdmin__FullName`, and `BootstrapAdmin__Password` values for the first deployment. Never commit these secrets. For Flutter Web, add `Cors__AllowedOriginsCsv` with the exact HTTPS origin of the deployed frontend; native Flutter apps do not need CORS.
+If creating the service manually instead of using the Blueprint, select the `backend` branch and Docker runtime with `Dockerfile` at the repository root. Set `ASPNETCORE_HTTP_PORTS=8080`, `PORT=8080`, `ConnectionStrings__Inspecta` to the PostgreSQL connection string, `Jwt__Issuer=Inspecta.Api`, `Jwt__Audience=Inspecta.Client`, and `Swagger__Enabled=true`. Set `Jwt__SigningKey` to a unique secret with at least 32 UTF-8 bytes and set all three `BootstrapAdmin__Email`, `BootstrapAdmin__FullName`, and `BootstrapAdmin__Password` values for the first deployment. Never commit these secrets. For Flutter Web, add `Cors__AllowedOriginsCsv` with the exact HTTPS origin of the deployed frontend; native Flutter apps do not need CORS.
 
 ## API request examples
 
@@ -96,6 +97,4 @@ See [Inspecta.Api.http](./Inspecta.Api/Inspecta.Api.http) for example requests f
 
 ## Data and account notes
 
-- The runtime has no Firebase or Flutter dependency. The `RemoveFirebaseIdentity` migration drops the legacy Firebase UID column from `Users`; back up existing databases before applying it if those IDs are still needed for external reconciliation.
-- The Company table has been replaced by subscriptions on Technical Manager accounts. The migration transfers each company's subscription to its Technical Manager and moves its team members to a direct manager assignment; deleted companies become expired manager subscriptions.
-- Bootstrap admin creation is optional and only creates an account when the configured email is not already present.
+- Bootstrap admin creation is optional and only creates an account when the configured email is not already present. The account can sign in through `POST /api/v1/auth/login`; keep its credentials private and replace the password after testing.

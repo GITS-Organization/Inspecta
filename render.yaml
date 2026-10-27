@@ -17,7 +17,7 @@ services:
       - key: PORT
         value: "8080"
       - key: ConnectionStrings__Inspecta
-        value: Data Source=/data/inspecta.db
+        sync: false
       - key: Jwt__SigningKey
         generateValue: true
       - key: Jwt__Issuer

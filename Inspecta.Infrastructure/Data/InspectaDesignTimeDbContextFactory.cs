@@ -8,7 +8,7 @@ public sealed class InspectaDesignTimeDbContextFactory : IDesignTimeDbContextFac
     public InspectaDbContext CreateDbContext(string[] args)
     {
         var options = new DbContextOptionsBuilder<InspectaDbContext>()
-            .UseSqlite("Data Source=inspecta.design.db")
+            .UseNpgsql("Host=localhost;Database=inspecta_design;Username=postgres;Password=postgres")
             .Options;
         return new InspectaDbContext(options);
     }
