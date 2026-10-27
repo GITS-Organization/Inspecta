@@ -35,6 +35,7 @@ Successful create operations return `201 Created`; delete actions return `204 No
 - `DELETE /api/v1/companies/{companyId}` and user delete routes perform soft deletes, recording `IsDeleted` and `DeletedAt` instead of removing records. Deleted companies and users are excluded from normal lists; Admin can pass `includeDeleted=true` to the company and user list routes to include them.
 - Disabling a user's `IsActive` account is separate from deleting it. Admin can change user status with `PUT /api/v1/users/{userId}/status`; a Technical Manager can change the status of a member in their own team with `PUT /api/v1/manager/team/{userId}/status`.
 - `CompanyId` scopes a Technical Manager to their own team. Team members created by a manager also record that manager's ID in `CreatedById`; this is audit information and does not replace company-based access scoping.
+- Clients expose `isCompany` to identify company clients and `hasContract` to indicate whether a contract is in place; both default to `false`.
 
 ## Local development
 

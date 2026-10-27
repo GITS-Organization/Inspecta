@@ -108,6 +108,12 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("HasContract")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsCompany")
+                        .HasColumnType("INTEGER");
+
                     b.Property<double?>("Latitude")
                         .HasColumnType("REAL");
 

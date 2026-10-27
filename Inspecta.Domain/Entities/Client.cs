@@ -6,7 +6,8 @@ public sealed class Client
 
     public Guid Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
-    public string CompanyName => Name;
+    public bool IsCompany { get; private set; }
+    public bool HasContract { get; private set; }
     public string? Location { get; private set; }
     public string? CertificatesEmail { get; private set; }
     public string? TaxNumber { get; private set; }
@@ -19,6 +20,8 @@ public sealed class Client
 
     public static Client Create(
         string name,
+        bool isCompany = false,
+        bool hasContract = false,
         string? notes = null,
         string? location = null,
         string? certificatesEmail = null,
@@ -33,6 +36,8 @@ public sealed class Client
         {
             Id = Guid.NewGuid(),
             Name = name.Trim(),
+            IsCompany = isCompany,
+            HasContract = hasContract,
             Location = location?.Trim(),
             CertificatesEmail = EmptyToNull(certificatesEmail),
             TaxNumber = EmptyToNull(taxNumber),

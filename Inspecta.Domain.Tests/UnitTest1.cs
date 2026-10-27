@@ -141,7 +141,7 @@ public sealed class DomainDataModelTests
     {
         Assert.Throws<ArgumentException>(() => Client.Create("Client", latitude: 30));
 
-        var client = Client.Create("Client", location: "Cairo");
+        var client = Client.Create("Client", isCompany: true, hasContract: true, location: "Cairo");
         var contacts = new[]
         {
             ClientContact.Create(client.Id, "First", isPrimary: true),
@@ -149,8 +149,19 @@ public sealed class DomainDataModelTests
         };
 
         Assert.Throws<InvalidOperationException>(() => client.ReplaceContacts(contacts));
-        Assert.Equal("Client", client.CompanyName);
+        Assert.Equal("Client", client.Name);
+        Assert.True(client.IsCompany);
+        Assert.True(client.HasContract);
         Assert.Equal("Cairo", client.Location);
+    }
+
+    [Fact]
+    public void ClientCompanyAndContractFlagsDefaultToFalse()
+    {
+        var client = Client.Create("Individual");
+
+        Assert.False(client.IsCompany);
+        Assert.False(client.HasContract);
     }
 
     [Fact]

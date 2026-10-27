@@ -8,6 +8,12 @@ public sealed record CreateClientRequest
     [Required, MaxLength(200)]
     public required string Name { get; init; }
 
+    /// <summary>Whether this client represents a company rather than an individual.</summary>
+    public bool IsCompany { get; init; }
+
+    /// <summary>Whether this client currently has a contract.</summary>
+    public bool HasContract { get; init; }
+
     [MaxLength(4000)]
     public string? Notes { get; init; }
 

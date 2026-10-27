@@ -10,7 +10,11 @@ public sealed class ClientService(IClientRepository clientRepository) : IClientS
     {
         if (request.Contacts.Count(contact => contact.IsPrimary) > 1)
             throw new ArgumentException("A client can have only one primary contact.");
-        var client = Client.Create(request.Name, notes: request.Notes);
+        var client = Client.Create(
+            request.Name,
+            isCompany: request.IsCompany,
+            hasContract: request.HasContract,
+            notes: request.Notes);
         foreach (var contact in request.Contacts)
         {
             client.Contacts.Add(ClientContact.Create(client.Id, contact.Name, contact.Email, contact.Phone, contact.IsPrimary));
@@ -39,6 +43,8 @@ public sealed class ClientService(IClientRepository clientRepository) : IClientS
     private static ClientResponse Map(Client client) => new(
         client.Id,
         client.Name,
+        client.IsCompany,
+        client.HasContract,
         client.Notes,
         client.CreatedAt,
         client.ArchivedAt,
