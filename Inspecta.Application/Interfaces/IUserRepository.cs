@@ -8,7 +8,7 @@ public interface IUserRepository
     Task<AppUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<AppUser?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AppUser>> ListAsync(
-        Guid? companyId = null,
+        Guid? managerId = null,
         UserRole? role = null,
         bool? isActive = null,
         CancellationToken cancellationToken = default,

@@ -1,6 +1,7 @@
 using Inspecta.Domain.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
+using SubscriptionState = Inspecta.Domain.Enums.SubscriptionStatus;
 
 namespace Inspecta.Domain.Entities;
 
@@ -11,7 +12,7 @@ public class AppUser
     private AppUser() { }
 
     public Guid Id { get; private set; } = Guid.NewGuid();
-    public Guid? CompanyId { get; private set; }
+    public Guid? ManagerId { get; private set; }
     public Guid? CreatedById { get; private set; }
     public string Email { get; private set; } = string.Empty;
     public string FullName { get; private set; } = string.Empty;
@@ -26,6 +27,8 @@ public class AppUser
     public DateTimeOffset? LeaveUntil { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastLoginAt { get; private set; }
+    public SubscriptionState? SubscriptionStatus { get; private set; }
+    public DateTimeOffset? SubscriptionEndDate { get; private set; }
     public bool IsDeleted { get; private set; }
     public DateTimeOffset? DeletedAt { get; private set; }
     public ICollection<RefreshToken> RefreshTokens { get; private set; } = new List<RefreshToken>();
@@ -54,7 +57,8 @@ public class AppUser
         string? passwordHash = null,
         bool isActive = true,
         DateTimeOffset? createdAt = null,
-        Guid? companyId = null,
+        Guid? managerId = null,
+        DateTimeOffset? subscriptionEndDate = null,
         Guid? createdById = null)
     {
         if (string.IsNullOrWhiteSpace(email))
@@ -63,12 +67,16 @@ public class AppUser
             throw new ArgumentException("Full name is required.", nameof(fullName));
         if (!Enum.IsDefined(role))
             throw new ArgumentOutOfRangeException(nameof(role));
-        if (companyId == Guid.Empty)
-            throw new ArgumentException("Company id cannot be empty.", nameof(companyId));
+        if (managerId == Guid.Empty)
+            throw new ArgumentException("Manager id cannot be empty.", nameof(managerId));
+        if (managerId is not null && role is (UserRole.Admin or UserRole.TechnicalManager))
+            throw new ArgumentException("Only a team member can be assigned to a technical manager.", nameof(managerId));
+        if (subscriptionEndDate is not null && role != UserRole.TechnicalManager)
+            throw new ArgumentException("Only a technical manager can have a subscription.", nameof(subscriptionEndDate));
 
         var user = new AppUser
         {
-            CompanyId = companyId,
+            ManagerId = managerId,
             CreatedById = createdById,
             Email = email.Trim().ToLowerInvariant(),
             FullName = fullName.Trim(),
@@ -76,7 +84,9 @@ public class AppUser
             Phone = Normalize(phone),
             SignatureImageId = Normalize(signatureImageId),
             IsActive = isActive,
-            CreatedAt = createdAt ?? DateTimeOffset.UtcNow
+            CreatedAt = createdAt ?? DateTimeOffset.UtcNow,
+            SubscriptionStatus = role == UserRole.TechnicalManager ? SubscriptionState.Active : null,
+            SubscriptionEndDate = subscriptionEndDate
         };
         if (qualifications is not null)
             user.SetQualifications(qualifications);
@@ -108,7 +118,7 @@ public class AppUser
 
         FullName = fullName.Trim();
         Phone = Normalize(phone);
-        Role = role;
+        ChangeRole(role);
         IsOnLeave = isOnLeave;
         LeaveUntil = isOnLeave ? leaveUntil : null;
         SignatureImageId = Normalize(signatureImageId);
@@ -149,10 +159,57 @@ public class AppUser
     {
         if (!Enum.IsDefined(role))
             throw new ArgumentOutOfRangeException(nameof(role));
+        if (Role == UserRole.TechnicalManager && role != UserRole.TechnicalManager)
+        {
+            SubscriptionStatus = null;
+            SubscriptionEndDate = null;
+        }
+        else if (Role != UserRole.TechnicalManager && role == UserRole.TechnicalManager)
+        {
+            SubscriptionStatus = SubscriptionState.Expired;
+            SubscriptionEndDate = null;
+        }
         Role = role;
+        if (role is UserRole.Admin or UserRole.TechnicalManager)
+            ManagerId = null;
     }
 
-    public void AssignToCompany(Guid? companyId) => CompanyId = companyId;
+    public void AssignToManager(Guid? managerId)
+    {
+        if (managerId == Guid.Empty)
+            throw new ArgumentException("Manager id cannot be empty.", nameof(managerId));
+        if (managerId == Id)
+            throw new ArgumentException("A user cannot manage themselves.", nameof(managerId));
+        if (managerId is not null && Role is (UserRole.Admin or UserRole.TechnicalManager))
+            throw new ArgumentException("Admins and technical managers cannot be assigned to another manager.", nameof(managerId));
+
+        ManagerId = managerId;
+    }
+
+    public void UpdateSubscription(SubscriptionState status, DateTimeOffset? endDate)
+    {
+        if (Role != UserRole.TechnicalManager)
+            throw new InvalidOperationException("Only a technical manager can have a subscription.");
+        if (!Enum.IsDefined(status))
+            throw new ArgumentOutOfRangeException(nameof(status));
+
+        SubscriptionStatus = status;
+        SubscriptionEndDate = endDate;
+    }
+
+    public SubscriptionState? GetEffectiveSubscriptionStatus(DateTimeOffset? now = null)
+    {
+        if (Role != UserRole.TechnicalManager || SubscriptionStatus is null)
+            return null;
+        if (SubscriptionStatus != SubscriptionState.Active)
+            return SubscriptionStatus;
+        return SubscriptionEndDate is { } endDate && endDate <= (now ?? DateTimeOffset.UtcNow)
+            ? SubscriptionState.Expired
+            : SubscriptionState.Active;
+    }
+
+    public bool HasActiveSubscription(DateTimeOffset? now = null) =>
+        GetEffectiveSubscriptionStatus(now) == SubscriptionState.Active;
 
     private sealed record QualificationData(string Name, DateOnly? ValidUntil);
 

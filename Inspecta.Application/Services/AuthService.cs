@@ -2,24 +2,22 @@ using Inspecta.Application.Contracts.Auth;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
 using Inspecta.Domain.Entities;
+using Inspecta.Domain.Enums;
 
 namespace Inspecta.Application.Services;
 
 public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
-    private readonly ICompanyRepository _companyRepository;
     private readonly IPasswordService _passwordService;
     private readonly IAccessTokenService _accessTokenService;
 
     public AuthService(
         IUserRepository userRepository,
-        ICompanyRepository companyRepository,
         IPasswordService passwordService,
         IAccessTokenService accessTokenService)
     {
         _userRepository = userRepository;
-        _companyRepository = companyRepository;
         _passwordService = passwordService;
         _accessTokenService = accessTokenService;
     }
@@ -38,7 +36,7 @@ public class AuthService : IAuthService
         {
             throw new AuthException("account_disabled", "This account is disabled.", 403);
         }
-        await EnsureCompanySubscriptionActiveAsync(user, cancellationToken);
+        await EnsureManagerSubscriptionActiveAsync(user, cancellationToken);
 
         var (accessToken, accessTokenExpiresAt) = _accessTokenService.Create(user);
         var rawRefreshToken = CreateRefreshToken();
@@ -80,7 +78,7 @@ public class AuthService : IAuthService
         {
             throw new AuthException("account_disabled", "This account is disabled.", 403);
         }
-        await EnsureCompanySubscriptionActiveAsync(user, cancellationToken);
+        await EnsureManagerSubscriptionActiveAsync(user, cancellationToken);
 
         var rawRefreshToken = CreateRefreshToken();
 
@@ -131,22 +129,33 @@ public class AuthService : IAuthService
             user.Qualifications.Select(qualification => qualification.Name).ToArray(),
             user.IsOnLeave,
             user.LeaveUntil,
-            user.CompanyId,
-            user.CreatedById);
+            user.ManagerId,
+            user.CreatedById,
+            user.GetEffectiveSubscriptionStatus(),
+            user.SubscriptionEndDate);
 
-    private async Task EnsureCompanySubscriptionActiveAsync(
+    private async Task EnsureManagerSubscriptionActiveAsync(
         AppUser user,
         CancellationToken cancellationToken)
     {
-        if (user.CompanyId is not Guid companyId)
+        if (user.Role == UserRole.Admin)
             return;
 
-        var company = await _companyRepository.GetByIdAsync(companyId, cancellationToken);
-        if (company is null || !company.HasActiveSubscription())
+        var manager = user.Role == UserRole.TechnicalManager
+            ? user
+            : user.ManagerId is Guid managerId
+                ? await _userRepository.GetByIdAsync(managerId, cancellationToken)
+                : null;
+        if (manager is null ||
+            !manager.IsActive ||
+            manager.Role != UserRole.TechnicalManager ||
+            !manager.HasActiveSubscription())
+        {
             throw new AuthException(
                 "subscription_inactive",
-                "The company subscription is suspended, expired, or deleted.",
+                "The technical manager subscription is suspended or expired.",
                 403);
+        }
     }
 
     private static string CreateRefreshToken() =>

@@ -23,9 +23,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("CompanyId")
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -60,6 +57,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset?>("LeaveUntil")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ManagerId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -81,6 +81,13 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<string>("SignatureImageId")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTimeOffset?>("SubscriptionEndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubscriptionStatus")
+                        .HasMaxLength(24)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedById");
@@ -88,7 +95,7 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.HasIndex("CompanyId", "Role");
+                    b.HasIndex("ManagerId", "Role");
 
                     b.ToTable("Users");
                 });
@@ -171,39 +178,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasIndex("ClientId");
 
                     b.ToTable("ClientContacts");
-                });
-
-            modelBuilder.Entity("Inspecta.Domain.Entities.Company", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset?>("DeletedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset?>("SubscriptionEndDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SubscriptionStatus")
-                        .IsRequired()
-                        .HasMaxLength(24)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Companies");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.InspectionCertificate", b =>
@@ -705,14 +679,14 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("Inspecta.Domain.Entities.AppUser", b =>
                 {
-                    b.HasOne("Inspecta.Domain.Entities.Company", null)
+                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
                         .WithMany()
-                        .HasForeignKey("CompanyId")
+                        .HasForeignKey("CreatedById")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Inspecta.Domain.Entities.AppUser", null)
                         .WithMany()
-                        .HasForeignKey("CreatedById")
+                        .HasForeignKey("ManagerId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 

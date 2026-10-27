@@ -16,6 +16,6 @@ public sealed record CreateStaffUserRequest
     public required string Password { get; init; }
 
     public required UserRole Role { get; init; }
-    public Guid? CompanyId { get; init; }
+    public Guid? ManagerId { get; init; }
     public IReadOnlyList<string> Qualifications { get; init; } = [];
 }

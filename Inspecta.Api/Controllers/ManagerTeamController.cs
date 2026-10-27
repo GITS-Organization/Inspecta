@@ -7,19 +7,19 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Inspecta.Api.Controllers;
 
-/// <summary>Operations for a technical manager's own company team.</summary>
+/// <summary>Operations for a technical manager's own team.</summary>
 [ApiController]
 [Authorize(Roles = "technical_manager")]
 [Route("api/v1/manager/team")]
 public sealed class ManagerTeamController(IUserManagementService userManagementService) : ControllerBase
 {
-    /// <summary>List coordinators and inspectors assigned to the current manager's company.</summary>
+    /// <summary>List coordinators and inspectors assigned to the current manager.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<AuthUserResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<AuthUserResponse>>> List(CancellationToken cancellationToken) =>
         Ok(await userManagementService.ListTeamAsync(GetActorId(), cancellationToken));
 
-    /// <summary>Create a coordinator or inspector in the current manager's company.</summary>
+    /// <summary>Create a coordinator or inspector assigned to the current manager.</summary>
     [HttpPost]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status201Created)]
     public async Task<ActionResult<AuthUserResponse>> Create(
@@ -30,7 +30,7 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
         return CreatedAtAction(nameof(GetById), new { userId = user.Id }, user);
     }
 
-    /// <summary>Get a team member in the current manager's company.</summary>
+    /// <summary>Get a team member assigned to the current manager.</summary>
     [HttpGet("{userId:guid}")]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -40,7 +40,7 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
         return user is null ? NotFound() : Ok(user);
     }
 
-    /// <summary>Update a team member's profile without changing their role or company.</summary>
+    /// <summary>Update a team member's profile without changing their role or manager.</summary>
     [HttpPut("{userId:guid}")]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -67,7 +67,7 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
         return NoContent();
     }
 
-    /// <summary>Soft-delete a team member in the current manager's company.</summary>
+    /// <summary>Soft-delete a team member assigned to the current manager.</summary>
     [HttpDelete("{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

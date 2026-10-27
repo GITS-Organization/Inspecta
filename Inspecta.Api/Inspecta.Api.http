@@ -1,7 +1,7 @@
-@baseUrl = http://localhost:5238
+﻿@baseUrl = http://localhost:5238
 @requestId = 00000000-0000-0000-0000-000000000000
 @clientId = 00000000-0000-0000-0000-000000000000
-@companyId = 00000000-0000-0000-0000-000000000000
+@managerId = 00000000-0000-0000-0000-000000000000
 @userId = 00000000-0000-0000-0000-000000000000
 @itemId = 00000000-0000-0000-0000-000000000000
 @quoteId = 00000000-0000-0000-0000-000000000000
@@ -33,29 +33,20 @@ Content-Type: application/json
   "refreshToken": "replace-with-refresh-token"
 }
 
-### List companies (Admin; optionally include soft-deleted companies)
-GET {{baseUrl}}/api/v1/companies?includeDeleted=false
-Authorization: Bearer {{token}}
-
-### Get a company and its subscription state (Admin)
-GET {{baseUrl}}/api/v1/companies/{{companyId}}
-Authorization: Bearer {{token}}
-
-### Create a company and initial Technical Manager (Admin; defaults to one month)
-POST {{baseUrl}}/api/v1/companies
+### Create a Technical Manager account (Admin; defaults to a one-month subscription)
+POST {{baseUrl}}/api/v1/technical-managers
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "name": "Example Inspection Company",
-  "managerEmail": "manager@example.com",
-  "managerFullName": "Technical Manager",
-  "managerPassword": "Replace-With-Strong-Password",
+  "email": "manager@example.com",
+  "fullName": "Technical Manager",
+  "password": "Replace-With-Strong-Password",
   "subscriptionMonths": 12
 }
 
-### Activate/reactivate a company subscription (Admin; end date may be null for no expiry)
-PUT {{baseUrl}}/api/v1/companies/{{companyId}}/subscription
+### Activate/reactivate a Technical Manager subscription (Admin; end date may be null for no expiry)
+PUT {{baseUrl}}/api/v1/technical-managers/{{managerId}}/subscription
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -64,8 +55,8 @@ Content-Type: application/json
   "subscriptionEndDate": "2027-10-26T00:00:00Z"
 }
 
-### Suspend a company and its team (Admin)
-PUT {{baseUrl}}/api/v1/companies/{{companyId}}/subscription
+### Suspend a Technical Manager subscription and their team's access (Admin)
+PUT {{baseUrl}}/api/v1/technical-managers/{{managerId}}/subscription
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -74,12 +65,8 @@ Content-Type: application/json
   "subscriptionEndDate": "2027-10-26T00:00:00Z"
 }
 
-### Soft-delete a company and revoke all team refresh tokens (Admin)
-DELETE {{baseUrl}}/api/v1/companies/{{companyId}}
-Authorization: Bearer {{token}}
-
-### List users (Admin; optional filters: companyId, role, isActive, includeDeleted)
-GET {{baseUrl}}/api/v1/users?isActive=true&includeDeleted=false
+### List users (Admin; optional filters: managerId, role, isActive, includeDeleted)
+GET {{baseUrl}}/api/v1/users?managerId={{managerId}}&isActive=true&includeDeleted=false
 Authorization: Bearer {{token}}
 
 ### Create a user (Admin)
@@ -92,7 +79,7 @@ Content-Type: application/json
   "fullName": "Inspector",
   "password": "Replace-With-Strong-Password",
   "role": "inspector",
-  "companyId": "{{companyId}}"
+  "managerId": "{{managerId}}"
 }
 
 ### Get a user (Admin)
@@ -107,7 +94,7 @@ Content-Type: application/json
 {
   "fullName": "Inspector Updated",
   "role": "inspector",
-  "companyId": "{{companyId}}",
+  "managerId": "{{managerId}}",
   "qualifications": [],
   "isOnLeave": false,
   "leaveUntil": null
@@ -125,52 +112,6 @@ Content-Type: application/json
 ### Soft-delete a user (Admin; record is retained)
 DELETE {{baseUrl}}/api/v1/users/{{userId}}
 Authorization: Bearer {{token}}
-
-### List current Technical Manager's team
-GET {{baseUrl}}/api/v1/manager/team
-Authorization: Bearer {{token}}
-
-### Create team member (Technical Manager; role must be coordinator or inspector)
-POST {{baseUrl}}/api/v1/manager/team
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "email": "coordinator@example.com",
-  "fullName": "Coordinator",
-  "password": "Replace-With-Strong-Password",
-  "role": "coordinator",
-  "qualifications": []
-}
-
-### Get team member
-GET {{baseUrl}}/api/v1/manager/team/{{userId}}
-Authorization: Bearer {{token}}
-
-### Update team member
-PUT {{baseUrl}}/api/v1/manager/team/{{userId}}
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "fullName": "Coordinator Updated",
-  "qualifications": [],
-  "isOnLeave": false
-}
-
-### Enable or suspend a team member without deleting its data
-PUT {{baseUrl}}/api/v1/manager/team/{{userId}}/status
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "isActive": false
-}
-
-### Soft-delete team member (record is retained)
-DELETE {{baseUrl}}/api/v1/manager/team/{{userId}}
-Authorization: Bearer {{token}}
-
 ### List clients
 GET {{baseUrl}}/api/v1/clients?includeArchived=false
 Authorization: Bearer {{token}}

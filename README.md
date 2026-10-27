@@ -17,9 +17,9 @@ All business routes use the `/api/v1` prefix. Roles in the table are required JW
 | Area | Routes | Access |
 |---|---|---|
 | Authentication | `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`, `POST /auth/logout` | Public login/refresh; authenticated profile/logout |
-| Companies | `GET /companies`, `GET /companies/{companyId}`, `POST /companies`, `PUT /companies/{companyId}/subscription`, `DELETE /companies/{companyId}` | Admin |
+| Technical managers | `POST /technical-managers`, `PUT /technical-managers/{managerId}/subscription` | Admin |
 | Users | `GET /users`, `POST /users`, `GET /users/{userId}`, `PUT /users/{userId}/profile`, `PUT /users/{userId}/status`, `DELETE /users/{userId}` | Admin |
-| Manager team | `GET /manager/team`, `POST /manager/team`, `GET /manager/team/{userId}`, `PUT /manager/team/{userId}`, `PUT /manager/team/{userId}/status`, `DELETE /manager/team/{userId}` | Technical Manager; scoped to their company |
+| Manager team | `GET /manager/team`, `POST /manager/team`, `GET /manager/team/{userId}`, `PUT /manager/team/{userId}`, `PUT /manager/team/{userId}/status`, `DELETE /manager/team/{userId}` | Technical Manager; scoped to their account |
 | Clients | `GET /clients`, `POST /clients`, `GET /clients/{clientId}`, `DELETE /clients/{clientId}` | Admin, Coordinator |
 | Equipment/items | `GET /equipment`, `POST /equipment`, `GET /equipment/{equipmentId}`, `PUT /equipment/{equipmentId}`, `POST /equipment/{equipmentId}/inspections`, `DELETE /equipment/{equipmentId}` | Admin, Coordinator |
 | Inspection requests | `GET /requests`, `POST /requests`, `GET /requests/{requestId}`, `POST /requests/{requestId}/transitions`, `POST /requests/{requestId}/assignment` | Authenticated; create/assign requires Admin or Coordinator |
@@ -28,13 +28,13 @@ All business routes use the `/api/v1` prefix. Roles in the table are required JW
 
 Successful create operations return `201 Created`; delete actions return `204 No Content`. API errors use Problem Details JSON.
 
-### Companies, subscriptions, and user lifecycle
+### Technical managers, subscriptions, and user lifecycle
 
-- A company's subscription has an explicit `Active`, `Suspended`, or `Expired` status and an optional end date. An active subscription becomes effectively expired when its end date is reached. Suspended, expired, or soft-deleted companies cannot sign in or use the API; this applies to their assigned team as well.
-- Creating a company also provisions its initial Technical Manager. The subscription defaults to one month; Admin can select 1–120 months at creation and later update the status or end date through `PUT /api/v1/companies/{companyId}/subscription`.
-- `DELETE /api/v1/companies/{companyId}` and user delete routes perform soft deletes, recording `IsDeleted` and `DeletedAt` instead of removing records. Deleted companies and users are excluded from normal lists; Admin can pass `includeDeleted=true` to the company and user list routes to include them.
+- A Technical Manager account represents the company using Inspecta and owns its subscription. The subscription has an explicit `Active`, `Suspended`, or `Expired` status and an optional end date. An active subscription becomes effectively expired when its end date is reached.
+- Admin provisions a Technical Manager account through `POST /api/v1/technical-managers`; the subscription defaults to one month and can be set to 1–120 months. Admin can later update its status or end date through `PUT /api/v1/technical-managers/{managerId}/subscription`.
+- A suspended or expired manager subscription blocks the manager and all assigned team members from using the API. Team accounts are linked directly to their manager through `ManagerId`; `CreatedById` remains audit information.
+- User delete routes perform soft deletes, recording `IsDeleted` and `DeletedAt` instead of removing records. Deleted users are excluded from normal lists; Admin can pass `includeDeleted=true` to the user list route to include them.
 - Disabling a user's `IsActive` account is separate from deleting it. Admin can change user status with `PUT /api/v1/users/{userId}/status`; a Technical Manager can change the status of a member in their own team with `PUT /api/v1/manager/team/{userId}/status`.
-- `CompanyId` scopes a Technical Manager to their own team. Team members created by a manager also record that manager's ID in `CreatedById`; this is audit information and does not replace company-based access scoping.
 - Clients expose `isCompany` to identify company clients and `hasContract` to indicate whether a contract is in place; both default to `false`.
 
 ## Local development
@@ -97,5 +97,5 @@ See [Inspecta.Api.http](./Inspecta.Api/Inspecta.Api.http) for example requests f
 ## Data and account notes
 
 - The runtime has no Firebase or Flutter dependency. The `RemoveFirebaseIdentity` migration drops the legacy Firebase UID column from `Users`; back up existing databases before applying it if those IDs are still needed for external reconciliation.
-- Existing users have no company assigned by default. An Admin must provision companies and assign existing users explicitly. The subscription migration preserves each existing company's active/inactive state as `Active`/`Suspended`; companies without a subscription end date do not expire until one is set.
+- The Company table has been replaced by subscriptions on Technical Manager accounts. The migration transfers each company's subscription to its Technical Manager and moves its team members to a direct manager assignment; deleted companies become expired manager subscriptions.
 - Bootstrap admin creation is optional and only creates an account when the configured email is not already present.

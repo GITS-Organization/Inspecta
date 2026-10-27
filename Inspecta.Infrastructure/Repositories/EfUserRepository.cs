@@ -15,7 +15,7 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
         dbContext.Users.SingleOrDefaultAsync(user => user.Id == id, cancellationToken);
 
     public async Task<IReadOnlyList<AppUser>> ListAsync(
-        Guid? companyId = null,
+        Guid? managerId = null,
         UserRole? role = null,
         bool? isActive = null,
         CancellationToken cancellationToken = default,
@@ -24,7 +24,7 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
         var query = includeDeleted
             ? dbContext.Users.IgnoreQueryFilters().AsNoTracking()
             : dbContext.Users.AsNoTracking();
-        if (companyId is not null) query = query.Where(user => user.CompanyId == companyId);
+        if (managerId is not null) query = query.Where(user => user.ManagerId == managerId);
         if (role is not null) query = query.Where(user => user.Role == role);
         if (isActive is not null) query = query.Where(user => user.IsActive == isActive);
         return await query.OrderBy(user => user.FullName).ToListAsync(cancellationToken);

@@ -6,24 +6,24 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Inspecta.Api.Controllers;
 
-/// <summary>Admin-only operations for managing users across companies.</summary>
+/// <summary>Admin-only operations for managing users and their technical manager assignments.</summary>
 [ApiController]
 [Authorize(Roles = "admin")]
 [Route("api/v1/users")]
 public sealed class UsersController(IUserManagementService userManagementService) : ControllerBase
 {
-    /// <summary>List users, optionally filtering by company, role, or active status.</summary>
+    /// <summary>List users, optionally filtering by technical manager, role, or active status.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<AuthUserResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<AuthUserResponse>>> List(
-        [FromQuery] Guid? companyId,
+        [FromQuery] Guid? managerId,
         [FromQuery] string? role,
         [FromQuery] bool? isActive,
         [FromQuery] bool includeDeleted,
         CancellationToken cancellationToken)
     {
         UserRole? parsedRole = role is null ? null : UserRoleParser.Parse(role);
-        return Ok(await userManagementService.ListAsync(companyId, parsedRole, isActive, cancellationToken, includeDeleted));
+        return Ok(await userManagementService.ListAsync(managerId, parsedRole, isActive, cancellationToken, includeDeleted));
     }
 
     /// <summary>Get a user's profile by identifier.</summary>
@@ -46,7 +46,7 @@ public sealed class UsersController(IUserManagementService userManagementService
         return CreatedAtAction(nameof(GetById), new { userId = user.Id }, user);
     }
 
-    /// <summary>Update a user's profile, role, company, and operational settings.</summary>
+    /// <summary>Update a user's profile, role, manager assignment, and operational settings.</summary>
     [HttpPut("{userId:guid}/profile")]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

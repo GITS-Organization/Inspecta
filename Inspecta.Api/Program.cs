@@ -38,7 +38,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "Inspecta API",
         Version = "v1",
-        Description = "JWT-secured API for Inspecta inspection workflows, companies, and user management."
+        Description = "JWT-secured API for Inspecta inspection workflows, technical managers, and user management."
     });
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -61,7 +61,6 @@ builder.Services.AddHealthChecks();
 var connectionString = builder.Configuration.GetConnectionString("Inspecta") ?? "Data Source=inspecta.db";
 builder.Services.AddDbContext<InspectaDbContext>(options => options.UseSqlite(connectionString));
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
-builder.Services.AddScoped<ICompanyRepository, EfCompanyRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IRequestRepository, EfRequestRepository>();
@@ -115,7 +114,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
             var dbContext = context.HttpContext.RequestServices.GetRequiredService<InspectaDbContext>();
             var currentUser = await dbContext.Users.AsNoTracking()
                 .Where(user => user.Id == userId)
-                .Select(user => new { user.IsActive, user.Role, user.CompanyId })
+                .Select(user => new
+                {
+                    user.IsActive,
+                    user.Role,
+                    user.ManagerId,
+                    user.SubscriptionStatus,
+                    user.SubscriptionEndDate
+                })
                 .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
             if (currentUser is null || !currentUser.IsActive)
             {
@@ -123,23 +129,34 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
                 return;
             }
 
-            if (currentUser.CompanyId is Guid companyId)
+            if (currentUser.Role == Inspecta.Domain.Enums.UserRole.TechnicalManager)
             {
-                var company = await dbContext.Companies.IgnoreQueryFilters().AsNoTracking()
-                    .Where(item => item.Id == companyId)
-                    .Select(item => new
-                    {
-                        item.IsDeleted,
-                        item.SubscriptionStatus,
-                        item.SubscriptionEndDate
-                    })
-                    .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
-                if (company is null ||
-                    company.IsDeleted ||
-                    company.SubscriptionStatus != Inspecta.Domain.Enums.SubscriptionStatus.Active ||
-                    company.SubscriptionEndDate is { } endDate && endDate <= DateTimeOffset.UtcNow)
+                if (currentUser.SubscriptionStatus != Inspecta.Domain.Enums.SubscriptionStatus.Active ||
+                    currentUser.SubscriptionEndDate is { } managerEndDate && managerEndDate <= DateTimeOffset.UtcNow)
                 {
-                    context.Fail("The company subscription is suspended, expired, or deleted.");
+                    context.Fail("The technical manager subscription is suspended or expired.");
+                    return;
+                }
+            }
+            else if (currentUser.Role != Inspecta.Domain.Enums.UserRole.Admin)
+            {
+                if (currentUser.ManagerId is not Guid managerId)
+                {
+                    context.Fail("The account is not assigned to a technical manager.");
+                    return;
+                }
+
+                var manager = await dbContext.Users.AsNoTracking()
+                    .Where(user => user.Id == managerId &&
+                        user.IsActive &&
+                        user.Role == Inspecta.Domain.Enums.UserRole.TechnicalManager)
+                    .Select(user => new { user.SubscriptionStatus, user.SubscriptionEndDate })
+                    .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+                if (manager is null ||
+                    manager.SubscriptionStatus != Inspecta.Domain.Enums.SubscriptionStatus.Active ||
+                    manager.SubscriptionEndDate is { } teamEndDate && teamEndDate <= DateTimeOffset.UtcNow)
+                {
+                    context.Fail("The technical manager subscription is suspended or expired.");
                     return;
                 }
             }

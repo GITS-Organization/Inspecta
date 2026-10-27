@@ -7,7 +7,6 @@ namespace Inspecta.Infrastructure.Data;
 public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> options) : DbContext(options)
 {
     public DbSet<AppUser> Users => Set<AppUser>();
-    public DbSet<Company> Companies => Set<Company>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<ClientContact> ClientContacts => Set<ClientContact>();
@@ -22,11 +21,11 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
     {
         var user = modelBuilder.Entity<AppUser>();
         user.HasKey(item => item.Id);
-        user.HasIndex(item => new { item.CompanyId, item.Role });
+        user.HasIndex(item => new { item.ManagerId, item.Role });
         user.HasQueryFilter(item => !item.IsDeleted);
-        user.HasOne<Company>()
+        user.HasOne<AppUser>()
             .WithMany()
-            .HasForeignKey(item => item.CompanyId)
+            .HasForeignKey(item => item.ManagerId)
             .OnDelete(DeleteBehavior.Restrict);
         user.HasOne<AppUser>()
             .WithMany()
@@ -38,12 +37,7 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
         user.Property(item => item.PasswordHash).HasMaxLength(512).IsRequired();
         user.Property(item => item.Role).HasConversion<string>().HasMaxLength(32);
         user.Property(item => item.QualificationsJson).HasMaxLength(4000).IsRequired();
-
-        var company = modelBuilder.Entity<Company>();
-        company.HasKey(item => item.Id);
-        company.Property(item => item.Name).HasMaxLength(200).IsRequired();
-        company.Property(item => item.SubscriptionStatus).HasConversion<string>().HasMaxLength(24);
-        company.HasQueryFilter(item => !item.IsDeleted);
+        user.Property(item => item.SubscriptionStatus).HasConversion<string>().HasMaxLength(24);
 
         var refreshToken = modelBuilder.Entity<RefreshToken>();
         refreshToken.HasKey(item => item.Id);
