@@ -45,9 +45,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<long>("HourlyRatePiastres")
-                        .HasColumnType("INTEGER");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("INTEGER");
 
@@ -114,10 +111,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<double?>("Latitude")
                         .HasColumnType("REAL");
 
-                    b.Property<string>("LegacyId")
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Location")
                         .HasColumnType("TEXT");
 
@@ -136,9 +129,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("LegacyId")
-                        .IsUnique();
 
                     b.ToTable("Clients");
                 });
@@ -249,9 +239,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("LegacyId")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("QrData")
                         .HasColumnType("TEXT");
 
@@ -352,10 +339,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<Guid?>("InspectorId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("LegacyId")
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Location")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -395,9 +378,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
-
-                    b.HasIndex("LegacyId")
-                        .IsUnique();
 
                     b.ToTable("Requests");
                 });
@@ -466,10 +446,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("LegacyId")
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Location")
                         .HasColumnType("TEXT");
 
@@ -511,9 +487,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
                     b.HasIndex("ClientId");
 
-                    b.HasIndex("LegacyId")
-                        .IsUnique();
-
                     b.ToTable("Items", (string)null);
                 });
 
@@ -527,9 +500,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FromStatus")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("LegacyId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Note")
@@ -689,9 +659,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<Guid?>("EquipmentId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("LegacyId")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Location")
                         .HasColumnType("TEXT");
 
@@ -728,54 +695,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasIndex("RequestId");
 
                     b.ToTable("RequestItems");
-                });
-
-            modelBuilder.Entity("Inspecta.Domain.Entities.TimesheetEntry", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ActivitiesJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ExpensesJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<long>("HourlyRatePiastres")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid>("InspectorId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<long>("PricePiastres")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid>("RequestId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ReviewNote")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset?>("ReviewedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("ReviewedBy")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(24)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RequestId")
-                        .IsUnique();
-
-                    b.ToTable("Timesheets");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.AppUser", b =>
@@ -865,15 +784,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasOne("Inspecta.Domain.Entities.InspectionRequest", null)
                         .WithMany("Items")
                         .HasForeignKey("RequestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Inspecta.Domain.Entities.TimesheetEntry", b =>
-                {
-                    b.HasOne("Inspecta.Domain.Entities.InspectionRequest", null)
-                        .WithOne()
-                        .HasForeignKey("Inspecta.Domain.Entities.TimesheetEntry", "RequestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

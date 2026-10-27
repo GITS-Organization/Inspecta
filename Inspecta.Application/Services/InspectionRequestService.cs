@@ -76,7 +76,6 @@ public sealed class InspectionRequestService(IRequestRepository requestRepositor
 
     private static RequestResponse Map(InspectionRequest request) => new(
         request.Id,
-        request.LegacyId,
         request.ClientId,
         request.ClientName,
         request.Location,

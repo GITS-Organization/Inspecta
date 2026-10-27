@@ -10,7 +10,6 @@ public sealed class Item
     private Item() { }
 
     public Guid Id { get; private set; }
-    public string? LegacyId { get; private set; }
     public Guid ClientId { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string Type => Name;
@@ -47,11 +46,11 @@ public sealed class Item
     public IReadOnlyList<ItemChecklistEntry> GetChecklist() => Deserialize<List<ItemChecklistEntry>>(ChecklistJson);
     public IReadOnlyList<ItemAttachment> GetAttachments() => Deserialize<List<ItemAttachment>>(AttachmentsJson);
 
-    public static Item Create(Guid clientId, string name, string? legacyId = null)
+    public static Item Create(Guid clientId, string name)
     {
         if (clientId == Guid.Empty) throw new ArgumentException("Client is required.", nameof(clientId));
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Item name is required.", nameof(name));
-        return new Item { Id = Guid.NewGuid(), ClientId = clientId, Name = name.Trim(), LegacyId = legacyId };
+        return new Item { Id = Guid.NewGuid(), ClientId = clientId, Name = name.Trim() };
     }
 
     public static Item Register(
@@ -71,7 +70,6 @@ public sealed class Item
         string? ownerReference = null,
         string? assetTag = null,
         string? notes = null,
-        string? legacyId = null,
         DateOnly? today = null,
         ItemType itemType = ItemType.Equipment)
     {
@@ -91,7 +89,6 @@ public sealed class Item
         return new Item
         {
             Id = Guid.NewGuid(),
-            LegacyId = legacyId,
             ClientId = clientId,
             Name = type.Trim(),
             ItemType = itemType,

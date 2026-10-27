@@ -24,7 +24,6 @@ public class AppUser
     public string? SignatureImageId { get; private set; }
     public bool IsOnLeave { get; private set; }
     public DateTimeOffset? LeaveUntil { get; private set; }
-    public long HourlyRatePiastres { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastLoginAt { get; private set; }
     public bool IsDeleted { get; private set; }
@@ -51,7 +50,6 @@ public class AppUser
         UserRole role,
         string? phone = null,
         IEnumerable<UserQualification>? qualifications = null,
-        long hourlyRatePiastres = 0,
         string? signatureImageId = null,
         string? passwordHash = null,
         bool isActive = true,
@@ -65,8 +63,6 @@ public class AppUser
             throw new ArgumentException("Full name is required.", nameof(fullName));
         if (!Enum.IsDefined(role))
             throw new ArgumentOutOfRangeException(nameof(role));
-        if (hourlyRatePiastres < 0)
-            throw new ArgumentOutOfRangeException(nameof(hourlyRatePiastres));
         if (companyId == Guid.Empty)
             throw new ArgumentException("Company id cannot be empty.", nameof(companyId));
 
@@ -79,7 +75,6 @@ public class AppUser
             Role = role,
             Phone = Normalize(phone),
             SignatureImageId = Normalize(signatureImageId),
-            HourlyRatePiastres = hourlyRatePiastres,
             IsActive = isActive,
             CreatedAt = createdAt ?? DateTimeOffset.UtcNow
         };
@@ -97,15 +92,12 @@ public class AppUser
         UserRole role,
         bool isOnLeave,
         DateTimeOffset? leaveUntil,
-        long hourlyRatePiastres,
         string? signatureImageId = null)
     {
         if (string.IsNullOrWhiteSpace(fullName))
             throw new ArgumentException("Full name is required.", nameof(fullName));
         if (!Enum.IsDefined(role))
             throw new ArgumentOutOfRangeException(nameof(role));
-        if (hourlyRatePiastres < 0)
-            throw new ArgumentOutOfRangeException(nameof(hourlyRatePiastres));
         if (isOnLeave && leaveUntil is not null && leaveUntil <= DateTimeOffset.UtcNow)
             throw new ArgumentException("Leave end date must be in the future.", nameof(leaveUntil));
 
@@ -117,7 +109,6 @@ public class AppUser
         FullName = fullName.Trim();
         Phone = Normalize(phone);
         Role = role;
-        HourlyRatePiastres = hourlyRatePiastres;
         IsOnLeave = isOnLeave;
         LeaveUntil = isOnLeave ? leaveUntil : null;
         SignatureImageId = Normalize(signatureImageId);

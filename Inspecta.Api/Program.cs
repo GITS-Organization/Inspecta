@@ -74,8 +74,6 @@ builder.Services.AddScoped<IQuoteRepository, EfQuoteRepository>();
 builder.Services.AddScoped<IQuoteService, QuoteService>();
 builder.Services.AddScoped<ICertificateRepository, EfCertificateRepository>();
 builder.Services.AddScoped<ICertificateService, CertificateService>();
-builder.Services.AddScoped<ITimesheetRepository, EfTimesheetRepository>();
-builder.Services.AddScoped<ITimesheetService, TimesheetService>();
 builder.Services.AddScoped<IPasswordService, IdentityPasswordService>();
 builder.Services.AddSingleton<IAccessTokenService, JwtAccessTokenService>();
 

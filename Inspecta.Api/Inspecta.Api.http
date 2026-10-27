@@ -110,8 +110,7 @@ Content-Type: application/json
   "companyId": "{{companyId}}",
   "qualifications": [],
   "isOnLeave": false,
-  "leaveUntil": null,
-  "hourlyRatePiastres": 0
+  "leaveUntil": null
 }
 
 ### Enable or suspend a user without deleting its data (Admin)
@@ -141,8 +140,7 @@ Content-Type: application/json
   "fullName": "Coordinator",
   "password": "Replace-With-Strong-Password",
   "role": "coordinator",
-  "qualifications": [],
-  "hourlyRatePiastres": 0
+  "qualifications": []
 }
 
 ### Get team member
@@ -157,8 +155,7 @@ Content-Type: application/json
 {
   "fullName": "Coordinator Updated",
   "qualifications": [],
-  "isOnLeave": false,
-  "hourlyRatePiastres": 0
+  "isOnLeave": false
 }
 
 ### Enable or suspend a team member without deleting its data
@@ -357,34 +354,6 @@ Content-Type: application/json
 {
   "approve": false,
   "note": "Please update the inspection details"
-}
-
-### Get a timesheet
-GET {{baseUrl}}/api/v1/requests/{{requestId}}/timesheet
-Authorization: Bearer {{token}}
-
-### Save a timesheet
-PUT {{baseUrl}}/api/v1/requests/{{requestId}}/timesheet
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "activities": {
-    "inspection": 120,
-    "travel": 30
-  },
-  "expenses": {
-    "transport": 250
-  }
-}
-
-### Review a timesheet
-POST {{baseUrl}}/api/v1/requests/{{requestId}}/timesheet/review
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "approve": true
 }
 
 ### Logout

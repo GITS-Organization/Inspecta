@@ -16,7 +16,6 @@ public sealed class UserManagementService(
         if (!Enum.IsDefined(request.Role)) throw new ArgumentException("User role is invalid.", nameof(request.Role));
         var email = request.Email.Trim().ToLowerInvariant();
         await EnsureEmailAvailableAsync(email, cancellationToken);
-        if (request.HourlyRatePiastres < 0) throw new ArgumentOutOfRangeException(nameof(request.HourlyRatePiastres));
         if (request.Role != UserRole.Admin &&
             (request.CompanyId is null || !await companyRepository.ExistsAsync(request.CompanyId.Value, cancellationToken)))
             throw new AuthException("company_required", "A valid company is required for non-admin users.", 400);
@@ -29,7 +28,6 @@ public sealed class UserManagementService(
             request.Role,
             request.Password,
             request.Qualifications,
-            request.HourlyRatePiastres,
             request.CompanyId);
         await userRepository.AddAsync(user, cancellationToken);
         return ToResponse(user);
@@ -57,7 +55,6 @@ public sealed class UserManagementService(
 
     public async Task<AuthUserResponse> UpdateProfileAsync(Guid userId, UpdateStaffProfileRequest request, CancellationToken cancellationToken = default)
     {
-        if (request.HourlyRatePiastres < 0) throw new ArgumentOutOfRangeException(nameof(request.HourlyRatePiastres));
         if (!Enum.IsDefined(request.Role)) throw new ArgumentException("User role is invalid.", nameof(request.Role));
         if (request.IsOnLeave && request.LeaveUntil is not null && request.LeaveUntil <= DateTimeOffset.UtcNow)
             throw new ArgumentException("Leave end date must be in the future.", nameof(request.LeaveUntil));
@@ -88,7 +85,6 @@ public sealed class UserManagementService(
             request.Role,
             request.IsOnLeave,
             request.LeaveUntil,
-            request.HourlyRatePiastres,
             user.SignatureImageId);
         user.AssignToCompany(companyId);
         await userRepository.SaveAsync(user, cancellationToken);
@@ -130,7 +126,6 @@ public sealed class UserManagementService(
             UserRole.TechnicalManager,
             request.ManagerPassword,
             [],
-            0,
             company.Id);
         await companyRepository.AddWithManagerAsync(company, manager, cancellationToken);
         return new CompanyWithManagerResponse(
@@ -197,8 +192,6 @@ public sealed class UserManagementService(
         if (!IsTeamRole(request.Role))
             throw new AuthException("role_forbidden", "Technical managers may only create coordinators and inspectors.", 403);
         ValidatePassword(request.Password);
-        if (request.HourlyRatePiastres < 0)
-            throw new ArgumentOutOfRangeException(nameof(request.HourlyRatePiastres));
 
         var email = request.Email.Trim().ToLowerInvariant();
         await EnsureEmailAvailableAsync(email, cancellationToken);
@@ -208,7 +201,6 @@ public sealed class UserManagementService(
             request.Role,
             request.Password,
             request.Qualifications,
-            request.HourlyRatePiastres,
             manager.CompanyId,
             managerId);
         await userRepository.AddAsync(user, cancellationToken);
@@ -237,8 +229,6 @@ public sealed class UserManagementService(
         {
             var manager = await GetAuthorizedManagerAsync(managerId, cancellationToken);
             var user = await GetScopedTeamMemberAsync(manager.CompanyId!.Value, userId, cancellationToken);
-            if (request.HourlyRatePiastres < 0)
-                throw new ArgumentOutOfRangeException(nameof(request.HourlyRatePiastres));
             if (request.IsOnLeave && request.LeaveUntil is not null && request.LeaveUntil <= DateTimeOffset.UtcNow)
                 throw new ArgumentException("Leave end date must be in the future.", nameof(request.LeaveUntil));
 
@@ -249,7 +239,6 @@ public sealed class UserManagementService(
                 user.Role,
                 request.IsOnLeave,
                 request.LeaveUntil,
-                request.HourlyRatePiastres,
                 user.SignatureImageId);
             await userRepository.SaveAsync(user, cancellationToken);
             return ToResponse(user);
@@ -299,7 +288,6 @@ public sealed class UserManagementService(
         user.Qualifications.Select(qualification => qualification.Name).ToArray(),
         user.IsOnLeave,
         user.LeaveUntil,
-        user.HourlyRatePiastres,
         user.CompanyId,
         user.CreatedById);
 
@@ -339,7 +327,6 @@ public sealed class UserManagementService(
         UserRole role,
         string password,
         IEnumerable<string> qualificationNames,
-        long hourlyRatePiastres,
         Guid? companyId,
         Guid? createdById = null)
     {
@@ -349,7 +336,6 @@ public sealed class UserManagementService(
             fullName,
             role,
             qualifications: CreateQualifications(qualificationNames),
-            hourlyRatePiastres: hourlyRatePiastres,
             companyId: companyId,
             createdById: createdById);
         user.SetPasswordHash(passwordService.Hash(user, password));

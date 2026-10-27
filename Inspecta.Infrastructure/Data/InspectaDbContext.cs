@@ -17,7 +17,6 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
     public DbSet<JobStatusHistory> JobStatusHistory => Set<JobStatusHistory>();
     public DbSet<Quote> Quotes => Set<Quote>();
     public DbSet<InspectionCertificate> Certificates => Set<InspectionCertificate>();
-    public DbSet<TimesheetEntry> Timesheets => Set<TimesheetEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,8 +59,6 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
         var client = modelBuilder.Entity<Client>();
         client.HasKey(item => item.Id);
         client.Property(item => item.Name).HasMaxLength(200).IsRequired();
-        client.Property(item => item.LegacyId).HasMaxLength(128);
-        client.HasIndex(item => item.LegacyId).IsUnique();
         client.HasMany(item => item.Contacts).WithOne().HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.Cascade);
 
         var contact = modelBuilder.Entity<ClientContact>();
@@ -73,8 +70,6 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
         item.ToTable("Items");
         item.HasKey(item => item.Id);
         item.Property(item => item.Name).HasMaxLength(200).IsRequired();
-        item.Property(item => item.LegacyId).HasMaxLength(128);
-        item.HasIndex(item => item.LegacyId).IsUnique();
         item.Property(item => item.ItemType).HasConversion<string>().HasMaxLength(24);
         item.Property(item => item.Status).HasConversion<string>().HasMaxLength(24);
         item.Property(item => item.LastInspectionResult).HasConversion<string>().HasMaxLength(32);
@@ -86,8 +81,6 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
 
         var request = modelBuilder.Entity<InspectionRequest>();
         request.HasKey(item => item.Id);
-        request.Property(item => item.LegacyId).HasMaxLength(128);
-        request.HasIndex(item => item.LegacyId).IsUnique();
         request.Property(item => item.ClientName).HasMaxLength(200).IsRequired();
         request.Property(item => item.Location).HasMaxLength(500).IsRequired();
         request.Property(item => item.Status).HasConversion<string>().HasMaxLength(32);
@@ -121,10 +114,5 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
         certificate.Property(item => item.FinalResult).HasConversion<string>().HasMaxLength(32);
         certificate.HasOne<InspectionRequest>().WithOne().HasForeignKey<InspectionCertificate>(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
 
-        var timesheet = modelBuilder.Entity<TimesheetEntry>();
-        timesheet.HasKey(item => item.Id);
-        timesheet.HasIndex(item => item.RequestId).IsUnique();
-        timesheet.Property(item => item.Status).HasConversion<string>().HasMaxLength(24);
-        timesheet.HasOne<InspectionRequest>().WithOne().HasForeignKey<TimesheetEntry>(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
     }
 }

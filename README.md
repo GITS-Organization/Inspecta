@@ -25,7 +25,6 @@ All business routes use the `/api/v1` prefix. Roles in the table are required JW
 | Inspection requests | `GET /requests`, `POST /requests`, `GET /requests/{requestId}`, `POST /requests/{requestId}/transitions`, `POST /requests/{requestId}/assignment` | Authenticated; create/assign requires Admin or Coordinator |
 | Quotes | `GET /requests/{requestId}/quotes`, `POST /requests/{requestId}/quotes`, `POST /requests/{requestId}/quotes/{quoteId}/send`, `POST /requests/{requestId}/quotes/{quoteId}/decision` | Admin, Coordinator |
 | Certificates | `GET /requests/{requestId}/certificate`, `PUT /requests/{requestId}/certificate/draft`, `POST /requests/{requestId}/certificate/submit`, `POST /requests/{requestId}/certificate/review` | Authenticated; action-specific roles enforced |
-| Timesheets | `GET /requests/{requestId}/timesheet`, `PUT /requests/{requestId}/timesheet`, `POST /requests/{requestId}/timesheet/review` | Authenticated; action-specific roles enforced |
 
 Successful create operations return `201 Created`; delete actions return `204 No Content`. API errors use Problem Details JSON.
 

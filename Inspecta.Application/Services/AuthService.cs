@@ -131,7 +131,6 @@ public class AuthService : IAuthService
             user.Qualifications.Select(qualification => qualification.Name).ToArray(),
             user.IsOnLeave,
             user.LeaveUntil,
-            user.HourlyRatePiastres,
             user.CompanyId,
             user.CreatedById);
 

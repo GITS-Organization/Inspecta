@@ -5,7 +5,6 @@ namespace Inspecta.Application.Contracts.Requests;
 /// <summary>Inspection request with its items and status history.</summary>
 public sealed record RequestResponse(
     Guid Id,
-    string? LegacyId,
     Guid? ClientId,
     string ClientName,
     string Location,

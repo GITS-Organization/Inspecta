@@ -7,7 +7,6 @@ public sealed class JobStatusHistory
     private JobStatusHistory() { }
 
     public Guid Id { get; private set; }
-    public string? LegacyId { get; private set; }
     public Guid RequestId { get; private set; }
     public JobStatus? FromStatus { get; private set; }
     public JobStatus ToStatus { get; private set; }
@@ -22,8 +21,7 @@ public sealed class JobStatusHistory
         JobStatus toStatus,
         Guid actorId,
         DateTimeOffset occurredAt,
-        string? note,
-        string? legacyId = null)
+        string? note)
     {
         if (requestId == Guid.Empty)
             throw new ArgumentException("Request is required.", nameof(requestId));
@@ -35,7 +33,6 @@ public sealed class JobStatusHistory
         return new JobStatusHistory
         {
             Id = Guid.NewGuid(),
-            LegacyId = legacyId,
             RequestId = requestId,
             FromStatus = fromStatus,
             ToStatus = toStatus,

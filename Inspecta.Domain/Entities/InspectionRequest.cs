@@ -23,7 +23,6 @@ public sealed class InspectionRequest
     private InspectionRequest() { }
 
     public Guid Id { get; private set; }
-    public string? LegacyId { get; private set; }
     public string ClientName { get; private set; } = string.Empty;
     public Guid? ClientId { get; private set; }
     public string Location { get; private set; } = string.Empty;
@@ -55,7 +54,6 @@ public sealed class InspectionRequest
         Guid? clientId,
         IEnumerable<RequestItem> items,
         Guid coordinatorId,
-        string? legacyId = null,
         string? subject = null,
         string? emailThreadId = null,
         DateTimeOffset? preferredDate = null,
@@ -81,7 +79,6 @@ public sealed class InspectionRequest
         var request = new InspectionRequest
         {
             Id = Guid.NewGuid(),
-            LegacyId = legacyId,
             ClientName = clientName.Trim(),
             ClientId = clientId,
             Location = location.Trim(),

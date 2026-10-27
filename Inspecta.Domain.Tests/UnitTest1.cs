@@ -58,35 +58,6 @@ public sealed class RequestLifecycleTests
     }
 }
 
-public sealed class TimesheetTests
-{
-    [Fact]
-    public void PricingUsesPaidMinutesAndRoundsToNearestPiastre()
-    {
-        var timesheet = TimesheetEntry.Priced(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            new Dictionary<string, int> { ["inspection"] = 31, ["unpaidBreak"] = 60 },
-            new Dictionary<string, long> { ["transport"] = 250 },
-            100);
-
-        Assert.Equal(52, timesheet.PricePiastres);
-        Assert.Equal(302, timesheet.TotalPiastres);
-    }
-
-    [Fact]
-    public void ApprovedTimesheetCannotBeChanged()
-    {
-        var timesheet = TimesheetEntry.Priced(
-            Guid.NewGuid(), Guid.NewGuid(), new Dictionary<string, int> { ["inspection"] = 60 },
-            new Dictionary<string, long>(), 100);
-        timesheet.Approve(Guid.NewGuid());
-
-        Assert.Throws<InvalidOperationException>(() => timesheet.Update(
-            new Dictionary<string, int> { ["inspection"] = 30 }, new Dictionary<string, long>(), 100));
-    }
-}
-
 public sealed class CertificateTests
 {
     [Fact]
@@ -378,13 +349,6 @@ public sealed class DomainDataModelTests
             null,
             "fr",
             "website"));
-    }
-
-    [Fact]
-    public void TimesheetSettingsRejectsNegativeRates()
-    {
-        Assert.Throws<ArgumentOutOfRangeException>(() => TimesheetSettings.Create(Guid.NewGuid(), -1));
-        Assert.Equal(500, TimesheetSettings.Create(Guid.NewGuid(), 500).HourlyRatePiastres);
     }
 
     private static CertificateDraft CompleteDraft(decimal? angle = null) => new()

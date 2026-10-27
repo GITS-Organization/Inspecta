@@ -8,6 +8,6 @@ The API supports:
 - Client records, contacts, equipment/items, item metadata, and inspection history.
 - Inspection request intake, workflow transitions, inspector assignment, and scheduling.
 - Quote revisions and client decisions.
-- Inspection certificates, technical review, and timesheets.
+- Inspection certificates and technical review.
 
 Authentication uses API-managed accounts and JWT access/refresh tokens. The backend does not require a frontend framework or an external identity provider.

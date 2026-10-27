@@ -12,6 +12,5 @@ public sealed record AuthUserResponse(
 	IReadOnlyList<string> Qualifications,
 	bool IsOnLeave,
 	DateTimeOffset? LeaveUntil,
-	long HourlyRatePiastres,
 	Guid? CompanyId,
 	Guid? CreatedById);

@@ -5,7 +5,6 @@ public sealed class Client
     private Client() { }
 
     public Guid Id { get; private set; }
-    public string? LegacyId { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string CompanyName => Name;
     public string? Location { get; private set; }
@@ -20,7 +19,6 @@ public sealed class Client
 
     public static Client Create(
         string name,
-        string? legacyId = null,
         string? notes = null,
         string? location = null,
         string? certificatesEmail = null,
@@ -34,7 +32,6 @@ public sealed class Client
         return new Client
         {
             Id = Guid.NewGuid(),
-            LegacyId = legacyId,
             Name = name.Trim(),
             Location = location?.Trim(),
             CertificatesEmail = EmptyToNull(certificatesEmail),

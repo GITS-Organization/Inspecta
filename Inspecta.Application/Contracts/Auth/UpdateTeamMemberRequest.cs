@@ -11,7 +11,4 @@ public sealed record UpdateTeamMemberRequest
     public IReadOnlyList<string> Qualifications { get; init; } = [];
     public bool IsOnLeave { get; init; }
     public DateTimeOffset? LeaveUntil { get; init; }
-
-    [Range(0, long.MaxValue)]
-    public long HourlyRatePiastres { get; init; }
 }

@@ -5,11 +5,10 @@ public sealed class EquipmentCategory
     private EquipmentCategory() { }
 
     public Guid Id { get; private set; }
-    public string? LegacyId { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public bool IsActive { get; private set; } = true;
 
-    public static EquipmentCategory Create(string name, string? legacyId = null)
+    public static EquipmentCategory Create(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Category name is required.", nameof(name));
@@ -17,7 +16,6 @@ public sealed class EquipmentCategory
         return new EquipmentCategory
         {
             Id = Guid.NewGuid(),
-            LegacyId = legacyId,
             Name = name.Trim()
         };
     }

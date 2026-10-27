@@ -12,7 +12,6 @@ public sealed class InspectionCertificate
     private InspectionCertificate() { }
 
     public Guid Id { get; private set; }
-    public string? LegacyId { get; private set; }
     public Guid RequestId { get; private set; }
     public Guid? EquipmentId { get; private set; }
     public Guid InspectorId { get; private set; }
@@ -51,8 +50,7 @@ public sealed class InspectionCertificate
         Guid requestId,
         Guid inspectorId,
         Guid? equipmentId = null,
-        bool hasAngle = false,
-        string? legacyId = null)
+        bool hasAngle = false)
     {
         if (requestId == Guid.Empty || inspectorId == Guid.Empty)
             throw new ArgumentException("Request and inspector are required.");
@@ -62,7 +60,6 @@ public sealed class InspectionCertificate
         return new InspectionCertificate
         {
             Id = Guid.NewGuid(),
-            LegacyId = legacyId,
             RequestId = requestId,
             EquipmentId = equipmentId,
             InspectorId = inspectorId,

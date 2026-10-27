@@ -7,7 +7,6 @@ public sealed class DemoRequest
     private DemoRequest() { }
 
     public Guid Id { get; private set; }
-    public string? LegacyId { get; private set; }
     public DemoRequestType Type { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string Email { get; private set; } = string.Empty;
@@ -27,7 +26,6 @@ public sealed class DemoRequest
         string? message,
         string language,
         string source,
-        string? legacyId = null,
         DateTimeOffset? createdAt = null)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -44,7 +42,6 @@ public sealed class DemoRequest
         return new DemoRequest
         {
             Id = Guid.NewGuid(),
-            LegacyId = legacyId,
             Type = type,
             Name = name.Trim(),
             Email = email.Trim(),

@@ -5,7 +5,6 @@ public sealed class RequestItem
     private RequestItem() { }
 
     public Guid Id { get; private set; }
-    public string? LegacyId { get; private set; }
     public Guid RequestId { get; private set; }
     public Guid? EquipmentId { get; private set; }
     public string Name { get; private set; } = string.Empty;
@@ -30,8 +29,7 @@ public sealed class RequestItem
         string? manufacturer = null,
         string? model = null,
         string? prNumber = null,
-        string? location = null,
-        string? legacyId = null)
+        string? location = null)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Item name is required.", nameof(name));
         if (quantity < 1) throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be at least one.");
@@ -40,7 +38,6 @@ public sealed class RequestItem
         return new RequestItem
         {
             Id = Guid.NewGuid(),
-            LegacyId = legacyId,
             EquipmentId = equipmentId,
             Name = name.Trim(),
             Type = type?.Trim(),
