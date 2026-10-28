@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Inspecta.Api.Middleware;
 using Inspecta.Api.OpenApi;
+using Inspecta.Api.BackgroundServices;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Interfaces;
 using Inspecta.Application.Services;
@@ -65,8 +66,14 @@ var connectionString = builder.Configuration.GetConnectionString("Inspecta")
     ?? throw new InvalidOperationException("Set the ConnectionStrings:Inspecta PostgreSQL connection string.");
 builder.Services.AddDbContext<InspectaDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
+builder.Services.AddScoped<ICoordinatorEmailConfigRepository, EfCoordinatorEmailConfigRepository>();
+builder.Services.AddScoped<IEmailSyncRepository, EfEmailSyncRepository>();
+builder.Services.AddScoped<IQuotationDraftRepository, EfQuotationDraftRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+builder.Services.AddScoped<ICoordinatorEmailConfigService, CoordinatorEmailConfigService>();
+builder.Services.AddScoped<IQuotationDraftService, QuotationDraftService>();
+builder.Services.AddScoped<IEmailParserService, EmailParserService>();
 builder.Services.AddScoped<IRequestRepository, EfRequestRepository>();
 builder.Services.AddScoped<IInspectionRequestService, InspectionRequestService>();
 builder.Services.AddScoped<IClientRepository, EfClientRepository>();
@@ -79,6 +86,8 @@ builder.Services.AddScoped<ICertificateRepository, EfCertificateRepository>();
 builder.Services.AddScoped<ICertificateService, CertificateService>();
 builder.Services.AddScoped<IPasswordService, IdentityPasswordService>();
 builder.Services.AddSingleton<IAccessTokenService, JwtAccessTokenService>();
+builder.Services.AddSingleton<ISecretProtector, AesGcmSecretProtector>();
+builder.Services.AddHostedService<EmailSyncBackgroundService>();
 
 var signingKey = builder.Configuration["Jwt:SigningKey"];
 if (string.IsNullOrWhiteSpace(signingKey) || Encoding.UTF8.GetByteCount(signingKey) < 32)

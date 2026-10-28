@@ -21,6 +21,8 @@ public sealed class InspectaDbContext(
     public DbSet<JobStatusHistory> JobStatusHistory => Set<JobStatusHistory>();
     public DbSet<Quote> Quotes => Set<Quote>();
     public DbSet<InspectionCertificate> Certificates => Set<InspectionCertificate>();
+    public DbSet<CoordinatorEmailConfig> CoordinatorEmailConfigs => Set<CoordinatorEmailConfig>();
+    public DbSet<QuotationDraft> QuotationDrafts => Set<QuotationDraft>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -143,5 +145,47 @@ public sealed class InspectaDbContext(
         certificate.Property(item => item.FunctionCheck).HasConversion<string>().HasMaxLength(24);
         certificate.Property(item => item.FinalResult).HasConversion<string>().HasMaxLength(32);
 
+        var emailConfig = modelBuilder.Entity<CoordinatorEmailConfig>();
+        emailConfig.HasKey(item => item.CoordinatorId);
+        emailConfig.HasIndex(item => item.TenantId);
+        emailConfig.Property(item => item.ImapServer).HasMaxLength(255).IsRequired();
+        emailConfig.Property(item => item.EmailUsername).HasMaxLength(320).IsRequired();
+        emailConfig.Property(item => item.EncryptedPassword).HasMaxLength(2048).IsRequired();
+        emailConfig.HasOne<AppUser>()
+            .WithOne()
+            .HasForeignKey<CoordinatorEmailConfig>(item => item.CoordinatorId)
+            .OnDelete(DeleteBehavior.Cascade);
+        emailConfig.HasOne<AppUser>()
+            .WithMany()
+            .HasForeignKey(item => item.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        var quotationDraft = modelBuilder.Entity<QuotationDraft>();
+        quotationDraft.HasKey(item => item.Id);
+        quotationDraft.HasIndex(item => item.TenantId);
+        quotationDraft.HasIndex(item => new
+        {
+            item.CoordinatorId,
+            item.SourceUidValidity,
+            item.SourceUid
+        }).IsUnique();
+        quotationDraft.HasQueryFilter(item =>
+            IsTenantAdmin || TenantId != null && item.TenantId == TenantId);
+        quotationDraft.Property(item => item.ClientName).HasMaxLength(200);
+        quotationDraft.Property(item => item.Location).HasMaxLength(500);
+        quotationDraft.Property(item => item.MachineDetails).HasMaxLength(4000);
+        quotationDraft.Property(item => item.RawEmailBody).IsRequired();
+        quotationDraft.Property(item => item.SenderEmail).HasMaxLength(320);
+        quotationDraft.Property(item => item.EmailSubject).HasMaxLength(998);
+        quotationDraft.Property(item => item.Status).HasConversion<string>().HasMaxLength(24);
+        quotationDraft.Property(item => item.SourceUidValidity).HasMaxLength(64).IsRequired();
+        quotationDraft.HasOne<AppUser>()
+            .WithMany()
+            .HasForeignKey(item => item.CoordinatorId)
+            .OnDelete(DeleteBehavior.Restrict);
+        quotationDraft.HasOne<AppUser>()
+            .WithMany()
+            .HasForeignKey(item => item.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

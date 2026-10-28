@@ -190,6 +190,45 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.ToTable("ClientContacts");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.CoordinatorEmailConfig", b =>
+                {
+                    b.Property<Guid>("CoordinatorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EmailUsername")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("EncryptedPassword")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<int>("ImapPort")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ImapServer")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("UseSsl")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("CoordinatorId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("CoordinatorEmailConfigs");
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.InspectionCertificate", b =>
                 {
                     b.Property<Guid>("Id")
@@ -519,6 +558,68 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.ToTable("JobStatusHistory");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.QuotationDraft", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClientName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("CoordinatorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EmailSubject")
+                        .HasMaxLength(998)
+                        .HasColumnType("character varying(998)");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("MachineDetails")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("RawEmailBody")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SenderEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<long>("SourceUid")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SourceUidValidity")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("CoordinatorId", "SourceUidValidity", "SourceUid")
+                        .IsUnique();
+
+                    b.ToTable("QuotationDrafts");
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.Quote", b =>
                 {
                     b.Property<Guid>("Id")
@@ -729,6 +830,21 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Navigation("Client");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.CoordinatorEmailConfig", b =>
+                {
+                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
+                        .WithOne()
+                        .HasForeignKey("Inspecta.Domain.Entities.CoordinatorEmailConfig", "CoordinatorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.InspectionCertificate", b =>
                 {
                     b.HasOne("Inspecta.Domain.Entities.InspectionRequest", "Request")
@@ -782,6 +898,21 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Request");
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.QuotationDraft", b =>
+                {
+                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("CoordinatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.Quote", b =>

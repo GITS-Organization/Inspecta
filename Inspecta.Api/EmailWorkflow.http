@@ -1,0 +1,52 @@
+@baseUrl = http://localhost:5238
+@accessToken = replace-with-coordinator-access-token
+@managerToken = replace-with-manager-access-token
+@coordinatorId = replace-with-coordinator-id
+@draftId = replace-with-draft-id
+
+### Create a coordinator with IMAP access
+POST {{baseUrl}}/api/v1/manager/team
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "email": "coordinator@example.com",
+  "fullName": "Test Coordinator",
+  "password": "ChangeThisStrongPassword123!",
+  "role": "coordinator",
+  "emailConfig": {
+    "imapServer": "imap.example.com",
+    "imapPort": 993,
+    "emailUsername": "coordinator@example.com",
+    "password": "replace-with-mailbox-password",
+    "useSsl": true
+  }
+}
+
+### Update coordinator mailbox configuration
+PUT {{baseUrl}}/api/v1/manager/team/{{coordinatorId}}/email-config
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "imapServer": "imap.example.com",
+  "imapPort": 993,
+  "emailUsername": "coordinator@example.com",
+  "password": "replace-with-mailbox-password",
+  "useSsl": true
+}
+
+### List this coordinator's quotation drafts
+GET {{baseUrl}}/api/v1/quotation-drafts
+Authorization: Bearer {{accessToken}}
+
+### Update a quotation draft
+PUT {{baseUrl}}/api/v1/quotation-drafts/{{draftId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "clientName": "Acme Industries",
+  "location": "Cairo",
+  "machineDetails": "Model: X-100; Serial: SN-42; Issue: Motor vibration"
+}

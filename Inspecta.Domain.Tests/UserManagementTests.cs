@@ -1,4 +1,5 @@
 using Inspecta.Application.Contracts.Auth;
+using Inspecta.Application.Contracts.Email;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
 using Inspecta.Application.Services;
@@ -66,6 +67,91 @@ public sealed class UserManagementTests
         Assert.Equal(UserRole.Inspector, created.Role);
         Assert.Equal(manager.Id, created.ManagerId);
         Assert.Equal(manager.Id, created.CreatedById);
+    }
+
+    [Fact]
+    public async Task TechnicalManagerMustProvideEmailSettingsWhenCreatingCoordinator()
+    {
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
+        var service = CreateService(new MemoryUserRepository(manager));
+
+        var error = await Assert.ThrowsAsync<AuthException>(() => service.CreateTeamMemberAsync(
+            manager.Id,
+            new CreateTeamMemberRequest
+            {
+                Email = "coordinator@example.com",
+                FullName = "Coordinator",
+                Password = "StrongPassword123!",
+                Role = UserRole.Coordinator
+            }));
+
+        Assert.Equal("coordinator_email_config_required", error.Code);
+    }
+
+    [Fact]
+    public async Task InspectorCannotBeCreatedWithEmailSettings()
+    {
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
+        var service = CreateService(new MemoryUserRepository(manager));
+
+        var error = await Assert.ThrowsAsync<AuthException>(() => service.CreateTeamMemberAsync(
+            manager.Id,
+            new CreateTeamMemberRequest
+            {
+                Email = "inspector@example.com",
+                FullName = "Inspector",
+                Password = "StrongPassword123!",
+                Role = UserRole.Inspector,
+                EmailConfig = CreateEmailConfigRequest()
+            }));
+
+        Assert.Equal("email_config_coordinator_only", error.Code);
+    }
+
+    [Fact]
+    public async Task CoordinatorCreationStoresEncryptedMailboxSettingsWithTheAccount()
+    {
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
+        var users = new MemoryUserRepository(manager);
+        var service = CreateService(users);
+
+        var created = await service.CreateTeamMemberAsync(
+            manager.Id,
+            new CreateTeamMemberRequest
+            {
+                Email = "coordinator@example.com",
+                FullName = "Coordinator",
+                Password = "StrongPassword123!",
+                Role = UserRole.Coordinator,
+                EmailConfig = CreateEmailConfigRequest()
+            });
+
+        var config = Assert.Single(users.EmailConfigs);
+        Assert.Equal(created.Id, config.CoordinatorId);
+        Assert.Equal(manager.Id, config.TenantId);
+        Assert.Equal("encrypted:mail-password", config.EncryptedPassword);
+        Assert.Equal("imap.example.com", config.ImapServer);
+    }
+
+    [Fact]
+    public async Task AdminCreationAlsoRequiresAndStoresCoordinatorEmailSettings()
+    {
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
+        var users = new MemoryUserRepository(manager);
+        var service = CreateService(users);
+
+        var created = await service.CreateAsync(new CreateStaffUserRequest
+        {
+            Email = "coordinator@example.com",
+            FullName = "Coordinator",
+            Password = "StrongPassword123!",
+            Role = UserRole.Coordinator,
+            ManagerId = manager.Id,
+            EmailConfig = CreateEmailConfigRequest()
+        });
+
+        Assert.Equal(UserRole.Coordinator, created.Role);
+        Assert.Equal("encrypted:mail-password", Assert.Single(users.EmailConfigs).EncryptedPassword);
     }
 
     [Fact]
@@ -187,8 +273,16 @@ public sealed class UserManagementTests
         Assert.Equal(managerId, created.ManagerId);
     }
 
+    private static CoordinatorEmailConfigRequest CreateEmailConfigRequest() => new()
+    {
+        ImapServer = "imap.example.com",
+        ImapPort = 993,
+        EmailUsername = "coordinator@example.com",
+        Password = "mail-password"
+    };
+
     private static UserManagementService CreateService(MemoryUserRepository users) =>
-        new(users, new FakePasswordService());
+        new(users, new FakePasswordService(), new FakeSecretProtector());
 
     private sealed class FakePasswordService : IPasswordService
     {
@@ -196,9 +290,16 @@ public sealed class UserManagementTests
         public bool Verify(AppUser user, string password) => user.PasswordHash == $"hashed:{password}";
     }
 
+    private sealed class FakeSecretProtector : ISecretProtector
+    {
+        public string Protect(string plaintext) => $"encrypted:{plaintext}";
+        public string Unprotect(string protectedValue) => protectedValue["encrypted:".Length..];
+    }
+
     private sealed class MemoryUserRepository(params AppUser[] initialUsers) : IUserRepository
     {
         private readonly List<AppUser> _users = initialUsers.ToList();
+        public List<CoordinatorEmailConfig> EmailConfigs { get; } = [];
 
         public Task<AppUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default) =>
             Task.FromResult(_users.SingleOrDefault(user => user.Email == email));
@@ -223,6 +324,17 @@ public sealed class UserManagementTests
         public Task AddAsync(AppUser user, CancellationToken cancellationToken = default)
         {
             _users.Add(user);
+            return Task.CompletedTask;
+        }
+
+        public Task AddTeamMemberAsync(
+            AppUser user,
+            CoordinatorEmailConfig? emailConfig,
+            CancellationToken cancellationToken = default)
+        {
+            _users.Add(user);
+            if (emailConfig is not null)
+                EmailConfigs.Add(emailConfig);
             return Task.CompletedTask;
         }
 

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Inspecta.Application.Contracts.Email;
 using Inspecta.Domain.Enums;
 
 namespace Inspecta.Application.Contracts.Auth;
@@ -18,4 +19,5 @@ public sealed record CreateStaffUserRequest
     public required UserRole Role { get; init; }
     public Guid? ManagerId { get; init; }
     public IReadOnlyList<string> Qualifications { get; init; } = [];
+    public CoordinatorEmailConfigRequest? EmailConfig { get; init; }
 }

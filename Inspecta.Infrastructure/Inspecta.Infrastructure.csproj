@@ -14,6 +14,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.22" />
+    <PackageReference Include="MailKit" Version="4.18.2" />
     <ProjectReference Include="..\Inspecta.Application\Inspecta.Application.csproj" />
     <ProjectReference Include="..\Inspecta.Domain\Inspecta.Domain.csproj" />
   </ItemGroup>

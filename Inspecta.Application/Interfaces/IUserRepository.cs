@@ -14,6 +14,10 @@ public interface IUserRepository
         CancellationToken cancellationToken = default,
         bool includeDeleted = false);
     Task AddAsync(AppUser user, CancellationToken cancellationToken = default);
+    Task AddTeamMemberAsync(
+        AppUser user,
+        CoordinatorEmailConfig? emailConfig,
+        CancellationToken cancellationToken = default);
     Task SaveAsync(AppUser user, CancellationToken cancellationToken = default);
     Task<bool> SetActiveAsync(Guid userId, bool isActive, CancellationToken cancellationToken = default);
     Task<bool> SoftDeleteAsync(Guid userId, CancellationToken cancellationToken = default);

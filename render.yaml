@@ -20,6 +20,8 @@ services:
         sync: false
       - key: Jwt__SigningKey
         generateValue: true
+      - key: IMAP_ENCRYPTION_KEY
+        sync: false
       - key: Jwt__Issuer
         value: Inspecta.Api
       - key: Jwt__Audience

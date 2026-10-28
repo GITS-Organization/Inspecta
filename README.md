@@ -20,18 +20,36 @@ All business routes use the `/api/v1` prefix. Roles in the table are required JW
 | Technical managers | `POST /technical-managers`, `PUT /technical-managers/{managerId}/subscription` | Admin |
 | Users | `GET /users`, `POST /users`, `GET /users/{userId}`, `PUT /users/{userId}/profile`, `PUT /users/{userId}/status`, `DELETE /users/{userId}` | Admin |
 | Manager team | `GET /manager/team`, `POST /manager/team`, `GET /manager/team/{userId}`, `PUT /manager/team/{userId}`, `PUT /manager/team/{userId}/status`, `DELETE /manager/team/{userId}` | Technical Manager (own team); Admin (include `?managerId={managerId}`) |
+| Coordinator mailbox | `PUT /manager/team/{coordinatorId}/email-config` | Technical Manager (own team); Admin (include `?managerId={managerId}`) |
 | Clients | `GET /clients`, `POST /clients`, `GET /clients/{clientId}`, `GET /clients/{clientId}/history`, `PUT /clients/{clientId}`, `DELETE /clients/{clientId}` | Admin, Technical Manager, Coordinator; team scoped |
 | Equipment/items | `GET /equipment`, `POST /equipment`, `GET /equipment/{equipmentId}`, `PUT /equipment/{equipmentId}`, `POST /equipment/{equipmentId}/inspections`, `DELETE /equipment/{equipmentId}` | Admin, Technical Manager, Coordinator; team scoped |
 | Inspection requests | `GET /requests`, `POST /requests`, `GET /requests/{requestId}`, `POST /requests/{requestId}/transitions`, `POST /requests/{requestId}/assignment` | Admin, Technical Manager, Coordinator; assigned Inspectors can view and update their own tasks |
 | Test incoming email | `POST /emails/send-test` | Admin, Technical Manager, Coordinator |
 | Quotes | `GET /requests/{requestId}/quotes`, `POST /requests/{requestId}/quotes`, `POST /requests/{requestId}/quotes/{quoteId}/send`, `POST /requests/{requestId}/quotes/{quoteId}/decision` | Admin, Technical Manager, Coordinator; team scoped |
+| Quotation drafts | `GET /quotation-drafts`, `PUT /quotation-drafts/{draftId}` | Coordinator; only drafts for that coordinator |
 | Certificates | `GET /requests/{requestId}/certificates`, `GET /requests/{requestId}/certificates/{requestItemId}`, `PUT /requests/{requestId}/certificates/{requestItemId}/draft`, `POST /requests/{requestId}/certificates/{requestItemId}/submit`, `POST /requests/{requestId}/certificates/{requestItemId}/review` | Team scoped; Inspector edits assigned jobs, Admin/Technical Manager review |
 
 Successful create operations return `201 Created`; delete actions return `204 No Content`. API errors use Problem Details JSON.
 
 Each client retains its inspection request history. A request can have a certificate for each request item; submit all item certificates before the request enters technical review. Existing certificates are retained by the migration and linked to a request item when the match is unambiguous.
 
-`POST /api/v1/emails/send-test` is an authenticated test helper that generates a realistic email body and simulates the incoming-email webhook by creating an email-sourced inspection request. It saves the generated body as the email preview and stores the reported machine issue on the request item. There is no free-text email parser in the application yet; the structured test fields are mapped into the request service directly.
+`POST /api/v1/emails/send-test` is an authenticated test helper that generates a realistic email body and simulates the incoming-email webhook by creating an email-sourced inspection request. It saves the generated body as the email preview and stores the reported machine issue on the request item. Coordinator IMAP mailboxes use a separate parser and create quotation drafts through the background sync workflow below.
+
+### Coordinator email-to-draft workflow
+
+- When a Technical Manager creates a Coordinator using `POST /api/v1/manager/team`, include `emailConfig` with `imapServer`, `imapPort`, `emailUsername`, `password`, and `useSsl`. IMAP configuration is required for Coordinators and must not be sent for Inspectors. Passwords are encrypted with AES-GCM before being saved and are never returned by the API.
+- Set `IMAP_ENCRYPTION_KEY` in Render as a stable Base64-encoded key containing exactly 32 random bytes. Configure the same value in `.env` for Docker deployments, or in user secrets for local development. Generate one with PowerShell:
+
+  ```powershell
+  $key = New-Object byte[] 32
+  [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($key)
+  [Convert]::ToBase64String($key)
+  ```
+
+- Keep the same key across deployments and backups. If it is lost or changed, existing IMAP passwords cannot be decrypted; rotate mail passwords and reconfigure each Coordinator before replacing the key.
+- Update mailbox settings through `PUT /api/v1/manager/team/{coordinatorId}/email-config`. Admins must add `?managerId={managerId}`. The API requires TLS: `useSsl=true` uses implicit TLS and `useSsl=false` requires STARTTLS.
+- `EmailSyncBackgroundService` polls unread messages every 120 seconds by default (`EmailSync__IntervalSeconds` may be configured from 30 to 3600). It reads the INBOX, creates one tenant-scoped draft per IMAP UID, then marks the message read. A unique coordinator/UIDVALIDITY/UID constraint prevents duplicate drafts after retry.
+- `GET /api/v1/quotation-drafts` lists the authenticated Coordinator's own drafts. `PUT /api/v1/quotation-drafts/{draftId}` lets that Coordinator edit the parsed client name, location, and machine details. Other Coordinators cannot access the draft.
 
 ### Technical managers, subscriptions, and user lifecycle
 
@@ -58,6 +76,9 @@ dotnet user-secrets set "ConnectionStrings:Inspecta" "Host=localhost;Database=in
 dotnet user-secrets set "BootstrapAdmin:Email" "admin@example.com" --project .\Inspecta.Api\Inspecta.Api.csproj
 dotnet user-secrets set "BootstrapAdmin:FullName" "Inspecta Admin" --project .\Inspecta.Api\Inspecta.Api.csproj
 dotnet user-secrets set "BootstrapAdmin:Password" "<strong-password>" --project .\Inspecta.Api\Inspecta.Api.csproj
+$mailKeyBytes = New-Object byte[] 32
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($mailKeyBytes)
+dotnet user-secrets set "IMAP_ENCRYPTION_KEY" ([Convert]::ToBase64String($mailKeyBytes)) --project .\Inspecta.Api\Inspecta.Api.csproj
 ```
 
 Passwords must be at least 12 characters and include uppercase, lowercase, numeric, and symbol characters. Never put credentials or signing keys in `appsettings.json`.

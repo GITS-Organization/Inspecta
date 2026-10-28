@@ -192,6 +192,10 @@ public sealed class CertificateHistoryTests
             Task.FromResult<IReadOnlyList<AppUser>>([]);
 
         public Task AddAsync(AppUser user, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task AddTeamMemberAsync(
+            AppUser user,
+            CoordinatorEmailConfig? emailConfig,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task SaveAsync(AppUser user, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<bool> SetActiveAsync(Guid userId, bool isActive, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task<bool> SoftDeleteAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult(false);

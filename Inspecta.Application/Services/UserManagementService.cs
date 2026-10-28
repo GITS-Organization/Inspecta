@@ -1,4 +1,5 @@
 using Inspecta.Application.Contracts.Auth;
+using Inspecta.Application.Contracts.Email;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
 using Inspecta.Domain.Entities;
@@ -8,7 +9,8 @@ namespace Inspecta.Application.Services;
 
 public sealed class UserManagementService(
     IUserRepository userRepository,
-    IPasswordService passwordService) : IUserManagementService
+    IPasswordService passwordService,
+    ISecretProtector secretProtector) : IUserManagementService
 {
     public async Task<AuthUserResponse> CreateAsync(
         CreateStaffUserRequest request,
@@ -21,6 +23,10 @@ public sealed class UserManagementService(
                 "technical_manager_provisioning_required",
                 "Create technical managers through the technical manager endpoint.",
                 400);
+        if (request.Role == UserRole.Coordinator && request.EmailConfig is null)
+            throw new AuthException("coordinator_email_config_required", "IMAP settings are required when creating a coordinator.", 400);
+        if (request.Role != UserRole.Coordinator && request.EmailConfig is not null)
+            throw new AuthException("email_config_coordinator_only", "IMAP settings can only be assigned to coordinators.", 400);
 
         var managerId = request.ManagerId;
         if (request.Role == UserRole.Admin)
@@ -44,7 +50,13 @@ public sealed class UserManagementService(
             request.Password,
             request.Qualifications,
             managerId);
-        await userRepository.AddAsync(user, cancellationToken);
+        var emailConfig = request.EmailConfig is null
+            ? null
+            : CreateEmailConfig(user.Id, managerId!.Value, request.EmailConfig);
+        if (emailConfig is null)
+            await userRepository.AddAsync(user, cancellationToken);
+        else
+            await userRepository.AddTeamMemberAsync(user, emailConfig, cancellationToken);
         return ToResponse(user);
     }
 
@@ -204,6 +216,10 @@ public sealed class UserManagementService(
         var manager = await GetAuthorizedManagerAsync(managerId, cancellationToken);
         if (!IsTeamRole(request.Role))
             throw new AuthException("role_forbidden", "Technical managers may only create coordinators and inspectors.", 403);
+        if (request.Role == UserRole.Coordinator && request.EmailConfig is null)
+            throw new AuthException("coordinator_email_config_required", "IMAP settings are required when creating a coordinator.", 400);
+        if (request.Role == UserRole.Inspector && request.EmailConfig is not null)
+            throw new AuthException("email_config_coordinator_only", "IMAP settings can only be assigned to coordinators.", 400);
         ValidatePassword(request.Password);
 
         var email = request.Email.Trim().ToLowerInvariant();
@@ -216,8 +232,41 @@ public sealed class UserManagementService(
             request.Qualifications,
             manager.Id,
             createdById: manager.Id);
-        await userRepository.AddAsync(user, cancellationToken);
+        var emailConfig = request.EmailConfig is null
+            ? null
+            : CreateEmailConfig(user.Id, manager.Id, request.EmailConfig);
+        await userRepository.AddTeamMemberAsync(user, emailConfig, cancellationToken);
         return ToResponse(user);
+    }
+
+    private CoordinatorEmailConfig CreateEmailConfig(
+        Guid coordinatorId,
+        Guid tenantId,
+        CoordinatorEmailConfigRequest request)
+    {
+        ValidateEmailConfig(request);
+        return CoordinatorEmailConfig.Create(
+            coordinatorId,
+            tenantId,
+            request.ImapServer,
+            request.ImapPort,
+            request.EmailUsername,
+            secretProtector.Protect(request.Password),
+            request.UseSsl);
+    }
+
+    private static void ValidateEmailConfig(CoordinatorEmailConfigRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.ImapServer) ||
+            request.ImapServer.Length > 255 ||
+            request.ImapPort is < 1 or > 65535 ||
+            string.IsNullOrWhiteSpace(request.EmailUsername) ||
+            request.EmailUsername.Length > 320 ||
+            string.IsNullOrWhiteSpace(request.Password) ||
+            request.Password.Length > 256)
+        {
+            throw new ArgumentException("IMAP server, valid port, username, and password are required.");
+        }
     }
 
     public async Task<AuthUserResponse?> GetTeamMemberAsync(

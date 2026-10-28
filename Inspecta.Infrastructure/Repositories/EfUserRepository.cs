@@ -36,6 +36,19 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task AddTeamMemberAsync(
+        AppUser user,
+        CoordinatorEmailConfig? emailConfig,
+        CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        dbContext.Users.Add(user);
+        if (emailConfig is not null)
+            dbContext.CoordinatorEmailConfigs.Add(emailConfig);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
     public async Task SaveAsync(AppUser user, CancellationToken cancellationToken = default)
     {
         if (dbContext.Entry(user).State == EntityState.Detached)
