@@ -29,7 +29,9 @@ public sealed record RequestResponse(
     string? AccessNotes,
     IReadOnlyList<string> MissingFields,
     bool CanEditDetails,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    RequestTriage Triage = RequestTriage.Request,
+    DateTimeOffset? MaybeExpiresAt = null);
 
 /// <summary>Equipment requested for inspection.</summary>
 public sealed record RequestItemResponse(

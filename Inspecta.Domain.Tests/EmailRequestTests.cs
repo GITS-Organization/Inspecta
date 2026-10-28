@@ -180,17 +180,20 @@ public sealed class EmailRequestTests
         var actorId = Guid.NewGuid();
         var managerFilter = Guid.NewGuid();
 
-        await service.ListVisibleAsync(actorId, "coordinator", managerFilter);
-        Assert.Equal(new RequestListFilter(null, actorId, null), repository.LastFilter);
+        var query = new RequestListQuery(managerFilter);
+        var request = new RequestListFilter(Triage: RequestTriage.Request, Take: RequestListQuery.DefaultPageSize);
 
-        await service.ListVisibleAsync(actorId, "inspector", managerFilter);
-        Assert.Equal(new RequestListFilter(actorId, null, null), repository.LastFilter);
+        await service.ListVisibleAsync(actorId, "coordinator", query);
+        Assert.Equal(request with { CoordinatorId = actorId }, repository.LastFilter);
 
-        await service.ListVisibleAsync(actorId, "technical_manager", managerFilter);
-        Assert.Equal(new RequestListFilter(null, null, null), repository.LastFilter);
+        await service.ListVisibleAsync(actorId, "inspector", query);
+        Assert.Equal(request with { InspectorId = actorId }, repository.LastFilter);
 
-        await service.ListVisibleAsync(actorId, "admin", managerFilter);
-        Assert.Equal(new RequestListFilter(null, null, managerFilter), repository.LastFilter);
+        await service.ListVisibleAsync(actorId, "technical_manager", query);
+        Assert.Equal(request, repository.LastFilter);
+
+        await service.ListVisibleAsync(actorId, "admin", query);
+        Assert.Equal(request with { ManagerId = managerFilter }, repository.LastFilter);
     }
 
     [Fact]
@@ -252,6 +255,21 @@ public sealed class EmailRequestTests
     {
         public RequestListFilter? LastFilter { get; private set; }
         public Guid? ClientManagerId { get; init; }
+
+        public bool Deleted { get; private set; }
+        public IReadOnlyList<RequestCount> Counts { get; init; } = [];
+
+        public Task DeleteAsync(InspectionRequest request, CancellationToken cancellationToken = default)
+        {
+            Deleted = true;
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<RequestCount>> CountAsync(RequestListFilter scope, CancellationToken cancellationToken = default)
+        {
+            LastFilter = scope;
+            return Task.FromResult(Counts);
+        }
 
         public Task AddAsync(InspectionRequest request, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task SaveAsync(InspectionRequest request, CancellationToken cancellationToken = default) => Task.CompletedTask;

@@ -117,6 +117,11 @@ public sealed class CertificateHistoryTests
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<InspectionRequest>>([request]);
 
+        public Task DeleteAsync(InspectionRequest request, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task<IReadOnlyList<RequestCount>> CountAsync(RequestListFilter scope, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<RequestCount>>([]);
+
         public Task AddItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task RemoveItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default) => Task.CompletedTask;

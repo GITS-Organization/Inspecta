@@ -45,6 +45,82 @@ Content-Type: application/json
 GET {{baseUrl}}/api/v1/requests
 Authorization: Bearer {{accessToken}}
 
+### Tab counts: real requests (total and per status) and maybe emails
+GET {{baseUrl}}/api/v1/requests/summary
+Authorization: Bearer {{accessToken}}
+
+### Second page of requests, filtered by status and searched by text
+GET {{baseUrl}}/api/v1/requests?page=2&pageSize=20&status=request_received&q=noor
+Authorization: Bearer {{accessToken}}
+
+### Maybe tab: emails from unknown senders (deleted automatically after 7 days)
+GET {{baseUrl}}/api/v1/requests?triage=maybe
+Authorization: Bearer {{accessToken}}
+
+### Turn a maybe email into a real request (owning coordinator)
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/confirm
+Authorization: Bearer {{accessToken}}
+
+### Delete a maybe email now (owning coordinator; only maybe emails)
+DELETE {{baseUrl}}/api/v1/requests/{{requestId}}
+Authorization: Bearer {{accessToken}}
+
+### List the client senders of the team (Admin: add ?managerId=)
+GET {{baseUrl}}/api/v1/client-mail-rules
+Authorization: Bearer {{managerToken}}
+
+### Add a client domain (mail from it becomes a request immediately)
+POST {{baseUrl}}/api/v1/client-mail-rules
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "pattern": "alnoor-industries.example"
+}
+
+### Add one client address linked to a client record
+POST {{baseUrl}}/api/v1/client-mail-rules
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "pattern": "mohammed.ali@alnoor-industries.example",
+  "clientId": "replace-with-client-id"
+}
+
+### Admin: add a client domain for one technical manager
+POST {{baseUrl}}/api/v1/client-mail-rules
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pattern": "alnoor-industries.example",
+  "managerId": "{{managerId}}"
+}
+
+### Remove a client sender
+DELETE {{baseUrl}}/api/v1/client-mail-rules/replace-with-rule-id
+Authorization: Bearer {{managerToken}}
+
+### Admin: preview how many untouched imported email requests would be deleted (dryRun is the default)
+POST {{baseUrl}}/api/v1/admin/email-backlog/cleanup
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "createdBefore": "2026-10-29T00:00:00Z"
+}
+
+### Admin: delete them for real (permanent)
+POST {{baseUrl}}/api/v1/admin/email-backlog/cleanup
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "createdBefore": "2026-10-29T00:00:00Z",
+  "dryRun": false
+}
+
 ### Technical Manager: all requests of the team
 GET {{baseUrl}}/api/v1/requests
 Authorization: Bearer {{managerToken}}

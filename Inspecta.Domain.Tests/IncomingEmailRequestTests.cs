@@ -120,6 +120,11 @@ public sealed class IncomingEmailRequestTests
         public Task<IReadOnlyList<InspectionRequest>> ListAsync(RequestListFilter filter, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<InspectionRequest>>([]);
 
+        public Task DeleteAsync(InspectionRequest request, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task<IReadOnlyList<RequestCount>> CountAsync(RequestListFilter scope, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<RequestCount>>([]);
+
         public Task AddItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task RemoveItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default) => Task.CompletedTask;
@@ -134,7 +139,7 @@ public sealed class IncomingEmailRequestTests
             Task.FromResult<Guid?>(null);
     }
 
-    private sealed class FakeUserRepository(params AppUser[] users) : IUserRepository
+    internal sealed class FakeUserRepository(params AppUser[] users) : IUserRepository
     {
         public Task<AppUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default) =>
             Task.FromResult<AppUser?>(null);

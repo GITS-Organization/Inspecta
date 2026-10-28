@@ -13,6 +13,15 @@ public sealed class CoordinatorEmailConfig
     public bool UseSsl { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
+    /// <summary>Only mail that arrived after this moment is imported; older mailbox content is ignored.</summary>
+    public DateTimeOffset SyncFromUtc { get; private set; }
+
+    /// <summary>UID validity of the mailbox folder the cursor belongs to; <c>null</c> until the first sync.</summary>
+    public string? LastUidValidity { get; private set; }
+
+    /// <summary>Highest mailbox UID already handled.</summary>
+    public long LastUid { get; private set; }
+
     public void Update(
         string imapServer,
         int imapPort,
@@ -30,12 +39,27 @@ public sealed class CoordinatorEmailConfig
         if (string.IsNullOrWhiteSpace(encryptedPassword))
             throw new ArgumentException("Encrypted password is required.", nameof(encryptedPassword));
 
+        var mailboxChanged =
+            !string.Equals(ImapServer, imapServer.Trim(), StringComparison.OrdinalIgnoreCase) ||
+            ImapPort != imapPort ||
+            !string.Equals(EmailUsername, emailUsername.Trim(), StringComparison.OrdinalIgnoreCase);
+
         ImapServer = imapServer.Trim();
         ImapPort = imapPort;
         EmailUsername = emailUsername.Trim();
         EncryptedPassword = encryptedPassword;
         UseSsl = useSsl;
         UpdatedAt = updatedAt ?? DateTimeOffset.UtcNow;
+
+        // A different mailbox has its own UIDs: start again from now instead of importing its history.
+        if (mailboxChanged) ResetSync(UpdatedAt);
+    }
+
+    public void ResetSync(DateTimeOffset from)
+    {
+        SyncFromUtc = from;
+        LastUidValidity = null;
+        LastUid = 0;
     }
 
     public static CoordinatorEmailConfig Create(
@@ -68,7 +92,8 @@ public sealed class CoordinatorEmailConfig
             EmailUsername = emailUsername.Trim(),
             EncryptedPassword = encryptedPassword,
             UseSsl = useSsl,
-            UpdatedAt = updatedAt ?? DateTimeOffset.UtcNow
+            UpdatedAt = updatedAt ?? DateTimeOffset.UtcNow,
+            SyncFromUtc = updatedAt ?? DateTimeOffset.UtcNow
         };
     }
 }

@@ -190,6 +190,41 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.ToTable("ClientContacts");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.ClientMailRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ClientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ManagerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Pattern")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("ManagerId", "Pattern")
+                        .IsUnique();
+
+                    b.ToTable("ClientMailRules");
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.CoordinatorEmailConfig", b =>
                 {
                     b.Property<Guid>("CoordinatorId")
@@ -212,6 +247,16 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<long>("LastUid")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("LastUidValidity")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("SyncFromUtc")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -413,6 +458,11 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<string>("Subject")
                         .HasColumnType("text");
 
+                    b.Property<string>("Triage")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -423,6 +473,8 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasIndex("CoordinatorId");
 
                     b.HasIndex("ManagerId");
+
+                    b.HasIndex("Triage", "CreatedAt");
 
                     b.ToTable("Requests");
                 });
@@ -957,6 +1009,26 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.ClientMailRule", b =>
+                {
+                    b.HasOne("Inspecta.Domain.Entities.Client", null)
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("ManagerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.CoordinatorEmailConfig", b =>

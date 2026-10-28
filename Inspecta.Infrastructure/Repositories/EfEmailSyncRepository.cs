@@ -33,6 +33,74 @@ public sealed class EfEmailSyncRepository(InspectaDbContext dbContext) : IEmailS
             select config)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<SenderRule>> ListSenderRulesAsync(
+        Guid managerId,
+        CancellationToken cancellationToken = default)
+    {
+        var rules = await dbContext.ClientMailRules.IgnoreQueryFilters().AsNoTracking()
+            .Where(rule => rule.ManagerId == managerId)
+            .ToListAsync(cancellationToken);
+        var clientIds = rules.Where(rule => rule.ClientId != null).Select(rule => rule.ClientId!.Value).Distinct().ToList();
+        var clientNames = clientIds.Count == 0
+            ? []
+            : await dbContext.Clients.IgnoreQueryFilters().AsNoTracking()
+                .Where(client => clientIds.Contains(client.Id) && client.ManagerId == managerId && client.ArchivedAt == null)
+                .ToDictionaryAsync(client => client.Id, client => client.Name, cancellationToken);
+
+        return rules
+            .Select(rule => new SenderRule(
+                rule,
+                rule.ClientId is Guid clientId && clientNames.TryGetValue(clientId, out var name) ? name : null))
+            .ToArray();
+    }
+
+    public Task SaveSyncCursorAsync(
+        Guid coordinatorId,
+        string uidValidity,
+        long lastUid,
+        DateTimeOffset syncFromUtc,
+        CancellationToken cancellationToken = default) =>
+        dbContext.CoordinatorEmailConfigs
+            .Where(config => config.CoordinatorId == coordinatorId)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(config => config.LastUidValidity, uidValidity)
+                    .SetProperty(config => config.LastUid, lastUid)
+                    .SetProperty(config => config.SyncFromUtc, syncFromUtc),
+                cancellationToken);
+
+    public Task<int> CountUntouchedEmailRequestsAsync(
+        DateTimeOffset createdBefore,
+        Guid? managerId,
+        CancellationToken cancellationToken = default) =>
+        UntouchedEmailRequests(createdBefore, managerId).CountAsync(cancellationToken);
+
+    public Task<int> DeleteUntouchedEmailRequestsAsync(
+        DateTimeOffset createdBefore,
+        Guid? managerId,
+        CancellationToken cancellationToken = default) =>
+        UntouchedEmailRequests(createdBefore, managerId).ExecuteDeleteAsync(cancellationToken);
+
+    private IQueryable<InspectionRequest> UntouchedEmailRequests(DateTimeOffset createdBefore, Guid? managerId) =>
+        dbContext.Requests.IgnoreQueryFilters().Where(request =>
+            request.Source == RequestSource.Email &&
+            request.Status == JobStatus.RequestReceived &&
+            request.ClientName == string.Empty &&
+            request.Location == string.Empty &&
+            request.ClientId == null &&
+            request.InspectorId == null &&
+            !request.Items.Any() &&
+            !request.Certificates.Any() &&
+            request.CreatedAt < createdBefore &&
+            (managerId == null || request.ManagerId == managerId));
+
+    public Task<int> DeleteExpiredMaybeRequestsAsync(
+        DateTimeOffset createdBefore,
+        CancellationToken cancellationToken = default) =>
+        dbContext.Requests.IgnoreQueryFilters()
+            .Where(request => request.Triage == RequestTriage.Maybe && request.CreatedAt < createdBefore)
+            .ExecuteDeleteAsync(cancellationToken);
+
     public async Task<bool> SaveRequestIfNewAsync(
         InspectionRequest request,
         CancellationToken cancellationToken = default)

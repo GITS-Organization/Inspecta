@@ -83,15 +83,59 @@ public sealed class InspectionRequestService(IRequestRepository requestRepositor
     public async Task<IReadOnlyList<RequestResponse>> ListVisibleAsync(
         Guid actorId,
         string role,
+        RequestListQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var pageSize = Math.Clamp(query.PageSize, 1, RequestListQuery.MaxPageSize);
+        var page = Math.Max(query.Page, 1);
+        var filter = ScopeFor(actorId, role, query.ManagerId) with
+        {
+            Triage = query.Triage ?? RequestTriage.Request,
+            Status = query.Status,
+            Search = string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim(),
+            Skip = (page - 1) * pageSize,
+            Take = pageSize
+        };
+        return (await requestRepository.ListAsync(filter, cancellationToken)).Select(RequestResponseMapper.Map).ToArray();
+    }
+
+    public async Task<RequestSummaryResponse> GetSummaryAsync(
+        Guid actorId,
+        string role,
         Guid? managerId = null,
         CancellationToken cancellationToken = default)
     {
-        var filter = new RequestListFilter(
-            InspectorId: IsInspector(role) ? actorId : null,
-            CoordinatorId: role == "coordinator" ? actorId : null,
-            ManagerId: role == "admin" ? managerId : null);
-        return (await requestRepository.ListAsync(filter, cancellationToken)).Select(RequestResponseMapper.Map).ToArray();
+        var counts = await requestRepository.CountAsync(ScopeFor(actorId, role, managerId), cancellationToken);
+        return new RequestSummaryResponse(
+            counts.Where(item => item.Triage == RequestTriage.Request).Sum(item => item.Count),
+            counts.Where(item => item.Triage == RequestTriage.Maybe).Sum(item => item.Count),
+            counts.Where(item => item.Triage == RequestTriage.Request)
+                .GroupBy(item => item.Status)
+                .Select(group => new RequestStatusCount(group.Key, group.Sum(item => item.Count)))
+                .OrderBy(item => item.Status)
+                .ToArray());
     }
+
+    public async Task<RequestResponse> ConfirmAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
+    {
+        var request = await LoadForEditAsync(requestId, actorId, role, cancellationToken);
+        request.Confirm();
+        await requestRepository.SaveAsync(request, cancellationToken);
+        return RequestResponseMapper.Map(request);
+    }
+
+    public async Task DeleteMaybeAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
+    {
+        var request = await LoadForEditAsync(requestId, actorId, role, cancellationToken);
+        if (request.Triage != RequestTriage.Maybe)
+            throw new InvalidOperationException("Only a maybe email can be deleted.");
+        await requestRepository.DeleteAsync(request, cancellationToken);
+    }
+
+    private static RequestListFilter ScopeFor(Guid actorId, string role, Guid? managerId) => new(
+        InspectorId: IsInspector(role) ? actorId : null,
+        CoordinatorId: role == "coordinator" ? actorId : null,
+        ManagerId: role == "admin" ? managerId : null);
 
     public async Task<RequestResponse?> GetVisibleAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
     {

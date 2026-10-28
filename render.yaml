@@ -26,6 +26,8 @@ services:
         value: Inspecta.Api
       - key: Jwt__Audience
         value: Inspecta.Client
+      - key: EmailSync__IntervalSeconds
+        value: "15"
       - key: Swagger__Enabled
         value: "true"
       - key: BootstrapAdmin__Email

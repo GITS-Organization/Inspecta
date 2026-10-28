@@ -19,6 +19,12 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task DeleteAsync(InspectionRequest request, CancellationToken cancellationToken = default)
+    {
+        dbContext.Requests.Remove(request);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     // New children carry client-generated keys, so they are added explicitly instead of relying on change detection.
     public async Task AddItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default)
     {
@@ -49,17 +55,48 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
 
     public async Task<IReadOnlyList<InspectionRequest>> ListAsync(RequestListFilter filter, CancellationToken cancellationToken = default)
     {
-        var query = dbContext.Requests.AsNoTracking()
+        var query = Scope(filter)
             .Include(item => item.Items)
             .Include(item => item.History)
-            .Include(item => item.Certificates)
-            .AsSplitQuery()
-            .AsQueryable();
+            .AsSplitQuery();
+        if (filter.Status is JobStatus status) query = query.Where(item => item.Status == status);
+        if (filter.Search is { Length: > 0 } search)
+        {
+            var escaped = search.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+            var pattern = "%" + escaped + "%";
+            query = query.Where(item =>
+                EF.Functions.ILike(item.ClientName, pattern) ||
+                EF.Functions.ILike(item.Location, pattern) ||
+                (item.Subject != null && EF.Functions.ILike(item.Subject, pattern)) ||
+                (item.EmailFrom != null && EF.Functions.ILike(item.EmailFrom, pattern)) ||
+                (item.EmailFromName != null && EF.Functions.ILike(item.EmailFromName, pattern)));
+        }
+
+        return await query
+            .OrderByDescending(item => item.ReceivedAt)
+            .ThenBy(item => item.Id)
+            .Skip(filter.Skip)
+            .Take(filter.Take)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<RequestCount>> CountAsync(RequestListFilter scope, CancellationToken cancellationToken = default) =>
+        (await Scope(scope with { Triage = null, Status = null })
+            .GroupBy(item => new { item.Triage, item.Status })
+            .Select(group => new { group.Key.Triage, group.Key.Status, Count = group.Count() })
+            .ToListAsync(cancellationToken))
+        .Select(item => new RequestCount(item.Triage, item.Status, item.Count))
+        .ToArray();
+
+    private IQueryable<InspectionRequest> Scope(RequestListFilter filter)
+    {
+        var query = dbContext.Requests.AsNoTracking().AsQueryable();
         if (filter.InspectorId is Guid inspectorId) query = query.Where(item => item.InspectorId == inspectorId);
         if (filter.CoordinatorId is Guid coordinatorId)
             query = query.Where(item => item.Source != RequestSource.Email || item.CoordinatorId == coordinatorId);
         if (filter.ManagerId is Guid managerId) query = query.Where(item => item.ManagerId == managerId);
-        return await query.OrderByDescending(item => item.ReceivedAt).ToListAsync(cancellationToken);
+        if (filter.Triage is RequestTriage triage) query = query.Where(item => item.Triage == triage);
+        return query;
     }
 
     public Task<bool> ClientExistsAsync(Guid clientId, CancellationToken cancellationToken = default) =>

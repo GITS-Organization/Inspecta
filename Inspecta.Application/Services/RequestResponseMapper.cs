@@ -28,7 +28,9 @@ internal static class RequestResponseMapper
         request.AccessNotes,
         request.GetMissingFields(),
         request.CanEditDetails,
-        request.UpdatedAt);
+        request.UpdatedAt,
+        request.Triage,
+        request.MaybeExpiresAt);
 
     public static RequestItemResponse MapItem(RequestItem item) => new(
         item.Id, item.EquipmentId, item.Name, item.Type, item.Capacity, item.Quantity,

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using Inspecta.Domain.Entities;
+using Inspecta.Domain.Enums;
 using Inspecta.Application.Interfaces;
 using MailKit;
 using MailKit.Net.Imap;
@@ -11,14 +12,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Inspecta.Api.BackgroundServices;
 
-public sealed class EmailSyncBackgroundService(
+public sealed partial class EmailSyncBackgroundService(
     IServiceScopeFactory scopeFactory,
     IConfiguration configuration,
     ILogger<EmailSyncBackgroundService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var intervalSeconds = Math.Clamp(configuration.GetValue("EmailSync:IntervalSeconds", 120), 30, 3600);
+        var intervalSeconds = Math.Clamp(configuration.GetValue("EmailSync:IntervalSeconds", 120), 10, 3600);
         while (!stoppingToken.IsCancellationRequested)
         {
             await SyncAllAsync(stoppingToken);
@@ -56,75 +57,6 @@ public sealed class EmailSyncBackgroundService(
         {
             cancellationToken.ThrowIfCancellationRequested();
             await SyncMailboxAsync(config, cancellationToken);
-        }
-    }
-
-    private async Task SyncMailboxAsync(
-        CoordinatorEmailConfig config,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            await using var scope = scopeFactory.CreateAsyncScope();
-            var services = scope.ServiceProvider;
-            var protector = services.GetRequiredService<ISecretProtector>();
-            var repository = services.GetRequiredService<IEmailSyncRepository>();
-            var password = protector.Unprotect(config.EncryptedPassword);
-
-            using var client = new ImapClient();
-            var secureSocketOptions = config.UseSsl
-                ? SecureSocketOptions.SslOnConnect
-                : SecureSocketOptions.StartTls;
-            await ConnectSafelyAsync(client, config, secureSocketOptions, cancellationToken);
-            await client.AuthenticateAsync(config.EmailUsername, password, cancellationToken);
-
-            var inbox = client.Inbox;
-            await inbox.OpenAsync(FolderAccess.ReadWrite, cancellationToken);
-            var uidValidity = inbox.UidValidity.ToString(CultureInfo.InvariantCulture);
-            var unreadUids = await inbox.SearchAsync(SearchQuery.NotSeen, cancellationToken);
-
-            foreach (var uid in unreadUids.OrderBy(value => value.Id))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                try
-                {
-                    var message = await inbox.GetMessageAsync(uid, cancellationToken);
-                    var request = InspectionRequest.CreateFromEmail(
-                        config.TenantId,
-                        config.CoordinatorId,
-                        ToIncomingEmail(message, uidValidity, uid.Id));
-
-                    // Save first, mark read second: a failure in between re-imports as a no-op, never loses the message.
-                    await repository.SaveRequestIfNewAsync(request, cancellationToken);
-                    await inbox.AddFlagsAsync(uid, MessageFlags.Seen, true, cancellationToken);
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception exception) when (exception is not (ImapProtocolException or IOException))
-                {
-                    // One bad message must not block the ones after it. It stays unread and is retried next cycle.
-                    logger.LogError(
-                        exception,
-                        "Could not import message UID {Uid} for coordinator {CoordinatorId}; continuing with the next message.",
-                        uid.Id,
-                        config.CoordinatorId);
-                }
-            }
-
-            await client.DisconnectAsync(true, cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(
-                exception,
-                "Failed to synchronize email for coordinator {CoordinatorId}; other mailboxes will continue.",
-                config.CoordinatorId);
         }
     }
 

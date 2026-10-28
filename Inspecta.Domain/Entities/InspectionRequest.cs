@@ -20,6 +20,9 @@ public sealed class InspectionRequest
             [JobStatus.CertificateApproved] = [JobStatus.SentToClient]
         };
 
+    /// <summary>How long an unconfirmed "maybe" email is kept before it is deleted automatically.</summary>
+    public static readonly TimeSpan MaybeRetention = TimeSpan.FromDays(7);
+
     private InspectionRequest() { }
 
     public Guid Id { get; private set; }
@@ -33,6 +36,7 @@ public sealed class InspectionRequest
     public string? EmailFromName { get; private set; }
     public string? EmailPreview { get; private set; }
     public RequestSource Source { get; private set; } = RequestSource.Manual;
+    public RequestTriage Triage { get; private set; } = RequestTriage.Request;
     public bool HasUnreadClientReply { get; private set; }
     public string? SeededBy { get; private set; }
     public DateTimeOffset ReceivedAt { get; private set; }
@@ -117,8 +121,14 @@ public sealed class InspectionRequest
         Guid managerId,
         Guid coordinatorId,
         IncomingEmail email,
-        DateTimeOffset? receivedAt = null)
+        DateTimeOffset? receivedAt = null,
+        RequestTriage triage = RequestTriage.Request,
+        Guid? clientId = null,
+        string? clientName = null)
     {
+        if (!Enum.IsDefined(triage)) throw new ArgumentOutOfRangeException(nameof(triage));
+        if (clientId == Guid.Empty) throw new ArgumentException("Client id cannot be empty.", nameof(clientId));
+
         if (managerId == Guid.Empty) throw new ArgumentException("Manager is required.", nameof(managerId));
         if (coordinatorId == Guid.Empty) throw new ArgumentException("Coordinator is required.", nameof(coordinatorId));
         ArgumentNullException.ThrowIfNull(email);
@@ -137,6 +147,9 @@ public sealed class InspectionRequest
             EmailFromName = string.IsNullOrWhiteSpace(email.FromName) ? null : email.FromName.Trim(),
             EmailPreview = RequestEmail.BuildPreview(email.TextBody, email.HtmlBody),
             Source = RequestSource.Email,
+            Triage = triage,
+            ClientId = clientId,
+            ClientName = clientName?.Trim() ?? string.Empty,
             ReceivedAt = email.SentAt ?? received,
             Status = JobStatus.RequestReceived,
             CreatedAt = now,
@@ -177,7 +190,21 @@ public sealed class InspectionRequest
         return missing;
     }
 
-    public bool CanEditDetails => Status is JobStatus.RequestReceived or JobStatus.QuoteDraft;
+    public bool CanEditDetails =>
+        Triage == RequestTriage.Request && Status is JobStatus.RequestReceived or JobStatus.QuoteDraft;
+
+    /// <summary>When an unconfirmed "maybe" email will be deleted automatically.</summary>
+    public DateTimeOffset? MaybeExpiresAt => Triage == RequestTriage.Maybe ? CreatedAt + MaybeRetention : null;
+
+    /// <summary>Turns a "maybe" email into a real request.</summary>
+    public void Confirm()
+    {
+        if (Triage != RequestTriage.Maybe)
+            throw new InvalidOperationException("Only a maybe email can be confirmed as a request.");
+
+        Triage = RequestTriage.Request;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
 
     public void SetClient(Guid clientId)
     {
@@ -279,6 +306,8 @@ public sealed class InspectionRequest
     public void TransitionTo(JobStatus nextStatus, Guid actorId, string? note = null)
     {
         if (actorId == Guid.Empty) throw new ArgumentException("Actor is required.", nameof(actorId));
+        if (Triage == RequestTriage.Maybe)
+            throw new InvalidOperationException("Confirm the email as a request before changing its status.");
         if (!AllowedTransitions.TryGetValue(Status, out var allowed) || !allowed.Contains(nextStatus))
             throw new InvalidOperationException($"Transition from {Status} to {nextStatus} is not allowed.");
 

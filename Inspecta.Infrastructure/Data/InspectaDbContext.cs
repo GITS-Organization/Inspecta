@@ -19,6 +19,7 @@ public sealed class InspectaDbContext(
     public DbSet<InspectionRequest> Requests => Set<InspectionRequest>();
     public DbSet<RequestItem> RequestItems => Set<RequestItem>();
     public DbSet<RequestEmail> RequestEmails => Set<RequestEmail>();
+    public DbSet<ClientMailRule> ClientMailRules => Set<ClientMailRule>();
     public DbSet<JobStatusHistory> JobStatusHistory => Set<JobStatusHistory>();
     public DbSet<Quote> Quotes => Set<Quote>();
     public DbSet<InspectionCertificate> Certificates => Set<InspectionCertificate>();
@@ -105,6 +106,8 @@ public sealed class InspectaDbContext(
         request.Property(item => item.Location).HasMaxLength(500).IsRequired();
         request.Property(item => item.Status).HasConversion<string>().HasMaxLength(32);
         request.Property(item => item.Source).HasConversion<string>().HasMaxLength(24);
+        request.Property(item => item.Triage).HasConversion<string>().HasMaxLength(16);
+        request.HasIndex(item => new { item.Triage, item.CreatedAt });
         request.HasMany(item => item.Items).WithOne(item => item.Request).HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
         request.HasMany(item => item.Certificates).WithOne(item => item.Request)
             .HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
@@ -169,6 +172,7 @@ public sealed class InspectaDbContext(
         emailConfig.HasIndex(item => item.TenantId);
         emailConfig.Property(item => item.ImapServer).HasMaxLength(255).IsRequired();
         emailConfig.Property(item => item.EmailUsername).HasMaxLength(320).IsRequired();
+        emailConfig.Property(item => item.LastUidValidity).HasMaxLength(64);
         emailConfig.Property(item => item.EncryptedPassword).HasMaxLength(2048).IsRequired();
         emailConfig.HasOne<AppUser>()
             .WithOne()
@@ -178,6 +182,16 @@ public sealed class InspectaDbContext(
             .WithMany()
             .HasForeignKey(item => item.TenantId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        var mailRule = modelBuilder.Entity<ClientMailRule>();
+        mailRule.HasKey(item => item.Id);
+        mailRule.HasIndex(item => new { item.ManagerId, item.Pattern }).IsUnique();
+        mailRule.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
+        mailRule.Property(item => item.Pattern).HasMaxLength(320).IsRequired();
+        mailRule.Ignore(item => item.IsDomain);
+        mailRule.HasOne<AppUser>().WithMany().HasForeignKey(item => item.ManagerId).OnDelete(DeleteBehavior.Restrict);
+        mailRule.HasOne<AppUser>().WithMany().HasForeignKey(item => item.CreatedById).OnDelete(DeleteBehavior.Restrict);
+        mailRule.HasOne<Client>().WithMany().HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.SetNull);
 
         var quotationDraft = modelBuilder.Entity<QuotationDraft>();
         quotationDraft.HasKey(item => item.Id);

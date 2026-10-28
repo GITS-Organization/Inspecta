@@ -75,6 +75,9 @@ builder.Services.AddScoped<ICoordinatorEmailConfigService, CoordinatorEmailConfi
 builder.Services.AddScoped<IQuotationDraftService, QuotationDraftService>();
 builder.Services.AddScoped<IEmailParserService, EmailParserService>();
 builder.Services.AddScoped<IRequestRepository, EfRequestRepository>();
+builder.Services.AddScoped<IClientMailRuleRepository, EfClientMailRuleRepository>();
+builder.Services.AddScoped<IClientMailRuleService, ClientMailRuleService>();
+builder.Services.AddScoped<IEmailBacklogService, EmailBacklogService>();
 builder.Services.AddScoped<IInspectionRequestService, InspectionRequestService>();
 builder.Services.AddScoped<IClientRepository, EfClientRepository>();
 builder.Services.AddScoped<IClientService, ClientService>();
@@ -88,6 +91,7 @@ builder.Services.AddScoped<IPasswordService, IdentityPasswordService>();
 builder.Services.AddSingleton<IAccessTokenService, JwtAccessTokenService>();
 builder.Services.AddSingleton<ISecretProtector, AesGcmSecretProtector>();
 builder.Services.AddHostedService<EmailSyncBackgroundService>();
+builder.Services.AddHostedService<MaybeCleanupBackgroundService>();
 
 var signingKey = builder.Configuration["Jwt:SigningKey"];
 if (string.IsNullOrWhiteSpace(signingKey) || Encoding.UTF8.GetByteCount(signingKey) < 32)
