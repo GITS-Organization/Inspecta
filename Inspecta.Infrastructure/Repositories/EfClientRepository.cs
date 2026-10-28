@@ -27,5 +27,15 @@ public sealed class EfClientRepository(InspectaDbContext dbContext) : IClientRep
         return await query.OrderBy(client => client.Name).ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<InspectionRequest>> GetRequestHistoryAsync(Guid clientId, CancellationToken cancellationToken = default) =>
+        await dbContext.Requests.AsNoTracking()
+            .Where(request => request.ClientId == clientId)
+            .Include(request => request.Items)
+            .Include(request => request.Certificates)
+            .Include(request => request.History)
+            .AsSplitQuery()
+            .OrderByDescending(request => request.ReceivedAt)
+            .ToListAsync(cancellationToken);
+
     public Task SaveAsync(CancellationToken cancellationToken = default) => dbContext.SaveChangesAsync(cancellationToken);
 }

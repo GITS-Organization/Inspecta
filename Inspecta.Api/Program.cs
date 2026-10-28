@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Inspecta.Api.Middleware;
 using Inspecta.Api.OpenApi;
+using Inspecta.Api.Authorization;
 using Inspecta.Application.Interfaces;
 using Inspecta.Application.Services;
 using Inspecta.Infrastructure.Data;
@@ -57,6 +58,8 @@ builder.Services.AddSwaggerGen(options =>
         options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
 });
 builder.Services.AddHealthChecks();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<CurrentTenant>();
 
 var connectionString = builder.Configuration.GetConnectionString("Inspecta")
     ?? throw new InvalidOperationException("Set the ConnectionStrings:Inspecta PostgreSQL connection string.");
@@ -117,6 +120,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
                 .Where(user => user.Id == userId)
                 .Select(user => new
                 {
+                    user.Id,
                     user.IsActive,
                     user.Role,
                     user.ManagerId,
@@ -174,11 +178,29 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
             if (!string.Equals(tokenRole, currentRole, StringComparison.Ordinal))
             {
                 context.Fail("Account role has changed. Sign in again.");
+                return;
+            }
+
+            var expectedTenantId = currentUser.Role switch
+            {
+                Inspecta.Domain.Enums.UserRole.Admin => (Guid?)null,
+                Inspecta.Domain.Enums.UserRole.TechnicalManager => currentUser.Id,
+                _ => currentUser.ManagerId
+            };
+            var tokenTenantId = context.Principal?.FindFirst("tenant_id")?.Value;
+            var expectedManagerId = currentUser.ManagerId?.ToString();
+            var tokenManagerId = context.Principal?.FindFirst("manager_id")?.Value;
+            var tokenUserId = context.Principal?.FindFirst("user_id")?.Value;
+            if (!string.Equals(tokenUserId, currentUser.Id.ToString(), StringComparison.Ordinal) ||
+                !string.Equals(tokenTenantId, expectedTenantId?.ToString(), StringComparison.Ordinal) ||
+                !string.Equals(tokenManagerId, expectedManagerId, StringComparison.Ordinal))
+            {
+                context.Fail("Account tenant assignment has changed. Sign in again.");
             }
         }
     };
 });
-builder.Services.AddAuthorization();
+builder.Services.AddInspectaAuthorization();
 
 var app = builder.Build();
 

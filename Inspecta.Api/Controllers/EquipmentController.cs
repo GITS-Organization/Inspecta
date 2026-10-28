@@ -1,5 +1,6 @@
 using Inspecta.Application.Contracts.Equipment;
 using Inspecta.Application.Interfaces;
+using Inspecta.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,7 +8,7 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Manage inspection items registered for clients.</summary>
 [ApiController]
-[Authorize(Roles = "admin,coordinator")]
+[Authorize(Policy = AuthorizationPolicies.TeamOperations)]
 [Route("api/v1/equipment")]
 public sealed class EquipmentController(IEquipmentService equipmentService) : ControllerBase
 {

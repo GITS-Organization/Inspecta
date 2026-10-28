@@ -13,6 +13,7 @@ public sealed class InspectionCertificate
 
     public Guid Id { get; private set; }
     public Guid RequestId { get; private set; }
+    public Guid? RequestItemId { get; private set; }
     public Guid? EquipmentId { get; private set; }
     public Guid InspectorId { get; private set; }
     public string TemplateId { get; private set; } = "TUV-RTE-01";
@@ -42,6 +43,8 @@ public sealed class InspectionCertificate
     }
     public string? SentTo { get; private set; }
     public DateTimeOffset? SentAt { get; private set; }
+    public InspectionRequest? Request { get; private set; }
+    public RequestItem? RequestItem { get; private set; }
 
     [NotMapped]
     public CertificateDraft Draft => ReadDraft();
@@ -50,17 +53,21 @@ public sealed class InspectionCertificate
         Guid requestId,
         Guid inspectorId,
         Guid? equipmentId = null,
-        bool hasAngle = false)
+        bool hasAngle = false,
+        Guid? requestItemId = null)
     {
         if (requestId == Guid.Empty || inspectorId == Guid.Empty)
             throw new ArgumentException("Request and inspector are required.");
         if (equipmentId == Guid.Empty)
             throw new ArgumentException("Equipment id cannot be empty.", nameof(equipmentId));
+        if (requestItemId == Guid.Empty)
+            throw new ArgumentException("Request item id cannot be empty.", nameof(requestItemId));
 
         return new InspectionCertificate
         {
             Id = Guid.NewGuid(),
             RequestId = requestId,
+            RequestItemId = requestItemId,
             EquipmentId = equipmentId,
             InspectorId = inspectorId,
             HasAngle = hasAngle
@@ -181,6 +188,7 @@ public sealed class InspectionCertificate
     }
 
     public bool IsReadyToSubmit() => Draft.IsReadyToSubmit(HasAngle);
+    public bool IsApproved => ReviewedAt is not null && CertificateNumber is not null;
 
     public void Submit()
     {

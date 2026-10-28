@@ -5,6 +5,9 @@ namespace Inspecta.Application.Contracts.Clients;
 /// <summary>Payload for creating a client and its initial contact records.</summary>
 public sealed record CreateClientRequest
 {
+    /// <summary>Technical manager owner; honored only for Admin requests.</summary>
+    public Guid? ManagerId { get; init; }
+
     [Required, MaxLength(200)]
     public required string Name { get; init; }
 
@@ -13,6 +16,21 @@ public sealed record CreateClientRequest
 
     /// <summary>Whether this client currently has a contract.</summary>
     public bool HasContract { get; init; }
+
+    [MaxLength(500)]
+    public string? Location { get; init; }
+
+    [Range(-90, 90)]
+    public double? Latitude { get; init; }
+
+    [Range(-180, 180)]
+    public double? Longitude { get; init; }
+
+    [EmailAddress, MaxLength(320)]
+    public string? CertificatesEmail { get; init; }
+
+    [MaxLength(64)]
+    public string? TaxNumber { get; init; }
 
     [MaxLength(4000)]
     public string? Notes { get; init; }

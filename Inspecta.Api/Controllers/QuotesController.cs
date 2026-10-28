@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Quotations;
 using Inspecta.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,7 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Create and manage quote revisions for an inspection request.</summary>
 [ApiController]
-[Authorize(Roles = "admin,coordinator")]
+[Authorize(Policy = AuthorizationPolicies.TeamOperations)]
 [Route("api/v1/requests/{requestId:guid}/quotes")]
 public sealed class QuotesController(IQuoteService quoteService) : ControllerBase
 {

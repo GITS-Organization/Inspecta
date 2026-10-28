@@ -21,12 +21,23 @@ public sealed class JwtAccessTokenService(IConfiguration configuration) : IAcces
         }
 
         var expiresAt = DateTimeOffset.UtcNow.AddMinutes(configuration.GetValue("Jwt:AccessTokenMinutes", 10));
+        var tenantId = user.Role switch
+        {
+            Inspecta.Domain.Enums.UserRole.Admin => null,
+            Inspecta.Domain.Enums.UserRole.TechnicalManager => user.Id,
+            _ => user.ManagerId
+        };
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new Claim("user_id", user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim("role", RoleName(user.Role)),
         };
+        if (user.ManagerId is Guid managerId)
+            claims.Add(new Claim("manager_id", managerId.ToString()));
+        if (tenantId is Guid id)
+            claims.Add(new Claim("tenant_id", id.ToString()));
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
             SecurityAlgorithms.HmacSha256);

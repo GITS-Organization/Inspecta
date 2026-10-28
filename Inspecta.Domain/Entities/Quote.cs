@@ -11,6 +11,7 @@ public sealed class Quote
 
     public Guid Id { get; private set; }
     public Guid RequestId { get; private set; }
+    public InspectionRequest? Request { get; private set; }
     public string? RequestNumber { get; private set; }
     public int Version { get; private set; }
     public long AmountPiastres { get; private set; }

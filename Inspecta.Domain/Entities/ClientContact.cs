@@ -6,6 +6,7 @@ public sealed class ClientContact
 
     public Guid Id { get; private set; }
     public Guid ClientId { get; private set; }
+    public Client? Client { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string? Role { get; private set; }
     public string? Email { get; private set; }

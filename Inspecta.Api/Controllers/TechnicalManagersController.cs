@@ -1,3 +1,4 @@
+using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Auth;
 using Inspecta.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -7,7 +8,7 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Admin operations for provisioning technical manager accounts and subscriptions.</summary>
 [ApiController]
-[Authorize(Roles = "admin")]
+[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 [Route("api/v1/technical-managers")]
 public sealed class TechnicalManagersController(IUserManagementService userManagementService) : ControllerBase
 {

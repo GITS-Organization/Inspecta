@@ -1,3 +1,4 @@
+using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Auth;
 using Inspecta.Application.Interfaces;
 using Inspecta.Domain.Enums;
@@ -8,7 +9,7 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Admin-only operations for managing users and their technical manager assignments.</summary>
 [ApiController]
-[Authorize(Roles = "admin")]
+[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 [Route("api/v1/users")]
 public sealed class UsersController(IUserManagementService userManagementService) : ControllerBase
 {

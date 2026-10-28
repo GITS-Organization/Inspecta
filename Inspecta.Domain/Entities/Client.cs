@@ -5,6 +5,7 @@ public sealed class Client
     private Client() { }
 
     public Guid Id { get; private set; }
+    public Guid? ManagerId { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public bool IsCompany { get; private set; }
     public bool HasContract { get; private set; }
@@ -17,6 +18,7 @@ public sealed class Client
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? ArchivedAt { get; private set; }
     public List<ClientContact> Contacts { get; private set; } = [];
+    public List<InspectionRequest> Requests { get; private set; } = [];
 
     public static Client Create(
         string name,
@@ -28,6 +30,7 @@ public sealed class Client
         string? taxNumber = null,
         double? latitude = null,
         double? longitude = null,
+        Guid? managerId = null,
         DateTimeOffset? createdAt = null)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Client name is required.", nameof(name));
@@ -35,6 +38,7 @@ public sealed class Client
         return new Client
         {
             Id = Guid.NewGuid(),
+            ManagerId = managerId,
             Name = name.Trim(),
             IsCompany = isCompany,
             HasContract = hasContract,
@@ -50,6 +54,8 @@ public sealed class Client
 
     public void UpdateDetails(
         string name,
+        bool isCompany,
+        bool hasContract,
         string? location,
         string? certificatesEmail,
         string? taxNumber,
@@ -63,6 +69,8 @@ public sealed class Client
         ValidateCoordinates(latitude, longitude);
 
         Name = name.Trim();
+        IsCompany = isCompany;
+        HasContract = hasContract;
         Location = location?.Trim();
         CertificatesEmail = EmptyToNull(certificatesEmail);
         TaxNumber = EmptyToNull(taxNumber);

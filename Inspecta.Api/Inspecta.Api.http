@@ -112,6 +112,22 @@ Content-Type: application/json
 ### Soft-delete a user (Admin; record is retained)
 DELETE {{baseUrl}}/api/v1/users/{{userId}}
 Authorization: Bearer {{token}}
+### Admin: list a technical manager's team
+GET {{baseUrl}}/api/v1/manager/team?managerId={{managerId}}
+Authorization: ******
+
+### Admin: create a team member for a technical manager
+POST {{baseUrl}}/api/v1/manager/team?managerId={{managerId}}
+Authorization: ******
+Content-Type: application/json
+
+{
+  "email": "inspector@example.com",
+  "fullName": "Example Inspector",
+  "password": "replace-with-a-secure-test-password",
+  "role": "inspector"
+}
+
 ### List clients
 GET {{baseUrl}}/api/v1/clients?includeArchived=false
 Authorization: Bearer {{token}}
@@ -122,9 +138,15 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
+  "managerId": "{{managerId}}",
   "name": "Example Client",
   "isCompany": true,
   "hasContract": true,
+  "location": "Cairo, Egypt",
+  "latitude": 30.0444,
+  "longitude": 31.2357,
+  "certificatesEmail": "certificates@example.com",
+  "taxNumber": "123456789",
   "notes": "Client notes",
   "contacts": [
     {
@@ -139,6 +161,27 @@ Content-Type: application/json
 ### Get a client
 GET {{baseUrl}}/api/v1/clients/{{clientId}}
 Authorization: Bearer {{token}}
+
+### Update a client
+PUT {{baseUrl}}/api/v1/clients/{{clientId}}
+Authorization: ******
+Content-Type: application/json
+
+{
+  "name": "Example Client Updated",
+  "isCompany": true,
+  "hasContract": true,
+  "location": "Giza, Egypt",
+  "latitude": 29.9870,
+  "longitude": 31.2118,
+  "certificatesEmail": "certificates@example.com",
+  "taxNumber": "123456789",
+  "notes": "Updated client notes"
+}
+
+### Get a client's request and certificate history
+GET {{baseUrl}}/api/v1/clients/{{clientId}}/history
+Authorization: ******
 
 ### Archive a client
 DELETE {{baseUrl}}/api/v1/clients/{{clientId}}
@@ -199,6 +242,7 @@ Content-Type: application/json
 
 {
   "clientId": "{{clientId}}",
+  "managerId": "{{managerId}}",
   "clientName": "Example Client",
   "location": "Cairo",
   "subject": "Annual crane inspection",
@@ -209,6 +253,21 @@ Content-Type: application/json
       "capacity": "10 t"
     }
   ]
+}
+
+### Simulate an incoming client email and create an inspection request
+POST {{baseUrl}}/api/v1/emails/send-test
+Authorization: ******
+Content-Type: application/json
+
+{
+  "managerId": "{{managerId}}",
+  "clientName": "Example Client",
+  "location": "Cairo",
+  "contactEmail": "operations@example.com",
+  "machineModel": "Overhead Crane",
+  "serialNumber": "CR-1042",
+  "issueDescription": "The hoist makes an unusual noise under load, and the annual inspection is due."
 }
 
 ### List requests visible to current user
@@ -268,12 +327,16 @@ Content-Type: application/json
   "note": "Approved by client"
 }
 
-### Get a certificate
-GET {{baseUrl}}/api/v1/requests/{{requestId}}/certificate
+### List certificates for all request items
+GET {{baseUrl}}/api/v1/requests/{{requestId}}/certificates
 Authorization: Bearer {{token}}
 
-### Save a certificate draft
-PUT {{baseUrl}}/api/v1/requests/{{requestId}}/certificate/draft
+### Get a certificate for one request item
+GET {{baseUrl}}/api/v1/requests/{{requestId}}/certificates/{{requestItemId}}
+Authorization: ******
+
+### Save or update a certificate draft for one request item
+PUT {{baseUrl}}/api/v1/requests/{{requestId}}/certificates/{{requestItemId}}/draft
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -285,12 +348,12 @@ Content-Type: application/json
   "finalResult": null
 }
 
-### Submit a certificate
-POST {{baseUrl}}/api/v1/requests/{{requestId}}/certificate/submit
+### Submit an item certificate
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/certificates/{{requestItemId}}/submit
 Authorization: Bearer {{token}}
 
-### Review a certificate
-POST {{baseUrl}}/api/v1/requests/{{requestId}}/certificate/review
+### Review an item certificate
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/certificates/{{requestItemId}}/review
 Authorization: Bearer {{token}}
 Content-Type: application/json
 

@@ -135,6 +135,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<double?>("Longitude")
                         .HasColumnType("double precision");
 
+                    b.Property<Guid?>("ManagerId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -147,6 +150,8 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ManagerId");
 
                     b.ToTable("Clients");
                 });
@@ -230,6 +235,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<Guid>("RequestId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("RequestItemId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ReviewNote")
                         .HasColumnType("text");
 
@@ -274,7 +282,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RequestId")
+                    b.HasIndex("RequestItemId");
+
+                    b.HasIndex("RequestId", "RequestItemId")
                         .IsUnique();
 
                     b.ToTable("Certificates");
@@ -329,6 +339,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<Guid?>("ManagerId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset?>("PreferredDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -363,6 +376,8 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
+
+                    b.HasIndex("ManagerId");
 
                     b.ToTable("Requests");
                 });
@@ -405,9 +420,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<string>("DatesJson")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<bool>("HasAngle")
-                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsArchived")
                         .HasColumnType("boolean");
@@ -644,6 +656,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<Guid?>("EquipmentId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("IssueDescription")
+                        .HasColumnType("text");
+
                     b.Property<string>("Location")
                         .HasColumnType("text");
 
@@ -695,57 +710,89 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.Client", b =>
+                {
+                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("ManagerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.ClientContact", b =>
                 {
-                    b.HasOne("Inspecta.Domain.Entities.Client", null)
+                    b.HasOne("Inspecta.Domain.Entities.Client", "Client")
                         .WithMany("Contacts")
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Client");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.InspectionCertificate", b =>
                 {
-                    b.HasOne("Inspecta.Domain.Entities.InspectionRequest", null)
-                        .WithOne()
-                        .HasForeignKey("Inspecta.Domain.Entities.InspectionCertificate", "RequestId")
+                    b.HasOne("Inspecta.Domain.Entities.InspectionRequest", "Request")
+                        .WithMany("Certificates")
+                        .HasForeignKey("RequestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Inspecta.Domain.Entities.RequestItem", "RequestItem")
+                        .WithMany("Certificates")
+                        .HasForeignKey("RequestItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Request");
+
+                    b.Navigation("RequestItem");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.InspectionRequest", b =>
                 {
-                    b.HasOne("Inspecta.Domain.Entities.Client", null)
-                        .WithMany()
+                    b.HasOne("Inspecta.Domain.Entities.Client", "Client")
+                        .WithMany("Requests")
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("ManagerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Client");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.Item", b =>
                 {
-                    b.HasOne("Inspecta.Domain.Entities.Client", null)
+                    b.HasOne("Inspecta.Domain.Entities.Client", "Client")
                         .WithMany()
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Client");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.JobStatusHistory", b =>
                 {
-                    b.HasOne("Inspecta.Domain.Entities.InspectionRequest", null)
+                    b.HasOne("Inspecta.Domain.Entities.InspectionRequest", "Request")
                         .WithMany("History")
                         .HasForeignKey("RequestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Request");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.Quote", b =>
                 {
-                    b.HasOne("Inspecta.Domain.Entities.InspectionRequest", null)
+                    b.HasOne("Inspecta.Domain.Entities.InspectionRequest", "Request")
                         .WithMany()
                         .HasForeignKey("RequestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Request");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.RefreshToken", b =>
@@ -766,11 +813,13 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasForeignKey("EquipmentId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Inspecta.Domain.Entities.InspectionRequest", null)
+                    b.HasOne("Inspecta.Domain.Entities.InspectionRequest", "Request")
                         .WithMany("Items")
                         .HasForeignKey("RequestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Request");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.AppUser", b =>
@@ -781,13 +830,22 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.Client", b =>
                 {
                     b.Navigation("Contacts");
+
+                    b.Navigation("Requests");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.InspectionRequest", b =>
                 {
+                    b.Navigation("Certificates");
+
                     b.Navigation("History");
 
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.RequestItem", b =>
+                {
+                    b.Navigation("Certificates");
                 });
 #pragma warning restore 612, 618
         }

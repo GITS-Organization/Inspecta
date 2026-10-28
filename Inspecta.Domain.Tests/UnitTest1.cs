@@ -165,27 +165,64 @@ public sealed class DomainDataModelTests
     }
 
     [Fact]
+    public void ClientStoresAndUpdatesLocationAndBusinessDetails()
+    {
+        var client = Client.Create(
+            "Client",
+            isCompany: true,
+            hasContract: true,
+            location: "Cairo",
+            certificatesEmail: "certificates@example.com",
+            taxNumber: "TAX-123",
+            latitude: 30.0444,
+            longitude: 31.2357);
+
+        Assert.Equal(30.0444, client.Latitude);
+        Assert.Equal(31.2357, client.Longitude);
+        Assert.Equal("certificates@example.com", client.CertificatesEmail);
+        Assert.Equal("TAX-123", client.TaxNumber);
+
+        client.UpdateDetails(
+            "Updated Client",
+            isCompany: false,
+            hasContract: false,
+            location: "Giza",
+            certificatesEmail: "updated@example.com",
+            taxNumber: "TAX-456",
+            latitude: 29.987,
+            longitude: 31.2118,
+            notes: "Updated");
+
+        Assert.Equal("Updated Client", client.Name);
+        Assert.False(client.IsCompany);
+        Assert.False(client.HasContract);
+        Assert.Equal("Giza", client.Location);
+        Assert.Equal(29.987, client.Latitude);
+        Assert.Equal(31.2118, client.Longitude);
+        Assert.Equal("updated@example.com", client.CertificatesEmail);
+        Assert.Equal("TAX-456", client.TaxNumber);
+    }
+
+    [Fact]
     public void EquipmentRegistrationRequiresExplicitExpiryExceptionAndTracksDueSoon()
     {
         var today = new DateOnly(2026, 10, 25);
         var expired = today.AddDays(-1);
 
         Assert.Throws<ArgumentException>(() => Item.Register(
-            Guid.NewGuid(), Guid.NewGuid(), "Hoist", expired, true, today: today));
+            Guid.NewGuid(), Guid.NewGuid(), "Hoist", expired, today: today));
 
         var equipment = Item.Register(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "Hoist",
             today.AddDays(30),
-            hasAngle: true,
             manufacturer: "Inspecta",
             serialNumber: "SN-100",
             today: today);
 
         Assert.True(equipment.IsDueSoon(today));
         Assert.Equal("Hoist", equipment.Type);
-        Assert.True(equipment.HasAngle);
     }
 
     [Fact]

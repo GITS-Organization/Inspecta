@@ -7,6 +7,9 @@ public sealed record CreateInspectionRequest
 {
     public Guid? ClientId { get; init; }
 
+    /// <summary>Technical manager owner; honored only for Admin requests.</summary>
+    public Guid? ManagerId { get; init; }
+
     [Required, MaxLength(200)]
     public required string ClientName { get; init; }
 
@@ -37,4 +40,6 @@ public sealed record CreateRequestItem
     public string? Type { get; init; }
     public string? Capacity { get; init; }
     public string? SerialNumber { get; init; }
+    [MaxLength(4000)]
+    public string? IssueDescription { get; init; }
 }

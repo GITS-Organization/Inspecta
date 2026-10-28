@@ -15,11 +15,22 @@ public sealed record RequestResponse(
     Guid? CoordinatorId,
     Guid? InspectorId,
     DateTimeOffset? ScheduledAt,
+    RequestSource Source,
+    string? EmailFrom,
+    string? EmailPreview,
     IReadOnlyList<RequestItemResponse> Items,
     IReadOnlyList<RequestHistoryResponse> History);
 
 /// <summary>Equipment requested for inspection.</summary>
-public sealed record RequestItemResponse(Guid Id, Guid? EquipmentId, string Name, string? Type, string? Capacity, int Quantity, string? SerialNumber);
+public sealed record RequestItemResponse(
+    Guid Id,
+    Guid? EquipmentId,
+    string Name,
+    string? Type,
+    string? Capacity,
+    int Quantity,
+    string? SerialNumber,
+    string? IssueDescription);
 
 /// <summary>One recorded request status transition.</summary>
 public sealed record RequestHistoryResponse(JobStatus? From, JobStatus To, Guid ActorId, DateTimeOffset At, string? Note);

@@ -8,6 +8,7 @@ public sealed class JobStatusHistory
 
     public Guid Id { get; private set; }
     public Guid RequestId { get; private set; }
+    public InspectionRequest? Request { get; private set; }
     public JobStatus? FromStatus { get; private set; }
     public JobStatus ToStatus { get; private set; }
     public Guid ActorId { get; private set; }

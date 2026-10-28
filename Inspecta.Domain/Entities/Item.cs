@@ -11,6 +11,7 @@ public sealed class Item
 
     public Guid Id { get; private set; }
     public Guid ClientId { get; private set; }
+    public Client? Client { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string Type => Name;
     public ItemType ItemType { get; private set; } = ItemType.Equipment;
@@ -31,7 +32,6 @@ public sealed class Item
     public string DatesJson { get; private set; } = "[]";
     public string ChecklistJson { get; private set; } = "[]";
     public string AttachmentsJson { get; private set; } = "[]";
-    public bool HasAngle { get; private set; }
     public EquipmentStatus Status { get; private set; } = EquipmentStatus.Active;
     public DateOnly? CertificateExpiryDate { get; private set; }
     public DateOnly? LastInspectedOn { get; private set; }
@@ -58,7 +58,6 @@ public sealed class Item
         Guid categoryId,
         string type,
         DateOnly certificateExpiryDate,
-        bool hasAngle,
         bool allowExpired = false,
         string? manufacturer = null,
         string? model = null,
@@ -103,7 +102,6 @@ public sealed class Item
             OwnerReference = Normalize(ownerReference),
             AssetTag = Normalize(assetTag),
             Notes = Normalize(notes),
-            HasAngle = hasAngle,
             Status = EquipmentStatus.Active,
             CertificateExpiryDate = certificateExpiryDate
         };
@@ -215,13 +213,12 @@ public sealed class Item
         Notes = Normalize(notes);
     }
 
-    public void UpdateInspectionRequirements(bool hasAngle, DateOnly certificateExpiryDate, bool allowExpired = false, DateOnly? today = null)
+    public void UpdateInspectionRequirements(DateOnly certificateExpiryDate, bool allowExpired = false, DateOnly? today = null)
     {
         EnsureEditable();
         if (!allowExpired && certificateExpiryDate < (today ?? DateOnly.FromDateTime(DateTime.UtcNow)))
             throw new ArgumentException("Item certificate expiry cannot be in the past.", nameof(certificateExpiryDate));
 
-        HasAngle = hasAngle;
         CertificateExpiryDate = certificateExpiryDate;
     }
 

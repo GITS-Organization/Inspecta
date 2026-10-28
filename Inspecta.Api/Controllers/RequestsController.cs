@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Requests;
 using Inspecta.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,7 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Manage inspection requests and their workflow transitions.</summary>
 [ApiController]
-[Authorize]
+[Authorize(Policy = AuthorizationPolicies.TeamAccess)]
 [Route("api/v1/requests")]
 public sealed class RequestsController(IInspectionRequestService requestService) : ControllerBase
 {
@@ -34,12 +35,14 @@ public sealed class RequestsController(IInspectionRequestService requestService)
 
     /// <summary>Create an inspection request.</summary>
     [HttpPost]
-    [Authorize(Roles = "admin,coordinator")]
+    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status201Created)]
     public async Task<ActionResult<RequestResponse>> Create(CreateInspectionRequest request, CancellationToken cancellationToken)
     {
         if (!TryGetActor(out var actorId, out _)) return Unauthorized();
-        var created = await requestService.CreateAsync(request, actorId, cancellationToken);
+        var managerId = User.IsInRole("admin") ? request.ManagerId : User.GetTenantId();
+        if (!User.IsInRole("admin") && managerId is null) return Unauthorized();
+        var created = await requestService.CreateAsync(request, actorId, managerId, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { requestId = created.Id }, created);
     }
 
@@ -54,7 +57,7 @@ public sealed class RequestsController(IInspectionRequestService requestService)
 
     /// <summary>Assign an accepted request to an inspector.</summary>
     [HttpPost("{requestId:guid}/assignment")]
-    [Authorize(Roles = "admin,coordinator")]
+    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<RequestResponse>> Assign(Guid requestId, AssignInspectorRequest request, CancellationToken cancellationToken)
     {

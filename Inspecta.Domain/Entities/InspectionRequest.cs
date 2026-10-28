@@ -23,6 +23,7 @@ public sealed class InspectionRequest
     private InspectionRequest() { }
 
     public Guid Id { get; private set; }
+    public Guid? ManagerId { get; private set; }
     public string ClientName { get; private set; } = string.Empty;
     public Guid? ClientId { get; private set; }
     public string Location { get; private set; } = string.Empty;
@@ -45,6 +46,8 @@ public sealed class InspectionRequest
     public string? RejectReason { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
+    public Client? Client { get; private set; }
+    public List<InspectionCertificate> Certificates { get; private set; } = [];
     public List<RequestItem> Items { get; private set; } = [];
     public List<JobStatusHistory> History { get; private set; } = [];
 
@@ -63,7 +66,8 @@ public sealed class InspectionRequest
         string? emailPreview = null,
         bool hasUnreadClientReply = false,
         string? seededBy = null,
-        DateTimeOffset? receivedAt = null)
+        DateTimeOffset? receivedAt = null,
+        Guid? managerId = null)
     {
         if (string.IsNullOrWhiteSpace(clientName)) throw new ArgumentException("Client name is required.", nameof(clientName));
         if (string.IsNullOrWhiteSpace(location)) throw new ArgumentException("Location is required.", nameof(location));
@@ -79,6 +83,7 @@ public sealed class InspectionRequest
         var request = new InspectionRequest
         {
             Id = Guid.NewGuid(),
+            ManagerId = managerId,
             ClientName = clientName.Trim(),
             ClientId = clientId,
             Location = location.Trim(),

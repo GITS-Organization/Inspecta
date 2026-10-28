@@ -6,6 +6,7 @@ public sealed class RequestItem
 
     public Guid Id { get; private set; }
     public Guid RequestId { get; private set; }
+    public InspectionRequest? Request { get; private set; }
     public Guid? EquipmentId { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string? Type { get; private set; }
@@ -17,6 +18,8 @@ public sealed class RequestItem
     public string? Location { get; private set; }
     public int Quantity { get; private set; }
     public string? SerialNumber { get; private set; }
+    public string? IssueDescription { get; private set; }
+    public List<InspectionCertificate> Certificates { get; private set; } = [];
 
     public static RequestItem Create(
         string name,
@@ -29,7 +32,8 @@ public sealed class RequestItem
         string? manufacturer = null,
         string? model = null,
         string? prNumber = null,
-        string? location = null)
+        string? location = null,
+        string? issueDescription = null)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Item name is required.", nameof(name));
         if (quantity < 1) throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be at least one.");
@@ -48,7 +52,8 @@ public sealed class RequestItem
             PrNumber = prNumber?.Trim(),
             Location = location?.Trim(),
             Quantity = quantity,
-            SerialNumber = serialNumber?.Trim()
+            SerialNumber = serialNumber?.Trim(),
+            IssueDescription = string.IsNullOrWhiteSpace(issueDescription) ? null : issueDescription.Trim()
         };
     }
 

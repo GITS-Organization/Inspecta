@@ -22,7 +22,9 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
     {
         IQueryable<InspectionRequest> query = dbContext.Requests
             .Include(item => item.Items)
-            .Include(item => item.History);
+            .Include(item => item.Certificates)
+            .Include(item => item.History)
+            .AsSplitQuery();
         if (!tracking) query = query.AsNoTracking();
         return query.SingleOrDefaultAsync(item => item.Id == requestId, cancellationToken);
     }
@@ -32,6 +34,8 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
         var query = dbContext.Requests.AsNoTracking()
             .Include(item => item.Items)
             .Include(item => item.History)
+            .Include(item => item.Certificates)
+            .AsSplitQuery()
             .AsQueryable();
         if (inspectorId is Guid id) query = query.Where(item => item.InspectorId == id);
         return await query.OrderByDescending(item => item.ReceivedAt).ToListAsync(cancellationToken);
@@ -39,4 +43,10 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
 
     public Task<bool> ClientExistsAsync(Guid clientId, CancellationToken cancellationToken = default) =>
         dbContext.Clients.AnyAsync(client => client.Id == clientId && client.ArchivedAt == null, cancellationToken);
+
+    public Task<Guid?> GetClientManagerIdAsync(Guid clientId, CancellationToken cancellationToken = default) =>
+        dbContext.Clients
+            .Where(client => client.Id == clientId)
+            .Select(client => client.ManagerId)
+            .SingleOrDefaultAsync(cancellationToken);
 }

@@ -4,8 +4,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Inspecta.Infrastructure.Data;
 
-public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> options) : DbContext(options)
+public sealed class InspectaDbContext(
+    DbContextOptions<InspectaDbContext> options,
+    CurrentTenant currentTenant) : DbContext(options)
 {
+    private bool IsTenantAdmin => currentTenant.IsAdmin;
+    private Guid? TenantId => currentTenant.TenantId;
+
     public DbSet<AppUser> Users => Set<AppUser>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Client> Clients => Set<Client>();
@@ -52,13 +57,22 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
 
         var client = modelBuilder.Entity<Client>();
         client.HasKey(item => item.Id);
+        client.HasIndex(item => item.ManagerId);
+        client.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
+        client.HasOne<AppUser>().WithMany().HasForeignKey(item => item.ManagerId).OnDelete(DeleteBehavior.Restrict);
         client.Property(item => item.Name).HasMaxLength(200).IsRequired();
         client.HasMany(item => item.Contacts).WithOne().HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.Cascade);
+        client.HasMany(item => item.Requests).WithOne(item => item.Client)
+            .HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.Restrict);
 
         var contact = modelBuilder.Entity<ClientContact>();
         contact.HasKey(item => item.Id);
+        contact.HasQueryFilter(value => IsTenantAdmin ||
+            TenantId != null && value.Client != null && value.Client.ManagerId == TenantId);
         contact.Property(item => item.Name).HasMaxLength(200).IsRequired();
         contact.Property(item => item.Email).HasMaxLength(320);
+        contact.HasOne(value => value.Client).WithMany(value => value.Contacts)
+            .HasForeignKey(value => value.ClientId).OnDelete(DeleteBehavior.Cascade);
 
         var item = modelBuilder.Entity<Item>();
         item.ToTable("Items");
@@ -71,42 +85,63 @@ public sealed class InspectaDbContext(DbContextOptions<InspectaDbContext> option
         item.Property(item => item.DatesJson).IsRequired();
         item.Property(item => item.ChecklistJson).IsRequired();
         item.Property(item => item.AttachmentsJson).IsRequired();
-        item.HasOne<Client>().WithMany().HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.Restrict);
+        item.HasQueryFilter(value => IsTenantAdmin ||
+            TenantId != null && value.Client != null && value.Client.ManagerId == TenantId);
+        item.HasOne(value => value.Client).WithMany().HasForeignKey(value => value.ClientId).OnDelete(DeleteBehavior.Restrict);
 
         var request = modelBuilder.Entity<InspectionRequest>();
         request.HasKey(item => item.Id);
+        request.HasIndex(item => item.ManagerId);
+        request.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
+        request.HasOne<AppUser>().WithMany().HasForeignKey(item => item.ManagerId).OnDelete(DeleteBehavior.Restrict);
         request.Property(item => item.ClientName).HasMaxLength(200).IsRequired();
         request.Property(item => item.Location).HasMaxLength(500).IsRequired();
         request.Property(item => item.Status).HasConversion<string>().HasMaxLength(32);
         request.Property(item => item.Source).HasConversion<string>().HasMaxLength(24);
-        request.HasMany(item => item.Items).WithOne().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
-        request.HasMany(item => item.History).WithOne().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
-        request.HasOne<Client>().WithMany().HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.Restrict);
+        request.HasMany(item => item.Items).WithOne(item => item.Request).HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
+        request.HasMany(item => item.Certificates).WithOne(item => item.Request)
+            .HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
+        request.HasMany(item => item.History).WithOne(item => item.Request).HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
+        request.HasOne(item => item.Client).WithMany(item => item.Requests)
+            .HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.Restrict);
 
         var requestItem = modelBuilder.Entity<RequestItem>();
         requestItem.HasKey(item => item.Id);
+        requestItem.HasQueryFilter(value => IsTenantAdmin ||
+            TenantId != null && value.Request != null && value.Request.ManagerId == TenantId);
         requestItem.Property(item => item.Name).HasMaxLength(200).IsRequired();
+        requestItem.HasOne(value => value.Request).WithMany(value => value.Items)
+            .HasForeignKey(value => value.RequestId).OnDelete(DeleteBehavior.Cascade);
         requestItem.HasOne<Item>().WithMany().HasForeignKey(item => item.EquipmentId).OnDelete(DeleteBehavior.SetNull);
+        requestItem.HasMany(item => item.Certificates).WithOne(item => item.RequestItem)
+            .HasForeignKey(item => item.RequestItemId).OnDelete(DeleteBehavior.Restrict);
 
         var history = modelBuilder.Entity<JobStatusHistory>();
         history.HasKey(item => item.Id);
+        history.HasQueryFilter(value => IsTenantAdmin ||
+            TenantId != null && value.Request != null && value.Request.ManagerId == TenantId);
         history.Property(item => item.FromStatus).HasConversion<string>();
         history.Property(item => item.ToStatus).HasConversion<string>();
         history.HasIndex(item => new { item.RequestId, item.OccurredAt });
+        history.HasOne(value => value.Request).WithMany(value => value.History)
+            .HasForeignKey(value => value.RequestId).OnDelete(DeleteBehavior.Cascade);
 
         var quote = modelBuilder.Entity<Quote>();
         quote.HasKey(item => item.Id);
+        quote.HasQueryFilter(item => IsTenantAdmin ||
+            TenantId != null && item.Request != null && item.Request.ManagerId == TenantId);
         quote.Property(item => item.Status).HasConversion<string>().HasMaxLength(24);
         quote.Property(item => item.Type).HasConversion<string>().HasMaxLength(24);
         quote.HasIndex(item => new { item.RequestId, item.Version }).IsUnique();
-        quote.HasOne<InspectionRequest>().WithMany().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
+        quote.HasOne(item => item.Request).WithMany().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
 
         var certificate = modelBuilder.Entity<InspectionCertificate>();
         certificate.HasKey(item => item.Id);
-        certificate.HasIndex(item => item.RequestId).IsUnique();
+        certificate.HasQueryFilter(item => IsTenantAdmin ||
+            TenantId != null && item.Request != null && item.Request.ManagerId == TenantId);
+        certificate.HasIndex(item => new { item.RequestId, item.RequestItemId }).IsUnique();
         certificate.Property(item => item.FunctionCheck).HasConversion<string>().HasMaxLength(24);
         certificate.Property(item => item.FinalResult).HasConversion<string>().HasMaxLength(32);
-        certificate.HasOne<InspectionRequest>().WithOne().HasForeignKey<InspectionCertificate>(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
 
     }
 }
