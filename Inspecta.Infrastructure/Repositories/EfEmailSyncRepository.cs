@@ -10,7 +10,7 @@ namespace Inspecta.Infrastructure.Repositories;
 public sealed class EfEmailSyncRepository(InspectaDbContext dbContext) : IEmailSyncRepository
 {
     private const string SourceUidIndexName =
-        "IX_QuotationDrafts_CoordinatorId_SourceUidValidity_SourceUid";
+        "IX_RequestEmails_CoordinatorId_MailboxUidValidity_MailboxUid";
 
     public async Task<IReadOnlyList<CoordinatorEmailConfig>> ListActiveConfigsAsync(
         CancellationToken cancellationToken = default) =>
@@ -33,11 +33,22 @@ public sealed class EfEmailSyncRepository(InspectaDbContext dbContext) : IEmailS
             select config)
             .ToListAsync(cancellationToken);
 
-    public async Task<bool> SaveDraftIfNewAsync(
-        QuotationDraft draft,
+    public async Task<bool> SaveRequestIfNewAsync(
+        InspectionRequest request,
         CancellationToken cancellationToken = default)
     {
-        dbContext.QuotationDrafts.Add(draft);
+        var email = request.Email ?? throw new ArgumentException("The request has no source email.", nameof(request));
+
+        // Messages already imported as quotation drafts before requests replaced them are not imported twice.
+        var legacyUid = (uint)email.MailboxUid;
+        if (await dbContext.QuotationDrafts.IgnoreQueryFilters().AnyAsync(
+                draft => draft.CoordinatorId == email.CoordinatorId &&
+                         draft.SourceUidValidity == email.MailboxUidValidity &&
+                         draft.SourceUid == legacyUid,
+                cancellationToken))
+            return false;
+
+        dbContext.Requests.Add(request);
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
@@ -50,8 +61,14 @@ public sealed class EfEmailSyncRepository(InspectaDbContext dbContext) : IEmailS
                 ConstraintName: SourceUidIndexName
             })
         {
-            dbContext.Entry(draft).State = EntityState.Detached;
+            dbContext.ChangeTracker.Clear();
             return false;
+        }
+        catch
+        {
+            // A failed request must not stay tracked, or it would be re-saved with the next message.
+            dbContext.ChangeTracker.Clear();
+            throw;
         }
     }
 }

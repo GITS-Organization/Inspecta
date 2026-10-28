@@ -3,6 +3,10 @@ using Inspecta.Domain.Enums;
 namespace Inspecta.Application.Contracts.Requests;
 
 /// <summary>Inspection request with its items and status history.</summary>
+/// <remarks>
+/// Requests created from email start with empty <c>ClientName</c>, <c>Location</c> and <c>Items</c>;
+/// <c>MissingFields</c> lists what the coordinator still has to fill in before a quote can be drafted.
+/// </remarks>
 public sealed record RequestResponse(
     Guid Id,
     Guid? ClientId,
@@ -19,7 +23,13 @@ public sealed record RequestResponse(
     string? EmailFrom,
     string? EmailPreview,
     IReadOnlyList<RequestItemResponse> Items,
-    IReadOnlyList<RequestHistoryResponse> History);
+    IReadOnlyList<RequestHistoryResponse> History,
+    Guid? ManagerId,
+    string? EmailFromName,
+    string? AccessNotes,
+    IReadOnlyList<string> MissingFields,
+    bool CanEditDetails,
+    DateTimeOffset UpdatedAt);
 
 /// <summary>Equipment requested for inspection.</summary>
 public sealed record RequestItemResponse(
@@ -30,7 +40,8 @@ public sealed record RequestItemResponse(
     string? Capacity,
     int Quantity,
     string? SerialNumber,
-    string? IssueDescription);
+    string? IssueDescription,
+    string? Location = null);
 
 /// <summary>One recorded request status transition.</summary>
 public sealed record RequestHistoryResponse(JobStatus? From, JobStatus To, Guid ActorId, DateTimeOffset At, string? Note);

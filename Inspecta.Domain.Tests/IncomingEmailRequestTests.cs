@@ -117,8 +117,15 @@ public sealed class IncomingEmailRequestTests
         public Task<InspectionRequest?> GetByIdAsync(Guid requestId, bool tracking, CancellationToken cancellationToken = default) =>
             Task.FromResult(SavedRequest?.Id == requestId ? SavedRequest : null);
 
-        public Task<IReadOnlyList<InspectionRequest>> ListAsync(Guid? inspectorId, CancellationToken cancellationToken = default) =>
+        public Task<IReadOnlyList<InspectionRequest>> ListAsync(RequestListFilter filter, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<InspectionRequest>>([]);
+
+        public Task AddItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task RemoveItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task<RequestEmail?> GetEmailAsync(Guid requestId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<RequestEmail?>(null);
 
         public Task<bool> ClientExistsAsync(Guid clientId, CancellationToken cancellationToken = default) =>
             Task.FromResult(true);

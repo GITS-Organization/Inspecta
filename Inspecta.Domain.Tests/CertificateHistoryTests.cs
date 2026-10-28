@@ -113,9 +113,16 @@ public sealed class CertificateHistoryTests
             Task.FromResult<InspectionRequest?>(request.Id == requestId ? request : null);
 
         public Task<IReadOnlyList<InspectionRequest>> ListAsync(
-            Guid? inspectorId,
+            RequestListFilter filter,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<InspectionRequest>>([request]);
+
+        public Task AddItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task RemoveItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task<RequestEmail?> GetEmailAsync(Guid requestId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<RequestEmail?>(null);
 
         public Task<bool> ClientExistsAsync(Guid clientId, CancellationToken cancellationToken = default) =>
             Task.FromResult(true);

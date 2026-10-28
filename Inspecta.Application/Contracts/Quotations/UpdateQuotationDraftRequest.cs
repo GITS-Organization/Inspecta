@@ -13,4 +13,8 @@ public sealed record UpdateQuotationDraftRequest
 
     [MaxLength(4000)]
     public string? MachineDetails { get; init; }
+
+    public long? AmountPiastres { get; init; }
+
+    public DateTimeOffset? ValidUntil { get; init; }
 }

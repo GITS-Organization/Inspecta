@@ -30,6 +30,7 @@ public sealed class InspectionRequest
     public string? Subject { get; private set; }
     public string? EmailThreadId { get; private set; }
     public string? EmailFrom { get; private set; }
+    public string? EmailFromName { get; private set; }
     public string? EmailPreview { get; private set; }
     public RequestSource Source { get; private set; } = RequestSource.Manual;
     public bool HasUnreadClientReply { get; private set; }
@@ -50,6 +51,7 @@ public sealed class InspectionRequest
     public List<InspectionCertificate> Certificates { get; private set; } = [];
     public List<RequestItem> Items { get; private set; } = [];
     public List<JobStatusHistory> History { get; private set; } = [];
+    public RequestEmail? Email { get; private set; }
 
     public static InspectionRequest Create(
         string clientName,
@@ -107,14 +109,158 @@ public sealed class InspectionRequest
         return request;
     }
 
+    /// <summary>
+    /// Creates a request from a mailbox message. Client, location and items start empty and are
+    /// completed by the owning coordinator before a quote can be drafted.
+    /// </summary>
+    public static InspectionRequest CreateFromEmail(
+        Guid managerId,
+        Guid coordinatorId,
+        IncomingEmail email,
+        DateTimeOffset? receivedAt = null)
+    {
+        if (managerId == Guid.Empty) throw new ArgumentException("Manager is required.", nameof(managerId));
+        if (coordinatorId == Guid.Empty) throw new ArgumentException("Coordinator is required.", nameof(coordinatorId));
+        ArgumentNullException.ThrowIfNull(email);
+
+        var now = DateTimeOffset.UtcNow;
+        var received = receivedAt ?? now;
+        var subject = string.IsNullOrWhiteSpace(email.Subject) ? null : email.Subject.Trim();
+        var request = new InspectionRequest
+        {
+            Id = Guid.NewGuid(),
+            ManagerId = managerId,
+            CoordinatorId = coordinatorId,
+            Subject = subject is { Length: > 998 } ? subject[..998] : subject,
+            EmailThreadId = BuildThreadId(email),
+            EmailFrom = string.IsNullOrWhiteSpace(email.FromAddress) ? null : email.FromAddress.Trim(),
+            EmailFromName = string.IsNullOrWhiteSpace(email.FromName) ? null : email.FromName.Trim(),
+            EmailPreview = RequestEmail.BuildPreview(email.TextBody, email.HtmlBody),
+            Source = RequestSource.Email,
+            ReceivedAt = email.SentAt ?? received,
+            Status = JobStatus.RequestReceived,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        request.Email = RequestEmail.Create(
+            request.Id,
+            coordinatorId,
+            email.MailboxUidValidity,
+            email.MailboxUid,
+            email.TextBody,
+            email.HtmlBody,
+            email.FromAddress,
+            email.FromName,
+            email.Subject,
+            email.To,
+            email.Cc,
+            email.Bcc,
+            email.ReplyTo,
+            email.Attachments,
+            email.MessageId,
+            email.InReplyTo,
+            email.References,
+            email.SentAt,
+            received);
+        request.History.Add(JobStatusHistory.Create(
+            request.Id, null, JobStatus.RequestReceived, coordinatorId, now, "Received by email"));
+        return request;
+    }
+
+    /// <summary>Names of the fields that must still be filled in before a quote can be drafted.</summary>
+    public IReadOnlyList<string> GetMissingFields()
+    {
+        var missing = new List<string>();
+        if (string.IsNullOrWhiteSpace(ClientName)) missing.Add("clientName");
+        if (string.IsNullOrWhiteSpace(Location)) missing.Add("location");
+        if (Items.Count == 0) missing.Add("items");
+        return missing;
+    }
+
+    public bool CanEditDetails => Status is JobStatus.RequestReceived or JobStatus.QuoteDraft;
+
     public void SetClient(Guid clientId)
     {
         if (clientId == Guid.Empty) throw new ArgumentException("Client is required.", nameof(clientId));
-        if (Status is not (JobStatus.RequestReceived or JobStatus.QuoteDraft))
+        if (!CanEditDetails)
             throw new InvalidOperationException("Client can only be matched before a quote is sent.");
 
         ClientId = clientId;
         UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void UpdateDetails(
+        string? clientName,
+        string? location,
+        Guid? clientId,
+        DateTimeOffset? preferredDate,
+        string? accessNotes)
+    {
+        EnsureEditable();
+        if (clientId == Guid.Empty) throw new ArgumentException("Client id cannot be empty.", nameof(clientId));
+
+        ClientName = clientName?.Trim() ?? string.Empty;
+        Location = location?.Trim() ?? string.Empty;
+        ClientId = clientId;
+        PreferredDate = preferredDate;
+        AccessNotes = string.IsNullOrWhiteSpace(accessNotes) ? null : accessNotes.Trim();
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public RequestItem AddItem(RequestItem item)
+    {
+        EnsureEditable();
+        ArgumentNullException.ThrowIfNull(item);
+        Items.Add(item);
+        UpdatedAt = DateTimeOffset.UtcNow;
+        return item;
+    }
+
+    public RequestItem UpdateItem(
+        Guid itemId,
+        string name,
+        int quantity,
+        Guid? equipmentId,
+        string? type,
+        string? capacity,
+        string? serialNumber,
+        string? location,
+        string? issueDescription)
+    {
+        EnsureEditable();
+        var item = FindItem(itemId);
+        item.Update(name, quantity, equipmentId, type, capacity, serialNumber, location, issueDescription);
+        UpdatedAt = DateTimeOffset.UtcNow;
+        return item;
+    }
+
+    public RequestItem RemoveItem(Guid itemId)
+    {
+        EnsureEditable();
+        var item = FindItem(itemId);
+        Items.Remove(item);
+        UpdatedAt = DateTimeOffset.UtcNow;
+        return item;
+    }
+
+    private RequestItem FindItem(Guid itemId) =>
+        Items.SingleOrDefault(item => item.Id == itemId)
+            ?? throw new KeyNotFoundException("Request item was not found.");
+
+    private void EnsureEditable()
+    {
+        if (!CanEditDetails)
+            throw new InvalidOperationException(
+                $"Request details can only be edited while the request is {JobStatus.RequestReceived} or {JobStatus.QuoteDraft}.");
+    }
+
+    private static string? BuildThreadId(IncomingEmail email)
+    {
+        var root = email.References?
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault();
+        var threadId = root ?? email.InReplyTo ?? email.MessageId;
+        return threadId is { Length: > 256 } ? threadId[..256] : threadId;
     }
 
     public void AssignInspector(Guid inspectorId, DateTimeOffset scheduledAt, Guid coordinatorId, string? note = null)
@@ -136,6 +282,9 @@ public sealed class InspectionRequest
         if (!AllowedTransitions.TryGetValue(Status, out var allowed) || !allowed.Contains(nextStatus))
             throw new InvalidOperationException($"Transition from {Status} to {nextStatus} is not allowed.");
 
+        if (nextStatus == JobStatus.QuoteDraft && GetMissingFields() is { Count: > 0 } missing)
+            throw new InvalidOperationException(
+                $"Complete the request before drafting a quote. Missing: {string.Join(", ", missing)}.");
         if (nextStatus == JobStatus.QuoteSent && (ClientId is null || Items.Count == 0 || string.IsNullOrWhiteSpace(Location)))
             throw new InvalidOperationException("A matched client, at least one item, and a location are required before quoting.");
         if (nextStatus == JobStatus.CertificateSubmitted && InspectorId is null)

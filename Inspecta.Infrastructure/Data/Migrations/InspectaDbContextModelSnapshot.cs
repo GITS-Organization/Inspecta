@@ -361,6 +361,10 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<string>("EmailFrom")
                         .HasColumnType("text");
 
+                    b.Property<string>("EmailFromName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("EmailPreview")
                         .HasColumnType("text");
 
@@ -415,6 +419,8 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
+
+                    b.HasIndex("CoordinatorId");
 
                     b.HasIndex("ManagerId");
 
@@ -564,6 +570,18 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<long?>("AmountPiastres")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("AttachmentMetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BccAddressesJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CcAddressesJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("ClientName")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -574,7 +592,21 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("EmailDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EmailHtmlBody")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmailMessageId")
+                        .HasMaxLength(998)
+                        .HasColumnType("character varying(998)");
+
                     b.Property<string>("EmailSubject")
+                        .HasMaxLength(998)
+                        .HasColumnType("character varying(998)");
+
+                    b.Property<string>("InReplyTo")
                         .HasMaxLength(998)
                         .HasColumnType("character varying(998)");
 
@@ -590,9 +622,19 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("References")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReplyToAddressesJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("SenderEmail")
                         .HasMaxLength(320)
                         .HasColumnType("character varying(320)");
+
+                    b.Property<string>("SenderName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<long>("SourceUid")
                         .HasColumnType("bigint");
@@ -609,6 +651,12 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ToAddressesJson")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("ValidUntil")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -740,6 +788,87 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasIndex("UserId", "FamilyId");
 
                     b.ToTable("RefreshTokens");
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.RequestEmail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AttachmentMetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BccAddressesJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CcAddressesJson")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("CoordinatorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FromAddress")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("FromName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("HtmlBody")
+                        .HasColumnType("text");
+
+                    b.Property<string>("InReplyTo")
+                        .HasMaxLength(998)
+                        .HasColumnType("character varying(998)");
+
+                    b.Property<long>("MailboxUid")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("MailboxUidValidity")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("MessageId")
+                        .HasMaxLength(998)
+                        .HasColumnType("character varying(998)");
+
+                    b.Property<DateTimeOffset>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("References")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReplyToAddressesJson")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(998)
+                        .HasColumnType("character varying(998)");
+
+                    b.Property<string>("TextBody")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ToAddressesJson")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestId")
+                        .IsUnique();
+
+                    b.HasIndex("CoordinatorId", "MailboxUidValidity", "MailboxUid")
+                        .IsUnique();
+
+                    b.ToTable("RequestEmails");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.RequestItem", b =>
@@ -902,7 +1031,7 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("Inspecta.Domain.Entities.QuotationDraft", b =>
                 {
-                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
+                    b.HasOne("Inspecta.Domain.Entities.AppUser", "Coordinator")
                         .WithMany()
                         .HasForeignKey("CoordinatorId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -913,6 +1042,8 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Coordinator");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.Quote", b =>
@@ -935,6 +1066,23 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.RequestEmail", b =>
+                {
+                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("CoordinatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Inspecta.Domain.Entities.InspectionRequest", "Request")
+                        .WithOne("Email")
+                        .HasForeignKey("Inspecta.Domain.Entities.RequestEmail", "RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Request");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.RequestItem", b =>
@@ -968,6 +1116,8 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.InspectionRequest", b =>
                 {
                     b.Navigation("Certificates");
+
+                    b.Navigation("Email");
 
                     b.Navigation("History");
 

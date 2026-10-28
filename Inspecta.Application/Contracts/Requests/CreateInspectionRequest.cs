@@ -40,6 +40,10 @@ public sealed record CreateRequestItem
     public string? Type { get; init; }
     public string? Capacity { get; init; }
     public string? SerialNumber { get; init; }
+
+    /// <summary>Where the equipment sits on site, when different from the client location.</summary>
+    [MaxLength(500)]
+    public string? Location { get; init; }
     [MaxLength(4000)]
     public string? IssueDescription { get; init; }
 }

@@ -57,26 +57,7 @@ public sealed class ClientService(
         return new ClientHistoryResponse(
             clientId,
             requests.Select(request => new ClientRequestHistoryResponse(
-                new RequestResponse(
-                    request.Id,
-                    request.ClientId,
-                    request.ClientName,
-                    request.Location,
-                    request.Subject,
-                    request.ReceivedAt,
-                    request.PreferredDate,
-                    request.Status,
-                    request.CoordinatorId,
-                    request.InspectorId,
-                    request.ScheduledAt,
-                    request.Source,
-                    request.EmailFrom,
-                    request.EmailPreview,
-                    request.Items.Select(item => new RequestItemResponse(
-                        item.Id, item.EquipmentId, item.Name, item.Type, item.Capacity, item.Quantity, item.SerialNumber, item.IssueDescription)).ToArray(),
-                    request.History.OrderBy(entry => entry.OccurredAt)
-                        .Select(entry => new RequestHistoryResponse(
-                            entry.FromStatus, entry.ToStatus, entry.ActorId, entry.OccurredAt, entry.Note)).ToArray()),
+                RequestResponseMapper.Map(request),
                 request.Certificates.Select(CertificateResponseMapper.Map).ToArray()))
                 .ToArray());
     }

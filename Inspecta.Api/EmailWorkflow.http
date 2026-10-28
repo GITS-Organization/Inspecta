@@ -1,8 +1,10 @@
 @baseUrl = http://localhost:5238
 @accessToken = replace-with-coordinator-access-token
 @managerToken = replace-with-manager-access-token
+@adminToken = replace-with-admin-access-token
 @coordinatorId = replace-with-coordinator-id
 @draftId = replace-with-draft-id
+@managerId = replace-with-manager-id
 
 ### Create a coordinator with IMAP access
 POST {{baseUrl}}/api/v1/manager/team
@@ -36,9 +38,92 @@ Content-Type: application/json
   "useSsl": true
 }
 
-### List this coordinator's quotation drafts
+@requestId = replace-with-request-id
+@itemId = replace-with-request-item-id
+
+### List requests (a coordinator sees manual requests of the team and the email requests of their own mailbox)
+GET {{baseUrl}}/api/v1/requests
+Authorization: Bearer {{accessToken}}
+
+### Technical Manager: all requests of the team
+GET {{baseUrl}}/api/v1/requests
+Authorization: Bearer {{managerToken}}
+
+### Admin: requests of one technical manager
+GET {{baseUrl}}/api/v1/requests?managerId={{managerId}}
+Authorization: Bearer {{adminToken}}
+
+### Get one request (check missingFields to see what is still empty)
+GET {{baseUrl}}/api/v1/requests/{{requestId}}
+Authorization: Bearer {{accessToken}}
+
+### Read the original email of an email request ("Read full email")
+GET {{baseUrl}}/api/v1/requests/{{requestId}}/email
+Authorization: Bearer {{accessToken}}
+
+### Complete client, location, preferred date and access notes (owning coordinator only)
+PUT {{baseUrl}}/api/v1/requests/{{requestId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "clientName": "Al Noor Heavy Industries Ltd.",
+  "location": "Industrial City, Saudi Arabia",
+  "preferredDate": "2026-11-09T00:00:00Z",
+  "accessNotes": "Compressor Room, shutdown window Thursday evenings. Vessels depressurised by maintenance."
+}
+
+### Add an equipment item
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/items
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Air receiver pressure vessel - 2,000 L / 10 bar",
+  "type": "Air receiver pressure vessel",
+  "capacity": "2,000 L / 10 bar",
+  "quantity": 3,
+  "location": "Industrial City, Saudi Arabia"
+}
+
+### Replace an equipment item
+PUT {{baseUrl}}/api/v1/requests/{{requestId}}/items/{{itemId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Air receiver pressure vessel - 2,000 L / 10 bar",
+  "type": "Air receiver pressure vessel",
+  "capacity": "2,000 L / 10 bar",
+  "quantity": 2,
+  "location": "Compressor room"
+}
+
+### Remove an equipment item
+DELETE {{baseUrl}}/api/v1/requests/{{requestId}}/items/{{itemId}}
+Authorization: Bearer {{accessToken}}
+
+### Move a completed request to QuoteDraft (rejected with 409 while missingFields is not empty)
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/transitions
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "status": "quote_draft"
+}
+
+### Legacy: quotation drafts created from mail before requests replaced them (read and edit only, no new ones are created)
+### List this coordinator's legacy quotation drafts
 GET {{baseUrl}}/api/v1/quotation-drafts
 Authorization: Bearer {{accessToken}}
+
+### List all drafts in a Technical Manager's team
+GET {{baseUrl}}/api/v1/quotation-drafts
+Authorization: Bearer {{managerToken}}
+
+### Admin: list drafts for one technical manager
+GET {{baseUrl}}/api/v1/quotation-drafts?managerId={{managerId}}
+Authorization: Bearer {{adminToken}}
 
 ### Update a quotation draft
 PUT {{baseUrl}}/api/v1/quotation-drafts/{{draftId}}
@@ -48,5 +133,34 @@ Content-Type: application/json
 {
   "clientName": "Acme Industries",
   "location": "Cairo",
-  "machineDetails": "Model: X-100; Serial: SN-42; Issue: Motor vibration"
+  "machineDetails": "Model: X-100; Serial: SN-42; Issue: Motor vibration",
+  "amountPiastres": 25000000,
+  "validUntil": "2026-12-01T00:00:00Z"
+}
+
+### Counter-offer on a draft
+POST {{baseUrl}}/api/v1/quotation-drafts/{{draftId}}/decision
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "status": "counter_offered"
+}
+
+### Accept a quotation request
+POST {{baseUrl}}/api/v1/quotation-drafts/{{draftId}}/decision
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "status": "accepted"
+}
+
+### Reject a quotation request
+POST {{baseUrl}}/api/v1/quotation-drafts/{{draftId}}/decision
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "status": "rejected"
 }

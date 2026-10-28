@@ -18,6 +18,7 @@ public sealed class InspectaDbContext(
     public DbSet<Item> Items => Set<Item>();
     public DbSet<InspectionRequest> Requests => Set<InspectionRequest>();
     public DbSet<RequestItem> RequestItems => Set<RequestItem>();
+    public DbSet<RequestEmail> RequestEmails => Set<RequestEmail>();
     public DbSet<JobStatusHistory> JobStatusHistory => Set<JobStatusHistory>();
     public DbSet<Quote> Quotes => Set<Quote>();
     public DbSet<InspectionCertificate> Certificates => Set<InspectionCertificate>();
@@ -94,6 +95,10 @@ public sealed class InspectaDbContext(
         var request = modelBuilder.Entity<InspectionRequest>();
         request.HasKey(item => item.Id);
         request.HasIndex(item => item.ManagerId);
+        request.HasIndex(item => item.CoordinatorId);
+        request.Property(item => item.EmailFromName).HasMaxLength(500);
+        request.HasOne(item => item.Email).WithOne(item => item.Request)
+            .HasForeignKey<RequestEmail>(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
         request.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
         request.HasOne<AppUser>().WithMany().HasForeignKey(item => item.ManagerId).OnDelete(DeleteBehavior.Restrict);
         request.Property(item => item.ClientName).HasMaxLength(200).IsRequired();
@@ -117,6 +122,20 @@ public sealed class InspectaDbContext(
         requestItem.HasOne<Item>().WithMany().HasForeignKey(item => item.EquipmentId).OnDelete(DeleteBehavior.SetNull);
         requestItem.HasMany(item => item.Certificates).WithOne(item => item.RequestItem)
             .HasForeignKey(item => item.RequestItemId).OnDelete(DeleteBehavior.Restrict);
+
+        var requestEmail = modelBuilder.Entity<RequestEmail>();
+        requestEmail.HasKey(item => item.Id);
+        requestEmail.HasIndex(item => item.RequestId).IsUnique();
+        requestEmail.HasIndex(item => new { item.CoordinatorId, item.MailboxUidValidity, item.MailboxUid }).IsUnique();
+        requestEmail.HasQueryFilter(value => IsTenantAdmin ||
+            TenantId != null && value.Request != null && value.Request.ManagerId == TenantId);
+        requestEmail.HasOne<AppUser>().WithMany().HasForeignKey(item => item.CoordinatorId).OnDelete(DeleteBehavior.Restrict);
+        requestEmail.Property(item => item.MailboxUidValidity).HasMaxLength(64).IsRequired();
+        requestEmail.Property(item => item.MessageId).HasMaxLength(998);
+        requestEmail.Property(item => item.InReplyTo).HasMaxLength(998);
+        requestEmail.Property(item => item.FromAddress).HasMaxLength(320);
+        requestEmail.Property(item => item.FromName).HasMaxLength(500);
+        requestEmail.Property(item => item.Subject).HasMaxLength(998);
 
         var history = modelBuilder.Entity<JobStatusHistory>();
         history.HasKey(item => item.Id);
@@ -174,12 +193,24 @@ public sealed class InspectaDbContext(
         quotationDraft.Property(item => item.ClientName).HasMaxLength(200);
         quotationDraft.Property(item => item.Location).HasMaxLength(500);
         quotationDraft.Property(item => item.MachineDetails).HasMaxLength(4000);
+        quotationDraft.Property(item => item.AmountPiastres);
+        quotationDraft.Property(item => item.ValidUntil);
         quotationDraft.Property(item => item.RawEmailBody).IsRequired();
+        quotationDraft.Property(item => item.EmailHtmlBody);
         quotationDraft.Property(item => item.SenderEmail).HasMaxLength(320);
+        quotationDraft.Property(item => item.SenderName).HasMaxLength(500);
         quotationDraft.Property(item => item.EmailSubject).HasMaxLength(998);
+        quotationDraft.Property(item => item.ToAddressesJson);
+        quotationDraft.Property(item => item.CcAddressesJson);
+        quotationDraft.Property(item => item.BccAddressesJson);
+        quotationDraft.Property(item => item.ReplyToAddressesJson);
+        quotationDraft.Property(item => item.AttachmentMetadataJson);
+        quotationDraft.Property(item => item.EmailMessageId).HasMaxLength(998);
+        quotationDraft.Property(item => item.InReplyTo).HasMaxLength(998);
+        quotationDraft.Property(item => item.References);
         quotationDraft.Property(item => item.Status).HasConversion<string>().HasMaxLength(24);
         quotationDraft.Property(item => item.SourceUidValidity).HasMaxLength(64).IsRequired();
-        quotationDraft.HasOne<AppUser>()
+        quotationDraft.HasOne(item => item.Coordinator)
             .WithMany()
             .HasForeignKey(item => item.CoordinatorId)
             .OnDelete(DeleteBehavior.Restrict);

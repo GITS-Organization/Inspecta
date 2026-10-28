@@ -57,6 +57,30 @@ public sealed class RequestItem
         };
     }
 
+    public void Update(
+        string name,
+        int quantity,
+        Guid? equipmentId,
+        string? type,
+        string? capacity,
+        string? serialNumber,
+        string? location,
+        string? issueDescription)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Item name is required.", nameof(name));
+        if (quantity < 1) throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be at least one.");
+        if (equipmentId == Guid.Empty) throw new ArgumentException("Equipment id cannot be empty.", nameof(equipmentId));
+
+        Name = name.Trim();
+        Quantity = quantity;
+        EquipmentId = equipmentId;
+        Type = type?.Trim();
+        Capacity = capacity?.Trim();
+        SerialNumber = serialNumber?.Trim();
+        Location = location?.Trim();
+        IssueDescription = string.IsNullOrWhiteSpace(issueDescription) ? null : issueDescription.Trim();
+    }
+
     public void MatchEquipment(Guid equipmentId)
     {
         if (equipmentId == Guid.Empty)

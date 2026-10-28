@@ -1,5 +1,6 @@
 using Inspecta.Application.Interfaces;
 using Inspecta.Domain.Entities;
+using Inspecta.Domain.Enums;
 using Inspecta.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +19,19 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    // New children carry client-generated keys, so they are added explicitly instead of relying on change detection.
+    public async Task AddItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default)
+    {
+        dbContext.RequestItems.Add(item);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task RemoveItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default)
+    {
+        dbContext.RequestItems.Remove(item);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public Task<InspectionRequest?> GetByIdAsync(Guid requestId, bool tracking, CancellationToken cancellationToken = default)
     {
         IQueryable<InspectionRequest> query = dbContext.Requests
@@ -29,7 +43,11 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
         return query.SingleOrDefaultAsync(item => item.Id == requestId, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<InspectionRequest>> ListAsync(Guid? inspectorId, CancellationToken cancellationToken = default)
+    public Task<RequestEmail?> GetEmailAsync(Guid requestId, CancellationToken cancellationToken = default) =>
+        dbContext.RequestEmails.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.RequestId == requestId, cancellationToken);
+
+    public async Task<IReadOnlyList<InspectionRequest>> ListAsync(RequestListFilter filter, CancellationToken cancellationToken = default)
     {
         var query = dbContext.Requests.AsNoTracking()
             .Include(item => item.Items)
@@ -37,7 +55,10 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
             .Include(item => item.Certificates)
             .AsSplitQuery()
             .AsQueryable();
-        if (inspectorId is Guid id) query = query.Where(item => item.InspectorId == id);
+        if (filter.InspectorId is Guid inspectorId) query = query.Where(item => item.InspectorId == inspectorId);
+        if (filter.CoordinatorId is Guid coordinatorId)
+            query = query.Where(item => item.Source != RequestSource.Email || item.CoordinatorId == coordinatorId);
+        if (filter.ManagerId is Guid managerId) query = query.Where(item => item.ManagerId == managerId);
         return await query.OrderByDescending(item => item.ReceivedAt).ToListAsync(cancellationToken);
     }
 

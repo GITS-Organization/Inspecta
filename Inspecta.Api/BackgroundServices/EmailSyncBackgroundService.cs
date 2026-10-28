@@ -68,7 +68,6 @@ public sealed class EmailSyncBackgroundService(
             await using var scope = scopeFactory.CreateAsyncScope();
             var services = scope.ServiceProvider;
             var protector = services.GetRequiredService<ISecretProtector>();
-            var parser = services.GetRequiredService<IEmailParserService>();
             var repository = services.GetRequiredService<IEmailSyncRepository>();
             var password = protector.Unprotect(config.EncryptedPassword);
 
@@ -87,28 +86,31 @@ public sealed class EmailSyncBackgroundService(
             foreach (var uid in unreadUids.OrderBy(value => value.Id))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var message = await inbox.GetMessageAsync(uid, cancellationToken);
-                var rawBody = message.TextBody ?? message.HtmlBody;
-                if (string.IsNullOrWhiteSpace(rawBody))
-                    rawBody = message.Subject ?? "(Email has no body or subject.)";
+                try
+                {
+                    var message = await inbox.GetMessageAsync(uid, cancellationToken);
+                    var request = InspectionRequest.CreateFromEmail(
+                        config.TenantId,
+                        config.CoordinatorId,
+                        ToIncomingEmail(message, uidValidity, uid.Id));
 
-                var parsed = parser.Parse(rawBody);
-                var senderEmail = message.From.Mailboxes.FirstOrDefault()?.Address;
-                var subject = message.Subject;
-                var draft = QuotationDraft.Create(
-                    config.TenantId,
-                    config.CoordinatorId,
-                    parsed.ClientName,
-                    parsed.Location,
-                    parsed.MachineDetails,
-                    rawBody,
-                    senderEmail,
-                    subject is { Length: > 998 } ? subject[..998] : subject,
-                    uidValidity,
-                    uid.Id);
-
-                await repository.SaveDraftIfNewAsync(draft, cancellationToken);
-                await inbox.AddFlagsAsync(uid, MessageFlags.Seen, true, cancellationToken);
+                    // Save first, mark read second: a failure in between re-imports as a no-op, never loses the message.
+                    await repository.SaveRequestIfNewAsync(request, cancellationToken);
+                    await inbox.AddFlagsAsync(uid, MessageFlags.Seen, true, cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception) when (exception is not (ImapProtocolException or IOException))
+                {
+                    // One bad message must not block the ones after it. It stays unread and is retried next cycle.
+                    logger.LogError(
+                        exception,
+                        "Could not import message UID {Uid} for coordinator {CoordinatorId}; continuing with the next message.",
+                        uid.Id,
+                        config.CoordinatorId);
+                }
             }
 
             await client.DisconnectAsync(true, cancellationToken);
@@ -123,6 +125,58 @@ public sealed class EmailSyncBackgroundService(
                 exception,
                 "Failed to synchronize email for coordinator {CoordinatorId}; other mailboxes will continue.",
                 config.CoordinatorId);
+        }
+    }
+
+    private static IncomingEmail ToIncomingEmail(MimeKit.MimeMessage message, string uidValidity, uint uid)
+    {
+        var sender = message.From.Mailboxes.FirstOrDefault();
+        var attachments = message.Attachments
+            .Select(attachment => new EmailAttachmentInfo(
+                attachment.ContentDisposition?.FileName ??
+                attachment.ContentType.Name ??
+                "attachment",
+                attachment.ContentType.MimeType,
+                attachment is MimeKit.MimePart part ? GetAttachmentSize(part) : 0))
+            .ToArray();
+
+        return new IncomingEmail(
+            uidValidity,
+            uid,
+            message.TextBody,
+            message.HtmlBody,
+            sender?.Address,
+            sender?.Name,
+            message.Subject,
+            ToEmailAddresses(message.To),
+            ToEmailAddresses(message.Cc),
+            ToEmailAddresses(message.Bcc),
+            ToEmailAddresses(message.ReplyTo),
+            attachments,
+            message.MessageId,
+            message.InReplyTo,
+            message.References.Count > 0 ? string.Join(" ", message.References) : null,
+            message.Date == DateTimeOffset.MinValue ? null : message.Date);
+    }
+
+    private static IReadOnlyList<EmailAddressInfo> ToEmailAddresses(MimeKit.InternetAddressList addresses) =>
+        addresses.Mailboxes
+            .Select(mailbox => new EmailAddressInfo(mailbox.Address, mailbox.Name))
+            .ToArray();
+
+    private static long GetAttachmentSize(MimeKit.MimePart attachment)
+    {
+        var stream = attachment.Content?.Stream;
+        if (stream is null)
+            return 0;
+
+        try
+        {
+            return stream.Length;
+        }
+        catch (NotSupportedException)
+        {
+            return 0;
         }
     }
 

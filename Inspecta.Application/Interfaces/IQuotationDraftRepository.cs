@@ -4,8 +4,9 @@ namespace Inspecta.Application.Interfaces;
 
 public interface IQuotationDraftRepository
 {
-    Task<IReadOnlyList<QuotationDraft>> ListForCoordinatorAsync(
-        Guid coordinatorId,
+    Task<IReadOnlyList<QuotationDraft>> ListAsync(
+        Guid? tenantId,
+        Guid? coordinatorId,
         CancellationToken cancellationToken = default);
 
     Task<QuotationDraft?> GetForCoordinatorAsync(
