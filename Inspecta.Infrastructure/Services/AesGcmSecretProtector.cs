@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
 using Microsoft.Extensions.Configuration;
 
@@ -76,7 +77,7 @@ public sealed class AesGcmSecretProtector(IConfiguration configuration) : ISecre
         var configuredKey = configuration["IMAP_ENCRYPTION_KEY"];
         if (string.IsNullOrWhiteSpace(configuredKey))
         {
-            throw new InvalidOperationException(
+            throw new EmailEncryptionConfigurationException(
                 "Set IMAP_ENCRYPTION_KEY to a Base64-encoded 32-byte key before configuring coordinator email.");
         }
 
@@ -87,13 +88,13 @@ public sealed class AesGcmSecretProtector(IConfiguration configuration) : ISecre
         }
         catch (FormatException exception)
         {
-            throw new InvalidOperationException("IMAP_ENCRYPTION_KEY must be valid Base64.", exception);
+            throw new EmailEncryptionConfigurationException("IMAP_ENCRYPTION_KEY must be valid Base64.", exception);
         }
 
         if (key.Length != KeySize)
         {
             CryptographicOperations.ZeroMemory(key);
-            throw new InvalidOperationException("IMAP_ENCRYPTION_KEY must decode to exactly 32 bytes.");
+            throw new EmailEncryptionConfigurationException("IMAP_ENCRYPTION_KEY must decode to exactly 32 bytes.");
         }
 
         return key;

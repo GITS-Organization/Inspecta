@@ -25,6 +25,9 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
     /// <summary>Create a coordinator or inspector assigned to the current manager.</summary>
     [HttpPost]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public async Task<ActionResult<AuthUserResponse>> Create(
         CreateTeamMemberRequest request,
         [FromQuery] Guid? managerId,

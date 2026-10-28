@@ -1,6 +1,11 @@
 using Inspecta.Application.Services;
+using Inspecta.Application.Exceptions;
+using Inspecta.Domain.Entities;
+using Inspecta.Infrastructure.Data;
 using Inspecta.Infrastructure.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 
 namespace Inspecta.Domain.Tests;
 
@@ -55,5 +60,32 @@ public sealed class EmailWorkflowTests
         Assert.NotEqual("private-mail-password", encrypted);
         Assert.Equal("private-mail-password", protector.Unprotect(encrypted));
         Assert.ThrowsAny<System.Security.Cryptography.CryptographicException>(() => protector.Unprotect(altered));
+    }
+
+    [Fact]
+    public void MissingEncryptionKeyProducesConfigurationErrorInsteadOfConflictException()
+    {
+        var protector = new AesGcmSecretProtector(new ConfigurationBuilder().Build());
+
+        Assert.Throws<EmailEncryptionConfigurationException>(() => protector.Protect("mail-password"));
+    }
+
+    [Fact]
+    public void MailboxUsernameHasNoGlobalUniqueConstraintButCoordinatorDoesHaveOneConfig()
+    {
+        var options = new DbContextOptionsBuilder<InspectaDbContext>()
+            .UseNpgsql("Host=localhost;Database=inspecta_model_test;Username=postgres")
+            .Options;
+        using var dbContext = new InspectaDbContext(options, new CurrentTenant(new HttpContextAccessor()));
+        var configEntity = dbContext.Model.FindEntityType(typeof(CoordinatorEmailConfig))!;
+        var usernameIndex = configEntity.GetIndexes()
+            .SingleOrDefault(index => index.Properties.Any(property =>
+                property.Name == nameof(CoordinatorEmailConfig.EmailUsername)));
+
+        Assert.Null(usernameIndex);
+        Assert.Contains(
+            configEntity.GetKeys(),
+            key => key.Properties.Select(property => property.Name)
+                .SequenceEqual([nameof(CoordinatorEmailConfig.CoordinatorId)]));
     }
 }

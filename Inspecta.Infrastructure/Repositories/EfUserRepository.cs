@@ -1,8 +1,10 @@
 using Inspecta.Application.Interfaces;
+using Inspecta.Application.Exceptions;
 using Inspecta.Domain.Entities;
 using Inspecta.Domain.Enums;
 using Inspecta.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Inspecta.Infrastructure.Repositories;
 
@@ -45,9 +47,36 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
         dbContext.Users.Add(user);
         if (emailConfig is not null)
             dbContext.CoordinatorEmailConfigs.Add(emailConfig);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (GetUniqueConstraint(exception) is { } constraint)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw constraint switch
+            {
+                "IX_Users_Email" => new AuthException(
+                    "account_exists",
+                    "Email is already registered. Email addresses must be unique across the platform.",
+                    409),
+                "PK_CoordinatorEmailConfigs" => new AuthException(
+                    "coordinator_email_config_exists",
+                    "This coordinator already has an IMAP configuration.",
+                    409),
+                _ => exception
+            };
+        }
     }
+
+    private static string? GetUniqueConstraint(DbUpdateException exception) =>
+        exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation
+        } postgresException
+            ? postgresException.ConstraintName
+            : null;
 
     public async Task SaveAsync(AppUser user, CancellationToken cancellationToken = default)
     {
