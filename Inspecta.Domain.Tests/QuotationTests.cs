@@ -617,6 +617,25 @@ public sealed class QuotationTests
     }
 
     [Fact]
+    public async Task WithEmailingSwitchedOffAcceptAndSendStillChangeStateButSendNothing()
+    {
+        var fixture = new Fixture(configured: false, delivery: new QuoteDeliveryOptions(Enabled: false));
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+
+        var sent = await fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+        Assert.NotNull(sent.SentAt);
+        Assert.Equal(JobStatus.QuoteSent, fixture.Request.Status);
+
+        var accepted = await fixture.Service.AcceptAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+
+        Assert.Equal(QuoteStatus.Accepted, accepted.Status);
+        Assert.Equal(JobStatus.QuoteAccepted, fixture.Request.Status);
+        Assert.Empty(fixture.Sender.Sent);
+        Assert.Empty(accepted.Emails!);
+    }
+
+    [Fact]
     public async Task SendingEmailsThePdfAsAReplyToTheOriginalSenderAndThenMarksTheQuoteSent()
     {
         var fixture = new Fixture();
@@ -985,7 +1004,7 @@ public sealed class QuotationTests
 
     internal sealed class Fixture
     {
-        public Fixture(InspectionRequest? request = null, bool configured = true, IRequestEquipmentRegistrar? registrar = null)
+        public Fixture(InspectionRequest? request = null, bool configured = true, IRequestEquipmentRegistrar? registrar = null, QuoteDeliveryOptions? delivery = null, params AppUser[] extraUsers)
         {
             Request = request ?? CompleteRequest(out _, out _, Guid.NewGuid());
             Crane = Request.Items.ElementAtOrDefault(0)!;
@@ -999,12 +1018,13 @@ public sealed class QuotationTests
                 Requests,
                 new FakeConfigs(configured ? CoordinatorEmailConfig.Create(
                     CoordinatorId, ManagerId, "imap.example.com", 993, "coordinator@example.com", "encrypted", true) : null),
-                new IncomingEmailRequestTests.FakeUserRepository(Coordinator),
+                new IncomingEmailRequestTests.FakeUserRepository([Coordinator, .. extraUsers]),
                 Outbox,
                 new FakeProtector(),
                 Pdf,
-                Sender);
-            Service = new QuoteService(Quotes, Requests, Pdf, Delivery, Outbox, new IncomingEmailRequestTests.FakeUserRepository(Coordinator), registrar);
+                Sender,
+                delivery);
+            Service = new QuoteService(Quotes, Requests, Pdf, Delivery, Outbox, new IncomingEmailRequestTests.FakeUserRepository([Coordinator, .. extraUsers]), registrar);
         }
 
         public InspectionRequest Request { get; }
@@ -1112,6 +1132,8 @@ public sealed class QuotationTests
                 .Where(quote => quote.Request is not null)
                 .Where(quote => filter.CoordinatorId is not Guid coordinatorId ||
                     quote.Request!.Source != RequestSource.Email || quote.Request.CoordinatorId == coordinatorId)
+                .Where(quote => filter.InspectorId is not Guid inspectorId || quote.Request!.InspectorId == inspectorId)
+                .Where(quote => filter.Assigned is not bool assigned || (quote.Request!.InspectorId is not null) == assigned)
                 .Where(quote => !filter.CurrentOnly || quote.SupersededAt is null)
                 .Where(quote => filter.Open is not bool open || (quote.Status == QuoteStatus.Open) == open)
                 .Where(quote => filter.Sent is not bool sent || quote.IsSent == sent)
@@ -1143,6 +1165,11 @@ public sealed class QuotationTests
         public Task<IReadOnlyList<RequestCount>> CountAsync(RequestListFilter scope, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<RequestCount>>([]);
         public Task<bool> ClientExistsAsync(Guid clientId, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task<IReadOnlyDictionary<Guid, int>> CountActiveByInspectorAsync(IReadOnlyCollection<Guid> inspectorIds, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, int>>(requests
+                .Where(request => request.InspectorId is Guid id && inspectorIds.Contains(id) && request.Status is >= JobStatus.Assigned and <= JobStatus.CertificateReturned)
+                .GroupBy(request => request.InspectorId!.Value)
+                .ToDictionary(group => group.Key, group => group.Count()));
         public Task<Guid?> GetClientManagerIdAsync(Guid clientId, CancellationToken cancellationToken = default) => Task.FromResult<Guid?>(null);
     }
 }

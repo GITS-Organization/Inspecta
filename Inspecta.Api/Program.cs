@@ -85,6 +85,7 @@ builder.Services.AddScoped<IClientMailRuleRepository, EfClientMailRuleRepository
 builder.Services.AddScoped<IClientMailRuleService, ClientMailRuleService>();
 builder.Services.AddScoped<IEmailBacklogService, EmailBacklogService>();
 builder.Services.AddScoped<IOutboundEmailRepository, EfOutboundEmailRepository>();
+builder.Services.AddSingleton(new QuoteDeliveryOptions(builder.Configuration.GetValue("QuoteDelivery:Enabled", true)));
 builder.Services.AddScoped<IQuoteDeliveryService, QuoteDeliveryService>();
 builder.Services.AddSingleton<IEmailSender, MailKitSmtpEmailSender>();
 builder.Services.AddPdfGeneration(builder.Configuration);

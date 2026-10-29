@@ -57,6 +57,7 @@ public sealed class IncomingEmailRequestTests
         await Assert.ThrowsAsync<AuthException>(() => service.AssignAsync(
             request.Id,
             managerId,
+            "technical_manager",
             inspector.Id,
             DateTimeOffset.UtcNow.AddDays(1),
             null));
@@ -153,7 +154,10 @@ public sealed class IncomingEmailRequestTests
             bool? isActive = null,
             CancellationToken cancellationToken = default,
             bool includeDeleted = false) =>
-            Task.FromResult<IReadOnlyList<AppUser>>([]);
+            Task.FromResult<IReadOnlyList<AppUser>>(users
+                .Where(user => (managerId is null || user.ManagerId == managerId) &&
+                    (role is null || user.Role == role) && (isActive is null || user.IsActive == isActive))
+                .ToArray());
 
         public Task AddAsync(AppUser user, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task AddTeamMemberAsync(

@@ -119,6 +119,20 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
         return query;
     }
 
+    public async Task<IReadOnlyDictionary<Guid, int>> CountActiveByInspectorAsync(
+        IReadOnlyCollection<Guid> inspectorIds,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = inspectorIds.ToArray();
+        JobStatus[] active =
+            [JobStatus.Assigned, JobStatus.TaskAccepted, JobStatus.InProgress, JobStatus.CertificateSubmitted, JobStatus.CertificateReturned];
+        return await dbContext.Requests.AsNoTracking()
+            .Where(item => item.InspectorId != null && ids.Contains(item.InspectorId.Value) && active.Contains(item.Status))
+            .GroupBy(item => item.InspectorId!.Value)
+            .Select(group => new { group.Key, Count = group.Count() })
+            .ToDictionaryAsync(entry => entry.Key, entry => entry.Count, cancellationToken);
+    }
+
     public Task<bool> ClientExistsAsync(Guid clientId, CancellationToken cancellationToken = default) =>
         dbContext.Clients.AnyAsync(client => client.Id == clientId && client.ArchivedAt == null, cancellationToken);
 

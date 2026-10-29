@@ -11,6 +11,8 @@ namespace Inspecta.Application.Interfaces;
 /// <param name="Open">True for open quotations, false for closed ones (accepted or rejected).</param>
 /// <param name="Sent">Whether the quotation was sent to the client.</param>
 /// <param name="Accepted">True for accepted, false for rejected, among closed quotations.</param>
+/// <param name="InspectorId">Only quotations whose request is assigned to this inspector.</param>
+/// <param name="Assigned">True for requests that have an inspector, false for those still without one.</param>
 /// <param name="CurrentOnly">Leave out revisions that a newer one replaced.</param>
 public sealed record QuoteListFilter(
     Guid? CoordinatorId = null,
@@ -18,6 +20,8 @@ public sealed record QuoteListFilter(
     bool? Open = null,
     bool? Sent = null,
     bool? Accepted = null,
+    Guid? InspectorId = null,
+    bool? Assigned = null,
     bool CurrentOnly = true,
     string? Search = null,
     int Skip = 0,

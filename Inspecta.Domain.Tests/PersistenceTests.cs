@@ -76,6 +76,30 @@ public sealed class PersistenceTests : IDisposable
         Assert.Equal(2, check.Set<JobStatusHistory>().Count());
     }
 
+    [Fact]
+    public async Task UnfinishedJobsAreCountedPerInspector()
+    {
+        var inspector = AppUser.Create("inspector@example.com", "Inspector", UserRole.Inspector, managerId: manager.Id);
+        await using (var seed = CreateContext())
+        {
+            seed.Users.Add(inspector);
+            var request = seed.Requests.Include(item => item.Items).Single();
+            request.UpdateDetails("Al Noor", "Cairo", null, null, null);
+            request.AddItem(RequestItem.Create("Crane", 1));
+            request.TransitionTo(JobStatus.QuoteDraft, coordinator.Id);
+            request.TransitionTo(JobStatus.QuoteSent, coordinator.Id);
+            request.TransitionTo(JobStatus.QuoteAccepted, coordinator.Id);
+            request.AssignInspector(inspector.Id, DateTimeOffset.UtcNow.AddDays(1), coordinator.Id);
+            await seed.SaveChangesAsync();
+        }
+
+        await using var db = CreateContext();
+        var counts = await new EfRequestRepository(db).CountActiveByInspectorAsync([inspector.Id, Guid.NewGuid()]);
+
+        Assert.Equal(1, counts[inspector.Id]);
+        Assert.Single(counts);
+    }
+
     private InspectaDbContext CreateContext()
     {
         var accessor = new HttpContextAccessor

@@ -15,7 +15,8 @@ public sealed class QuoteDeliveryService(
     IOutboundEmailRepository outboundEmailRepository,
     ISecretProtector secretProtector,
     IPdfGenerator pdfGenerator,
-    IEmailSender emailSender) : IQuoteDeliveryService
+    IEmailSender emailSender,
+    QuoteDeliveryOptions? options = null) : IQuoteDeliveryService
 {
     public async Task<OutboundEmail?> DeliverAsync(
         InspectionRequest request,
@@ -23,6 +24,9 @@ public sealed class QuoteDeliveryService(
         OutboundEmailKind kind,
         CancellationToken cancellationToken = default)
     {
+        // Temporarily switched off (QuoteDelivery:Enabled=false): nothing is emailed, the quotation and request still change state.
+        if (options is { Enabled: false }) return null;
+
         var source = await requestRepository.GetEmailAsync(request.Id, cancellationToken);
         if (source is null) return null;
 
@@ -142,3 +146,6 @@ public sealed class QuoteDeliveryService(
         return body.ToString();
     }
 }
+
+/// <summary>Turns the emailing of quotations on or off (<c>QuoteDelivery:Enabled</c>). On unless configured otherwise.</summary>
+public sealed record QuoteDeliveryOptions(bool Enabled = true);

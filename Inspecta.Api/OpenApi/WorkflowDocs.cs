@@ -57,7 +57,7 @@ public static class WorkflowDocs
             """
             **When:** the coordinator wants to pick a quotation to work on.
             **How:** `GET /quotations?stage=draft` for the ones still being prepared. Other stages: `sent` (waiting for the client), `accepted`, `rejected`. Use `q=` to search and `page`/`pageSize` to page. Only the newest revision of each request is shown unless `includeSuperseded=true`.
-            Pick a row with `canEdit: true`; its `requestId` and `id` are used by the next steps.
+            Pick a row with `canEdit: true`; its `requestId` and `id` are used by the next steps. After acceptance the same list shows who got the job (`inspectorName`, `scheduledAt`) and can be filtered with `assigned` and `inspectorId` (see step 14).
             """),
         [Key<QuotesController>(nameof(QuotesController.Get))] = new(6, "Step 6 · Open a quotation",
             "**How:** `GET /requests/{requestId}/quotes/{quoteId}` returns the machines with their prices, `missingPrices`, notes, scope, the emails sent for it and `canEdit`."),
@@ -105,8 +105,19 @@ public static class WorkflowDocs
             "Step 4 saves the whole list at once; use this only to change a single machine."),
         [Key<RequestsController>(nameof(RequestsController.RemoveItem))] = new(25, "Extra · Remove one machine",
             "Step 4 saves the whole list at once; use this only to remove a single machine."),
-        [Key<RequestsController>(nameof(RequestsController.Assign))] = new(30, "After acceptance · Assign an inspector",
-            "**When:** the request is `quote_accepted`. Body: the inspector and the schedule."),
+        [Key<InspectorsController>(nameof(InspectorsController.List))] = new(13, "Step 13 · Pick an inspector",
+            """
+            **When:** a quotation was accepted and the job must be given to someone.
+            **How:** `GET /inspectors` returns the active inspectors of your team with `isOnLeave` and `activeJobs` (unfinished jobs they already have), so you can pick the least busy one that is available. Admin may add `managerId`.
+            **Next:** assign the job (step 14).
+            """),
+        [Key<RequestsController>(nameof(RequestsController.Assign))] = new(14, "Step 14 · Assign the inspector",
+            """
+            **When:** the quotation is `accepted` (the request is `quote_accepted`). One inspector gets the whole job.
+            **How:** `POST /requests/{requestId}/assignment` with `inspectorId` (from step 13), `scheduledAt` and an optional `note`. The request becomes `assigned`. The owning coordinator, a manager or Admin may do it; an inspector from another team or one on leave at that time is refused.
+            **Find the work:** `GET /quotations?stage=accepted&assigned=false` lists accepted quotations still waiting for an inspector, and `GET /quotations?inspectorId=...` lists what one inspector was given. Rows show `inspectorName` and `scheduledAt`.
+            **The inspector's side:** the inspector signs in and calls `GET /quotations` to get their own accepted quotations, **without prices** (`amountPiastres` is empty), then `GET /requests/{requestId}` for the machines and the client data.
+            """),
         [Key<RequestsController>(nameof(RequestsController.Transition))] = new(31, "After acceptance · Move the job forward",
             "Moves the job through inspector work and certificates. Quotation steps and the assignment are refused with `409`: use the steps above."),
     };
@@ -132,6 +143,8 @@ public static class WorkflowDocs
            - 10. **Accept**: the PDF is emailed and the request is accepted.
            - 11. **Counter offer**: new revision with the old prices, edit (7) and send (9) again.
            - 12. **Reject**: closes the request; no email.
+        13. **Pick an inspector** (`GET /inspectors`).
+        14. **Assign** the accepted job to that inspector (`POST /requests/{id}/assignment`). Find the work with `GET /quotations?stage=accepted&assigned=false` (waiting) or `?inspectorId=...` (what one inspector has). The inspector sees only their own accepted quotations, without prices.
 
         Amounts are in piastres (1 EGP = 100 piastres). Statuses and enums are lowercase snake_case in JSON.
         Email requests can only be changed by the coordinator whose mailbox received them; managers and admins can read them.

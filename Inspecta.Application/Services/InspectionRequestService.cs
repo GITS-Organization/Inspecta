@@ -229,10 +229,51 @@ public sealed class InspectionRequestService(
         return RequestResponseMapper.Map(request);
     }
 
-    public async Task<RequestResponse> AssignAsync(Guid requestId, Guid actorId, Guid inspectorId, DateTimeOffset scheduledAt, string? note, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<InspectorResponse>> ListInspectorsAsync(
+        Guid actorId,
+        string role,
+        Guid? managerId = null,
+        CancellationToken cancellationToken = default)
     {
-        var request = await requestRepository.GetByIdAsync(requestId, tracking: true, cancellationToken)
-            ?? throw new KeyNotFoundException("Request was not found.");
+        // A coordinator sees the inspectors of their own team, a manager their own, Admin any team (or all).
+        Guid? team = role switch
+        {
+            "technical_manager" => actorId,
+            "coordinator" => (await userRepository.GetByIdAsync(actorId, cancellationToken))?.ManagerId,
+            _ => managerId
+        };
+        if (role == "coordinator" && team is null) return [];
+
+        var inspectors = await userRepository.ListAsync(team, UserRole.Inspector, isActive: true, cancellationToken);
+        var active = await requestRepository.CountActiveByInspectorAsync(
+            inspectors.Select(inspector => inspector.Id).ToArray(), cancellationToken);
+        return inspectors
+            .OrderBy(inspector => inspector.FullName, StringComparer.OrdinalIgnoreCase)
+            .Select(inspector => new InspectorResponse(
+                inspector.Id,
+                inspector.FullName,
+                inspector.Email,
+                inspector.Qualifications.Select(qualification => qualification.Name).ToArray(),
+                inspector.IsOnLeave,
+                inspector.LeaveUntil,
+                active.GetValueOrDefault(inspector.Id)))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Gives an accepted job to one inspector. A coordinator may assign what they can manage (their own email requests
+    /// and the team's manual ones); managers and Admin may assign any request they can see.
+    /// </summary>
+    public async Task<RequestResponse> AssignAsync(Guid requestId, Guid actorId, string role, Guid inspectorId, DateTimeOffset scheduledAt, string? note, CancellationToken cancellationToken = default)
+    {
+        if (role == "inspector")
+            throw new AuthException("forbidden", "Inspectors cannot assign jobs.", 403);
+
+        var request = await requestRepository.GetByIdAsync(requestId, tracking: true, cancellationToken);
+        if (request is null || !RequestAccess.IsVisible(request, actorId, role))
+            throw new KeyNotFoundException("Request was not found.");
+        if (role == "coordinator" && !RequestAccess.CanManageQuotes(request, actorId, role))
+            throw new AuthException("forbidden", "Only the coordinator that owns the request can assign it.", 403);
         var inspector = await userRepository.GetByIdAsync(inspectorId, cancellationToken);
         if (inspector is null || !inspector.IsActive || inspector.Role != UserRole.Inspector)
             throw new InvalidOperationException("The selected inspector is unavailable.");

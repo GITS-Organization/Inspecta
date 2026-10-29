@@ -50,6 +50,12 @@ public interface IRequestRepository
     Task<RequestEmail?> GetEmailAsync(Guid requestId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<InspectionRequest>> ListAsync(RequestListFilter filter, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RequestCount>> CountAsync(RequestListFilter scope, CancellationToken cancellationToken = default);
+    /// <summary>Number of unfinished jobs (assigned up to certificate returned) per inspector.</summary>
+    Task<IReadOnlyDictionary<Guid, int>> CountActiveByInspectorAsync(
+        IReadOnlyCollection<Guid> inspectorIds,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, int>>(new Dictionary<Guid, int>());
+
     Task<bool> ClientExistsAsync(Guid clientId, CancellationToken cancellationToken = default);
     Task<Guid?> GetClientManagerIdAsync(Guid clientId, CancellationToken cancellationToken = default);
 }

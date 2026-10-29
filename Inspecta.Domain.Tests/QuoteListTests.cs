@@ -10,6 +10,7 @@ public sealed class QuoteListTests
 {
     private static readonly Guid ManagerId = QuotationTests.ManagerId;
     private static readonly Guid CoordinatorId = QuotationTests.CoordinatorId;
+    private static readonly AppUser Inspector = AppUser.Create("inspector@example.com", "Eng. Karim", UserRole.Inspector, managerId: ManagerId);
 
     [Fact]
     public async Task ADraftShowsUpInTheCoordinatorsListReadyToWorkOn()
@@ -120,11 +121,72 @@ public sealed class QuoteListTests
         Assert.True(filter.CurrentOnly);
     }
 
+    [Fact]
+    public async Task AnAcceptedQuotationWaitsForAnInspectorAndThenShowsWhoGotIt()
+    {
+        var fixture = new Fixture();
+        await fixture.AcceptAndAssignAsync();
+
+        var waiting = Assert.Single(await fixture.ListAsync(
+            CoordinatorId, "coordinator", new QuoteListQuery(Stage: QuoteStage.Accepted, Assigned: false)));
+        Assert.Null(waiting.InspectorId);
+        Assert.Empty(await fixture.ListAsync(CoordinatorId, "coordinator", new QuoteListQuery(Assigned: true)));
+
+        fixture.Request.AssignInspector(Inspector.Id, DateTimeOffset.UtcNow.AddDays(2), CoordinatorId);
+
+        var given = Assert.Single(await fixture.ListAsync(CoordinatorId, "coordinator", new QuoteListQuery(Assigned: true)));
+        Assert.Equal(Inspector.Id, given.InspectorId);
+        Assert.Equal("Eng. Karim", given.InspectorName);
+        Assert.NotNull(given.ScheduledAt);
+        Assert.Equal(JobStatus.Assigned, given.RequestStatus);
+        Assert.Equal(QuoteStage.Accepted, given.Stage);
+        Assert.Empty(await fixture.ListAsync(CoordinatorId, "coordinator", new QuoteListQuery(Assigned: false)));
+    }
+
+    [Fact]
+    public async Task TheListCanBeNarrowedToOneInspector()
+    {
+        var fixture = new Fixture();
+        await fixture.AcceptAndAssignAsync(Inspector.Id);
+
+        Assert.Single(await fixture.ListAsync(CoordinatorId, "coordinator", new QuoteListQuery(InspectorId: Inspector.Id)));
+        Assert.Empty(await fixture.ListAsync(CoordinatorId, "coordinator", new QuoteListQuery(InspectorId: Guid.NewGuid())));
+    }
+
+    [Fact]
+    public async Task AnInspectorSeesOnlyTheirOwnAcceptedQuotationsAndNoPrices()
+    {
+        var fixture = new Fixture();
+        await fixture.AcceptAndAssignAsync(Inspector.Id);
+
+        var row = Assert.Single(await fixture.ListAsync(Inspector.Id, "inspector", new QuoteListQuery()));
+
+        Assert.Equal(fixture.Request.Id, row.RequestId);
+        Assert.Equal("Al Noor Heavy Industries Ltd.", row.ClientName);
+        Assert.Equal("Industrial City", row.Location);
+        Assert.Equal(5, row.TotalUnits);
+        Assert.Null(row.AmountPiastres);
+        Assert.Equal(0, row.MissingPrices);
+        Assert.False(row.CanEdit);
+        Assert.Empty(await fixture.ListAsync(Guid.NewGuid(), "inspector", new QuoteListQuery()));
+        // Asking for someone else's work does not widen what an inspector can see.
+        Assert.Empty(await fixture.ListAsync(Guid.NewGuid(), "inspector", new QuoteListQuery(InspectorId: Inspector.Id, Assigned: true)));
+    }
+
+    [Fact]
+    public async Task AnInspectorDoesNotSeeAQuotationThatIsNotAcceptedYet()
+    {
+        var fixture = new Fixture();
+        await fixture.OpenDraftAsync();
+
+        Assert.Empty(await fixture.ListAsync(Inspector.Id, "inspector", new QuoteListQuery()));
+    }
+
     private sealed class Fixture
     {
         public Fixture()
         {
-            var inner = new QuotationTests.Fixture();
+            var inner = new QuotationTests.Fixture(extraUsers: [Inspector]);
             Request = inner.Request;
             Crane = inner.Crane;
             Receiver = inner.Receiver;
@@ -150,6 +212,14 @@ public sealed class QuoteListTests
                 new UpdateQuoteItem { RequestItemId = Receiver.Id, UnitPricePiastres = receiver }
             ]
         };
+
+        public async Task AcceptAndAssignAsync(Guid? inspectorId = null)
+        {
+            var quote = await OpenDraftAsync();
+            await Service.UpdateAsync(Request.Id, quote.Id, CoordinatorId, "coordinator", Prices(1_200_000, 850_000));
+            await Service.AcceptAsync(Request.Id, quote.Id, CoordinatorId, "coordinator");
+            if (inspectorId is Guid id) Request.AssignInspector(id, DateTimeOffset.UtcNow.AddDays(2), CoordinatorId);
+        }
 
         public Task<IReadOnlyList<QuoteSummaryResponse>> ListAsync(Guid actorId, string role, QuoteListQuery query) =>
             Service.ListVisibleAsync(actorId, role, query);

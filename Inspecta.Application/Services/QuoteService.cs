@@ -37,14 +37,23 @@ public sealed class QuoteService(
         QuoteListQuery query,
         CancellationToken cancellationToken = default)
     {
-        // Inspectors work on assigned jobs and never see quotations.
-        if (role == "inspector") return [];
-
+        // An inspector only gets the accepted quotations of their own jobs, without any price.
+        var isInspector = role == "inspector";
         var pageSize = Math.Clamp(query.PageSize, 1, QuoteListQuery.MaxPageSize);
         var page = Math.Max(query.Page, 1);
-        var filter = new QuoteListFilter(
+        var filter = isInspector
+            ? new QuoteListFilter(
+                InspectorId: actorId,
+                Open: false,
+                Accepted: true,
+                Search: string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim(),
+                Skip: (page - 1) * pageSize,
+                Take: pageSize)
+            : new QuoteListFilter(
             CoordinatorId: role == "coordinator" ? actorId : null,
             ManagerId: role == "admin" ? query.ManagerId : null,
+            InspectorId: query.InspectorId,
+            Assigned: query.Assigned,
             Open: query.Stage switch
             {
                 QuoteStage.Draft or QuoteStage.Sent => true,
@@ -68,13 +77,32 @@ public sealed class QuoteService(
             Skip: (page - 1) * pageSize,
             Take: pageSize);
 
-        return (await quoteRepository.ListAsync(filter, cancellationToken))
+        var quotes = (await quoteRepository.ListAsync(filter, cancellationToken))
             .Where(quote => quote.Request is not null)
-            .Select(quote => MapSummary(quote, quote.Request!, RequestAccess.CanManageQuotes(quote.Request!, actorId, role)))
+            .ToArray();
+        var inspectorNames = new Dictionary<Guid, string>();
+        foreach (var inspectorId in quotes.Select(quote => quote.Request!.InspectorId).OfType<Guid>().Distinct())
+        {
+            if (await userRepository.GetByIdAsync(inspectorId, cancellationToken) is { } inspector)
+                inspectorNames[inspectorId] = inspector.FullName;
+        }
+
+        return quotes
+            .Select(quote => MapSummary(
+                quote,
+                quote.Request!,
+                !isInspector && RequestAccess.CanManageQuotes(quote.Request!, actorId, role),
+                showPrices: !isInspector,
+                quote.Request!.InspectorId is Guid id && inspectorNames.TryGetValue(id, out var name) ? name : null))
             .ToArray();
     }
 
-    private static QuoteSummaryResponse MapSummary(Quote quote, InspectionRequest request, bool canManage)
+    private static QuoteSummaryResponse MapSummary(
+        Quote quote,
+        InspectionRequest request,
+        bool canManage,
+        bool showPrices,
+        string? inspectorName)
     {
         var items = quote.GetItems();
         return new QuoteSummaryResponse(
@@ -93,16 +121,19 @@ public sealed class QuoteService(
             quote.ProposalNumber,
             quote.ClientName ?? request.ClientName,
             request.Location,
-            quote.AmountPiastres,
+            showPrices ? quote.AmountPiastres : null,
             items.Sum(item => item.Quantity),
-            quote.GetUnpricedItems().Count,
+            showPrices ? quote.GetUnpricedItems().Count : 0,
             quote.ValidUntil,
             quote.IsExpired,
             quote.IsCurrent,
             canManage && quote.IsEditable,
             quote.SentAt,
             quote.CreatedAt,
-            quote.UpdatedAt);
+            quote.UpdatedAt,
+            request.InspectorId,
+            inspectorName,
+            request.ScheduledAt);
     }
 
     public async Task<QuoteResponse> GetAsync(

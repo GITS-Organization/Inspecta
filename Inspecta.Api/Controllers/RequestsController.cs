@@ -103,7 +103,7 @@ public sealed class RequestsController(IInspectionRequestService requestService,
     [ProducesResponseType<RequestResponse>(StatusCodes.Status201Created)]
     public async Task<ActionResult<RequestResponse>> Create(CreateInspectionRequest request, CancellationToken cancellationToken)
     {
-        if (!TryGetActor(out var actorId, out _)) return Unauthorized();
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
         var managerId = User.IsInRole("admin") ? request.ManagerId : User.GetTenantId();
         if (!User.IsInRole("admin") && managerId is null) return Unauthorized();
         var created = await requestService.CreateAsync(request, actorId, managerId, cancellationToken);
@@ -223,8 +223,8 @@ public sealed class RequestsController(IInspectionRequestService requestService,
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<RequestResponse>> Assign(Guid requestId, AssignInspectorRequest request, CancellationToken cancellationToken)
     {
-        if (!TryGetActor(out var actorId, out _)) return Unauthorized();
-        var updated = await requestService.AssignAsync(requestId, actorId, request.InspectorId, request.ScheduledAt, request.Note, cancellationToken);
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        var updated = await requestService.AssignAsync(requestId, actorId, role, request.InspectorId, request.ScheduledAt, request.Note, cancellationToken);
         return Ok(updated);
     }
 
