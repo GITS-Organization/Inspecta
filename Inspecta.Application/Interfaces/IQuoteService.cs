@@ -6,6 +6,7 @@ namespace Inspecta.Application.Interfaces;
 public interface IQuoteService
 {
     Task<IReadOnlyList<QuoteResponse>> ListAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<QuoteSummaryResponse>> ListVisibleAsync(Guid actorId, string role, QuoteListQuery query, CancellationToken cancellationToken = default);
     Task<QuoteResponse> GetAsync(Guid requestId, Guid quoteId, Guid actorId, string role, CancellationToken cancellationToken = default);
     Task<QuoteResponse> CreateAsync(Guid requestId, Guid actorId, string role, CreateQuoteRequest request, CancellationToken cancellationToken = default);
     Task<QuoteResponse> UpdateAsync(Guid requestId, Guid quoteId, Guid actorId, string role, UpdateQuoteRequest request, CancellationToken cancellationToken = default);

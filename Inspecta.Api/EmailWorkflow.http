@@ -288,6 +288,10 @@ Authorization: Bearer {{adminToken}}
 
 @quoteId = replace-with-quote-id
 
+### List my quotations across all requests (stage: draft | sent | accepted | rejected; canEdit=true means it can be worked on)
+GET {{baseUrl}}/api/v1/quotations?stage=draft
+Authorization: Bearer {{accessToken}}
+
 ### Open a quotation on a request (copies every request item with an empty price)
 POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes
 Authorization: Bearer {{accessToken}}

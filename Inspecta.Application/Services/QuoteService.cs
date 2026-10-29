@@ -31,6 +31,80 @@ public sealed class QuoteService(
             .ToArray();
     }
 
+    public async Task<IReadOnlyList<QuoteSummaryResponse>> ListVisibleAsync(
+        Guid actorId,
+        string role,
+        QuoteListQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        // Inspectors work on assigned jobs and never see quotations.
+        if (role == "inspector") return [];
+
+        var pageSize = Math.Clamp(query.PageSize, 1, QuoteListQuery.MaxPageSize);
+        var page = Math.Max(query.Page, 1);
+        var filter = new QuoteListFilter(
+            CoordinatorId: role == "coordinator" ? actorId : null,
+            ManagerId: role == "admin" ? query.ManagerId : null,
+            Open: query.Stage switch
+            {
+                QuoteStage.Draft or QuoteStage.Sent => true,
+                QuoteStage.Accepted or QuoteStage.Rejected => false,
+                _ => null
+            },
+            Sent: query.Stage switch
+            {
+                QuoteStage.Draft => false,
+                QuoteStage.Sent => true,
+                _ => null
+            },
+            Accepted: query.Stage switch
+            {
+                QuoteStage.Accepted => true,
+                QuoteStage.Rejected => false,
+                _ => null
+            },
+            CurrentOnly: !query.IncludeSuperseded,
+            Search: string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim(),
+            Skip: (page - 1) * pageSize,
+            Take: pageSize);
+
+        return (await quoteRepository.ListAsync(filter, cancellationToken))
+            .Where(quote => quote.Request is not null)
+            .Select(quote => MapSummary(quote, quote.Request!, RequestAccess.CanManageQuotes(quote.Request!, actorId, role)))
+            .ToArray();
+    }
+
+    private static QuoteSummaryResponse MapSummary(Quote quote, InspectionRequest request, bool canManage)
+    {
+        var items = quote.GetItems();
+        return new QuoteSummaryResponse(
+            quote.Id,
+            quote.RequestId,
+            quote.Version,
+            quote.Status switch
+            {
+                QuoteStatus.Accepted => QuoteStage.Accepted,
+                QuoteStatus.Rejected => QuoteStage.Rejected,
+                _ => quote.IsSent ? QuoteStage.Sent : QuoteStage.Draft
+            },
+            quote.Status,
+            request.Status,
+            quote.QuotationNumber,
+            quote.ProposalNumber,
+            quote.ClientName ?? request.ClientName,
+            request.Location,
+            quote.AmountPiastres,
+            items.Sum(item => item.Quantity),
+            quote.GetUnpricedItems().Count,
+            quote.ValidUntil,
+            quote.IsExpired,
+            quote.IsCurrent,
+            canManage && quote.IsEditable,
+            quote.SentAt,
+            quote.CreatedAt,
+            quote.UpdatedAt);
+    }
+
     public async Task<QuoteResponse> GetAsync(
         Guid requestId,
         Guid quoteId,

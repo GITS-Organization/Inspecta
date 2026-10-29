@@ -12,9 +12,9 @@ namespace Inspecta.Domain.Tests;
 
 public sealed class QuotationTests
 {
-    private static readonly Guid ManagerId = Guid.NewGuid();
+    internal static readonly Guid ManagerId = Guid.NewGuid();
     private static readonly AppUser Coordinator = AppUser.Create("coordinator@example.com", "Eng. Ahmed", UserRole.Coordinator, managerId: ManagerId);
-    private static readonly Guid CoordinatorId = Coordinator.Id;
+    internal static readonly Guid CoordinatorId = Coordinator.Id;
 
     [Fact]
     public async Task CreatingAQuoteCopiesEveryRequestItemWithoutPricesAndMovesTheRequestToDraft()
@@ -954,7 +954,7 @@ public sealed class QuotationTests
     }
 
 
-    private sealed class Fixture
+    internal sealed class Fixture
     {
         public Fixture(InspectionRequest? request = null, bool configured = true, IRequestEquipmentRegistrar? registrar = null)
         {
@@ -990,7 +990,7 @@ public sealed class QuotationTests
         public QuoteService Service { get; }
     }
 
-    private sealed class FakeSender : IEmailSender
+    internal sealed class FakeSender : IEmailSender
     {
         public List<OutgoingEmail> Sent { get; } = [];
         public SmtpSettings? LastSmtp { get; private set; }
@@ -1005,13 +1005,13 @@ public sealed class QuotationTests
         }
     }
 
-    private sealed class FakeProtector : ISecretProtector
+    internal sealed class FakeProtector : ISecretProtector
     {
         public string Protect(string plaintext) => plaintext;
         public string Unprotect(string protectedValue) => protectedValue;
     }
 
-    private sealed class FakeConfigs(CoordinatorEmailConfig? config) : ICoordinatorEmailConfigRepository
+    internal sealed class FakeConfigs(CoordinatorEmailConfig? config) : ICoordinatorEmailConfigRepository
     {
         public Task<CoordinatorEmailConfig?> GetByCoordinatorAsync(Guid coordinatorId, CancellationToken cancellationToken = default) =>
             Task.FromResult(config);
@@ -1019,7 +1019,7 @@ public sealed class QuotationTests
         public Task SaveAsync(CoordinatorEmailConfig value, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
-    private sealed class FakeOutbox : IOutboundEmailRepository
+    internal sealed class FakeOutbox : IOutboundEmailRepository
     {
         public List<OutboundEmail> Rows { get; } = [];
 
@@ -1044,7 +1044,7 @@ public sealed class QuotationTests
         public Task SaveAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
-    private sealed class FakePdfGenerator : IPdfGenerator
+    internal sealed class FakePdfGenerator : IPdfGenerator
     {
         public QuotationPdfModel? LastModel { get; private set; }
 
@@ -1055,9 +1055,12 @@ public sealed class QuotationTests
         }
     }
 
-    private sealed class FakeQuotes : IQuoteRepository
+    internal sealed class FakeQuotes : IQuoteRepository
     {
         private readonly List<Quote> quotes = [];
+
+        public Func<Guid, InspectionRequest?> RequestOf { get; set; } = _ => null;
+        public QuoteListFilter? LastFilter { get; private set; }
 
         public Task AddAsync(Quote quote, CancellationToken cancellationToken = default)
         {
@@ -1071,10 +1074,26 @@ public sealed class QuotationTests
         public Task<IReadOnlyList<Quote>> ListForRequestAsync(Guid requestId, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<Quote>>(quotes.Where(quote => quote.RequestId == requestId).OrderBy(quote => quote.Version).ToArray());
 
+        public Task<IReadOnlyList<Quote>> ListAsync(QuoteListFilter filter, CancellationToken cancellationToken = default)
+        {
+            LastFilter = filter;
+            var requestProperty = typeof(Quote).GetProperty(nameof(Quote.Request))!;
+            foreach (var quote in quotes) requestProperty.SetValue(quote, RequestOf(quote.RequestId));
+            return Task.FromResult<IReadOnlyList<Quote>>(quotes
+                .Where(quote => quote.Request is not null)
+                .Where(quote => filter.CoordinatorId is not Guid coordinatorId ||
+                    quote.Request!.Source != RequestSource.Email || quote.Request.CoordinatorId == coordinatorId)
+                .Where(quote => !filter.CurrentOnly || quote.SupersededAt is null)
+                .Where(quote => filter.Open is not bool open || (quote.Status == QuoteStatus.Open) == open)
+                .Where(quote => filter.Sent is not bool sent || quote.IsSent == sent)
+                .Where(quote => filter.Accepted is not bool accepted || quote.Status == (accepted ? QuoteStatus.Accepted : QuoteStatus.Rejected))
+                .OrderByDescending(quote => quote.UpdatedAt).ToArray());
+        }
+
         public Task SaveAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
-    private sealed class FakeRequests(params InspectionRequest[] initial) : IRequestRepository
+    internal sealed class FakeRequests(params InspectionRequest[] initial) : IRequestRepository
     {
         private readonly List<InspectionRequest> requests = [.. initial];
 

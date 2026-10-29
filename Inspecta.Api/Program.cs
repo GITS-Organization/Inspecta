@@ -59,6 +59,10 @@ builder.Services.AddSwaggerGen(options =>
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     if (File.Exists(xmlPath))
         options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+
+    // After the XML comments, so the workflow titles and tag order are the last word.
+    options.OperationFilter<WorkflowOperationFilter>();
+    options.DocumentFilter<WorkflowDocumentFilter>();
 });
 builder.Services.AddHealthChecks();
 builder.Services.AddHttpContextAccessor();
@@ -236,7 +240,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 if (app.Configuration.GetValue("Swagger:Enabled", true))
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options => options.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None));
 }
 
 app.UseExceptionHandler();
