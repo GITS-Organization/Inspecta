@@ -122,7 +122,8 @@ public sealed class RequestsController(IInspectionRequestService requestService,
 
     /// <summary>
     /// Save the request screen in one step: client, location, preferred date, access notes and, optionally, the whole
-    /// equipment list (<c>items</c>: items with an <c>id</c> are updated, items without one are added, items left out are
+    /// equipment list (<c>items</c>: items with an <c>id</c> of this request are updated, items without one (or with an id the
+    /// request does not know) are added, new machines are registered in the catalog automatically, items left out are
     /// removed; omit <c>items</c> to keep them). Everything is saved together or nothing is. Send the <c>updatedAt</c> you
     /// read as <c>expectedUpdatedAt</c> to get <c>409</c> instead of overwriting newer changes. Owning coordinator only,
     /// before a quote is sent.

@@ -41,15 +41,17 @@ public sealed class RequestItem
         string? model = null,
         string? prNumber = null,
         string? location = null,
-        string? issueDescription = null)
+        string? issueDescription = null,
+        Guid? id = null)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Item name is required.", nameof(name));
         if (quantity < 1) throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be at least one.");
         if (equipmentId == Guid.Empty) throw new ArgumentException("Equipment id cannot be empty.", nameof(equipmentId));
+        if (id == Guid.Empty) throw new ArgumentException("Item id cannot be empty.", nameof(id));
 
         return new RequestItem
         {
-            Id = Guid.NewGuid(),
+            Id = id ?? Guid.NewGuid(),
             EquipmentId = equipmentId,
             Name = name.Trim(),
             Type = type?.Trim(),

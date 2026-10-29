@@ -6,7 +6,10 @@ using Inspecta.Domain.Enums;
 
 namespace Inspecta.Application.Services;
 
-public sealed class InspectionRequestService(IRequestRepository requestRepository, IUserRepository userRepository) : IInspectionRequestService
+public sealed class InspectionRequestService(
+    IRequestRepository requestRepository,
+    IUserRepository userRepository,
+    IRequestEquipmentRegistrar? equipmentRegistrar = null) : IInspectionRequestService
 {
     public async Task<RequestResponse> CreateAsync(
         CreateInspectionRequest request,
@@ -184,6 +187,7 @@ public sealed class InspectionRequestService(IRequestRepository requestRepositor
             details.Items?.Select(item => new RequestItemSpec(
                 item.Id, item.Name, item.Quantity, item.EquipmentId, item.Type, item.Capacity,
                 item.SerialNumber, item.Location, item.IssueDescription)).ToArray());
+        await RegisterEquipmentAsync(request, cancellationToken);
         await requestRepository.SaveRevisionAsync(request, changes, cancellationToken);
         return RequestResponseMapper.Map(request);
     }
@@ -197,6 +201,7 @@ public sealed class InspectionRequestService(IRequestRepository requestRepositor
     {
         var request = await LoadForEditAsync(requestId, actorId, role, cancellationToken);
         var created = request.AddItem(CreateItem(item));
+        await RegisterEquipmentAsync(request, cancellationToken);
         await requestRepository.AddItemAsync(request, created, cancellationToken);
         return RequestResponseMapper.Map(request);
     }
@@ -213,6 +218,7 @@ public sealed class InspectionRequestService(IRequestRepository requestRepositor
         request.UpdateItem(
             itemId, item.Name, item.Quantity, item.EquipmentId, item.Type, item.Capacity,
             item.SerialNumber, item.Location, item.IssueDescription);
+        await RegisterEquipmentAsync(request, cancellationToken);
         await requestRepository.SaveAsync(request, cancellationToken);
         return RequestResponseMapper.Map(request);
     }
@@ -275,6 +281,10 @@ public sealed class InspectionRequestService(IRequestRepository requestRepositor
             throw new AuthException("forbidden", "Only the coordinator that owns the request can edit it.", 403);
         return request;
     }
+
+    // Machines that are not in our records yet are registered with the request: same save, same transaction.
+    private Task RegisterEquipmentAsync(InspectionRequest request, CancellationToken cancellationToken) =>
+        equipmentRegistrar is null ? Task.CompletedTask : equipmentRegistrar.RegisterAsync(request, cancellationToken);
 
     private static RequestItem CreateItem(CreateRequestItem item) => RequestItem.Create(
         item.Name,

@@ -236,7 +236,7 @@ public sealed class InspectionRequest
 
     /// <summary>
     /// Saves the details and, when <paramref name="items"/> is given, replaces the item list in one step: items with an
-    /// <c>Id</c> are updated, items without one are added, and existing items that are not listed are removed. Everything
+    /// <c>Id</c> of this request are updated, items without one (or with an id the request does not know) are added, and existing items that are not listed are removed. Everything
     /// is validated before anything changes, so a rejected revision leaves the request untouched.
     /// </summary>
     public RequestItemChanges Revise(
@@ -260,17 +260,17 @@ public sealed class InspectionRequest
             var repeated = ids.GroupBy(id => id).Where(group => group.Count() > 1).Select(group => group.Key).ToList();
             if (repeated.Count > 0)
                 throw new ArgumentException($"Each item can only appear once: {string.Join(", ", repeated)}.");
-            var unknown = ids.Where(id => Items.All(item => item.Id != id)).ToList();
-            if (unknown.Count > 0)
-                throw new ArgumentException($"These items do not belong to the request: {string.Join(", ", unknown)}.");
             foreach (var spec in items)
                 RequestItem.Validate(spec.Name, spec.Quantity, spec.EquipmentId);
 
-            foreach (var spec in items.Where(spec => spec.Id is null))
+            // An id this request does not know is an item the screen created itself (screens that work offline, or
+            // that number their rows, send their own ids): it is added with that id.
+            var known = Items.Select(item => item.Id).ToHashSet();
+            foreach (var spec in items.Where(spec => spec.Id is null || !known.Contains(spec.Id.Value)))
                 added.Add(RequestItem.Create(
                     spec.Name, spec.Quantity, spec.EquipmentId, spec.Type, spec.Capacity, spec.SerialNumber,
-                    location: spec.Location, issueDescription: spec.IssueDescription));
-            foreach (var spec in items.Where(spec => spec.Id is not null))
+                    location: spec.Location, issueDescription: spec.IssueDescription, id: spec.Id));
+            foreach (var spec in items.Where(spec => spec.Id is not null && known.Contains(spec.Id.Value)))
                 Items.Single(item => item.Id == spec.Id).Update(
                     spec.Name, spec.Quantity, spec.EquipmentId, spec.Type, spec.Capacity, spec.SerialNumber,
                     spec.Location, spec.IssueDescription);

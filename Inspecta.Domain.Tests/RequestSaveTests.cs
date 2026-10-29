@@ -96,13 +96,34 @@ public sealed class RequestSaveTests
     }
 
     [Fact]
-    public async Task UnknownAndRepeatedItemIdsAreRejected()
+    public async Task AnIdTheRequestDoesNotKnowIsAddedAsANewItemWithThatId()
+    {
+        var fixture = new Fixture();
+        var screenId = Guid.NewGuid();
+
+        var saved = await fixture.SaveAsync(new UpdateRequestDetailsRequest
+        {
+            Items =
+            [
+                new SaveRequestItem { Id = fixture.Crane.Id, Name = "Mobile crane" },
+                new SaveRequestItem { Id = screenId, Name = "Equipment from the screen", Quantity = 2, Capacity = "2 tons" }
+            ]
+        });
+
+        var added = Assert.Single(fixture.Repository.LastChanges!.Added);
+        Assert.Equal(screenId, added.Id);
+        Assert.Contains(saved.Items, item => item.Id == screenId && item.Name == "Equipment from the screen" && item.Quantity == 2);
+        Assert.Equal(fixture.Receiver.Id, Assert.Single(fixture.Repository.LastChanges.Removed).Id);
+    }
+
+    [Fact]
+    public async Task EmptyAndRepeatedItemIdsAreRejected()
     {
         var fixture = new Fixture();
 
         await Assert.ThrowsAsync<ArgumentException>(() => fixture.SaveAsync(new UpdateRequestDetailsRequest
         {
-            Items = [new SaveRequestItem { Id = Guid.NewGuid(), Name = "Not mine" }]
+            Items = [new SaveRequestItem { Id = Guid.Empty, Name = "Empty id" }]
         }));
         await Assert.ThrowsAsync<ArgumentException>(() => fixture.SaveAsync(new UpdateRequestDetailsRequest
         {
@@ -254,7 +275,7 @@ public sealed class RequestSaveTests
             Service.UpdateDetailsAsync(Request.Id, CoordinatorId, "coordinator", details);
     }
 
-    private sealed class Repo(InspectionRequest request) : IRequestRepository
+    internal sealed class Repo(InspectionRequest request) : IRequestRepository
     {
         public int Saves { get; private set; }
         public RequestItemChanges? LastChanges { get; private set; }
@@ -280,6 +301,7 @@ public sealed class RequestSaveTests
         public Task<IReadOnlyList<RequestCount>> CountAsync(RequestListFilter scope, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<RequestCount>>([]);
         public Task<bool> ClientExistsAsync(Guid clientId, CancellationToken cancellationToken = default) => Task.FromResult(true);
-        public Task<Guid?> GetClientManagerIdAsync(Guid clientId, CancellationToken cancellationToken = default) => Task.FromResult<Guid?>(null);
+        public Guid? ClientManagerId { get; set; }
+        public Task<Guid?> GetClientManagerIdAsync(Guid clientId, CancellationToken cancellationToken = default) => Task.FromResult(ClientManagerId);
     }
 }
