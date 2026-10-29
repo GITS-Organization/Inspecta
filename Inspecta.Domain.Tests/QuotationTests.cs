@@ -351,6 +351,155 @@ public sealed class QuotationTests
     }
 
     [Fact]
+    public async Task OneSaveCanCompleteTheRequestAndOpenTheQuotationInstead()
+    {
+        var incomplete = InspectionRequest.CreateFromEmail(ManagerId, CoordinatorId, Email());
+        var fixture = new Fixture(incomplete);
+
+        var saved = await fixture.Service.SaveRequestAndPrepareQuotationAsync(
+            incomplete.Id, CoordinatorId, "coordinator", new UpdateRequestDetailsRequest
+            {
+                ClientName = "Al Noor Heavy Industries Ltd.",
+                Location = "Industrial City",
+                PrepareQuotation = true,
+                Items =
+                [
+                    new SaveRequestItem { Name = "Mobile crane - Liebherr", Type = "Mobile crane", Quantity = 1 },
+                    new SaveRequestItem { Name = "Air receiver - 3000 L", Type = "Air receiver", Quantity = 4 }
+                ]
+            });
+
+        Assert.Equal(JobStatus.QuoteDraft, saved.Status);
+        Assert.Equal(2, saved.Items.Count);
+        var quotation = saved.Quotation!;
+        Assert.Equal(QuoteStatus.Open, quotation.Status);
+        Assert.Equal(1, quotation.Version);
+        Assert.Equal(2, quotation.Items!.Count);
+        Assert.Equal(saved.Items.Select(item => item.Id).Order(), quotation.Items.Select(item => item.RequestItemId!.Value).Order());
+        Assert.All(quotation.Items, item => Assert.Null(item.UnitPricePiastres));
+        Assert.Equal(quotation.Items.Select(item => item.RequestItemId!.Value).Order(), quotation.MissingPrices!.Order());
+        Assert.Equal("Al Noor", quotation.ContactName);
+        Assert.Equal(QuotationDefaults.StandardNotes, quotation.Notes);
+        Assert.True(quotation.CanEdit);
+        Assert.Single(await fixture.Quotes.ListForRequestAsync(incomplete.Id));
+        Assert.Empty(fixture.Sender.Sent);
+    }
+
+    [Fact]
+    public async Task AnIncompleteRequestIsNotSavedNorQuotedAndTheMissingFieldsAreNamed()
+    {
+        var incomplete = InspectionRequest.CreateFromEmail(ManagerId, CoordinatorId, Email());
+        var fixture = new Fixture(incomplete);
+
+        var conflict = await Assert.ThrowsAsync<AuthException>(() => fixture.Service.SaveRequestAndPrepareQuotationAsync(
+            incomplete.Id, CoordinatorId, "coordinator", new UpdateRequestDetailsRequest
+            {
+                ClientName = "Al Noor",
+                PrepareQuotation = true
+            }));
+
+        Assert.Equal(409, conflict.StatusCode);
+        Assert.Equal("request_incomplete", conflict.Code);
+        Assert.Contains("location", conflict.Message, StringComparison.Ordinal);
+        Assert.Contains("items", conflict.Message, StringComparison.Ordinal);
+        Assert.Equal(JobStatus.RequestReceived, incomplete.Status);
+        Assert.Empty(await fixture.Quotes.ListForRequestAsync(incomplete.Id));
+    }
+
+    [Fact]
+    public async Task PressingTheButtonAgainRefreshesTheSameDraftAndKeepsItsPrices()
+    {
+        var fixture = new Fixture();
+        var first = await fixture.Service.SaveRequestAndPrepareQuotationAsync(
+            fixture.Request.Id, CoordinatorId, "coordinator", FullSave(fixture));
+        await fixture.Service.UpdateAsync(
+            fixture.Request.Id, first.Quotation!.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+
+        var again = await fixture.Service.SaveRequestAndPrepareQuotationAsync(
+            fixture.Request.Id, CoordinatorId, "coordinator", FullSave(fixture) with
+            {
+                Items =
+                [
+                    new SaveRequestItem { Id = fixture.Crane.Id, Name = "Mobile crane - Liebherr LTM 1100", Quantity = 1 },
+                    new SaveRequestItem { Id = fixture.Receiver.Id, Name = "Air receiver - 3000 L", Quantity = 4 },
+                    new SaveRequestItem { Name = "Safety valve DN40", Quantity = 6 }
+                ]
+            });
+
+        Assert.Equal(first.Quotation.Id, again.Quotation!.Id);
+        Assert.Equal(1, again.Quotation.Version);
+        Assert.Single(await fixture.Quotes.ListForRequestAsync(fixture.Request.Id));
+        Assert.Equal(3, again.Quotation.Items!.Count);
+        Assert.Equal(1_200_000, again.Quotation.Items.Single(item => item.RequestItemId == fixture.Crane.Id).UnitPricePiastres);
+        Assert.Equal(850_000, again.Quotation.Items.Single(item => item.RequestItemId == fixture.Receiver.Id).UnitPricePiastres);
+        var added = again.Quotation.Items.Single(item => item.Description == "Safety valve DN40");
+        Assert.Null(added.UnitPricePiastres);
+        Assert.Equal([added.RequestItemId!.Value], again.Quotation.MissingPrices!);
+        Assert.Equal(JobStatus.QuoteDraft, fixture.Request.Status);
+    }
+
+    [Fact]
+    public async Task PreparingTheQuotationAlsoRegistersNewMachines()
+    {
+        var registrar = new RecordingRegistrar();
+        var fixture = new Fixture(registrar: registrar);
+
+        await fixture.Service.SaveRequestAndPrepareQuotationAsync(
+            fixture.Request.Id, CoordinatorId, "coordinator", FullSave(fixture));
+
+        Assert.Equal(1, registrar.Calls);
+    }
+
+    [Fact]
+    public async Task OnlyTheOwnerCanSaveAndPrepareAndAStaleScreenGetsAConflict()
+    {
+        var fixture = new Fixture();
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => fixture.Service.SaveRequestAndPrepareQuotationAsync(
+            fixture.Request.Id, Guid.NewGuid(), "coordinator", FullSave(fixture)));
+        await Assert.ThrowsAsync<AuthException>(() => fixture.Service.SaveRequestAndPrepareQuotationAsync(
+            fixture.Request.Id, ManagerId, "technical_manager", FullSave(fixture)));
+        var stale = await Assert.ThrowsAsync<AuthException>(() => fixture.Service.SaveRequestAndPrepareQuotationAsync(
+            fixture.Request.Id, CoordinatorId, "coordinator", FullSave(fixture) with { ExpectedUpdatedAt = fixture.Request.UpdatedAt.AddMinutes(-3) }));
+
+        Assert.Equal("request_changed", stale.Code);
+        Assert.Empty(await fixture.Quotes.ListForRequestAsync(fixture.Request.Id));
+        Assert.Equal(JobStatus.RequestReceived, fixture.Request.Status);
+    }
+
+    [Fact]
+    public async Task ASentQuotationCannotBeReopenedBySavingTheRequest()
+    {
+        var sent = await SentFixtureAsync();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sent.Fixture.Service.SaveRequestAndPrepareQuotationAsync(
+            sent.Fixture.Request.Id, CoordinatorId, "coordinator", FullSave(sent.Fixture)));
+    }
+
+    private static UpdateRequestDetailsRequest FullSave(Fixture fixture) => new()
+    {
+        ClientName = "Al Noor Heavy Industries Ltd.",
+        Location = "Industrial City",
+        PrepareQuotation = true,
+        Items =
+        [
+            new SaveRequestItem { Id = fixture.Crane.Id, Name = fixture.Crane.Name, Quantity = fixture.Crane.Quantity, Type = fixture.Crane.Type },
+            new SaveRequestItem { Id = fixture.Receiver.Id, Name = fixture.Receiver.Name, Quantity = fixture.Receiver.Quantity, Type = fixture.Receiver.Type }
+        ]
+    };
+
+    private sealed class RecordingRegistrar : IRequestEquipmentRegistrar
+    {
+        public int Calls { get; private set; }
+
+        public Task RegisterAsync(InspectionRequest request, CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
     public async Task ANewQuoteStartsWithTheStandardNotesAndTheSenderAsContact()
     {
         var fixture = new Fixture();
@@ -807,7 +956,7 @@ public sealed class QuotationTests
 
     private sealed class Fixture
     {
-        public Fixture(InspectionRequest? request = null, bool configured = true)
+        public Fixture(InspectionRequest? request = null, bool configured = true, IRequestEquipmentRegistrar? registrar = null)
         {
             Request = request ?? CompleteRequest(out _, out _, Guid.NewGuid());
             Crane = Request.Items.ElementAtOrDefault(0)!;
@@ -826,7 +975,7 @@ public sealed class QuotationTests
                 new FakeProtector(),
                 Pdf,
                 Sender);
-            Service = new QuoteService(Quotes, Requests, Pdf, Delivery, Outbox, new IncomingEmailRequestTests.FakeUserRepository(Coordinator));
+            Service = new QuoteService(Quotes, Requests, Pdf, Delivery, Outbox, new IncomingEmailRequestTests.FakeUserRepository(Coordinator), registrar);
         }
 
         public InspectionRequest Request { get; }

@@ -31,7 +31,8 @@ public sealed record RequestResponse(
     bool CanEditDetails,
     DateTimeOffset UpdatedAt,
     RequestTriage Triage = RequestTriage.Request,
-    DateTimeOffset? MaybeExpiresAt = null);
+    DateTimeOffset? MaybeExpiresAt = null,
+    Quotations.QuoteResponse? Quotation = null);
 
 /// <summary>Equipment requested for inspection.</summary>
 public sealed record RequestItemResponse(

@@ -124,7 +124,9 @@ public sealed class RequestsController(IInspectionRequestService requestService,
     /// Save the request screen in one step: client, location, preferred date, access notes and, optionally, the whole
     /// equipment list (<c>items</c>: items with an <c>id</c> of this request are updated, items without one (or with an id the
     /// request does not know) are added, new machines are registered in the catalog automatically, items left out are
-    /// removed; omit <c>items</c> to keep them). Everything is saved together or nothing is. Send the <c>updatedAt</c> you
+    /// removed; omit <c>items</c> to keep them). Everything is saved together or nothing is. Set <c>prepareQuotation</c> to open
+    /// the quotation in the same save (items copied with empty prices, request moves to <c>quote_draft</c>, the response carries
+    /// <c>quotation</c>; a complete request is required, otherwise <c>409 request_incomplete</c>). Send the <c>updatedAt</c> you
     /// read as <c>expectedUpdatedAt</c> to get <c>409</c> instead of overwriting newer changes. Owning coordinator only,
     /// before a quote is sent.
     /// </summary>
@@ -137,7 +139,9 @@ public sealed class RequestsController(IInspectionRequestService requestService,
     public async Task<ActionResult<RequestResponse>> UpdateDetails(Guid requestId, UpdateRequestDetailsRequest request, CancellationToken cancellationToken)
     {
         if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
-        return Ok(await requestService.UpdateDetailsAsync(requestId, actorId, role, request, cancellationToken));
+        return Ok(request.PrepareQuotation
+            ? await quoteService.SaveRequestAndPrepareQuotationAsync(requestId, actorId, role, request, cancellationToken)
+            : await requestService.UpdateDetailsAsync(requestId, actorId, role, request, cancellationToken));
     }
 
     /// <summary>Add an equipment item to a request. Owning coordinator only, before a quote is sent.</summary>

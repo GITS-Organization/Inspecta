@@ -14,7 +14,8 @@ public sealed class QuoteService(
     IPdfGenerator pdfGenerator,
     IQuoteDeliveryService deliveryService,
     IOutboundEmailRepository outboundEmailRepository,
-    IUserRepository userRepository) : IQuoteService
+    IUserRepository userRepository,
+    IRequestEquipmentRegistrar? equipmentRegistrar = null) : IQuoteService
 {
     public async Task<IReadOnlyList<QuoteResponse>> ListAsync(
         Guid requestId,
@@ -74,8 +75,65 @@ public sealed class QuoteService(
         if (request.Status != JobStatus.QuoteDraft)
             request.TransitionTo(JobStatus.QuoteDraft, actorId);
 
+        var quote = await BuildNewDraftAsync(request, existingQuotes, previous, createRequest.ValidForDays, actorId, cancellationToken);
+        await quoteRepository.AddAsync(quote, cancellationToken);
+        return await MapAsync(quote, canManage: true, cancellationToken);
+    }
+
+    /// <summary>
+    /// Saves the request screen and opens the quotation in the same transaction. The quotation is created from the saved
+    /// items, or, when a draft already exists, refreshed from them keeping its prices. The request must be complete.
+    /// </summary>
+    public async Task<RequestResponse> SaveRequestAndPrepareQuotationAsync(
+        Guid requestId,
+        Guid actorId,
+        string role,
+        UpdateRequestDetailsRequest details,
+        CancellationToken cancellationToken = default)
+    {
+        var request = await LoadRequestAsync(requestId, actorId, role, tracking: true, manage: true, cancellationToken);
+        if (request.CoordinatorId != actorId)
+            throw new AuthException("forbidden", "Only the coordinator that owns the request can edit it.", 403);
+
+        var changes = await new RequestDetailsEditor(requestRepository, equipmentRegistrar).ApplyAsync(request, details, cancellationToken);
+        if (request.GetMissingFields() is { Count: > 0 } missing)
+            throw new AuthException(
+                "request_incomplete",
+                $"Complete the request before preparing the quotation. Missing: {string.Join(", ", missing)}.",
+                409);
+
+        var existingQuotes = await quoteRepository.ListForRequestAsync(request.Id, cancellationToken);
+        var draftId = existingQuotes.FirstOrDefault(quote => quote.IsEditable)?.Id;
+        var draft = draftId is Guid id ? await quoteRepository.GetByIdAsync(id, cancellationToken) : null;
+        if (draft is not null)
+        {
+            RefreshDraftItems(draft, request);
+        }
+        else
+        {
+            if (request.Status != JobStatus.QuoteDraft)
+                request.TransitionTo(JobStatus.QuoteDraft, actorId);
+            draft = await BuildNewDraftAsync(request, existingQuotes, null, null, actorId, cancellationToken);
+        }
+
+        // One save for the request, its item changes, the new machines and the quotation.
+        requestRepository.StageRevision(changes);
+        if (draftId is null) await quoteRepository.AddAsync(draft, cancellationToken);
+        else await quoteRepository.SaveAsync(cancellationToken);
+
+        return RequestResponseMapper.Map(request) with { Quotation = await MapAsync(draft, canManage: true, cancellationToken) };
+    }
+
+    private async Task<Quote> BuildNewDraftAsync(
+        InspectionRequest request,
+        IReadOnlyList<Quote> existingQuotes,
+        Quote? previous,
+        int? requestedValidForDays,
+        Guid actorId,
+        CancellationToken cancellationToken)
+    {
         var version = existingQuotes.Select(quote => quote.Version).DefaultIfEmpty(0).Max() + 1;
-        var validForDays = createRequest.ValidForDays ?? previous?.ValidForDays ?? Quote.DefaultValidForDays;
+        var validForDays = requestedValidForDays ?? previous?.ValidForDays ?? Quote.DefaultValidForDays;
         var clientName = string.IsNullOrWhiteSpace(request.ClientName) ? null : request.ClientName;
         var previousPrices = previous?.GetItems()
             .Where(item => item.RequestItemId is not null)
@@ -83,10 +141,10 @@ public sealed class QuoteService(
         var items = request.Items
             .Select(item => ToQuoteItem(item, previousPrices is not null && previousPrices.TryGetValue(item.Id, out var price) ? price : null))
             .ToArray();
-        var sourceEmail = previous is null ? await requestRepository.GetEmailAsync(requestId, cancellationToken) : null;
+        var sourceEmail = previous is null ? await requestRepository.GetEmailAsync(request.Id, cancellationToken) : null;
         var contactName = previous?.ContactName ?? sourceEmail?.FromName;
         var quote = Quote.Create(
-            requestId,
+            request.Id,
             version,
             0,
             DateTimeOffset.UtcNow.AddDays(validForDays),
@@ -103,9 +161,20 @@ public sealed class QuoteService(
             previous?.GetNotes() ?? QuotationDefaults.StandardNotes,
             previous?.GetScopeOfWork(),
             validForDays);
+        return quote;
+    }
 
-        await quoteRepository.AddAsync(quote, cancellationToken);
-        return await MapAsync(quote, canManage: true, cancellationToken);
+    // The draft follows the request items; items that were already priced keep their price.
+    private static void RefreshDraftItems(Quote draft, InspectionRequest request)
+    {
+        var prices = draft.GetItems()
+            .Where(item => item.RequestItemId is not null)
+            .ToDictionary(item => item.RequestItemId!.Value, item => item.UnitPricePiastres);
+        draft.SetDraftDetails(
+            request.Items.Select(item => ToQuoteItem(item, prices.TryGetValue(item.Id, out var price) ? price : null)).ToArray(),
+            draft.Message,
+            Summarize(request.Items),
+            string.IsNullOrWhiteSpace(request.ClientName) ? null : request.ClientName);
     }
 
     public async Task<QuoteResponse> UpdateAsync(

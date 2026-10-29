@@ -34,6 +34,13 @@ public sealed record UpdateRequestDetailsRequest
     /// saved and the API answers <c>409</c>, so a stale screen cannot overwrite or delete newer changes.
     /// </summary>
     public DateTimeOffset? ExpectedUpdatedAt { get; init; }
+
+    /// <summary>
+    /// Also open the quotation in the same save: its items are copied from the request (prices empty), the request moves to
+    /// <c>quote_draft</c>, and the response carries the quotation. If a draft already exists it is refreshed from the items and
+    /// keeps its prices. The request must be complete (client name, location and at least one item), otherwise nothing is saved.
+    /// </summary>
+    public bool PrepareQuotation { get; init; }
 }
 
 /// <summary>One equipment item of the whole-request save.</summary>

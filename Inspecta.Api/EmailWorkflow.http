@@ -166,6 +166,21 @@ Content-Type: application/json
   ]
 }
 
+### One button: save the request screen and open the quotation in the same step (response has "quotation")
+PUT {{baseUrl}}/api/v1/requests/{{requestId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "clientName": "Al Noor Heavy Industries Ltd.",
+  "location": "Industrial City, Saudi Arabia",
+  "items": [
+    { "name": "Air receiver pressure vessel - 2,000 L / 10 bar", "type": "Air receiver pressure vessel", "quantity": 3 },
+    { "name": "Safety relief valve - DN40", "type": "Safety relief valve", "quantity": 6 }
+  ],
+  "prepareQuotation": true
+}
+
 ### Add an equipment item
 POST {{baseUrl}}/api/v1/requests/{{requestId}}/items
 Authorization: Bearer {{accessToken}}

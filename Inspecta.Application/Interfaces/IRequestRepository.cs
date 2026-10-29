@@ -34,6 +34,9 @@ public interface IRequestRepository
     Task DeleteAsync(InspectionRequest request, CancellationToken cancellationToken = default);
     Task AddItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default);
 
+    /// <summary>Adds and removes the items of a revision in the change tracker without saving; the caller saves.</summary>
+    void StageRevision(RequestItemChanges changes) { }
+
     /// <summary>Saves a revised request together with the items it added and removed, in one save.</summary>
     Task SaveRevisionAsync(
         InspectionRequest request,
