@@ -850,6 +850,10 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset?>("ClientRespondedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("ContactName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -872,6 +876,10 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<string>("NotesJson")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("QuotationNumber")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
 
                     b.Property<Guid>("RequestId")
                         .HasColumnType("uuid");

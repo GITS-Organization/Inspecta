@@ -21,6 +21,7 @@ public static class PdfServiceCollectionExtensions
             (!Enum.TryParse(licenseName, ignoreCase: true, out license) || !Enum.IsDefined(license)))
             throw new InvalidOperationException("Pdf:QuestPdfLicense must be Community, Professional or Enterprise.");
 
+        PdfFonts.Register();
         QuestPDF.Settings.License = license;
         // Client names and email-derived text can contain characters no font covers; draw a placeholder
         // glyph instead of failing the whole document.

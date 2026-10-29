@@ -12,7 +12,8 @@ public sealed class QuoteService(
     IRequestRepository requestRepository,
     IPdfGenerator pdfGenerator,
     IQuoteDeliveryService deliveryService,
-    IOutboundEmailRepository outboundEmailRepository) : IQuoteService
+    IOutboundEmailRepository outboundEmailRepository,
+    IUserRepository userRepository) : IQuoteService
 {
     public async Task<IReadOnlyList<QuoteResponse>> ListAsync(
         Guid requestId,
@@ -81,6 +82,8 @@ public sealed class QuoteService(
         var items = request.Items
             .Select(item => ToQuoteItem(item, previousPrices is not null && previousPrices.TryGetValue(item.Id, out var price) ? price : null))
             .ToArray();
+        var sourceEmail = previous is null ? await requestRepository.GetEmailAsync(requestId, cancellationToken) : null;
+        var contactName = previous?.ContactName ?? sourceEmail?.FromName;
         var quote = Quote.Create(
             requestId,
             version,
@@ -88,13 +91,15 @@ public sealed class QuoteService(
             DateTimeOffset.UtcNow.AddDays(validForDays),
             actorId,
             requestNumber: previous is null ? null : Quote.NextRevisionNumber(previous.ProposalNumber, version),
-            clientName: clientName);
+            clientName: clientName,
+            quotationNumber: previous?.QuotationNumber,
+            contactName: contactName);
         quote.SetDraftDetails(
             items,
             previous?.Message,
             Summarize(request.Items),
             clientName,
-            previous?.GetNotes(),
+            previous?.GetNotes() ?? QuotationDefaults.StandardNotes,
             previous?.GetScopeOfWork(),
             validForDays);
 
@@ -126,7 +131,8 @@ public sealed class QuoteService(
             string.IsNullOrWhiteSpace(request.ClientName) ? null : request.ClientName,
             update.Notes,
             update.ScopeOfWork,
-            update.ValidForDays);
+            update.ValidForDays,
+            update.ContactName);
         if (update.ProposalNumber is not null)
             quote.SetProposalNumber(update.ProposalNumber);
 
@@ -143,7 +149,11 @@ public sealed class QuoteService(
     {
         var request = await LoadRequestAsync(requestId, actorId, role, tracking: false, manage: false, cancellationToken);
         var quote = await LoadQuoteAsync(requestId, quoteId, cancellationToken);
-        return pdfGenerator.Generate(QuotationPdfModelFactory.Create(quote, request, DateTimeOffset.UtcNow));
+        var coordinator = request.CoordinatorId is Guid coordinatorId
+            ? await userRepository.GetByIdAsync(coordinatorId, cancellationToken)
+            : null;
+        return pdfGenerator.Generate(QuotationPdfModelFactory.Create(
+            quote, request, coordinator?.FullName ?? string.Empty, DateTimeOffset.UtcNow));
     }
 
     /// <summary>
@@ -341,6 +351,8 @@ public sealed class QuoteService(
                 .OrderBy(email => email.CreatedAt)
                 .Select(email => new QuoteEmailResponse(
                     email.Kind, email.Status, email.ToAddress, email.Attempts, email.SentAt, email.LastError))
-                .ToArray());
+                .ToArray(),
+            quote.ContactName,
+            quote.QuotationNumber);
     }
 }

@@ -32,6 +32,15 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    // New items have client-generated keys, so they are added explicitly; the request, its edited items and the
+    // added and removed items are written by a single SaveChanges (one transaction).
+    public async Task SaveRevisionAsync(InspectionRequest request, RequestItemChanges changes, CancellationToken cancellationToken = default)
+    {
+        dbContext.RequestItems.AddRange(changes.Added);
+        dbContext.RequestItems.RemoveRange(changes.Removed);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task RemoveItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default)
     {
         dbContext.RequestItems.Remove(item);

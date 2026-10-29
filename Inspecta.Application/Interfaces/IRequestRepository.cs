@@ -33,6 +33,13 @@ public interface IRequestRepository
     Task SaveAsync(InspectionRequest request, CancellationToken cancellationToken = default);
     Task DeleteAsync(InspectionRequest request, CancellationToken cancellationToken = default);
     Task AddItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default);
+
+    /// <summary>Saves a revised request together with the items it added and removed, in one save.</summary>
+    Task SaveRevisionAsync(
+        InspectionRequest request,
+        RequestItemChanges changes,
+        CancellationToken cancellationToken = default) => SaveAsync(request, cancellationToken);
+
     Task RemoveItemAsync(InspectionRequest request, RequestItem item, CancellationToken cancellationToken = default);
     Task<InspectionRequest?> GetByIdAsync(Guid requestId, bool tracking, CancellationToken cancellationToken = default);
     Task<RequestEmail?> GetEmailAsync(Guid requestId, CancellationToken cancellationToken = default);

@@ -149,6 +149,23 @@ Content-Type: application/json
   "accessNotes": "Compressor Room, shutdown window Thursday evenings. Vessels depressurised by maintenance."
 }
 
+### Save the whole request screen in one call (details plus the full equipment list, all or nothing)
+PUT {{baseUrl}}/api/v1/requests/{{requestId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "clientName": "Al Noor Heavy Industries Ltd.",
+  "location": "Industrial City, Saudi Arabia",
+  "preferredDate": "2026-11-09T00:00:00Z",
+  "accessNotes": "Compressor Room, shutdown window Thursday evenings.",
+  "expectedUpdatedAt": "replace-with-the-updatedAt-you-read",
+  "items": [
+    { "id": "replace-with-existing-item-id", "name": "Air receiver pressure vessel - 2,000 L / 10 bar", "type": "Air receiver pressure vessel", "capacity": "2,000 L / 10 bar", "quantity": 3, "location": "Industrial City, Saudi Arabia" },
+    { "name": "Safety relief valve - DN40", "type": "Safety relief valve", "quantity": 6 }
+  ]
+}
+
 ### Add an equipment item
 POST {{baseUrl}}/api/v1/requests/{{requestId}}/items
 Authorization: Bearer {{accessToken}}
@@ -341,4 +358,17 @@ Content-Type: application/json
 {
   "decision": "rejected",
   "note": "Price is above our budget"
+}
+
+### Set who the offer is addressed to ("Attention" on the PDF cover) while the quotation is a draft
+PUT {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "contactName": "Eng. Reem",
+  "items": [
+    { "requestItemId": "replace-with-request-item-id", "unitPricePiastres": 1200000 },
+    { "requestItemId": "replace-with-other-request-item-id", "unitPricePiastres": 850000 }
+  ]
 }

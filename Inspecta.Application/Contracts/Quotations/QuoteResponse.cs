@@ -32,7 +32,9 @@ public sealed record QuoteResponse(
     DateTimeOffset? SentAt = null,
     DateTimeOffset UpdatedAt = default,
     DateTimeOffset? SupersededAt = null,
-    IReadOnlyList<QuoteEmailResponse>? Emails = null);
+    IReadOnlyList<QuoteEmailResponse>? Emails = null,
+    string? ContactName = null,
+    string? QuotationNumber = null);
 
 /// <summary>One priced line of a quotation.</summary>
 public sealed record QuoteItemResponse(

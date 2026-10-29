@@ -157,6 +157,8 @@ public sealed class InspectaDbContext(
             TenantId != null && item.Request != null && item.Request.ManagerId == TenantId);
         quote.Property(item => item.Status).HasConversion<string>().HasMaxLength(24);
         quote.Property(item => item.Type).HasConversion<string>().HasMaxLength(24);
+        quote.Property(item => item.ContactName).HasMaxLength(200);
+        quote.Property(item => item.QuotationNumber).HasMaxLength(40);
         quote.HasIndex(item => new { item.RequestId, item.Version }).IsUnique();
         quote.HasOne(item => item.Request).WithMany().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
 

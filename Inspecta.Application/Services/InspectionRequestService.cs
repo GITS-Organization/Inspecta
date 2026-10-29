@@ -161,6 +161,12 @@ public sealed class InspectionRequestService(IRequestRepository requestRepositor
         CancellationToken cancellationToken = default)
     {
         var request = await LoadForEditAsync(requestId, actorId, role, cancellationToken);
+        // A screen that read an older version must not overwrite (or delete) what changed in the meantime.
+        if (details.ExpectedUpdatedAt is DateTimeOffset expected && Math.Abs((request.UpdatedAt - expected).TotalMilliseconds) > 1)
+            throw new AuthException(
+                "request_changed",
+                "The request was changed after it was loaded. Reload it and save again.",
+                409);
         if (details.ClientId is Guid clientId)
         {
             if (!await requestRepository.ClientExistsAsync(clientId, cancellationToken))
@@ -169,8 +175,16 @@ public sealed class InspectionRequestService(IRequestRepository requestRepositor
                 throw new AuthException("forbidden", "The client does not belong to the request team.", 403);
         }
 
-        request.UpdateDetails(details.ClientName, details.Location, details.ClientId, details.PreferredDate, details.AccessNotes);
-        await requestRepository.SaveAsync(request, cancellationToken);
+        var changes = request.Revise(
+            details.ClientName,
+            details.Location,
+            details.ClientId,
+            details.PreferredDate,
+            details.AccessNotes,
+            details.Items?.Select(item => new RequestItemSpec(
+                item.Id, item.Name, item.Quantity, item.EquipmentId, item.Type, item.Capacity,
+                item.SerialNumber, item.Location, item.IssueDescription)).ToArray());
+        await requestRepository.SaveRevisionAsync(request, changes, cancellationToken);
         return RequestResponseMapper.Map(request);
     }
 

@@ -27,6 +27,10 @@ public sealed record UpdateQuoteRequest
     /// </summary>
     [MaxLength(64)]
     public string? ProposalNumber { get; init; }
+
+    /// <summary>Person the offer is addressed to (the "Attention" line). Defaults to the sender name of the original email.</summary>
+    [MaxLength(200)]
+    public string? ContactName { get; init; }
 }
 
 /// <summary>The price of one request item.</summary>

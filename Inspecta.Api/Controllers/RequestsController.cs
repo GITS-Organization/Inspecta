@@ -120,7 +120,13 @@ public sealed class RequestsController(IInspectionRequestService requestService)
         return email is null ? NotFound() : Ok(email);
     }
 
-    /// <summary>Complete client, location, preferred date and access notes. Owning coordinator only, before a quote is sent.</summary>
+    /// <summary>
+    /// Save the request screen in one step: client, location, preferred date, access notes and, optionally, the whole
+    /// equipment list (<c>items</c>: items with an <c>id</c> are updated, items without one are added, items left out are
+    /// removed; omit <c>items</c> to keep them). Everything is saved together or nothing is. Send the <c>updatedAt</c> you
+    /// read as <c>expectedUpdatedAt</c> to get <c>409</c> instead of overwriting newer changes. Owning coordinator only,
+    /// before a quote is sent.
+    /// </summary>
     [HttpPut("{requestId:guid}")]
     [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]

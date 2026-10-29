@@ -30,6 +30,12 @@ public sealed class Quote
     public QuoteType Type { get; private set; } = QuoteType.Offer;
     public QuoteStatus Status { get; private set; }
     public string? ClientName { get; private set; }
+
+    /// <summary>Person the offer is addressed to (the "Attention" line of the PDF).</summary>
+    public string? ContactName { get; private set; }
+
+    /// <summary>Stable number shown on the cover, kept across revisions (for example <c>QT-2026-1A2B3C</c>).</summary>
+    public string? QuotationNumber { get; private set; }
     public string? Message { get; private set; }
     public string? EquipmentSummary { get; private set; }
     public string? ClientReply { get; private set; }
@@ -90,7 +96,9 @@ public sealed class Quote
         string? message = null,
         string? equipmentSummary = null,
         long? subtotalPiastres = null,
-        DateTimeOffset? createdAt = null)
+        DateTimeOffset? createdAt = null,
+        string? quotationNumber = null,
+        string? contactName = null)
     {
         if (requestId == Guid.Empty || createdBy == Guid.Empty) throw new ArgumentException("Request and creator are required.");
         if (version < 1) throw new ArgumentOutOfRangeException(nameof(version));
@@ -101,13 +109,18 @@ public sealed class Quote
 
         var now = createdAt ?? DateTimeOffset.UtcNow;
         var id = Guid.NewGuid();
+        var number = string.IsNullOrWhiteSpace(quotationNumber)
+            ? $"QT-{now.Year}-{id.ToString("N")[..6].ToUpperInvariant()}"
+            : quotationNumber.Trim();
         return new Quote
         {
             Id = id,
             RequestId = requestId,
             Version = version,
+            QuotationNumber = number,
+            ContactName = string.IsNullOrWhiteSpace(contactName) ? null : contactName.Trim(),
             RequestNumber = string.IsNullOrWhiteSpace(requestNumber)
-                ? $"QT-{now.Year}-{id.ToString("N")[..6].ToUpperInvariant()} rev{version:D2}"
+                ? $"{number} rev{version:D2}"
                 : requestNumber.Trim(),
             AmountPiastres = amountPiastres,
             SubtotalPiastres = subtotalPiastres ?? amountPiastres,
@@ -130,7 +143,8 @@ public sealed class Quote
         string? clientName = null,
         IEnumerable<string>? notes = null,
         IEnumerable<string>? scopeOfWork = null,
-        int? validForDays = null)
+        int? validForDays = null,
+        string? contactName = null)
     {
         EnsureEditable();
         ArgumentNullException.ThrowIfNull(items);
@@ -151,6 +165,8 @@ public sealed class Quote
         SubtotalPiastres = AmountPiastres;
         Message = string.IsNullOrWhiteSpace(message) ? null : message.Trim();
         EquipmentSummary = equipmentSummary?.Trim();
+        if (contactName is not null)
+            ContactName = string.IsNullOrWhiteSpace(contactName) ? null : contactName.Trim();
         if (clientName is not null)
             ClientName = clientName.Trim();
         if (notes is not null)

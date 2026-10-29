@@ -7,7 +7,8 @@ namespace Inspecta.Infrastructure.Pdf;
 
 /// <summary>
 /// Base class for PDF templates. A new document is a model record in the application layer plus a subclass
-/// that implements <see cref="FileName"/>, <see cref="Title"/> and <see cref="ComposeContent"/>, registered with
+/// that implements <see cref="FileName"/> and <see cref="Title"/> and either <see cref="ComposeContent"/> (one
+/// flowing page with header and footer) or <see cref="ComposeDocument"/> (full control over the pages). Register it with
 /// <see cref="PdfServiceCollectionExtensions.AddPdfTemplate{TModel, TTemplate}"/>.
 /// </summary>
 public abstract class QuestPdfTemplate<TModel> : IPdfTemplate<TModel>
@@ -21,7 +22,7 @@ public abstract class QuestPdfTemplate<TModel> : IPdfTemplate<TModel>
     protected virtual void ComposeHeader(IContainer container, TModel model) { }
 
     /// <summary>Body of the document; pages break automatically when the content is long.</summary>
-    protected abstract void ComposeContent(IContainer container, TModel model);
+    protected virtual void ComposeContent(IContainer container, TModel model) { }
 
     /// <summary>Footer drawn at the bottom of every page. Shows the page number by default.</summary>
     protected virtual void ComposeFooter(IContainer container, TModel model) =>
@@ -34,16 +35,29 @@ public abstract class QuestPdfTemplate<TModel> : IPdfTemplate<TModel>
             text.TotalPages();
         });
 
+    /// <summary>Adds the pages. By default one A4 page with <see cref="ComposeHeader"/>, content and footer.</summary>
+    protected virtual void ComposeDocument(IDocumentContainer document, TModel model) =>
+        document.Page(page =>
+        {
+            page.Size(PageSizes.A4);
+            page.Margin(PdfTheme.PageMargin);
+            page.DefaultTextStyle(style => style
+                .FontFamily(PdfTheme.FontFamily)
+                .FontSize(PdfTheme.BodyFontSize)
+                .FontColor(PdfTheme.Navy));
+            page.Header().Element(container => ComposeHeader(container, model));
+            page.Content().Element(container => ComposeContent(container, model));
+            page.Footer().Element(container => ComposeFooter(container, model));
+        });
+
     public byte[] Render(TModel model) =>
-        Document.Create(document => document.Page(page =>
+        Document.Create(document => ComposeDocument(document, model))
+            .WithSettings(new DocumentSettings
             {
-                page.Size(PageSizes.A4);
-                page.Margin(PdfTheme.PageMargin);
-                page.DefaultTextStyle(style => style.FontSize(PdfTheme.BodyFontSize).FontColor(PdfTheme.Primary));
-                page.Header().Element(container => ComposeHeader(container, model));
-                page.Content().Element(container => ComposeContent(container, model));
-                page.Footer().Element(container => ComposeFooter(container, model));
-            }))
+                // The cover illustration is a large raster image; these keep the emailed PDF small.
+                ImageCompressionQuality = ImageCompressionQuality.Medium,
+                ImageRasterDpi = 144
+            })
             .WithMetadata(new DocumentMetadata
             {
                 Title = Title(model),

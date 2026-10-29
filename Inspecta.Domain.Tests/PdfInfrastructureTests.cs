@@ -27,6 +27,50 @@ public sealed class PdfInfrastructureTests
     }
 
     [Fact]
+    public void TheQuotationHasTheTenPagesOfTheReferenceDesignAndStaysSmallEnoughToEmail()
+    {
+        using var provider = BuildProvider();
+
+        var file = provider.GetRequiredService<IPdfGenerator>().Generate(Model("INT/417/2026 rev01", "Delta Steel Co."));
+
+        Assert.Equal(10, PageCount(file.Content));
+        Assert.True(file.Content.Length < 1_000_000, $"The PDF is {file.Content.Length} bytes.");
+    }
+
+    [Fact]
+    public void ManyItemsAndNotesFlowOntoExtraPagesInsteadOfFailing()
+    {
+        using var provider = BuildProvider();
+        var items = Enumerable.Range(1, 60)
+            .Select(index => new QuotationPdfItem(
+                $"Machine {index}", $"Pressure vessel number {index} - 2,000 L / 10 bar", index % 2 == 0 ? $"PR{index}" : null, index, index * 12_345, "Per Visit"))
+            .ToArray();
+
+        var file = provider.GetRequiredService<IPdfGenerator>().Generate(Model("INT/417/2026 rev01", "Delta Steel Co.") with
+        {
+            Items = items,
+            Notes = Enumerable.Repeat("A long note that goes on and on to take some room on the page, repeated many times.", 30).ToArray()
+        });
+
+        Assert.True(PageCount(file.Content) > 10);
+    }
+
+    [Fact]
+    public void VeryLongNamesDoNotBreakTheCover()
+    {
+        using var provider = BuildProvider();
+
+        var file = provider.GetRequiredService<IPdfGenerator>().Generate(Model("INT/417/2026 rev01", new string('N', 400)) with
+        {
+            ContactName = new string('C', 300),
+            Subject = string.Join(", ", Enumerable.Repeat("Mobile crane", 30)),
+            PreparedBy = new string('P', 200)
+        });
+
+        Assert.Equal(10, PageCount(file.Content));
+    }
+
+    [Fact]
     public void FileNamesAreSafeForHeadersAndFileSystems()
     {
         using var provider = BuildProvider();
@@ -109,18 +153,32 @@ public sealed class PdfInfrastructureTests
         Assert.Equal(LicenseType.Community, QuestPDF.Settings.License);
     }
 
+    // The page tree root carries the total in its "/Count N" entry; nested nodes carry smaller counts.
+    private static int PageCount(byte[] pdf)
+    {
+        var matches = System.Text.RegularExpressions.Regex.Matches(Encoding.Latin1.GetString(pdf), @"/Count (\d+)");
+        return matches.Count == 0 ? -1 : matches.Max(match => int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture));
+    }
+
     private static QuotationPdfModel Model(string proposalNumber, string clientName) => new(
-        proposalNumber,
-        clientName,
-        new DateTimeOffset(2026, 9, 7, 0, 0, 0, TimeSpan.Zero),
-        new DateTimeOffset(2026, 9, 21, 0, 0, 0, TimeSpan.Zero),
-        "Please find our offer below.",
+        ProposalNumber: proposalNumber,
+        QuotationNumber: "QT-2026-0142",
+        ClientName: clientName,
+        ContactName: "Eng. Reem",
+        Subject: "Mobile crane, Air receiver",
+        IssuedAt: new DateTimeOffset(2026, 9, 7, 0, 0, 0, TimeSpan.Zero),
+        ValidUntil: new DateTimeOffset(2026, 9, 21, 0, 0, 0, TimeSpan.Zero),
+        ValidForDays: 14,
+        PreparedBy: "Ahmed Rafat",
+        PreparedByTitle: "Coordinator",
+        Message: "Please find our offer below.",
+        Items:
         [
-            new QuotationPdfItem("Mobile crane - Liebherr LTM 1100, 100 t", "13351021", 1, 1_200_000, "Per Visit"),
-            new QuotationPdfItem("Air receiver - 3000 L", null, 2, null, "Per Visit")
+            new QuotationPdfItem("Mobile crane", "Mobile crane - Liebherr LTM 1100, 100 t", "13351021", 1, 1_200_000, "Per Visit"),
+            new QuotationPdfItem("Air receiver", "Air receiver - 3000 L", null, 2, null, "Per Visit")
         ],
-        ["Load and functional test", "Visual inspection"],
-        ["Pricing excludes VAT."]);
+        ScopeOfWork: ["Load and functional test", "Visual inspection"],
+        Notes: ["Pricing excludes VAT."]);
 
     private static ServiceProvider BuildProvider()
     {

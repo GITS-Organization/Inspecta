@@ -23,15 +23,22 @@ public sealed class PdfDiagnosticsController(IPdfGenerator pdfGenerator) : Contr
     }
 
     private static QuotationPdfModel SampleModel() => new(
-        "QT-2026-0142 rev01",
-        "Delta Steel Co.",
-        DateTimeOffset.UtcNow,
-        DateTimeOffset.UtcNow.AddDays(14),
-        "Thank you for your enquiry. Please find our offer below.",
+        ProposalNumber: "INT/417/2026 rev01",
+        QuotationNumber: "QT-2026-0142",
+        ClientName: "Delta Steel Co.",
+        ContactName: "Eng. Reem",
+        Subject: "Mobile crane, Air receiver",
+        IssuedAt: DateTimeOffset.UtcNow,
+        ValidUntil: DateTimeOffset.UtcNow.AddDays(14),
+        ValidForDays: 14,
+        PreparedBy: "Ahmed Rafat",
+        PreparedByTitle: "Coordinator",
+        Message: null,
+        Items:
         [
-            new QuotationPdfItem("Mobile crane - Liebherr LTM 1100, 100 t", "13351021", 1, 1_200_000, "Per Visit"),
-            new QuotationPdfItem("Air receiver - 3000 L", null, 2, 850_000, "Per Visit")
+            new QuotationPdfItem("Mobile crane", "Mobile crane - Liebherr LTM 1100, 100 t", "13351021", 1, 1_200_000, "Per Visit"),
+            new QuotationPdfItem("Air receiver", "Air receiver - 3000 L", null, 2, 850_000, "Per Visit")
         ],
-        ["Load and functional test", "Visual inspection", "Ultrasonic thickness measurements"],
-        ["Pricing excludes VAT.", "Payment terms: 90 days from invoice date."]);
+        ScopeOfWork: [],
+        Notes: QuotationDefaults.StandardNotes);
 }

@@ -44,7 +44,7 @@ public sealed class QuoteDeliveryService(
             ?? throw new KeyNotFoundException("Coordinator was not found.");
         var fromAddress = ResolveFromAddress(config, coordinator);
 
-        var pdf = pdfGenerator.Generate(QuotationPdfModelFactory.Create(quote, request, DateTimeOffset.UtcNow));
+        var pdf = pdfGenerator.Generate(QuotationPdfModelFactory.Create(quote, request, coordinator.FullName, DateTimeOffset.UtcNow));
         var row = existing;
         if (row is null)
             row = OutboundEmail.Create(managerId, request.Id, quote.Id, kind, DomainOf(fromAddress));

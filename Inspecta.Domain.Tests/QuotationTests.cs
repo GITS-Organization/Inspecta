@@ -247,6 +247,59 @@ public sealed class QuotationTests
     }
 
     [Fact]
+    public async Task ANewQuoteStartsWithTheStandardNotesAndTheSenderAsContact()
+    {
+        var fixture = new Fixture();
+
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+
+        Assert.Equal(QuotationDefaults.StandardNotes, quote.Notes);
+        Assert.Equal("Al Noor", quote.ContactName);
+        Assert.Matches(@"^QT-\d{4}-[0-9A-F]{6}$", quote.QuotationNumber);
+        Assert.Equal($"{quote.QuotationNumber} rev01", quote.ProposalNumber);
+    }
+
+    [Fact]
+    public async Task TheContactNameIsEditableAndKeptByRevisions()
+    {
+        var fixture = new Fixture();
+        var first = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        var saved = await fixture.Service.UpdateAsync(
+            fixture.Request.Id, first.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { ContactName = "  Eng. Reem " });
+        Assert.Equal("Eng. Reem", saved.ContactName);
+        await fixture.Service.SendAsync(fixture.Request.Id, first.Id, CoordinatorId, "coordinator");
+
+        var revision = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+
+        Assert.Equal("Eng. Reem", revision.ContactName);
+        Assert.Equal(first.QuotationNumber, revision.QuotationNumber);
+        Assert.EndsWith("rev02", revision.ProposalNumber, StringComparison.Ordinal);
+        Assert.Equal(first.Notes, revision.Notes);
+    }
+
+    [Fact]
+    public async Task ThePdfModelCarriesTheCoverDataSubjectAndPreparer()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { ValidForDays = 21 });
+
+        await fixture.Service.GetPdfAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+
+        var model = fixture.Pdf.LastModel!;
+        Assert.Equal("Mobile crane, Air receiver", model.Subject);
+        Assert.Equal(quote.QuotationNumber, model.QuotationNumber);
+        Assert.Equal("Al Noor", model.ContactName);
+        Assert.Equal("Eng. Ahmed", model.PreparedBy);
+        Assert.Equal("Coordinator", model.PreparedByTitle);
+        Assert.Equal(21, model.ValidForDays);
+        Assert.Equal(QuotationDefaults.StandardNotes, model.Notes);
+        Assert.Equal(["Mobile crane", "Air receiver"], model.Items.Select(item => item.Type));
+        Assert.Null(model.Company);
+    }
+
+    [Fact]
     public void QuotationStatusesAreOpenAcceptedAndRejected() =>
         Assert.Equal(["Open", "Accepted", "Rejected"], Enum.GetNames<QuoteStatus>());
 
@@ -669,7 +722,7 @@ public sealed class QuotationTests
                 new FakeProtector(),
                 Pdf,
                 Sender);
-            Service = new QuoteService(Quotes, Requests, Pdf, Delivery, Outbox);
+            Service = new QuoteService(Quotes, Requests, Pdf, Delivery, Outbox, new IncomingEmailRequestTests.FakeUserRepository(Coordinator));
         }
 
         public InspectionRequest Request { get; }

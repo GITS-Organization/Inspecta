@@ -234,6 +234,60 @@ public sealed class InspectionRequest
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
+    /// <summary>
+    /// Saves the details and, when <paramref name="items"/> is given, replaces the item list in one step: items with an
+    /// <c>Id</c> are updated, items without one are added, and existing items that are not listed are removed. Everything
+    /// is validated before anything changes, so a rejected revision leaves the request untouched.
+    /// </summary>
+    public RequestItemChanges Revise(
+        string? clientName,
+        string? location,
+        Guid? clientId,
+        DateTimeOffset? preferredDate,
+        string? accessNotes,
+        IReadOnlyList<RequestItemSpec>? items)
+    {
+        EnsureEditable();
+        if (clientId == Guid.Empty) throw new ArgumentException("Client id cannot be empty.", nameof(clientId));
+
+        List<RequestItem> added = [];
+        List<RequestItem> removed = [];
+        if (items is not null)
+        {
+            var ids = items.Where(spec => spec.Id is not null).Select(spec => spec.Id!.Value).ToList();
+            if (ids.Any(id => id == Guid.Empty))
+                throw new ArgumentException("Item id cannot be empty.");
+            var repeated = ids.GroupBy(id => id).Where(group => group.Count() > 1).Select(group => group.Key).ToList();
+            if (repeated.Count > 0)
+                throw new ArgumentException($"Each item can only appear once: {string.Join(", ", repeated)}.");
+            var unknown = ids.Where(id => Items.All(item => item.Id != id)).ToList();
+            if (unknown.Count > 0)
+                throw new ArgumentException($"These items do not belong to the request: {string.Join(", ", unknown)}.");
+            foreach (var spec in items)
+                RequestItem.Validate(spec.Name, spec.Quantity, spec.EquipmentId);
+
+            foreach (var spec in items.Where(spec => spec.Id is null))
+                added.Add(RequestItem.Create(
+                    spec.Name, spec.Quantity, spec.EquipmentId, spec.Type, spec.Capacity, spec.SerialNumber,
+                    location: spec.Location, issueDescription: spec.IssueDescription));
+            foreach (var spec in items.Where(spec => spec.Id is not null))
+                Items.Single(item => item.Id == spec.Id).Update(
+                    spec.Name, spec.Quantity, spec.EquipmentId, spec.Type, spec.Capacity, spec.SerialNumber,
+                    spec.Location, spec.IssueDescription);
+            removed.AddRange(Items.Where(item => ids.All(id => id != item.Id)));
+            foreach (var item in removed) Items.Remove(item);
+            Items.AddRange(added);
+        }
+
+        ClientName = clientName?.Trim() ?? string.Empty;
+        Location = location?.Trim() ?? string.Empty;
+        ClientId = clientId;
+        PreferredDate = preferredDate;
+        AccessNotes = string.IsNullOrWhiteSpace(accessNotes) ? null : accessNotes.Trim();
+        UpdatedAt = DateTimeOffset.UtcNow;
+        return new RequestItemChanges(added, removed);
+    }
+
     public RequestItem AddItem(RequestItem item)
     {
         EnsureEditable();
