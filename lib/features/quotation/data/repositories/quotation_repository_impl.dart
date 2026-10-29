@@ -1,19 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/error/api_error_model.dart';
+import '../../../../core/error/api_failure.dart';
 import '../../domain/entities/client_response_outcome.dart';
 import '../../domain/entities/quotation.dart';
 import '../../domain/entities/quotation_failure.dart';
 import '../../domain/entities/quote_line_item.dart';
 import '../../domain/entities/reply_type.dart';
 import '../../domain/repositories/quotation_repository.dart';
+import '../datasources/quotation_api_datasource.dart';
 import '../datasources/quotation_remote_datasource.dart';
 import '../models/quotation_model.dart';
 
 class QuotationRepositoryImpl implements QuotationRepository {
   final QuotationRemoteDataSource _remote;
+  final QuotationApiDataSource _api;
 
-  const QuotationRepositoryImpl(this._remote);
+  const QuotationRepositoryImpl(this._remote, this._api);
 
   @override
   Stream<List<Quotation>> watchAll() {
@@ -24,11 +29,17 @@ class QuotationRepositoryImpl implements QuotationRepository {
   }
 
   @override
-  Stream<List<Quotation>> watchForRequest(String requestId) {
-    return _remote
-        .watchForRequest(requestId)
-        .map(_toEntities)
-        .handleError((Object error) => throw _mapError(error));
+  Future<List<Quotation>> getForRequest(String requestId) async {
+    final result = await _api.getRequestQuotes(requestId);
+    final quotations = _toEntities(
+      result.fold((data) => data, (f) => throw _mapError(f)),
+    );
+    // Newest version first; a version-less (draft) quote counts as newest.
+    quotations.sort((a, b) {
+      final byVersion = (b.version ?? 1 << 30).compareTo(a.version ?? 1 << 30);
+      return byVersion != 0 ? byVersion : b.createdAt.compareTo(a.createdAt);
+    });
+    return quotations;
   }
 
   @override
@@ -117,15 +128,6 @@ class QuotationRepositoryImpl implements QuotationRepository {
     }
   }
 
-  @override
-  Future<void> sendReminder(String quotationId) async {
-    try {
-      await _remote.sendReminder(quotationId);
-    } catch (e) {
-      throw _mapError(e);
-    }
-  }
-
   List<Quotation> _toEntities(List<QuotationModel> models) {
     final quotations = <Quotation>[];
     for (final model in models) {
@@ -141,6 +143,21 @@ class QuotationRepositoryImpl implements QuotationRepository {
 
   QuotationFailure _mapError(Object error) {
     if (error is QuotationFailure) return error;
+    if (error is ApiFailure) error = error.error;
+    if (error is ApiErrorModel) {
+      return QuotationFailure(switch (error.code) {
+        401 || 403 => QuotationFailureCode.permissionDenied,
+        null => switch (error.dioException?.type) {
+          DioExceptionType.connectionError ||
+          DioExceptionType.connectionTimeout ||
+          DioExceptionType.sendTimeout ||
+          DioExceptionType.receiveTimeout ||
+          DioExceptionType.unknown => QuotationFailureCode.network,
+          _ => QuotationFailureCode.unknown,
+        },
+        _ => QuotationFailureCode.unknown,
+      });
+    }
     if (error is FirebaseException) {
       return QuotationFailure(switch (error.code) {
         'permission-denied' => QuotationFailureCode.permissionDenied,

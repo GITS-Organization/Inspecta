@@ -782,12 +782,6 @@ abstract class AppLocalizations {
   /// **'New'**
   String get tabNew;
 
-  /// No description provided for @tabAll.
-  ///
-  /// In en, this message translates to:
-  /// **'All'**
-  String get tabAll;
-
   /// No description provided for @tabCount.
   ///
   /// In en, this message translates to:
@@ -799,12 +793,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Needs your reply'**
   String get needsYourReply;
-
-  /// No description provided for @allRequestsHeading.
-  ///
-  /// In en, this message translates to:
-  /// **'All requests'**
-  String get allRequestsHeading;
 
   /// No description provided for @newestFirst.
   ///
@@ -824,18 +812,6 @@ abstract class AppLocalizations {
   /// **'Continue quote'**
   String get continueQuote;
 
-  /// No description provided for @clientReplied.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} replied'**
-  String clientReplied(String name);
-
-  /// No description provided for @reply.
-  ///
-  /// In en, this message translates to:
-  /// **'Reply'**
-  String get reply;
-
   /// No description provided for @newClientTag.
   ///
   /// In en, this message translates to:
@@ -854,11 +830,59 @@ abstract class AppLocalizations {
   /// **'No new requests. Nice and clear.'**
   String get emptyNewRequests;
 
-  /// No description provided for @emptyAllRequests.
+  /// No description provided for @tabMaybe.
   ///
   /// In en, this message translates to:
-  /// **'No requests yet.'**
-  String get emptyAllRequests;
+  /// **'Maybe'**
+  String get tabMaybe;
+
+  /// No description provided for @maybeRequestsHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'From unknown senders'**
+  String get maybeRequestsHeading;
+
+  /// No description provided for @emptyMaybeRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'No emails from unknown senders.'**
+  String get emptyMaybeRequests;
+
+  /// No description provided for @confirmRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm as request'**
+  String get confirmRequest;
+
+  /// No description provided for @confirmRequestError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t confirm the request. Please try again.'**
+  String get confirmRequestError;
+
+  /// No description provided for @deleteRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get deleteRequest;
+
+  /// No description provided for @deleteRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this email?'**
+  String get deleteRequestTitle;
+
+  /// No description provided for @deleteRequestMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'It will be removed from your inbox and cannot be restored.'**
+  String get deleteRequestMessage;
+
+  /// No description provided for @deleteRequestError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t delete the request. Please try again.'**
+  String get deleteRequestError;
 
   /// No description provided for @emptySearch.
   ///
@@ -998,6 +1022,12 @@ abstract class AppLocalizations {
   /// **'Read full email'**
   String get readFullEmail;
 
+  /// No description provided for @showLessEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get showLessEmail;
+
   /// No description provided for @notReadyToQuote.
   ///
   /// In en, this message translates to:
@@ -1081,12 +1111,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View in Quotations'**
   String get viewInQuotationsAction;
-
-  /// No description provided for @quotationBackendNotBuiltYet.
-  ///
-  /// In en, this message translates to:
-  /// **'Saving and sending aren\'t connected to a server yet.'**
-  String get quotationBackendNotBuiltYet;
 
   /// No description provided for @comingSoon.
   ///

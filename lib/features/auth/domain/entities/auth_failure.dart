@@ -4,17 +4,17 @@ enum AuthFailureCode {
   invalidEmail,
   invalidCredentials,
 
-  /// The user's profile has `active: false` (BR-01.4), or Firebase has
-  /// disabled the account.
+  /// The user is inactive (BR-01.4), or the API has disabled the account.
   accountDisabled,
 
-  /// Signed in to Firebase, but there is no `users/{uid}` profile with a
-  /// valid role, so we can't pick a home screen.
+  /// Signed in, but the user has no valid role, so we can't pick a home
+  /// screen.
   noProfile,
   tooManyAttempts,
   network,
 
-  /// Firebase isn't initialised (e.g. `flutterfire configure` not run yet).
+  /// Firebase isn't initialised (e.g. `flutterfire configure` not run yet),
+  /// which only the password-reset email depends on.
   unavailable,
   unknown,
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
@@ -8,34 +9,29 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/inspection_request.dart';
 import 'status_chip.dart';
 
-/// One row in the requests inbox. Renders as a compact "client replied"
-/// prompt when [InspectionRequest.hasUnreadClientReply] is set (BR-03.6),
-/// otherwise as the full card with a "Review & quote" CTA for New items.
 class RequestCard extends StatelessWidget {
   final InspectionRequest request;
   final VoidCallback onTap;
+  final VoidCallback? onConfirm;
+  final VoidCallback? onDelete;
+  final bool busy;
 
-  const RequestCard({super.key, required this.request, required this.onTap});
+  const RequestCard({
+    super.key,
+    required this.request,
+    required this.onTap,
+    this.onConfirm,
+    this.onDelete,
+    this.busy = false,
+  });
 
-  @override
-  Widget build(BuildContext context) {
-    return _CardShell(
-      onTap: onTap,
-      child: request.hasUnreadClientReply
-          ? _ReplyRow(request: request)
-          : _FullCard(request: request),
-    );
-  }
-}
-
-class _CardShell extends StatelessWidget {
-  final VoidCallback onTap;
-  final Widget child;
-
-  const _CardShell({required this.onTap, required this.child});
+  bool get _isMaybe => onConfirm != null && onDelete != null;
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final waiting = request.isWaitingOver24h();
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -46,7 +42,101 @@ class _CardShell extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          child: Padding(padding: const EdgeInsets.all(20), child: child),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _IconTile(Icons.precision_manufacturing_outlined),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            request.equipmentTitle,
+                            style: AppTextStyles.cardTitle,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  // An email has no equipment yet, so no unit count.
+                                  request.totalUnits == 0
+                                      ? request.senderLabel
+                                      : '${request.senderLabel} · ${t.unitsCount(request.totalUnits)}',
+                                  style: AppTextStyles.caption.copyWith(
+                                    height: 18 / 13,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (request.isNewClient) ...[
+                                const SizedBox(width: 6),
+                                _NewClientTag(label: t.newClientTag),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        StatusChip(status: request.status),
+                        if (waiting) ...[
+                          const SizedBox(height: 6),
+                          const WaitingChip(),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    if (request.location.isNotEmpty)
+                      _MetaItem(
+                        icon: Icons.location_on_outlined,
+                        label: request.location,
+                      )
+                    else if (request.emailFrom != null)
+                      _MetaItem(
+                        icon: Icons.mail_outline_rounded,
+                        label: request.emailFrom!,
+                      ),
+                    const SizedBox(width: 20),
+                    _MetaItem(
+                      icon: Icons.schedule_outlined,
+                      label: RelativeDuration.since(request.receivedAt)
+                          .label(t),
+                    ),
+                  ],
+                ),
+                if (_isMaybe) ...[
+                  const SizedBox(height: 16),
+                  _MaybeActions(
+                    onConfirm: onConfirm!,
+                    onDelete: onDelete!,
+                    busy: busy,
+                  ),
+                ] else if (request.isNew) ...[
+                  const SizedBox(height: 16),
+                  _ReviewCta(
+                    primary: request.status == JobStatus.requestReceived,
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -68,132 +158,6 @@ class _IconTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Icon(icon, size: 22, color: AppColours.primaryColor),
-    );
-  }
-}
-
-class _ReplyRow extends StatelessWidget {
-  final InspectionRequest request;
-
-  const _ReplyRow({required this.request});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    return Row(
-      children: [
-        const _IconTile(Icons.mail_outline_rounded),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                t.clientReplied(request.clientName),
-                style: AppTextStyles.cardTitle,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                request.lastReplySnippet ?? request.equipmentTitle,
-                style: AppTextStyles.caption.copyWith(height: 18 / 13),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColours.chipBlueBackground,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            t.reply,
-            style: AppTextStyles.badge.copyWith(color: AppColours.chipBlueText),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FullCard extends StatelessWidget {
-  final InspectionRequest request;
-
-  const _FullCard({required this.request});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    final waiting = request.isWaitingOver24h();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _IconTile(Icons.precision_manufacturing_outlined),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    request.equipmentTitle,
-                    style: AppTextStyles.cardTitle,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          '${request.clientName} · ${t.unitsCount(request.totalUnits)}',
-                          style: AppTextStyles.caption.copyWith(height: 18 / 13),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (request.isNewClient) ...[
-                        const SizedBox(width: 6),
-                        _NewClientTag(label: t.newClientTag),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                StatusChip(status: request.status),
-                if (waiting) ...[const SizedBox(height: 6), const WaitingChip()],
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            _MetaItem(icon: Icons.location_on_outlined, label: request.location),
-            const SizedBox(width: 20),
-            _MetaItem(
-              icon: Icons.schedule_outlined,
-              label: RelativeDuration.since(request.receivedAt).label(t),
-            ),
-          ],
-        ),
-        if (request.isNew) ...[
-          const SizedBox(height: 16),
-          _ReviewCta(primary: request.status == JobStatus.requestReceived),
-        ],
-      ],
     );
   }
 }
@@ -239,12 +203,82 @@ class _MetaItem extends StatelessWidget {
           Flexible(
             child: Text(
               label,
-              style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w400, height: 18 / 13),
+              style: AppTextStyles.caption.copyWith(
+                fontWeight: FontWeight.w400,
+                height: 18 / 13,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Delete and "Confirm as request" for a "maybe" email. While [busy] the
+/// confirm label shimmers instead of spinning.
+class _MaybeActions extends StatelessWidget {
+  final VoidCallback onConfirm;
+  final VoidCallback onDelete;
+  final bool busy;
+
+  const _MaybeActions({
+    required this.onConfirm,
+    required this.onDelete,
+    required this.busy,
+  });
+
+  static const _height = 48.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(14),
+    );
+
+    return Row(
+      children: [
+        SizedBox(
+          height: _height,
+          child: OutlinedButton(
+            onPressed: busy ? null : onDelete,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColours.red,
+              side: const BorderSide(color: AppColours.red),
+              shape: shape,
+            ),
+            child: Text(
+              t.deleteRequest,
+              style: AppTextStyles.buttonLabel.copyWith(color: AppColours.red),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: SizedBox(
+            height: _height,
+            child: FilledButton(
+              onPressed: busy ? null : onConfirm,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColours.primaryColor,
+                disabledBackgroundColor: AppColours.primaryColor,
+                shape: shape,
+              ),
+              child: Skeletonizer(
+                enabled: busy,
+                child: Text(
+                  t.confirmRequest,
+                  style: AppTextStyles.buttonLabel.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -272,7 +306,11 @@ class _ReviewCta extends StatelessWidget {
         ),
         if (primary) ...[
           const SizedBox(width: 8),
-          const Icon(Icons.arrow_forward_rounded, size: 18, color: Colors.white),
+          const Icon(
+            Icons.arrow_forward_rounded,
+            size: 18,
+            color: Colors.white,
+          ),
         ],
       ],
     );

@@ -399,18 +399,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get tabNew => 'جديد';
 
   @override
-  String get tabAll => 'الكل';
-
-  @override
   String tabCount(String label, int count) {
     return '$label · $count';
   }
 
   @override
   String get needsYourReply => 'بحاجة إلى ردك';
-
-  @override
-  String get allRequestsHeading => 'جميع الطلبات';
 
   @override
   String get newestFirst => 'الأحدث أولاً';
@@ -420,14 +414,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get continueQuote => 'متابعة عرض السعر';
-
-  @override
-  String clientReplied(String name) {
-    return 'رد $name';
-  }
-
-  @override
-  String get reply => 'رد';
 
   @override
   String get newClientTag => 'عميل جديد';
@@ -450,7 +436,32 @@ class AppLocalizationsAr extends AppLocalizations {
   String get emptyNewRequests => 'لا توجد طلبات جديدة. كل شيء واضح.';
 
   @override
-  String get emptyAllRequests => 'لا توجد طلبات بعد.';
+  String get tabMaybe => 'محتمل';
+
+  @override
+  String get maybeRequestsHeading => 'من مرسلين غير معروفين';
+
+  @override
+  String get emptyMaybeRequests => 'لا توجد رسائل من مرسلين غير معروفين.';
+
+  @override
+  String get confirmRequest => 'تأكيد كطلب';
+
+  @override
+  String get confirmRequestError => 'تعذّر تأكيد الطلب. حاول مرة أخرى.';
+
+  @override
+  String get deleteRequest => 'حذف';
+
+  @override
+  String get deleteRequestTitle => 'حذف هذه الرسالة؟';
+
+  @override
+  String get deleteRequestMessage =>
+      'ستُزال من صندوق الطلبات ولا يمكن استعادتها.';
+
+  @override
+  String get deleteRequestError => 'تعذّر حذف الطلب. حاول مرة أخرى.';
 
   @override
   String emptySearch(String query) {
@@ -526,6 +537,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get readFullEmail => 'قراءة البريد الكامل';
 
   @override
+  String get showLessEmail => 'عرض أقل';
+
+  @override
   String get notReadyToQuote =>
       'أضف العميل وعنصر معدات واحدًا على الأقل والموقع قبل التسعير.';
 
@@ -572,10 +586,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get viewInQuotationsAction => 'عرض في عروض الأسعار';
-
-  @override
-  String get quotationBackendNotBuiltYet =>
-      'الحفظ والإرسال غير متصلين بخادم بعد.';
 
   @override
   String get comingSoon => 'لم يُبنَ بعد.';

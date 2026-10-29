@@ -89,6 +89,62 @@ class QuotationModel {
     );
   }
 
+  /// A quote as the Inspecta API returns it. The API has no reply type (every
+  /// quote is a priced offer), calls the number `proposalNumber`, and calls a
+  /// sent quote that awaits an answer `open`.
+  factory QuotationModel.fromApiJson(Map<String, dynamic> json) {
+    DateTime? date(String key) {
+      final value = json[key];
+      return value is String ? DateTime.tryParse(value) : null;
+    }
+
+    List<String> strings(String key) =>
+        (json[key] as List<dynamic>? ?? const []).whereType<String>().toList();
+
+    final items = (json['items'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(QuoteLineItemModel.fromApiJson)
+        .toList();
+    final sentAt = date('sentAt');
+    final status = json['status'] as String?;
+    final amount = (json['amountPiastres'] as num?)?.toInt();
+
+    return QuotationModel(
+      id: json['id'] as String,
+      requestId: json['requestId'] as String? ?? '',
+      requestNumber: json['proposalNumber'] as String? ?? '',
+      clientName: json['clientName'] as String? ?? '',
+      equipmentSummary: _summarise(items),
+      version: (json['version'] as num?)?.toInt(),
+      type: ReplyType.offer.value,
+      items: items,
+      subtotalPiastres: amount,
+      totalPiastres: amount,
+      validUntil: date('validUntil'),
+      message: json['message'] as String?,
+      notes: strings('notes'),
+      scopeOfWork: strings('scopeOfWork'),
+      status: status == 'open'
+          ? (sentAt == null ? QuotationStatus.draft.value : QuotationStatus.sent.value)
+          : status,
+      sentAt: sentAt,
+      createdBy: '',
+      createdAt: date('createdAt') ?? DateTime.now(),
+      clientResponseNote: json['clientReply'] as String?,
+    );
+  }
+
+  /// "Overhead crane × 2", or with a second line "Overhead crane × 2, Hoist
+  /// × 1" — what a list row says the quote is for.
+  static String _summarise(List<QuoteLineItemModel> items) {
+    final lines = [
+      for (final item in items.take(2))
+        item.quantity > 1 ? '${item.type} × ${item.quantity}' : item.type,
+    ];
+    final more = items.length - lines.length;
+    return [...lines, if (more > 0) '+$more'].join(', ');
+  }
+
   /// `null` when [type] or [status] isn't a value the app understands.
   Quotation? toEntity() {
     final replyType = ReplyType.fromValue(type);

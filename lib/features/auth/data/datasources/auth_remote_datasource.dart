@@ -1,48 +1,69 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../models/user_model.dart';
+import '../../../../core/base/result.dart';
+import '../../../../core/base/safe_request_handler.dart';
+import '../../../../core/networking/api_urls.dart';
+import '../../../../core/networking/dio_factory.dart';
+import '../models/auth_session_model.dart';
 
-/// Firebase Auth for credentials, Firestore `users/{uid}` for the profile
-/// (role, qualifications, active flag).
+/// Login and logout go to the Inspecta API. The password-reset email is
+/// still sent by Firebase Auth until the API exposes its own reset flow.
 ///
-/// Firebase instances are resolved lazily so that constructing this class
-/// doesn't throw when Firebase failed to initialise.
+/// The Dio and Firebase instances are resolved lazily so that constructing
+/// this class doesn't throw when either failed to initialise.
 class AuthRemoteDataSource {
-  static const usersCollection = 'users';
+  static const _safeApi = SafeApi();
 
+  final Dio? _dioOverride;
   final FirebaseAuth? _authOverride;
-  final FirebaseFirestore? _firestoreOverride;
 
-  AuthRemoteDataSource({FirebaseAuth? auth, FirebaseFirestore? firestore})
-    : _authOverride = auth,
-      _firestoreOverride = firestore;
+  AuthRemoteDataSource({Dio? dio, FirebaseAuth? auth})
+    : _dioOverride = dio,
+      _authOverride = auth;
+
+  Dio get _dio => _dioOverride ?? DioFactory.getDio();
 
   FirebaseAuth get _auth => _authOverride ?? FirebaseAuth.instance;
 
-  FirebaseFirestore get _firestore =>
-      _firestoreOverride ?? FirebaseFirestore.instance;
-
-  DocumentReference<Map<String, dynamic>> _userDoc(String uid) =>
-      _firestore.collection(usersCollection).doc(uid);
-
-  String? get currentUid => _auth.currentUser?.uid;
-
-  /// Emits the signed-in uid, or `null` when signed out.
-  Stream<String?> uidChanges() => _auth.authStateChanges().map((u) => u?.uid);
-
-  Future<String> signIn({
+  Future<Result<AuthSessionModel>> login({
     required String email,
     required String password,
-  }) async {
-    final credential = await _auth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-    return credential.user!.uid;
+  }) {
+    return _safeApi(() async {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiUrls.login,
+        data: {'email': email, 'password': password},
+      );
+      return AuthSessionModel.fromJson(response.data!);
+    });
   }
 
-  Future<void> signOut() => _auth.signOut();
+  /// Trades [refreshToken] for a new session (new tokens, same user).
+  Future<Result<AuthSessionModel>> refresh({required String refreshToken}) {
+    return _safeApi(() async {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiUrls.refresh,
+        data: {'refreshToken': refreshToken},
+      );
+      return AuthSessionModel.fromJson(response.data!);
+    });
+  }
+
+  /// Revokes [refreshToken] server-side. [accessToken] is passed explicitly
+  /// because the stored session may already be gone when this is called.
+  Future<Result<void>> logout({
+    required String accessToken,
+    required String refreshToken,
+  }) {
+    return _safeApi<void>(() async {
+      await _dio.post<void>(
+        ApiUrls.logout,
+        data: {'refreshToken': refreshToken},
+        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+      );
+    });
+  }
 
   Future<void> sendPasswordReset({
     required String email,
@@ -50,22 +71,5 @@ class AuthRemoteDataSource {
   }) async {
     await _auth.setLanguageCode(languageCode);
     await _auth.sendPasswordResetEmail(email: email);
-  }
-
-  Future<UserModel?> getUser(String uid) async {
-    final snapshot = await _userDoc(uid).get();
-    final data = snapshot.data();
-    return data == null ? null : UserModel.fromJson(snapshot.id, data);
-  }
-
-  Stream<UserModel?> watchUser(String uid) {
-    return _userDoc(uid).snapshots().map((snapshot) {
-      final data = snapshot.data();
-      return data == null ? null : UserModel.fromJson(snapshot.id, data);
-    });
-  }
-
-  Future<void> touchLastLogin(String uid) {
-    return _userDoc(uid).update({'lastLogin': FieldValue.serverTimestamp()});
   }
 }

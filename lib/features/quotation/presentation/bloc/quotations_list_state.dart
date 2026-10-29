@@ -6,8 +6,16 @@ class QuotationsListState extends Equatable {
   final QuotationsListStatus status;
 
   /// One entry per request: its current (latest, non-superseded, sent)
-  /// quotation. Drafts don't appear here at all — see the cubit's doc.
-  final List<Quotation> board;
+  /// quotation, over the pages loaded so far. Drafts don't appear here at
+  /// all — see the cubit's doc.
+  final Paginated<Quotation> page;
+
+  /// The next page is on its way.
+  final bool loadingMore;
+
+  /// The last attempt at the next page failed. Scrolling doesn't retry until
+  /// the board is refreshed, so an unreachable server isn't hammered.
+  final bool loadMoreFailed;
 
   final QuoteBoardTab tab;
   final String query;
@@ -19,12 +27,23 @@ class QuotationsListState extends Equatable {
 
   const QuotationsListState({
     this.status = QuotationsListStatus.loading,
-    this.board = const [],
+    this.page = const Paginated(),
+    this.loadingMore = false,
+    this.loadMoreFailed = false,
     this.tab = QuoteBoardTab.open,
     this.query = '',
     this.onlyExpiringSoon = false,
     this.failure,
   });
+
+  List<Quotation> get board => page.items;
+
+  /// Whether scrolling to the end can fetch another page.
+  bool get canLoadMore =>
+      status == QuotationsListStatus.ready &&
+      page.hasMore &&
+      !loadingMore &&
+      !loadMoreFailed;
 
   List<Quotation> _forTab(QuoteBoardTab tab, {DateTime? now}) =>
       board.where((q) => QuoteBoardTabX.of(q, now: now) == tab).toList();
@@ -69,22 +88,36 @@ class QuotationsListState extends Equatable {
 
   QuotationsListState copyWith({
     QuotationsListStatus? status,
-    List<Quotation>? board,
+    Paginated<Quotation>? page,
+    bool? loadingMore,
+    bool? loadMoreFailed,
     QuoteBoardTab? tab,
     String? query,
     bool? onlyExpiringSoon,
     QuotationFailureCode? failure,
+    bool clearFailure = false,
   }) {
     return QuotationsListState(
       status: status ?? this.status,
-      board: board ?? this.board,
+      page: page ?? this.page,
+      loadingMore: loadingMore ?? this.loadingMore,
+      loadMoreFailed: loadMoreFailed ?? this.loadMoreFailed,
       tab: tab ?? this.tab,
       query: query ?? this.query,
       onlyExpiringSoon: onlyExpiringSoon ?? this.onlyExpiringSoon,
-      failure: failure ?? this.failure,
+      failure: clearFailure ? null : (failure ?? this.failure),
     );
   }
 
   @override
-  List<Object?> get props => [status, board, tab, query, onlyExpiringSoon, failure];
+  List<Object?> get props => [
+    status,
+    page,
+    loadingMore,
+    loadMoreFailed,
+    tab,
+    query,
+    onlyExpiringSoon,
+    failure,
+  ];
 }

@@ -9,9 +9,10 @@ abstract interface class QuotationRepository {
   /// Quotations tab.
   Stream<List<Quotation>> watchAll();
 
-  /// A request's own quotations, newest first — its version history, for
-  /// the quote detail timeline.
-  Stream<List<Quotation>> watchForRequest(String requestId);
+  /// A request's own quotations from the API, newest version first — its
+  /// version history, for the quote detail timeline. Throws
+  /// [QuotationFailure].
+  Future<List<Quotation>> getForRequest(String requestId);
 
   /// Creates the request's draft if none exists yet, otherwise updates
   /// the existing one (US-03.4). Not used for [ReplyType.reject] — see
@@ -56,9 +57,4 @@ abstract interface class QuotationRepository {
     int? clientPricePiastres,
     String? note,
   });
-
-  /// Stamps that a reminder was prompted for [quotationId]. Sending the
-  /// actual email is a backend job this client can't perform — see the
-  /// quotation feature's known gaps.
-  Future<void> sendReminder(String quotationId);
 }

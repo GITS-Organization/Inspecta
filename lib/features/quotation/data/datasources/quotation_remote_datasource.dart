@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/entities/client_response_outcome.dart';
 import '../../domain/entities/quote_line_item.dart';
@@ -11,16 +10,18 @@ class QuotationRemoteDataSource {
   static const collection = 'quotations';
 
   final FirebaseFirestore? _firestoreOverride;
-  final FirebaseAuth? _authOverride;
 
-  QuotationRemoteDataSource({FirebaseFirestore? firestore, FirebaseAuth? auth})
-    : _firestoreOverride = firestore,
-      _authOverride = auth;
+  /// The signed-in user's id, as the Inspecta API knows them.
+  final String? Function() _currentUserId;
+
+  QuotationRemoteDataSource({
+    FirebaseFirestore? firestore,
+    String? Function()? currentUserId,
+  }) : _firestoreOverride = firestore,
+       _currentUserId = currentUserId ?? (() => null);
 
   FirebaseFirestore get _firestore =>
       _firestoreOverride ?? FirebaseFirestore.instance;
-
-  FirebaseAuth get _auth => _authOverride ?? FirebaseAuth.instance;
 
   CollectionReference<Map<String, dynamic>> get _collection =>
       _firestore.collection(collection);
@@ -29,18 +30,16 @@ class QuotationRemoteDataSource {
     return _collection
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => QuotationModel.fromJson(d.id, d.data())).toList());
+        .map(
+          (s) => s.docs
+              .map((d) => QuotationModel.fromJson(d.id, d.data()))
+              .toList(),
+        );
   }
 
-  Stream<List<QuotationModel>> watchForRequest(String requestId) {
-    return _collection
-        .where('requestId', isEqualTo: requestId)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((s) => s.docs.map((d) => QuotationModel.fromJson(d.id, d.data())).toList());
-  }
-
-  Future<DocumentReference<Map<String, dynamic>>?> _findDraft(String requestId) async {
+  Future<DocumentReference<Map<String, dynamic>>?> _findDraft(
+    String requestId,
+  ) async {
     final snapshot = await _collection
         .where('requestId', isEqualTo: requestId)
         .where('status', isEqualTo: 'draft')
@@ -64,17 +63,26 @@ class QuotationRemoteDataSource {
     int? validityDays,
   ) {
     if (type != ReplyType.offer) {
-      return {'subtotalPiastres': null, 'totalPiastres': null, 'validUntil': null};
+      return {
+        'subtotalPiastres': null,
+        'totalPiastres': null,
+        'validUntil': null,
+      };
     }
     final total = items.fold<int>(
       0,
-      (runningTotal, item) => runningTotal + item.unitPricePiastres * item.quantity,
+      (runningTotal, item) =>
+          runningTotal + item.unitPricePiastres * item.quantity,
     );
     final validUntil = validityDays == null
         ? null
         : Timestamp.fromDate(DateTime.now().add(Duration(days: validityDays)));
     // BR-03.2: no VAT line yet — see the quotation feature's known gaps.
-    return {'subtotalPiastres': total, 'totalPiastres': total, 'validUntil': validUntil};
+    return {
+      'subtotalPiastres': total,
+      'totalPiastres': total,
+      'validUntil': validUntil,
+    };
   }
 
   Future<QuotationModel> saveDraft({
@@ -102,7 +110,7 @@ class QuotationRemoteDataSource {
       'notes': notes,
       'scopeOfWork': scopeOfWork,
       'status': 'draft',
-      'createdBy': _auth.currentUser?.uid,
+      'createdBy': _currentUserId(),
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
@@ -113,7 +121,10 @@ class QuotationRemoteDataSource {
       return QuotationModel.fromJson(snapshot.id, snapshot.data()!);
     }
 
-    final ref = await _collection.add({...data, 'createdAt': FieldValue.serverTimestamp()});
+    final ref = await _collection.add({
+      ...data,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
     final snapshot = await ref.get();
     return QuotationModel.fromJson(snapshot.id, snapshot.data()!);
   }
@@ -146,7 +157,7 @@ class QuotationRemoteDataSource {
       'scopeOfWork': scopeOfWork,
       'status': 'sent',
       'sentAt': FieldValue.serverTimestamp(),
-      'createdBy': _auth.currentUser?.uid,
+      'createdBy': _currentUserId(),
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
@@ -163,7 +174,10 @@ class QuotationRemoteDataSource {
     if (existing != null) {
       batch.update(existing, data);
     } else {
-      batch.set(_collection.doc(), {...data, 'createdAt': FieldValue.serverTimestamp()});
+      batch.set(_collection.doc(), {
+        ...data,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     }
     for (final doc in open.docs) {
       batch.update(doc.reference, {
@@ -219,12 +233,5 @@ class QuotationRemoteDataSource {
     }
 
     await batch.commit();
-  }
-
-  Future<void> sendReminder(String quotationId) {
-    return _collection.doc(quotationId).update({
-      'lastReminderAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
   }
 }

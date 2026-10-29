@@ -1,8 +1,11 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 class Constants {
-  /// Identity microservice base URL (auth: login, otp, password...).
-  static const String baseUrl = 'https://tvoy-identity.kabret.info';
+  /// Inspecta API host (auth: login, logout...).
+  static const String baseUrl = 'https://api.gitsplatform.com';
+
+  /// Path prefix of every API route, appended to [baseUrl] by the Dio client.
+  static const String apiPrefix = '/api/v1/';
 
   /// Notification microservice base URL (in-app notifications).
   static const String notificationUrl = 'https://tvoy-notification.kabret.info';

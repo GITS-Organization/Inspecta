@@ -16,13 +16,11 @@ import 'reply_type_labels.dart';
 class QuoteBoardCard extends StatelessWidget {
   final Quotation quotation;
   final VoidCallback onTap;
-  final VoidCallback onSendReminder;
 
   const QuoteBoardCard({
     super.key,
     required this.quotation,
     required this.onTap,
-    required this.onSendReminder,
   });
 
   @override
@@ -97,12 +95,7 @@ class QuoteBoardCard extends StatelessWidget {
                     ),
                     if (actionLabel != null) ...[
                       const SizedBox(width: 8),
-                      _ActionButton(
-                        label: actionLabel,
-                        onPressed: tab == QuoteBoardTab.open && !quotation.isExpiringSoon()
-                            ? onSendReminder
-                            : onTap,
-                      ),
+                      _ActionButton(label: actionLabel, onPressed: onTap),
                     ],
                   ],
                 ),
@@ -119,7 +112,7 @@ class QuoteBoardCard extends StatelessWidget {
       return expired ? t.actionRequote : null;
     }
     return switch (tab) {
-      QuoteBoardTab.open => quotation.isExpiringSoon() ? t.actionExtendOrResend : t.actionSendReminder,
+      QuoteBoardTab.open => quotation.isExpiringSoon() ? t.actionExtendOrResend : null,
       QuoteBoardTab.replied => t.actionRespond,
       QuoteBoardTab.accepted => t.actionViewJob,
       QuoteBoardTab.lost => null,

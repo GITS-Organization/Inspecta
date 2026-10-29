@@ -5,6 +5,9 @@ class ApiUrls {
   static const String resetPassword = "auth/reset-password";
   static const String changeMyPassword = "auvath/change-my-password";
   static const String logout = "auth/logout";
+
+  static const String refresh = "auth/refresh";
+  static const String requests = "requests";
   static const String updateMyProfile = "dashboard/users/update-my-profile";
 
 }

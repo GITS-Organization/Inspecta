@@ -44,7 +44,7 @@ class ApiErrorHandler {
             trace: trace,
           );
         case DioExceptionType.badResponse:
-          return _handleError(error);
+          return _handleError(error, trace: trace);
         default:
           return ApiErrorModel(
             message: "Something went wrong",
@@ -53,7 +53,10 @@ class ApiErrorHandler {
           );
       }
     } else {
-      return GenericErrorModel(message: "Unknown error occurred $error");
+      return GenericErrorModel(
+        message: "Unknown error occurred $error",
+        trace: trace,
+      );
     }
   }
 }

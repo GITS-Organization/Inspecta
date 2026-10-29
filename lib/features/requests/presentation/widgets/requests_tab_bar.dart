@@ -5,7 +5,7 @@ import '../../../../core/consts/app_text_styles.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/requests_tab.dart';
 
-/// The inbox's New / All toggle: a rounded control as tall as the search
+/// The inbox's New / Maybe toggle: a rounded control as tall as the search
 /// box it sits beside, with the active segment filled.
 class RequestsTabBar extends StatelessWidget {
   /// Matches `ISearchField`'s height so the two line up in the header.
@@ -43,7 +43,7 @@ class RequestsTabBar extends StatelessWidget {
 
   String _label(AppLocalizations t, RequestsTab tab) => switch (tab) {
     RequestsTab.newTab => t.tabNew,
-    RequestsTab.all => t.tabAll,
+    RequestsTab.maybe => t.tabMaybe,
   };
 }
 

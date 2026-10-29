@@ -14,7 +14,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  #Firebase
+  #Firebase 
   firebase_core: ^4.14.0
   firebase_crashlytics: ^5.1.0
   firebase_auth: ^6.7.0
@@ -67,6 +67,7 @@ dependencies:
 
 
   cupertino_icons: ^1.0.9
+  skeletonizer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

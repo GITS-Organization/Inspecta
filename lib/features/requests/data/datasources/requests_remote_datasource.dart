@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../../core/enums/job_status.dart';
 import '../models/inspection_request_model.dart';
@@ -12,16 +11,18 @@ class RequestsRemoteDataSource {
   static const eventsSubcollection = 'events';
 
   final FirebaseFirestore? _firestoreOverride;
-  final FirebaseAuth? _authOverride;
 
-  RequestsRemoteDataSource({FirebaseFirestore? firestore, FirebaseAuth? auth})
-    : _firestoreOverride = firestore,
-      _authOverride = auth;
+  /// The signed-in user's id, as the Inspecta API knows them.
+  final String? Function() _currentUserId;
+
+  RequestsRemoteDataSource({
+    FirebaseFirestore? firestore,
+    String? Function()? currentUserId,
+  }) : _firestoreOverride = firestore,
+       _currentUserId = currentUserId ?? (() => null);
 
   FirebaseFirestore get _firestore =>
       _firestoreOverride ?? FirebaseFirestore.instance;
-
-  FirebaseAuth get _auth => _authOverride ?? FirebaseAuth.instance;
 
   DocumentReference<Map<String, dynamic>> _doc(String id) =>
       _firestore.collection(collection).doc(id);
@@ -80,17 +81,12 @@ class RequestsRemoteDataSource {
     batch.update(_doc(requestId), {'status': status.value, ...?extra});
     batch.set(_doc(requestId).collection(eventsSubcollection).doc(), {
       'toStatus': status.value,
-      'actorId': _auth.currentUser?.uid,
+      'actorId': _currentUserId(),
       'note': note,
       'timestamp': FieldValue.serverTimestamp(),
     });
     await batch.commit();
   }
-
-  /// Just the `clientId` field — matching a sender to a client doesn't
-  /// change the job's status, so it doesn't log a status-change event.
-  Future<void> assignClient(String requestId, String clientId) =>
-      _doc(requestId).update({'clientId': clientId});
 
   /// Assigning an inspector moves the job to [JobStatus.assigned], so it
   /// goes through [updateStatus] to log the event alongside the write.

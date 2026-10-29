@@ -1,14 +1,19 @@
 import '../../../../core/enums/job_status.dart';
+import 'request_triage.dart';
 
-/// The inbox's two segments. "Negotiating" used to be a third tab here,
-/// but it only duplicated the Quotations tab (which already tracks every
-/// sent quote's follow-up) — once the first quote goes out, a request's
-/// story continues there, not in this inbox.
-enum RequestsTab { newTab, all }
+/// The inbox's two segments. "New" holds requests from senders we already
+/// know; "Maybe" holds emails from senders we don't know, which the
+/// coordinator confirms as requests or deletes.
+enum RequestsTab { newTab, maybe }
 
 extension RequestsTabX on RequestsTab {
-  /// Whether a job's current [JobStatus] still needs a first quote —
-  /// the only thing that keeps a request in the "New" segment.
+  /// What the API calls the requests this tab lists.
+  RequestTriage get triage => switch (this) {
+    RequestsTab.newTab => RequestTriage.request,
+    RequestsTab.maybe => RequestTriage.maybe,
+  };
+
+  /// Whether a job's current [JobStatus] still needs a first quote.
   static bool isNew(JobStatus status) =>
       status == JobStatus.requestReceived || status == JobStatus.quoteDraft;
 }

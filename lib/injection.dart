@@ -10,6 +10,7 @@ import 'features/auth/domain/repositories/auth_repository.dart';
 import 'features/auth/domain/usecases/get_current_user.dart';
 import 'features/auth/domain/usecases/reset_password.dart';
 import 'features/auth/domain/usecases/sign_in.dart';
+import 'features/auth/domain/usecases/refresh_session.dart';
 import 'features/auth/domain/usecases/sign_out.dart';
 import 'features/auth/presentation/bloc/auth_cubit.dart';
 import 'features/auth/presentation/bloc/forgot_password_cubit.dart';
@@ -41,26 +42,30 @@ import 'features/coordinator/presentation/bloc/coordinator_queue_cubit.dart';
 import 'features/coordinator/presentation/bloc/send_certificate_cubit.dart';
 import 'features/inspector/presentation/bloc/certificates_list_cubit.dart';
 import 'features/inspector/presentation/bloc/inspector_tasks_cubit.dart';
+import 'features/quotation/data/datasources/quotation_api_datasource.dart';
 import 'features/quotation/data/datasources/quotation_remote_datasource.dart';
 import 'features/quotation/data/repositories/quotation_repository_impl.dart';
 import 'features/quotation/domain/repositories/quotation_repository.dart';
+import 'features/quotation/domain/usecases/get_quotation_board.dart';
 import 'features/quotation/domain/usecases/get_quotations.dart';
 import 'features/quotation/domain/usecases/log_client_response.dart';
 import 'features/quotation/domain/usecases/save_draft.dart';
 import 'features/quotation/domain/usecases/send_quotation.dart';
-import 'features/quotation/domain/usecases/send_reminder.dart';
 import 'features/quotation/presentation/bloc/quotation_detail_cubit.dart';
 import 'features/quotation/presentation/bloc/quotation_form_cubit.dart';
 import 'features/quotation/presentation/bloc/quotations_list_cubit.dart';
+import 'features/requests/data/datasources/requests_api_datasource.dart';
 import 'features/requests/data/datasources/requests_remote_datasource.dart';
 import 'features/requests/data/repositories/requests_repository_impl.dart';
 import 'features/requests/domain/entities/inspection_request.dart';
 import 'features/requests/domain/repositories/requests_repository.dart';
 import 'features/requests/domain/usecases/accept_task.dart';
-import 'features/requests/domain/usecases/assign_client.dart';
 import 'features/requests/domain/usecases/assign_inspector.dart';
 import 'features/requests/domain/usecases/complete_intake.dart';
 import 'features/requests/domain/usecases/decline_task.dart';
+import 'features/requests/domain/usecases/confirm_request.dart';
+import 'features/requests/domain/usecases/delete_request.dart';
+import 'features/requests/domain/usecases/get_triaged_requests.dart';
 import 'features/requests/domain/usecases/get_my_tasks.dart';
 import 'features/requests/domain/usecases/get_request_detail.dart';
 import 'features/requests/domain/usecases/get_requests.dart';
@@ -116,6 +121,7 @@ void _registerAuth(FlutterSecureStorage storage) {
     )
     ..registerLazySingleton(() => SignIn(getIt()))
     ..registerLazySingleton(() => SignOut(getIt()))
+    ..registerLazySingleton(() => RefreshSession(getIt()))
     ..registerLazySingleton(() => GetCurrentUser(getIt()))
     ..registerLazySingleton(() => ResetPassword(getIt()))
     ..registerLazySingleton(() => AuthCubit(getIt(), getIt()))
@@ -125,33 +131,41 @@ void _registerAuth(FlutterSecureStorage storage) {
 
 void _registerRequests() {
   getIt
-    ..registerLazySingleton(RequestsRemoteDataSource.new)
+    ..registerLazySingleton(
+      () => RequestsRemoteDataSource(currentUserId: () => getIt<AuthCubit>().user?.id),
+    )
+    ..registerLazySingleton(RequestsApiDataSource.new)
     ..registerLazySingleton<RequestsRepository>(
-      () => RequestsRepositoryImpl(getIt()),
+      () => RequestsRepositoryImpl(getIt(), getIt()),
     )
     ..registerLazySingleton(() => GetRequests(getIt()))
+    ..registerLazySingleton(() => GetTriagedRequests(getIt()))
+    ..registerLazySingleton(() => ConfirmRequest(getIt()))
+    ..registerLazySingleton(() => DeleteRequest(getIt()))
     ..registerLazySingleton(() => GetRequestDetail(getIt()))
-    ..registerLazySingleton(() => AssignClient(getIt()))
     ..registerLazySingleton(() => AssignInspector(getIt()))
     ..registerLazySingleton(() => CompleteIntake(getIt()))
     ..registerLazySingleton(() => GetMyTasks(getIt()))
     ..registerLazySingleton(() => AcceptTask(getIt()))
     ..registerLazySingleton(() => DeclineTask(getIt()))
     ..registerLazySingleton(() => StartInspection(getIt()))
-    ..registerFactory(() => RequestsListCubit(getIt()));
+    ..registerFactory(() => RequestsListCubit(getIt(), getIt(), getIt()));
 }
 
 void _registerQuotation() {
   getIt
-    ..registerLazySingleton(QuotationRemoteDataSource.new)
+    ..registerLazySingleton(
+      () => QuotationRemoteDataSource(currentUserId: () => getIt<AuthCubit>().user?.id),
+    )
+    ..registerLazySingleton(QuotationApiDataSource.new)
     ..registerLazySingleton<QuotationRepository>(
-      () => QuotationRepositoryImpl(getIt()),
+      () => QuotationRepositoryImpl(getIt(), getIt()),
     )
     ..registerLazySingleton(() => GetQuotations(getIt()))
     ..registerLazySingleton(() => SaveDraft(getIt()))
     ..registerLazySingleton(() => SendQuotation(getIt(), getIt()))
     ..registerLazySingleton(() => LogClientResponse(getIt(), getIt()))
-    ..registerLazySingleton(() => SendReminder(getIt()))
+    ..registerLazySingleton(() => GetQuotationBoard(getIt(), getIt()))
     ..registerFactory(() => QuotationsListCubit(getIt()))
     ..registerFactoryParam<QuotationFormCubit, InspectionRequest, void>(
       (request, _) => QuotationFormCubit(

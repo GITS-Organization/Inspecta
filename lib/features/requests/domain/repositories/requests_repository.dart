@@ -1,12 +1,31 @@
+import '../../../../core/base/paginated.dart';
 import '../../../../core/enums/job_status.dart';
 import '../entities/inspection_request.dart';
 import '../entities/request_item.dart';
+import '../entities/request_triage.dart';
 
 /// Methods emit / throw [RequestsFailure] on expected errors.
 abstract interface class RequestsRepository {
   /// The shared requests inbox (BR-02.1), newest first. Every coordinator
   /// sees every request — there's no per-coordinator split.
   Stream<List<InspectionRequest>> watchRequests();
+
+  /// One page of requests from the API for the signed-in user, newest first.
+  /// [triage] picks real requests or emails from unknown senders; [query]
+  /// searches client, location, subject and sender server-side.
+  Future<Paginated<InspectionRequest>> listRequests({
+    required RequestTriage triage,
+    String? query,
+    int page = 1,
+    int pageSize = 20,
+  });
+
+  /// Turns a [RequestTriage.maybe] email into a real request (it joins the
+  /// New list) and returns it. Throws [RequestsFailure].
+  Future<InspectionRequest> confirmRequest(String requestId);
+
+  /// Discards a [RequestTriage.maybe] email. Throws [RequestsFailure].
+  Future<void> deleteRequest(String requestId);
 
   /// Feature 05: every job ever assigned to one inspector — the only
   /// slice of `requests` their read access covers (see firestore.rules).
@@ -27,9 +46,6 @@ abstract interface class RequestsRepository {
 
   /// BR-03.8: rejects the request with a reason, closing it.
   Future<void> rejectRequest({required String requestId, required String reason});
-
-  /// BR-02.4: matches an unmatched sender to a known client.
-  Future<void> assignClient(String requestId, String clientId);
 
   /// Feature 04: a coordinator assigns an inspector and a time slot,
   /// moving the job to [JobStatus.assigned].

@@ -394,18 +394,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabNew => 'New';
 
   @override
-  String get tabAll => 'All';
-
-  @override
   String tabCount(String label, int count) {
     return '$label · $count';
   }
 
   @override
   String get needsYourReply => 'Needs your reply';
-
-  @override
-  String get allRequestsHeading => 'All requests';
 
   @override
   String get newestFirst => 'Newest first';
@@ -415,14 +409,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get continueQuote => 'Continue quote';
-
-  @override
-  String clientReplied(String name) {
-    return '$name replied';
-  }
-
-  @override
-  String get reply => 'Reply';
 
   @override
   String get newClientTag => 'New client';
@@ -442,7 +428,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emptyNewRequests => 'No new requests. Nice and clear.';
 
   @override
-  String get emptyAllRequests => 'No requests yet.';
+  String get tabMaybe => 'Maybe';
+
+  @override
+  String get maybeRequestsHeading => 'From unknown senders';
+
+  @override
+  String get emptyMaybeRequests => 'No emails from unknown senders.';
+
+  @override
+  String get confirmRequest => 'Confirm as request';
+
+  @override
+  String get confirmRequestError =>
+      'Couldn\'t confirm the request. Please try again.';
+
+  @override
+  String get deleteRequest => 'Delete';
+
+  @override
+  String get deleteRequestTitle => 'Delete this email?';
+
+  @override
+  String get deleteRequestMessage =>
+      'It will be removed from your inbox and cannot be restored.';
+
+  @override
+  String get deleteRequestError =>
+      'Couldn\'t delete the request. Please try again.';
 
   @override
   String emptySearch(String query) {
@@ -519,6 +532,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readFullEmail => 'Read full email';
 
   @override
+  String get showLessEmail => 'Show less';
+
+  @override
   String get notReadyToQuote =>
       'Add the client, at least one equipment item and the location before quoting.';
 
@@ -565,10 +581,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get viewInQuotationsAction => 'View in Quotations';
-
-  @override
-  String get quotationBackendNotBuiltYet =>
-      'Saving and sending aren\'t connected to a server yet.';
 
   @override
   String get comingSoon => 'This isn\'t built yet.';

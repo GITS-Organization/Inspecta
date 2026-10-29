@@ -1,27 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_layout.dart';
 import '../../../../core/consts/app_text_styles.dart';
-import '../../../../core/framework/mtoast.dart';
-import '../../../../core/shared/loading.dart';
 import '../../../../core/shared/m_notice.dart';
 import '../../../../core/shared/m_search_field.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/presentation/widgets/user_app_header.dart';
 import '../../domain/entities/quotation.dart';
-import '../../domain/entities/quotation_failure.dart';
+import '../../domain/entities/quotation_status.dart';
 import '../../domain/entities/quote_board_tab.dart';
-import '../../domain/usecases/send_reminder.dart';
+import '../../domain/entities/reply_type.dart';
 import '../bloc/quotations_list_cubit.dart';
 import '../widgets/quote_board_card.dart';
 import '../widgets/quote_board_tab_bar.dart';
 import '../widgets/quote_value_summary.dart';
 import '../widgets/quotation_labels.dart';
 import 'quotation_detail_page.dart';
+
+/// What the skeleton cards are drawn from; only its shape matters.
+final _placeholder = Quotation(
+  id: 'placeholder',
+  requestId: 'placeholder',
+  requestNumber: 'INT/000/2026',
+  clientName: 'Client name',
+  equipmentSummary: 'Equipment inspection × 2',
+  type: ReplyType.offer,
+  items: const [],
+  status: QuotationStatus.sent,
+  createdBy: '',
+  createdAt: DateTime(2026),
+  version: 1,
+  totalPiastres: 100000,
+  validUntil: DateTime(2099),
+  sentAt: DateTime(2026),
+);
+
+/// How far from the end of the board, in pixels, the next page is fetched.
+const _loadMoreExtent = 400.0;
 
 /// The Quotations tab: the coordinator's price tracker — every quote
 /// they've sent, where it stands, and what needs chasing. A real tab
@@ -68,20 +88,6 @@ class _QuotationsBoardViewState extends State<_QuotationsBoardView> {
     );
   }
 
-  Future<void> _sendReminder(Quotation quotation) async {
-    final t = AppLocalizations.of(context)!;
-    try {
-      await getIt<SendReminder>()(quotation.id);
-      if (mounted) MToast.showSuccess(message: t.reminderSent);
-    } catch (e) {
-      if (mounted) {
-        MToast.showError(
-          message: e is QuotationFailure ? e.code.message(t) : t.actionFailed,
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
@@ -121,7 +127,7 @@ class _QuotationsBoardViewState extends State<_QuotationsBoardView> {
               child: BlocBuilder<QuotationsListCubit, QuotationsListState>(
                 builder: (context, state) {
                   if (state.status == QuotationsListStatus.loading) {
-                    return Loading.loader(context);
+                    return const _Skeleton();
                   }
                   if (state.status == QuotationsListStatus.error) {
                     return Center(
@@ -146,38 +152,59 @@ class _QuotationsBoardViewState extends State<_QuotationsBoardView> {
                   }
 
                   final visible = state.visible;
-                  return ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, AppLayout.bottomNavClearance),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: QuoteValueSummary(
-                          openTotalPiastres: state.openTotalPiastres,
+                  return RefreshIndicator(
+                    onRefresh: cubit.refresh,
+                    child: NotificationListener<ScrollNotification>(
+                      onNotification: (notification) {
+                        if (notification.depth == 0 &&
+                            notification.metrics.extentAfter < _loadMoreExtent) {
+                          cubit.loadMore();
+                        }
+                        return false;
+                      },
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(
+                          16,
+                          16,
+                          16,
+                          AppLayout.bottomNavClearance,
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      if (visible.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 32),
-                          child: Center(
-                            child: Text(
-                              _emptyMessage(t, state),
-                              textAlign: TextAlign.center,
-                              style: AppTextStyles.subtitle,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: QuoteValueSummary(
+                              openTotalPiastres: state.openTotalPiastres,
                             ),
                           ),
-                        )
-                      else
-                        for (final quotation in visible) ...[
-                          QuoteBoardCard(
-                            key: ValueKey(quotation.id),
-                            quotation: quotation,
-                            onTap: () => _openDetail(quotation),
-                            onSendReminder: () => _sendReminder(quotation),
-                          ),
                           const SizedBox(height: 12),
+                          if (visible.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 32),
+                              child: Center(
+                                child: Text(
+                                  _emptyMessage(t, state),
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.subtitle,
+                                ),
+                              ),
+                            )
+                          else
+                            for (final quotation in visible) ...[
+                              QuoteBoardCard(
+                                key: ValueKey(quotation.id),
+                                quotation: quotation,
+                                onTap: () => _openDetail(quotation),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                          if (state.loadingMore)
+                            Skeletonizer(
+                              child: QuoteBoardCard(quotation: _placeholder, onTap: () {}),
+                            ),
                         ],
-                    ],
+                      ),
+                    ),
                   );
                 },
               ),
@@ -198,5 +225,23 @@ class _QuotationsBoardViewState extends State<_QuotationsBoardView> {
       QuoteBoardTab.accepted => t.boardEmptyAccepted,
       QuoteBoardTab.lost => t.boardEmptyLost,
     };
+  }
+}
+
+/// The board's loading state: cards drawn from [_placeholder], shimmering.
+class _Skeleton extends StatelessWidget {
+  const _Skeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Skeletonizer(
+      child: ListView.separated(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        itemCount: 3,
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        itemBuilder: (_, _) => QuoteBoardCard(quotation: _placeholder, onTap: () {}),
+      ),
+    );
   }
 }

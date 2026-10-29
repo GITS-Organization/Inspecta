@@ -82,22 +82,13 @@ class _Body extends StatelessWidget {
 
   const _Body({required this.request, required this.quotable});
 
-  void _notBuiltYet(BuildContext context) {
-    MToast.showError(
-      message: AppLocalizations.of(context)!.quotationBackendNotBuiltYet,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       children: [
         if (request.emailPreview != null || request.emailFrom != null) ...[
-          EmailSummaryCard(
-            request: request,
-            onReadFullEmail: () => _notBuiltYet(context),
-          ),
+          EmailSummaryCard(request: request),
           const SizedBox(height: 12),
         ],
         EquipmentGrid(

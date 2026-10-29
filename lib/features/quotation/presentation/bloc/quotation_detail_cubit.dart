@@ -24,38 +24,63 @@ class QuotationDetailCubit extends Cubit<QuotationDetailState> {
   final LogClientResponse _logClientResponse;
   final GetRequestDetail _getRequestDetail;
 
-  StreamSubscription<List<Quotation>>? _subscription;
+  bool _started = false;
 
   QuotationDetailCubit({
     required this.requestId,
-    required QuotationRepository repository,
-    required LogClientResponse logClientResponse,
-    required GetRequestDetail getRequestDetail,
-  }) : _repository = repository,
-       _logClientResponse = logClientResponse,
-       _getRequestDetail = getRequestDetail,
-       super(const QuotationDetailState());
+    required this._repository,
+    required this._logClientResponse,
+    required this._getRequestDetail,
+  }) : super(const QuotationDetailState());
 
   void start() {
-    if (_subscription != null) return;
-    _subscription = _repository.watchForRequest(requestId).listen(
-      (versions) => emit(state.copyWith(status: QuotationDetailStatus.ready, versions: versions)),
-      onError: (Object error) => emit(
-        state.copyWith(
-          status: QuotationDetailStatus.error,
-          failure: error is QuotationFailure ? error.code : QuotationFailureCode.unknown,
-        ),
-      ),
-    );
+    if (_started) return;
+    _started = true;
+    _loadVersions();
 
     // Supplementary — the info card and "Request received" timeline step
     // degrade gracefully (just hide) if this fails or is slow, so it
     // isn't allowed to block the quotations themselves from showing.
     _getRequestDetail(requestId)
         .then((request) {
-          if (!isClosed && request != null) emit(state.copyWith(request: request));
+          if (!isClosed && request != null)
+            emit(state.copyWith(request: request));
         })
         .catchError((_) {});
+  }
+
+  /// Loads the request's quotes from the API. A failed reload keeps the
+  /// versions already on screen.
+  Future<void> _loadVersions() async {
+    try {
+      final versions = await _repository.getForRequest(requestId);
+      if (isClosed) return;
+      emit(
+        state.copyWith(
+          status: QuotationDetailStatus.ready,
+          versions: versions,
+          clearFailure: true,
+        ),
+      );
+    } catch (error) {
+      if (isClosed || state.status == QuotationDetailStatus.ready) return;
+      emit(
+        state.copyWith(
+          status: QuotationDetailStatus.error,
+          failure: error is QuotationFailure
+              ? error.code
+              : QuotationFailureCode.unknown,
+        ),
+      );
+    }
+  }
+
+  /// Reloads from the error screen.
+  Future<void> retry() {
+    emit(
+      state.copyWith(status: QuotationDetailStatus.loading, clearFailure: true),
+    );
+    return _loadVersions();
   }
 
   Future<void> logResponse({
@@ -76,8 +101,12 @@ class QuotationDetailCubit extends Cubit<QuotationDetailState> {
         note: note,
       );
       _complete(success: true);
+      await _loadVersions();
     } catch (e) {
-      _complete(success: false, failure: e is QuotationFailure ? e.code : QuotationFailureCode.unknown);
+      _complete(
+        success: false,
+        failure: e is QuotationFailure ? e.code : QuotationFailureCode.unknown,
+      );
     }
   }
 
@@ -92,11 +121,5 @@ class QuotationDetailCubit extends Cubit<QuotationDetailState> {
         clearFailure: failure == null,
       ),
     );
-  }
-
-  @override
-  Future<void> close() async {
-    await _subscription?.cancel();
-    return super.close();
   }
 }

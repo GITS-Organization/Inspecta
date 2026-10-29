@@ -2,57 +2,106 @@ part of 'requests_list_cubit.dart';
 
 enum RequestsListStatus { loading, ready, error }
 
-class RequestsListState extends Equatable {
+/// One tab's list: the pages loaded so far, and where its loading stands.
+class RequestsTabState extends Equatable {
   final RequestsListStatus status;
-  final List<InspectionRequest> requests;
-  final RequestsTab tab;
-  final String query;
+  final Paginated<InspectionRequest> requests;
+
+  /// The next page is on its way.
+  final bool loadingMore;
+
+  /// The last attempt at the next page failed. Scrolling doesn't retry until
+  /// the list is refreshed, so an unreachable server isn't hammered.
+  final bool loadMoreFailed;
   final RequestsFailureCode? failure;
 
-  const RequestsListState({
+  const RequestsTabState({
     this.status = RequestsListStatus.loading,
-    this.requests = const [],
-    this.tab = RequestsTab.newTab,
-    this.query = '',
+    this.requests = const Paginated(),
+    this.loadingMore = false,
+    this.loadMoreFailed = false,
     this.failure,
   });
 
-  /// [requests] filtered to [tab] — "New" narrows to unquoted requests,
-  /// "All" shows everything — then to [query] (client, equipment
-  /// type/title, or request ID — acceptance criterion 4), newest first
-  /// (the repository already sorts; filtering preserves that order).
-  List<InspectionRequest> get visible {
-    final needle = query.trim().toLowerCase();
-    return requests.where((r) {
-      if (tab == RequestsTab.newTab && !r.isNew) return false;
-      if (needle.isEmpty) return true;
-      return r.clientName.toLowerCase().contains(needle) ||
-          r.equipmentTitle.toLowerCase().contains(needle) ||
-          r.id.toLowerCase().contains(needle);
-    }).toList();
-  }
+  /// Whether scrolling to the end can fetch another page.
+  bool get canLoadMore =>
+      status == RequestsListStatus.ready &&
+      requests.hasMore &&
+      !loadingMore &&
+      !loadMoreFailed;
 
-  /// Tab counts ignore [query], matching the mockup's "New · 2" badges.
-  int countOf(RequestsTab t) =>
-      t == RequestsTab.newTab ? requests.where((r) => r.isNew).length : requests.length;
-
-  RequestsListState copyWith({
-    RequestsListStatus? status,
-    List<InspectionRequest>? requests,
-    RequestsTab? tab,
-    String? query,
-    RequestsFailureCode? failure,
-    bool clearFailure = false,
+  RequestsTabState copyWith({
+    Paginated<InspectionRequest>? requests,
+    bool? loadingMore,
+    bool? loadMoreFailed,
   }) {
-    return RequestsListState(
-      status: status ?? this.status,
+    return RequestsTabState(
+      status: status,
       requests: requests ?? this.requests,
-      tab: tab ?? this.tab,
-      query: query ?? this.query,
-      failure: clearFailure ? null : (failure ?? this.failure),
+      loadingMore: loadingMore ?? this.loadingMore,
+      loadMoreFailed: loadMoreFailed ?? this.loadMoreFailed,
+      failure: failure,
     );
   }
 
   @override
-  List<Object?> get props => [status, requests, tab, query, failure];
+  List<Object?> get props => [
+    status,
+    requests,
+    loadingMore,
+    loadMoreFailed,
+    failure,
+  ];
+}
+
+class RequestsListState extends Equatable {
+  final RequestsTab tab;
+
+  /// The search applied to both tabs, after the typing pause.
+  final String query;
+  final RequestsTabState newTab;
+  final RequestsTabState maybeTab;
+
+  /// Ids of "maybe" requests being confirmed or deleted right now.
+  final Set<String> busy;
+
+  const RequestsListState({
+    this.tab = RequestsTab.newTab,
+    this.query = '',
+    this.newTab = const RequestsTabState(),
+    this.maybeTab = const RequestsTabState(),
+    this.busy = const {},
+  });
+
+  RequestsTabState tabState(RequestsTab t) => switch (t) {
+    RequestsTab.newTab => newTab,
+    RequestsTab.maybe => maybeTab,
+  };
+
+  /// The tab being shown.
+  RequestsTabState get current => tabState(tab);
+
+  RequestsListState withTab(RequestsTab t, RequestsTabState state) => switch (t) {
+    RequestsTab.newTab => copyWith(newTab: state),
+    RequestsTab.maybe => copyWith(maybeTab: state),
+  };
+
+  RequestsListState copyWith({
+    RequestsTab? tab,
+    String? query,
+    RequestsTabState? newTab,
+    RequestsTabState? maybeTab,
+    Set<String>? busy,
+  }) {
+    return RequestsListState(
+      tab: tab ?? this.tab,
+      query: query ?? this.query,
+      newTab: newTab ?? this.newTab,
+      maybeTab: maybeTab ?? this.maybeTab,
+      busy: busy ?? this.busy,
+    );
+  }
+
+  @override
+  List<Object?> get props => [tab, query, newTab, maybeTab, busy];
 }

@@ -16,9 +16,11 @@ class InspectionRequest extends Equatable {
   /// coordinator must confirm or create the client before quoting.
   final String? clientId;
   final String clientName;
-  final String? emailThreadId;
   final String? subject;
   final String? emailFrom;
+
+  /// The sender's display name from the email header, e.g. "Seif Mohamed".
+  final String? emailFromName;
   final String? emailPreview;
   final DateTime receivedAt;
   final String location;
@@ -27,11 +29,6 @@ class InspectionRequest extends Equatable {
   final JobStatus status;
   final String? coordinatorId;
   final List<RequestItem> items;
-
-  /// The client answered in the email thread and it hasn't been acted on
-  /// yet (BR-03.6): the inbox shows "X replied" instead of the usual card.
-  final bool hasUnreadClientReply;
-  final String? lastReplySnippet;
 
   /// Set when [status] is [JobStatus.quoteRejected] (BR-03.8).
   final String? rejectReason;
@@ -57,15 +54,13 @@ class InspectionRequest extends Equatable {
     required this.status,
     required this.items,
     this.clientId,
-    this.emailThreadId,
     this.subject,
     this.emailFrom,
+    this.emailFromName,
     this.emailPreview,
     this.preferredDate,
     this.accessNotes,
     this.coordinatorId,
-    this.hasUnreadClientReply = false,
-    this.lastReplySnippet,
     this.rejectReason,
     this.inspectorId,
     this.scheduledAt,
@@ -76,6 +71,13 @@ class InspectionRequest extends Equatable {
   bool get isNew => RequestsTabX.isNew(status);
 
   bool get isNewClient => clientId == null;
+
+  /// Who the request is from: the client once matched, otherwise whoever
+  /// sent the email — an unmatched sender has no client name yet.
+  String get senderLabel {
+    if (clientName.isNotEmpty) return clientName;
+    return emailFromName?.isNotEmpty == true ? emailFromName! : emailFrom ?? '';
+  }
 
   /// The client accepted a quote but no inspector has been assigned yet —
   /// the coordinator's "ready to assign" queue (Feature 04 §5).
@@ -121,9 +123,9 @@ class InspectionRequest extends Equatable {
     source,
     clientId,
     clientName,
-    emailThreadId,
     subject,
     emailFrom,
+    emailFromName,
     emailPreview,
     receivedAt,
     location,
@@ -132,8 +134,6 @@ class InspectionRequest extends Equatable {
     status,
     coordinatorId,
     items,
-    hasUnreadClientReply,
-    lastReplySnippet,
     rejectReason,
     inspectorId,
     scheduledAt,

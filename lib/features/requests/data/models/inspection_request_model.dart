@@ -11,9 +11,9 @@ class InspectionRequestModel {
   final RequestSource source;
   final String? clientId;
   final String clientName;
-  final String? emailThreadId;
   final String? subject;
   final String? emailFrom;
+  final String? emailFromName;
   final String? emailPreview;
   final DateTime receivedAt;
   final String location;
@@ -22,8 +22,6 @@ class InspectionRequestModel {
   final JobStatus? status;
   final String? coordinatorId;
   final List<RequestItemModel> items;
-  final bool hasUnreadClientReply;
-  final String? lastReplySnippet;
   final String? rejectReason;
   final String? inspectorId;
   final DateTime? scheduledAt;
@@ -38,16 +36,14 @@ class InspectionRequestModel {
     required this.location,
     required this.items,
     this.clientId,
-    this.emailThreadId,
     this.subject,
     this.emailFrom,
+    this.emailFromName,
     this.emailPreview,
     this.preferredDate,
     this.accessNotes,
     this.status,
     this.coordinatorId,
-    this.hasUnreadClientReply = false,
-    this.lastReplySnippet,
     this.rejectReason,
     this.inspectorId,
     this.scheduledAt,
@@ -55,15 +51,47 @@ class InspectionRequestModel {
     this.certificateSubmittedAt,
   });
 
+  /// A request as the Inspecta API returns it: ISO-8601 date strings instead
+  /// of Firestore timestamps, and the id inside the object.
+  factory InspectionRequestModel.fromApiJson(Map<String, dynamic> json) {
+    DateTime? date(String key) {
+      final value = json[key];
+      return value is String ? DateTime.tryParse(value) : null;
+    }
+
+    return InspectionRequestModel(
+      id: json['id'] as String,
+      source: RequestSource.fromValue(json['source']),
+      clientId: json['clientId'] as String?,
+      clientName: json['clientName'] as String? ?? '',
+      subject: json['subject'] as String?,
+      emailFrom: json['emailFrom'] as String?,
+      emailFromName: json['emailFromName'] as String?,
+      emailPreview: json['emailPreview'] as String?,
+      receivedAt: date('receivedAt') ?? DateTime.now(),
+      location: json['location'] as String? ?? '',
+      preferredDate: date('preferredDate'),
+      accessNotes: json['accessNotes'] as String?,
+      status: JobStatus.fromValue(json['status']),
+      coordinatorId: json['coordinatorId'] as String?,
+      items: (json['items'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(RequestItemModel.fromJson)
+          .toList(),
+      inspectorId: json['inspectorId'] as String?,
+      scheduledAt: date('scheduledAt'),
+    );
+  }
+
   factory InspectionRequestModel.fromJson(String id, Map<String, dynamic> json) {
     return InspectionRequestModel(
       id: id,
       source: RequestSource.fromValue(json['source']),
       clientId: json['clientId'] as String?,
       clientName: json['clientName'] as String? ?? '',
-      emailThreadId: json['emailThreadId'] as String?,
       subject: json['subject'] as String?,
       emailFrom: json['emailFrom'] as String?,
+      emailFromName: json['emailFromName'] as String?,
       emailPreview: json['emailPreview'] as String?,
       receivedAt:
           (json['receivedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -77,8 +105,6 @@ class InspectionRequestModel {
           .whereType<Map<String, dynamic>>()
           .map(RequestItemModel.fromJson)
           .toList(),
-      hasUnreadClientReply: json['hasUnreadClientReply'] as bool? ?? false,
-      lastReplySnippet: json['lastReplySnippet'] as String?,
       rejectReason: json['rejectReason'] as String?,
       inspectorId: json['inspectorId'] as String?,
       scheduledAt: (json['scheduledAt'] as Timestamp?)?.toDate(),
@@ -97,9 +123,9 @@ class InspectionRequestModel {
       source: source,
       clientId: clientId,
       clientName: clientName,
-      emailThreadId: emailThreadId,
       subject: subject,
       emailFrom: emailFrom,
+      emailFromName: emailFromName,
       emailPreview: emailPreview,
       receivedAt: receivedAt,
       location: location,
@@ -108,8 +134,6 @@ class InspectionRequestModel {
       status: resolvedStatus,
       coordinatorId: coordinatorId,
       items: items.map((item) => item.toEntity()).toList(),
-      hasUnreadClientReply: hasUnreadClientReply,
-      lastReplySnippet: lastReplySnippet,
       rejectReason: rejectReason,
       inspectorId: inspectorId,
       scheduledAt: scheduledAt,

@@ -8,7 +8,7 @@ import '../bloc/requests_list_cubit.dart';
 import 'requests_tab_bar.dart';
 
 /// The inbox's header: avatar, role + greeting, bell, the "Requests" title,
-/// and the search box with the New / All toggle beside it.
+/// and the search box with the New / Maybe toggle beside it.
 class RequestsInboxHeader extends StatelessWidget {
   final TextEditingController searchController;
   final VoidCallback onOpenProfile;

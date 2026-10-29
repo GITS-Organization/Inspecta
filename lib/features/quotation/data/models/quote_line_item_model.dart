@@ -26,6 +26,20 @@ class QuoteLineItemModel {
     );
   }
 
+  /// A line as the Inspecta API returns it, where the equipment's name is
+  /// `description` and `type` may be empty.
+  factory QuoteLineItemModel.fromApiJson(Map<String, dynamic> json) {
+    final type = json['type'] as String?;
+    final description = json['description'] as String?;
+    return QuoteLineItemModel(
+      requestItemId: json['requestItemId'] as String? ?? '',
+      type: type?.isNotEmpty == true ? type! : description ?? '',
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      unitPricePiastres: (json['unitPricePiastres'] as num?)?.toInt() ?? 0,
+      pricingUnit: PricingUnit.fromValue(json['pricingUnit']),
+    );
+  }
+
   factory QuoteLineItemModel.fromEntity(QuoteLineItem item) => QuoteLineItemModel(
     requestItemId: item.requestItemId,
     type: item.type,

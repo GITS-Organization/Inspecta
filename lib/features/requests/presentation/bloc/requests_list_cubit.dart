@@ -3,62 +3,219 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/base/paginated.dart';
 import '../../domain/entities/inspection_request.dart';
 import '../../domain/entities/requests_failure.dart';
 import '../../domain/entities/requests_tab.dart';
-import '../../domain/usecases/get_requests.dart';
+import '../../domain/usecases/confirm_request.dart';
+import '../../domain/usecases/delete_request.dart';
+import '../../domain/usecases/get_triaged_requests.dart';
 
 part 'requests_list_state.dart';
 
-/// Backs the requests inbox: the live list plus the tab and search filter
-/// applied to it.
+/// Backs the requests inbox: the New and Maybe lists, each loaded a page at a
+/// time from the API, with the search and tab applied to them.
 class RequestsListCubit extends Cubit<RequestsListState> {
-  final GetRequests _getRequests;
+  final GetTriagedRequests _getTriagedRequests;
+  final ConfirmRequest _confirmRequest;
+  final DeleteRequest _deleteRequest;
+  final Duration _searchDelay;
 
-  StreamSubscription<List<InspectionRequest>>? _subscription;
+  Timer? _searchTimer;
+  bool _started = false;
 
-  RequestsListCubit(this._getRequests) : super(const RequestsListState());
+  /// Bumped whenever a tab's first page is (re)loaded, so a slower response
+  /// to an older search can't overwrite a newer one.
+  final _generation = {for (final tab in RequestsTab.values) tab: 0};
 
-  /// Starts listening to the inbox. Safe to call more than once.
-  void start() {
-    if (_subscription != null) return;
-    _subscription = _getRequests().listen(
-      (requests) => emit(
-        state.copyWith(
-          status: RequestsListStatus.ready,
-          requests: requests,
-          clearFailure: true,
-        ),
-      ),
-      onError: (Object error) => emit(
-        state.copyWith(
-          status: RequestsListStatus.error,
-          failure: error is RequestsFailure
-              ? error.code
-              : RequestsFailureCode.unknown,
-        ),
-      ),
-    );
+  RequestsListCubit(this._getTriagedRequests,
+      this._confirmRequest,
+      this._deleteRequest, {
+        Duration searchDelay = const Duration(milliseconds: 400),
+      })
+      : _searchDelay = searchDelay,
+        super(const RequestsListState());
+
+  /// Loads the inbox. Safe to call more than once.
+  Future<void> start() async {
+    if (_started) return;
+    _started = true;
+    await _reloadAll(showLoading: false);
   }
 
   void setTab(RequestsTab tab) {
     if (tab != state.tab) emit(state.copyWith(tab: tab));
   }
 
-  void setQuery(String query) {
-    if (query != state.query) emit(state.copyWith(query: query));
+  /// Searches both tabs for [text], once typing pauses.
+  void setQuery(String text) {
+    _searchTimer?.cancel();
+    final query = text.trim();
+    if (query == state.query) return;
+    _searchTimer = Timer(_searchDelay, () {
+      emit(state.copyWith(query: query));
+      _reloadAll();
+    });
   }
 
-  Future<void> retry() async {
-    await _subscription?.cancel();
-    _subscription = null;
-    emit(state.copyWith(status: RequestsListStatus.loading, clearFailure: true));
-    start();
+  /// Reloads the tab being shown, from its error screen.
+  Future<void> retry() => _loadFirstPage(state.tab);
+
+  /// Pull-to-refresh: reloads both tabs in place, keeping what is on screen
+  /// (and on a failure).
+  Future<void> refresh() => _reloadAll(showLoading: false);
+
+  /// Fetches the next page of [tab] (the one being shown by default).
+  Future<void> loadMore([RequestsTab? tab]) async {
+    final which = tab ?? state.tab;
+    final current = state.tabState(which);
+    if (!current.canLoadMore) return;
+    final generation = _generation[which];
+    emit(state.withTab(which, current.copyWith(loadingMore: true)));
+    try {
+      final page = await _getTriagedRequests(
+        which.triage,
+        query: state.query,
+        page: current.requests.nextPage,
+      );
+      if (isClosed || generation != _generation[which]) return;
+      final now = state.tabState(which);
+      emit(
+        state.withTab(
+          which,
+          now.copyWith(
+            requests: now.requests.merge(page, keyOf: (r) => r.id),
+            loadingMore: false,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (isClosed || generation != _generation[which]) return;
+      emit(
+        state.withTab(
+          which,
+          state.tabState(which).copyWith(
+              loadingMore: false, loadMoreFailed: true),
+        ),
+      );
+    }
+  }
+
+  /// Keeps a "maybe" email as a request: it leaves Maybe and joins New.
+  /// Returns whether it worked.
+  Future<bool> confirm(String requestId) async {
+    if (!_begin(requestId)) return false;
+    try {
+      final confirmed = await _confirmRequest(requestId);
+      if (isClosed) return true;
+      emit(
+        state.copyWith(
+          newTab: state.newTab.copyWith(
+            requests: state.newTab.requests.mapItems(
+                  (items) =>
+              [
+                confirmed,
+                ...items.where((r) => r.id != requestId),
+              ]
+                ..sort((a, b) => b.receivedAt.compareTo(a.receivedAt)),
+            ),
+          ),
+          maybeTab: _without(state.maybeTab, requestId),
+          busy: _finish(requestId),
+        ),
+      );
+      return true;
+    } catch (_) {
+      if (!isClosed) emit(state.copyWith(busy: _finish(requestId)));
+      return false;
+    }
+  }
+
+  /// Discards a "maybe" email. Returns whether it worked.
+  Future<bool> delete(String requestId) async {
+    if (!_begin(requestId)) return false;
+    try {
+      await _deleteRequest(requestId);
+      if (isClosed) return true;
+      emit(
+        state.copyWith(
+          maybeTab: _without(state.maybeTab, requestId),
+          busy: _finish(requestId),
+        ),
+      );
+      return true;
+    } catch (_) {
+      if (!isClosed) emit(state.copyWith(busy: _finish(requestId)));
+      return false;
+    }
+  }
+
+  bool _begin(String requestId) {
+    if (state.busy.contains(requestId)) return false;
+    emit(state.copyWith(busy: {...state.busy, requestId}));
+    return true;
+  }
+
+  Set<String> _finish(String requestId) => {...state.busy}..remove(requestId);
+
+  RequestsTabState _without(RequestsTabState tab, String requestId) =>
+      tab.copyWith(
+        requests: tab.requests.mapItems(
+              (items) =>
+          [
+            for (final r in items)
+              if (r.id != requestId) r,
+          ],
+        ),
+      );
+
+  Future<void> _reloadAll({bool showLoading = true}) =>
+      Future.wait([
+        for (final tab in RequestsTab.values)
+          _loadFirstPage(tab, showLoading: showLoading),
+      ]);
+
+  /// Replaces [tab]'s list with its first page. [showLoading] swaps the list
+  /// for the skeleton meanwhile; without it the old rows stay until the new
+  /// ones arrive, and a failure leaves them.
+  Future<void> _loadFirstPage(RequestsTab tab,
+      {bool showLoading = true}) async {
+    final generation = _generation[tab]! + 1;
+    _generation[tab] = generation;
+    if (showLoading) emit(state.withTab(tab, const RequestsTabState()));
+    try {
+      final page = await _getTriagedRequests(tab.triage, query: state.query);
+      if (isClosed || generation != _generation[tab]) return;
+      emit(
+        state.withTab(
+          tab,
+          RequestsTabState(status: RequestsListStatus.ready, requests: page),
+        ),
+      );
+    } catch (error) {
+      if (isClosed || generation != _generation[tab]) return;
+      if (!showLoading && state
+          .tabState(tab)
+          .status == RequestsListStatus.ready) {
+        return;
+      }
+      emit(
+        state.withTab(
+          tab,
+          RequestsTabState(
+            status: RequestsListStatus.error,
+            failure: error is RequestsFailure
+                ? error.code
+                : RequestsFailureCode.unknown,
+          ),
+        ),
+      );
+    }
   }
 
   @override
-  Future<void> close() async {
-    await _subscription?.cancel();
+  Future<void> close() {
+    _searchTimer?.cancel();
     return super.close();
   }
 }
