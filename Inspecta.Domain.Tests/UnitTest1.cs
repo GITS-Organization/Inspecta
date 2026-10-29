@@ -6,7 +6,7 @@ namespace Inspecta.Domain.Tests;
 public sealed class RequestLifecycleTests
 {
     [Fact]
-    public void QuoteCannotBeSentBeforeClientIsMatched()
+    public void QuoteCanBeSentWithoutAMatchedClient()
     {
         var coordinatorId = Guid.NewGuid();
         var request = InspectionRequest.Create(
@@ -18,7 +18,10 @@ public sealed class RequestLifecycleTests
 
         request.TransitionTo(JobStatus.QuoteDraft, coordinatorId);
 
-        Assert.Throws<InvalidOperationException>(() => request.TransitionTo(JobStatus.QuoteSent, coordinatorId));
+        request.TransitionTo(JobStatus.QuoteSent, coordinatorId);
+
+        Assert.Equal(JobStatus.QuoteSent, request.Status);
+        Assert.Null(request.ClientId);
     }
 
     [Fact]
@@ -111,7 +114,7 @@ public sealed class DomainDataModelTests
         Assert.Equal(UserRole.Coordinator, UserRoleParser.Parse("supervisor"));
         Assert.Equal(UserRole.TechnicalManager, UserRoleParser.Parse("technical_manager"));
         Assert.Equal(RequestSource.Email, DomainEnumParser.ParseRequestSource("email"));
-        Assert.Equal(QuoteStatus.Superseded, DomainEnumParser.ParseQuoteStatus("superseded"));
+        Assert.Equal(QuoteStatus.Open, DomainEnumParser.ParseQuoteStatus("open"));
         Assert.Equal(ChecklistAnswer.NotApplicable, DomainEnumParser.ParseChecklistAnswer("na"));
     }
 
@@ -296,13 +299,14 @@ public sealed class DomainDataModelTests
 
         quote.Send();
 
-        Assert.Equal(QuoteStatus.Sent, quote.Status);
+        Assert.Equal(QuoteStatus.Open, quote.Status);
+        Assert.True(quote.IsSent);
         Assert.Equal(2, quote.GetItems().Count);
         Assert.Equal(2_250, quote.ItemsTotalPiastres);
         Assert.Throws<InvalidOperationException>(() => quote.SetDraftDetails(items, "Changed", "Two items"));
-        Assert.Throws<ArgumentException>(() => quote.RecordClientResponse(
-            QuoteStatus.Countered, "Counter offer", null));
-        Assert.Equal(QuoteStatus.Sent, quote.Status);
+        Assert.Throws<ArgumentException>(() => quote.RecordClientDecision(QuoteStatus.Open, null));
+        Assert.Throws<ArgumentException>(() => quote.RecordClientDecision(QuoteStatus.Rejected, null));
+        Assert.Equal(QuoteStatus.Open, quote.Status);
     }
 
     [Fact]

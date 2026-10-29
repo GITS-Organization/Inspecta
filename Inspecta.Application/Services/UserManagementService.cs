@@ -252,7 +252,10 @@ public sealed class UserManagementService(
             request.ImapPort,
             request.EmailUsername,
             secretProtector.Protect(request.Password),
-            request.UseSsl);
+            request.UseSsl,
+            smtpServer: request.SmtpServer,
+            smtpPort: request.SmtpPort,
+            smtpUseSsl: request.SmtpUseSsl);
     }
 
     private static void ValidateEmailConfig(CoordinatorEmailConfigRequest request)

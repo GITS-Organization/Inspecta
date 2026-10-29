@@ -41,7 +41,10 @@ public sealed class CoordinatorEmailConfigService(
                 request.ImapPort,
                 request.EmailUsername,
                 encryptedPassword,
-                request.UseSsl);
+                request.UseSsl,
+                smtpServer: request.SmtpServer,
+                smtpPort: request.SmtpPort,
+                smtpUseSsl: request.SmtpUseSsl);
         }
         else
         {
@@ -50,7 +53,10 @@ public sealed class CoordinatorEmailConfigService(
                 request.ImapPort,
                 request.EmailUsername,
                 encryptedPassword,
-                request.UseSsl);
+                request.UseSsl,
+                smtpServer: request.SmtpServer,
+                smtpPort: request.SmtpPort,
+                smtpUseSsl: request.SmtpUseSsl);
         }
 
         await configRepository.SaveAsync(config, cancellationToken);

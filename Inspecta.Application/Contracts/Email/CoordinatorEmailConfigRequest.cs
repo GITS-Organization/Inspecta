@@ -18,4 +18,15 @@ public sealed record CoordinatorEmailConfigRequest
     public required string Password { get; init; }
 
     public bool UseSsl { get; init; } = true;
+
+    /// <summary>Outgoing mail server used to send quotations. Defaults to the IMAP server with imap changed to smtp.</summary>
+    [MaxLength(255)]
+    public string? SmtpServer { get; init; }
+
+    /// <summary>Defaults to 587.</summary>
+    [Range(1, 65535)]
+    public int? SmtpPort { get; init; }
+
+    /// <summary>True for implicit TLS (usually port 465), false for STARTTLS. Defaults to true only for port 465.</summary>
+    public bool? SmtpUseSsl { get; init; }
 }

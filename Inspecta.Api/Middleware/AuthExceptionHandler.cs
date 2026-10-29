@@ -20,6 +20,7 @@ public sealed class AuthExceptionHandler(ILogger<AuthExceptionHandler> logger) :
                 "Email encryption is unavailable",
                 "email_encryption_not_configured",
                 "Coordinator email cannot be saved because IMAP_ENCRYPTION_KEY is missing or invalid. Configure a Base64-encoded 32-byte key in the deployment environment."),
+            EmailDeliveryException => (StatusCodes.Status502BadGateway, "Email could not be sent", "email_delivery_failed", exception.Message),
             KeyNotFoundException => (StatusCodes.Status404NotFound, "Not found", "not_found", "The requested resource was not found."),
             ArgumentException => (StatusCodes.Status400BadRequest, "Invalid request", "bad_request", exception.Message),
             DbUpdateException => (StatusCodes.Status409Conflict, "Conflict", "data_conflict", "The data conflicts with an existing record."),

@@ -9,7 +9,7 @@ public sealed class InspectionRequest
         {
             [JobStatus.RequestReceived] = [JobStatus.QuoteDraft],
             [JobStatus.QuoteDraft] = [JobStatus.QuoteSent],
-            [JobStatus.QuoteSent] = [JobStatus.ClientCountered, JobStatus.QuoteRejected, JobStatus.QuoteAccepted, JobStatus.ClientDeclined],
+            [JobStatus.QuoteSent] = [JobStatus.ClientCountered, JobStatus.QuoteRejected, JobStatus.QuoteAccepted, JobStatus.ClientDeclined, JobStatus.QuoteDraft],
             [JobStatus.ClientCountered] = [JobStatus.QuoteDraft],
             [JobStatus.QuoteAccepted] = [JobStatus.Assigned],
             [JobStatus.Assigned] = [JobStatus.TaskAccepted],
@@ -314,8 +314,8 @@ public sealed class InspectionRequest
         if (nextStatus == JobStatus.QuoteDraft && GetMissingFields() is { Count: > 0 } missing)
             throw new InvalidOperationException(
                 $"Complete the request before drafting a quote. Missing: {string.Join(", ", missing)}.");
-        if (nextStatus == JobStatus.QuoteSent && (ClientId is null || Items.Count == 0 || string.IsNullOrWhiteSpace(Location)))
-            throw new InvalidOperationException("A matched client, at least one item, and a location are required before quoting.");
+        if (nextStatus == JobStatus.QuoteSent && (Items.Count == 0 || string.IsNullOrWhiteSpace(Location)))
+            throw new InvalidOperationException("At least one item and a location are required before quoting.");
         if (nextStatus == JobStatus.CertificateSubmitted && InspectorId is null)
             throw new InvalidOperationException("An assigned inspector is required before certificate submission.");
         if (nextStatus == JobStatus.QuoteRejected && string.IsNullOrWhiteSpace(note))

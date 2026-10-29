@@ -140,14 +140,14 @@ public sealed class InspectionRequestService(IRequestRepository requestRepositor
     public async Task<RequestResponse?> GetVisibleAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
     {
         var request = await requestRepository.GetByIdAsync(requestId, tracking: false, cancellationToken);
-        if (request is null || !IsVisible(request, actorId, role)) return null;
+        if (request is null || !RequestAccess.IsVisible(request, actorId, role)) return null;
         return RequestResponseMapper.Map(request);
     }
 
     public async Task<RequestEmailResponse?> GetEmailAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
     {
         var request = await requestRepository.GetByIdAsync(requestId, tracking: false, cancellationToken);
-        if (request is null || !IsVisible(request, actorId, role)) return null;
+        if (request is null || !RequestAccess.IsVisible(request, actorId, role)) return null;
 
         var email = await requestRepository.GetEmailAsync(requestId, cancellationToken);
         return email is null ? null : RequestResponseMapper.MapEmail(email);
@@ -219,7 +219,7 @@ public sealed class InspectionRequestService(IRequestRepository requestRepositor
     public async Task<RequestResponse> TransitionAsync(Guid requestId, Guid actorId, string role, TransitionRequest transition, CancellationToken cancellationToken = default)
     {
         var request = await requestRepository.GetByIdAsync(requestId, tracking: true, cancellationToken);
-        if (request is null || !IsVisible(request, actorId, role))
+        if (request is null || !RequestAccess.IsVisible(request, actorId, role))
             throw new KeyNotFoundException("Request was not found.");
         AuthorizeTransition(request, actorId, role, transition.Status);
         request.TransitionTo(transition.Status, actorId, transition.Note);
@@ -255,7 +255,7 @@ public sealed class InspectionRequestService(IRequestRepository requestRepositor
         CancellationToken cancellationToken)
     {
         var request = await requestRepository.GetByIdAsync(requestId, tracking: true, cancellationToken);
-        if (request is null || !IsVisible(request, actorId, role))
+        if (request is null || !RequestAccess.IsVisible(request, actorId, role))
             throw new KeyNotFoundException("Request was not found.");
         if (request.CoordinatorId != actorId)
             throw new AuthException("forbidden", "Only the coordinator that owns the request can edit it.", 403);
@@ -283,15 +283,6 @@ public sealed class InspectionRequestService(IRequestRepository requestRepositor
         if (!allowed) throw new AuthException("forbidden", "Role or ownership does not permit this transition.", 403);
     }
 
-    // Inspectors only see their assigned jobs. Coordinators see manual requests of their team but only the
-    // email requests that arrived in their own mailbox. Team scope for managers and the global Admin view
-    // come from the data layer tenant filter.
-    private static bool IsVisible(InspectionRequest request, Guid actorId, string role) => role switch
-    {
-        "inspector" => request.InspectorId == actorId,
-        "coordinator" => request.Source != RequestSource.Email || request.CoordinatorId == actorId,
-        _ => true
-    };
 
     private static bool IsInspector(string role) => role == "inspector";
 }

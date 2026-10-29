@@ -20,6 +20,7 @@ public sealed class InspectaDbContext(
     public DbSet<RequestItem> RequestItems => Set<RequestItem>();
     public DbSet<RequestEmail> RequestEmails => Set<RequestEmail>();
     public DbSet<ClientMailRule> ClientMailRules => Set<ClientMailRule>();
+    public DbSet<OutboundEmail> OutboundEmails => Set<OutboundEmail>();
     public DbSet<JobStatusHistory> JobStatusHistory => Set<JobStatusHistory>();
     public DbSet<Quote> Quotes => Set<Quote>();
     public DbSet<InspectionCertificate> Certificates => Set<InspectionCertificate>();
@@ -173,6 +174,7 @@ public sealed class InspectaDbContext(
         emailConfig.Property(item => item.ImapServer).HasMaxLength(255).IsRequired();
         emailConfig.Property(item => item.EmailUsername).HasMaxLength(320).IsRequired();
         emailConfig.Property(item => item.LastUidValidity).HasMaxLength(64);
+        emailConfig.Property(item => item.SmtpServer).HasMaxLength(255);
         emailConfig.Property(item => item.EncryptedPassword).HasMaxLength(2048).IsRequired();
         emailConfig.HasOne<AppUser>()
             .WithOne()
@@ -192,6 +194,26 @@ public sealed class InspectaDbContext(
         mailRule.HasOne<AppUser>().WithMany().HasForeignKey(item => item.ManagerId).OnDelete(DeleteBehavior.Restrict);
         mailRule.HasOne<AppUser>().WithMany().HasForeignKey(item => item.CreatedById).OnDelete(DeleteBehavior.Restrict);
         mailRule.HasOne<Client>().WithMany().HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.SetNull);
+
+        var outboundEmail = modelBuilder.Entity<OutboundEmail>();
+        outboundEmail.HasKey(item => item.Id);
+        outboundEmail.HasIndex(item => new { item.QuoteId, item.Kind }).IsUnique();
+        outboundEmail.HasIndex(item => item.RequestId);
+        outboundEmail.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
+        outboundEmail.Property(item => item.Kind).HasConversion<string>().HasMaxLength(16);
+        outboundEmail.Property(item => item.Status).HasConversion<string>().HasMaxLength(16);
+        outboundEmail.Property(item => item.ToAddress).HasMaxLength(320).IsRequired();
+        outboundEmail.Property(item => item.ToName).HasMaxLength(500);
+        outboundEmail.Property(item => item.FromAddress).HasMaxLength(320).IsRequired();
+        outboundEmail.Property(item => item.FromName).HasMaxLength(500);
+        outboundEmail.Property(item => item.Subject).HasMaxLength(998).IsRequired();
+        outboundEmail.Property(item => item.MessageId).HasMaxLength(998).IsRequired();
+        outboundEmail.Property(item => item.InReplyTo).HasMaxLength(998);
+        outboundEmail.Property(item => item.AttachmentFileName).HasMaxLength(260);
+        outboundEmail.Property(item => item.LastError).HasMaxLength(500);
+        outboundEmail.Ignore(item => item.IsStalePending);
+        outboundEmail.HasOne<Quote>().WithMany().HasForeignKey(item => item.QuoteId).OnDelete(DeleteBehavior.Cascade);
+        outboundEmail.HasOne<InspectionRequest>().WithMany().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
 
         var quotationDraft = modelBuilder.Entity<QuotationDraft>();
         quotationDraft.HasKey(item => item.Id);

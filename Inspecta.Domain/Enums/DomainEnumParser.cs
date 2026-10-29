@@ -24,13 +24,9 @@ public static class DomainEnumParser
     public static QuoteStatus ParseQuoteStatus(string value) =>
         ParseSeparated<QuoteStatus>(value, new Dictionary<string, QuoteStatus>(StringComparer.OrdinalIgnoreCase)
         {
-            ["draft"] = QuoteStatus.Draft,
-            ["sent"] = QuoteStatus.Sent,
-            ["countered"] = QuoteStatus.Countered,
+            ["open"] = QuoteStatus.Open,
             ["accepted"] = QuoteStatus.Accepted,
-            ["rejected"] = QuoteStatus.Rejected,
-            ["expired"] = QuoteStatus.Expired,
-            ["superseded"] = QuoteStatus.Superseded
+            ["rejected"] = QuoteStatus.Rejected
         });
 
     public static CertificateResult ParseCertificateResult(string value) =>

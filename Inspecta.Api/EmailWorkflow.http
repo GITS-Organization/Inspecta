@@ -240,3 +240,105 @@ Content-Type: application/json
 {
   "status": "rejected"
 }
+
+### Admin: download a sample quotation PDF to check PDF generation on the server
+GET {{baseUrl}}/api/v1/admin/pdf/sample
+Authorization: Bearer {{adminToken}}
+
+@quoteId = replace-with-quote-id
+
+### Open a quotation on a request (copies every request item with an empty price)
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "validForDays": 14
+}
+
+### Save the quotation draft: a price for every request item (piastres), scope, notes and message
+PUT {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "items": [
+    { "requestItemId": "replace-with-request-item-id", "unitPricePiastres": 1200000 },
+    { "requestItemId": "replace-with-other-request-item-id", "unitPricePiastres": 850000 }
+  ],
+  "validForDays": 14,
+  "scopeOfWork": ["Load and functional test", "Visual inspection", "Ultrasonic thickness measurements"],
+  "notes": ["Pricing excludes VAT.", "Payment terms: 90 days from invoice date."],
+  "message": "Thank you for your enquiry. Please find our offer attached."
+}
+
+### Get the quotation with its items, totals and missing prices
+GET {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}
+Authorization: Bearer {{accessToken}}
+
+### Preview the quotation as a PDF
+GET {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/pdf
+Authorization: Bearer {{accessToken}}
+
+### Send the offer: emails the PDF as a reply to the original sender, then marks the quotation as sent
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/send
+Authorization: Bearer {{accessToken}}
+
+### Accept the request: closes the quotation as accepted and emails the PDF to the original sender
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/accept
+Authorization: Bearer {{accessToken}}
+
+### Counter offer: while the request is quote_sent, this opens the next revision with the previous prices
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{}
+
+### Change the proposal number while the quotation is a draft (add "proposalNumber" to the PUT body)
+PUT {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "proposalNumber": "INT/417/2026 rev01",
+  "items": [
+    { "requestItemId": "replace-with-request-item-id", "unitPricePiastres": 1200000 },
+    { "requestItemId": "replace-with-other-request-item-id", "unitPricePiastres": 850000 }
+  ]
+}
+
+### Mailbox with a custom outgoing (SMTP) server
+PUT {{baseUrl}}/api/v1/manager/team/{{coordinatorId}}/email-config
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "imapServer": "imap.example.com",
+  "imapPort": 993,
+  "emailUsername": "coordinator@example.com",
+  "password": "replace-with-mailbox-password",
+  "useSsl": true,
+  "smtpServer": "smtp.example.com",
+  "smtpPort": 465,
+  "smtpUseSsl": true
+}
+
+### Record an accepted outcome without sending an email
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/decision
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "decision": "accepted"
+}
+
+### Close a sent quotation as rejected (a reason is required)
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/decision
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "decision": "rejected",
+  "note": "Price is above our budget"
+}
