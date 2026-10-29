@@ -288,12 +288,21 @@ public sealed class InspectionRequestService(IRequestRepository requestRepositor
 
     private static void AuthorizeTransition(InspectionRequest request, Guid actorId, string role, JobStatus target)
     {
+        // Quotation steps and the inspector assignment have their own endpoints that keep the quotation, the email and
+        // the inspector in step with the request. Moving the status directly would leave them out of sync.
+        if (target is JobStatus.QuoteDraft or JobStatus.QuoteSent or JobStatus.ClientCountered or JobStatus.QuoteRejected
+            or JobStatus.ClientDeclined or JobStatus.QuoteAccepted)
+            throw new AuthException(
+                "quote_flow",
+                "Quotation steps change through the quotation endpoints (quotes, send, accept, reject), not through transitions.",
+                409);
+        if (target == JobStatus.Assigned)
+            throw new AuthException("assignment_flow", "Assign an inspector through the assignment endpoint.", 409);
+
+        // What is left is the work after acceptance: inspectors move their own jobs, managers and admins the rest.
         var allowed = role is "admin" or "technical_manager"
             || (role == "inspector" && request.InspectorId == actorId &&
-                target is JobStatus.TaskAccepted or JobStatus.InProgress)
-            || (role == "coordinator" &&
-                target is JobStatus.QuoteDraft or JobStatus.QuoteSent or JobStatus.ClientCountered
-                    or JobStatus.QuoteRejected or JobStatus.ClientDeclined or JobStatus.QuoteAccepted);
+                target is JobStatus.TaskAccepted or JobStatus.InProgress);
         if (!allowed) throw new AuthException("forbidden", "Role or ownership does not permit this transition.", 403);
     }
 

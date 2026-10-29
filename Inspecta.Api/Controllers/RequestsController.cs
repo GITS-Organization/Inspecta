@@ -12,7 +12,7 @@ namespace Inspecta.Api.Controllers;
 [ApiController]
 [Authorize(Policy = AuthorizationPolicies.TeamAccess)]
 [Route("api/v1/requests")]
-public sealed class RequestsController(IInspectionRequestService requestService) : ControllerBase
+public sealed class RequestsController(IInspectionRequestService requestService, IQuoteService quoteService) : ControllerBase
 {
     /// <summary>List requests visible to the current user, newest first, one page at a time.</summary>
     /// <remarks>
@@ -179,7 +179,27 @@ public sealed class RequestsController(IInspectionRequestService requestService)
         return Ok(await requestService.RemoveItemAsync(requestId, itemId, actorId, role, cancellationToken));
     }
 
-    /// <summary>Advance a request to the requested workflow status.</summary>
+    /// <summary>
+    /// Turn the request down with a reason, from any stage before acceptance (new request, quotation being prepared, or
+    /// quotation sent). The open quotation, if any, is closed as rejected. No email is sent. Owning coordinator only.
+    /// </summary>
+    [HttpPost("{requestId:guid}/reject")]
+    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
+    [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<RequestResponse>> Reject(Guid requestId, RejectRequestRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await quoteService.RejectRequestAsync(requestId, actorId, role, request, cancellationToken));
+    }
+
+    /// <summary>
+    /// Move a request through the steps after acceptance (inspector work, certificates). Quotation steps and the inspector
+    /// assignment are refused with <c>409</c>: use the quotation endpoints, <c>reject</c> and <c>assignment</c> for those.
+    /// </summary>
     [HttpPost("{requestId:guid}/transitions")]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<RequestResponse>> Transition(Guid requestId, TransitionRequest request, CancellationToken cancellationToken)

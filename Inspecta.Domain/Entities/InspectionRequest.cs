@@ -7,8 +7,8 @@ public sealed class InspectionRequest
     private static readonly IReadOnlyDictionary<JobStatus, JobStatus[]> AllowedTransitions =
         new Dictionary<JobStatus, JobStatus[]>
         {
-            [JobStatus.RequestReceived] = [JobStatus.QuoteDraft],
-            [JobStatus.QuoteDraft] = [JobStatus.QuoteSent],
+            [JobStatus.RequestReceived] = [JobStatus.QuoteDraft, JobStatus.QuoteRejected],
+            [JobStatus.QuoteDraft] = [JobStatus.QuoteSent, JobStatus.QuoteRejected],
             [JobStatus.QuoteSent] = [JobStatus.ClientCountered, JobStatus.QuoteRejected, JobStatus.QuoteAccepted, JobStatus.ClientDeclined, JobStatus.QuoteDraft],
             [JobStatus.ClientCountered] = [JobStatus.QuoteDraft],
             [JobStatus.QuoteAccepted] = [JobStatus.Assigned],

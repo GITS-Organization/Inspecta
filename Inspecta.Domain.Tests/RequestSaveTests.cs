@@ -164,6 +164,72 @@ public sealed class RequestSaveTests
             fixture.Request.Id, Guid.NewGuid(), "coordinator", new UpdateRequestDetailsRequest { Items = [] }));
     }
 
+    [Theory]
+    [InlineData(JobStatus.QuoteDraft)]
+    [InlineData(JobStatus.QuoteSent)]
+    [InlineData(JobStatus.ClientCountered)]
+    [InlineData(JobStatus.QuoteRejected)]
+    [InlineData(JobStatus.ClientDeclined)]
+    [InlineData(JobStatus.QuoteAccepted)]
+    public async Task QuotationStepsCannotBeMovedThroughTheGenericTransitions(JobStatus target)
+    {
+        var fixture = new Fixture();
+
+        foreach (var role in new[] { "coordinator", "technical_manager", "admin" })
+        {
+            var exception = await Assert.ThrowsAsync<AuthException>(() => fixture.Service.TransitionAsync(
+                fixture.Request.Id,
+                role == "coordinator" ? CoordinatorId : Guid.NewGuid(),
+                role,
+                new TransitionRequest { Status = target, Note = "reason" }));
+
+            Assert.Equal("quote_flow", exception.Code);
+            Assert.Equal(409, exception.StatusCode);
+        }
+
+        Assert.Equal(JobStatus.RequestReceived, fixture.Request.Status);
+    }
+
+    [Fact]
+    public async Task AssigningAnInspectorGoesThroughTheAssignmentEndpointOnly()
+    {
+        var fixture = new Fixture();
+        fixture.Request.UpdateDetails("Al Noor", "Cairo", Guid.NewGuid(), null, null);
+        fixture.Request.TransitionTo(JobStatus.QuoteDraft, CoordinatorId);
+        fixture.Request.TransitionTo(JobStatus.QuoteSent, CoordinatorId);
+        fixture.Request.TransitionTo(JobStatus.QuoteAccepted, CoordinatorId);
+
+        var exception = await Assert.ThrowsAsync<AuthException>(() => fixture.Service.TransitionAsync(
+            fixture.Request.Id, Guid.NewGuid(), "technical_manager", new TransitionRequest { Status = JobStatus.Assigned }));
+
+        Assert.Equal("assignment_flow", exception.Code);
+        Assert.Null(fixture.Request.InspectorId);
+    }
+
+    [Fact]
+    public async Task TheWorkAfterAcceptanceStillMovesThroughTransitions()
+    {
+        var fixture = new Fixture();
+        var inspectorId = Guid.NewGuid();
+        fixture.Request.UpdateDetails("Al Noor", "Cairo", Guid.NewGuid(), null, null);
+        fixture.Request.TransitionTo(JobStatus.QuoteDraft, CoordinatorId);
+        fixture.Request.TransitionTo(JobStatus.QuoteSent, CoordinatorId);
+        fixture.Request.TransitionTo(JobStatus.QuoteAccepted, CoordinatorId);
+        fixture.Request.AssignInspector(inspectorId, DateTimeOffset.UtcNow.AddDays(2), CoordinatorId);
+
+        var accepted = await fixture.Service.TransitionAsync(
+            fixture.Request.Id, inspectorId, "inspector", new TransitionRequest { Status = JobStatus.TaskAccepted });
+        await fixture.Service.TransitionAsync(
+            fixture.Request.Id, inspectorId, "inspector", new TransitionRequest { Status = JobStatus.InProgress });
+        var submitted = await fixture.Service.TransitionAsync(
+            fixture.Request.Id, Guid.NewGuid(), "technical_manager", new TransitionRequest { Status = JobStatus.CertificateSubmitted });
+
+        Assert.Equal(JobStatus.TaskAccepted, accepted.Status);
+        Assert.Equal(JobStatus.CertificateSubmitted, submitted.Status);
+        await Assert.ThrowsAsync<AuthException>(() => fixture.Service.TransitionAsync(
+            fixture.Request.Id, CoordinatorId, "coordinator", new TransitionRequest { Status = JobStatus.CertificateApproved }));
+    }
+
     private sealed class Fixture
     {
         public Fixture()

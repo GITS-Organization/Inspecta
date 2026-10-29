@@ -1,4 +1,5 @@
 using Inspecta.Application.Contracts.Quotations;
+using Inspecta.Application.Contracts.Requests;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
 using Inspecta.Application.Pdf;
@@ -244,6 +245,109 @@ public sealed class QuotationTests
         Assert.Equal(["Pricing excludes VAT."], model.Notes);
         Assert.Equal("Offer", model.Message);
         Assert.True(model.ValidUntil > model.IssuedAt);
+    }
+
+    [Fact]
+    public async Task ANewRequestCanBeRejectedWithoutAnyQuotationAndNoEmailIsSent()
+    {
+        var fixture = new Fixture();
+
+        var rejected = await fixture.Service.RejectRequestAsync(
+            fixture.Request.Id, CoordinatorId, "coordinator", new RejectRequestRequest { Reason = "  Outside our service area  " });
+
+        Assert.Equal(JobStatus.QuoteRejected, rejected.Status);
+        Assert.Equal("Outside our service area", fixture.Request.History.Last().Note);
+        Assert.Equal("Outside our service area", fixture.Request.RejectReason);
+        Assert.Empty(fixture.Sender.Sent);
+        Assert.Empty(fixture.Outbox.Rows);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest()));
+    }
+
+    [Fact]
+    public async Task RejectingWhileTheQuotationIsADraftClosesItWithoutSendingAnything()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+
+        var rejected = await fixture.Service.RejectRequestAsync(
+            fixture.Request.Id, CoordinatorId, "coordinator", new RejectRequestRequest { Reason = "Cannot take it" });
+
+        Assert.Equal(JobStatus.QuoteRejected, rejected.Status);
+        var closed = await fixture.Service.GetAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+        Assert.Equal(QuoteStatus.Rejected, closed.Status);
+        Assert.Equal("Cannot take it", closed.ClientReply);
+        Assert.Null(closed.SentAt);
+        Assert.False(closed.CanEdit);
+        Assert.Empty(fixture.Sender.Sent);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1, 2)));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            fixture.Service.AcceptAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator"));
+    }
+
+    [Fact]
+    public async Task ASentQuotationCanAlsoBeRejectedByUs()
+    {
+        var sent = await SentFixtureAsync();
+
+        var rejected = await sent.Fixture.Service.RejectRequestAsync(
+            sent.Fixture.Request.Id, CoordinatorId, "coordinator", new RejectRequestRequest { Reason = "Withdrawn" });
+
+        Assert.Equal(JobStatus.QuoteRejected, rejected.Status);
+        var quote = await sent.Fixture.Service.GetAsync(sent.Fixture.Request.Id, sent.QuoteId, CoordinatorId, "coordinator");
+        Assert.Equal(QuoteStatus.Rejected, quote.Status);
+        Assert.Single(sent.Fixture.Sender.Sent);
+    }
+
+    [Fact]
+    public async Task RejectingNeedsAReasonAnOwnerAndARequestThatIsNotClosedYet()
+    {
+        var fixture = new Fixture();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => fixture.Service.RejectRequestAsync(
+            fixture.Request.Id, CoordinatorId, "coordinator", new RejectRequestRequest { Reason = "   " }));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => fixture.Service.RejectRequestAsync(
+            fixture.Request.Id, Guid.NewGuid(), "coordinator", new RejectRequestRequest { Reason = "x" }));
+        await Assert.ThrowsAsync<AuthException>(() => fixture.Service.RejectRequestAsync(
+            fixture.Request.Id, ManagerId, "technical_manager", new RejectRequestRequest { Reason = "x" }));
+        Assert.Equal(JobStatus.RequestReceived, fixture.Request.Status);
+
+        await fixture.Service.RejectRequestAsync(
+            fixture.Request.Id, CoordinatorId, "coordinator", new RejectRequestRequest { Reason = "First" });
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.RejectRequestAsync(
+            fixture.Request.Id, CoordinatorId, "coordinator", new RejectRequestRequest { Reason = "Again" }));
+    }
+
+    [Fact]
+    public async Task AnAcceptedRequestCanNoLongerBeRejected()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+        await fixture.Service.AcceptAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.RejectRequestAsync(
+            fixture.Request.Id, CoordinatorId, "coordinator", new RejectRequestRequest { Reason = "Too late" }));
+
+        Assert.Equal(JobStatus.QuoteAccepted, fixture.Request.Status);
+        var current = await fixture.Service.GetAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+        Assert.Equal(QuoteStatus.Accepted, current.Status);
+    }
+
+    [Fact]
+    public async Task AMaybeEmailMustBeConfirmedBeforeItCanBeRejected()
+    {
+        var maybe = InspectionRequest.CreateFromEmail(ManagerId, CoordinatorId, Email(), triage: RequestTriage.Maybe);
+        var fixture = new Fixture(maybe);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.RejectRequestAsync(
+            maybe.Id, CoordinatorId, "coordinator", new RejectRequestRequest { Reason = "Spam" }));
+
+        Assert.Equal(JobStatus.RequestReceived, maybe.Status);
     }
 
     [Fact]

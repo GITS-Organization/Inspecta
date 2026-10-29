@@ -250,6 +250,20 @@ public sealed class Quote
         UpdatedAt = ClientRespondedAt.Value;
     }
 
+    /// <summary>Closes the quotation as rejected by us, whether or not it was sent. The reason is required.</summary>
+    public void Reject(string reason)
+    {
+        if (Status != QuoteStatus.Open || SupersededAt is not null)
+            throw new InvalidOperationException("Only the current open quote can be rejected.");
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new ArgumentException("A rejection reason is required.", nameof(reason));
+
+        Status = QuoteStatus.Rejected;
+        ClientReply = reason.Trim();
+        ClientRespondedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = ClientRespondedAt.Value;
+    }
+
     public void RecordReminder(DateTimeOffset? sentAt = null)
     {
         if (Status != QuoteStatus.Open || SentAt is null)

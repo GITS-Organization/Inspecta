@@ -1,4 +1,5 @@
 using Inspecta.Application.Contracts.Quotations;
+using Inspecta.Application.Contracts.Requests;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
 using Inspecta.Application.Pdf;
@@ -182,6 +183,32 @@ public sealed class QuoteService(
         request.TransitionTo(JobStatus.QuoteSent, actorId);
         await quoteRepository.SaveAsync(cancellationToken);
         return await MapAsync(quote, canManage: true, cancellationToken);
+    }
+
+    /// <summary>
+    /// Turns the request down with a reason, from any stage before acceptance. The open quotation, if there is one, is closed as
+    /// rejected too (even if it was never sent). No email is sent.
+    /// </summary>
+    public async Task<RequestResponse> RejectRequestAsync(
+        Guid requestId,
+        Guid actorId,
+        string role,
+        RejectRequestRequest rejection,
+        CancellationToken cancellationToken = default)
+    {
+        var request = await LoadRequestAsync(requestId, actorId, role, tracking: true, manage: true, cancellationToken);
+        if (string.IsNullOrWhiteSpace(rejection.Reason))
+            throw new ArgumentException("A rejection reason is required.");
+
+        // The request transition validates the stage (and that the email was confirmed) before anything else changes.
+        request.TransitionTo(JobStatus.QuoteRejected, actorId, rejection.Reason);
+        var open = (await quoteRepository.ListForRequestAsync(requestId, cancellationToken))
+            .FirstOrDefault(quote => quote.Status == QuoteStatus.Open && quote.IsCurrent);
+        if (open is not null)
+            (await quoteRepository.GetByIdAsync(open.Id, cancellationToken))?.Reject(rejection.Reason);
+
+        await quoteRepository.SaveAsync(cancellationToken);
+        return RequestResponseMapper.Map(request);
     }
 
     /// <summary>

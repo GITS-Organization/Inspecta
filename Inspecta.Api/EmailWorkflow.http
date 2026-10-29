@@ -196,13 +196,22 @@ Content-Type: application/json
 DELETE {{baseUrl}}/api/v1/requests/{{requestId}}/items/{{itemId}}
 Authorization: Bearer {{accessToken}}
 
-### Move a completed request to QuoteDraft (rejected with 409 while missingFields is not empty)
-POST {{baseUrl}}/api/v1/requests/{{requestId}}/transitions
+### Reject the request (from a new request, a draft or a sent quotation; no email is sent)
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/reject
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
-  "status": "quote_draft"
+  "reason": "Outside our service area"
+}
+
+### Quotation steps cannot be moved with transitions (409 quote_flow); transitions only drive the work after acceptance
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/transitions
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "status": "certificate_submitted"
 }
 
 ### Legacy: quotation drafts created from mail before requests replaced them (read and edit only, no new ones are created)
