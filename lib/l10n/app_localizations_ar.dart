@@ -472,6 +472,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get requestsLoadError => 'تعذّر تحميل صندوق الطلبات.';
 
   @override
+  String get requestsConflict =>
+      'تم تعديل هذا الطلب من قبل شخص آخر. اسحب للأسفل لتحديث الصندوق ثم افتحه مرة أخرى.';
+
+  @override
   String get requestsPermissionDenied => 'ليس لديك صلاحية لعرض صندوق الطلبات.';
 
   @override
@@ -551,7 +555,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get completeRequestSheetSubtitle =>
-      'أضف المعدات والموقع اللازمين لهذا الطلب قبل إمكانية تسعيره.';
+      'أضف العميل والموقع والمعدات اللازمة لهذا الطلب قبل إمكانية تسعيره.';
+
+  @override
+  String get clientNameLabel => 'اسم العميل';
+
+  @override
+  String get errorClientNameRequired => 'أدخل اسم العميل.';
 
   @override
   String get addEquipmentItemAction => '+ إضافة معدة';
@@ -610,6 +620,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get replyRejectSubtitle => 'أخبر العميل بالسبب';
+
+  @override
+  String get chooseReplyTypeFirst => 'اختر طريقة الرد أولاً.';
 
   @override
   String get pricePerUnit => 'السعر لكل وحدة';
@@ -706,9 +719,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get tabOpen => 'مفتوح';
 
   @override
-  String get tabReplied => 'تم الرد';
-
-  @override
   String get tabAccepted => 'مقبول';
 
   @override
@@ -794,9 +804,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get boardEmptyOpen => 'لا يوجد شيء بانتظار العميل الآن.';
-
-  @override
-  String get boardEmptyReplied => 'لا توجد ردود بانتظارك.';
 
   @override
   String get boardEmptyAccepted => 'لا شيء مقبول بعد.';

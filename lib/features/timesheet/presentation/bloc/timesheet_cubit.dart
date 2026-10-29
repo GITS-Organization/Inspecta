@@ -89,7 +89,7 @@ class TimesheetCubit extends Cubit<TimesheetState> {
       return switch (error.code) {
         RequestsFailureCode.permissionDenied => TimesheetFailureCode.permissionDenied,
         RequestsFailureCode.network => TimesheetFailureCode.network,
-        RequestsFailureCode.unknown => TimesheetFailureCode.unknown,
+        RequestsFailureCode.conflict || RequestsFailureCode.unknown => TimesheetFailureCode.unknown,
       };
     }
     return TimesheetFailureCode.unknown;

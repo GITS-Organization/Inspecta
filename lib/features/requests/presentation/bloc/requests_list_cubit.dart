@@ -24,6 +24,10 @@ class RequestsListCubit extends Cubit<RequestsListState> {
   Timer? _searchTimer;
   bool _started = false;
 
+  /// The tabs whose first page has been asked for. A tab not in here has
+  /// never been opened and costs no request.
+  final _loaded = <RequestsTab>{};
+
   /// Bumped whenever a tab's first page is (re)loaded, so a slower response
   /// to an older search can't overwrite a newer one.
   final _generation = {for (final tab in RequestsTab.values) tab: 0};
@@ -36,34 +40,38 @@ class RequestsListCubit extends Cubit<RequestsListState> {
       : _searchDelay = searchDelay,
         super(const RequestsListState());
 
-  /// Loads the inbox. Safe to call more than once.
+  /// Loads the tab being shown. Safe to call more than once.
   Future<void> start() async {
     if (_started) return;
     _started = true;
-    await _reloadAll(showLoading: false);
+    await _loadTab(state.tab);
   }
 
+  /// Shows [tab], fetching its first page the first time it is opened.
   void setTab(RequestsTab tab) {
-    if (tab != state.tab) emit(state.copyWith(tab: tab));
+    if (tab == state.tab) return;
+    emit(state.copyWith(tab: tab));
+    _loadTab(tab);
   }
 
-  /// Searches both tabs for [text], once typing pauses.
+  /// Searches for [text], once typing pauses. Only the tab being shown is
+  /// fetched; the other loads again when it is opened.
   void setQuery(String text) {
     _searchTimer?.cancel();
     final query = text.trim();
     if (query == state.query) return;
     _searchTimer = Timer(_searchDelay, () {
       emit(state.copyWith(query: query));
-      _reloadAll();
+      _reloadShown();
     });
   }
 
   /// Reloads the tab being shown, from its error screen.
   Future<void> retry() => _loadFirstPage(state.tab);
 
-  /// Pull-to-refresh: reloads both tabs in place, keeping what is on screen
-  /// (and on a failure).
-  Future<void> refresh() => _reloadAll(showLoading: false);
+  /// Pull-to-refresh: reloads the tab being shown in place, keeping what is
+  /// on screen (and on a failure).
+  Future<void> refresh() => _reloadShown(showLoading: false);
 
   /// Fetches the next page of [tab] (the one being shown by default).
   Future<void> loadMore([RequestsTab? tab]) async {
@@ -110,16 +118,18 @@ class RequestsListCubit extends Cubit<RequestsListState> {
       if (isClosed) return true;
       emit(
         state.copyWith(
-          newTab: state.newTab.copyWith(
-            requests: state.newTab.requests.mapItems(
-                  (items) =>
-              [
-                confirmed,
-                ...items.where((r) => r.id != requestId),
-              ]
-                ..sort((a, b) => b.receivedAt.compareTo(a.receivedAt)),
-            ),
-          ),
+          // A New tab that was never opened isn't touched: it fetches the
+          // request along with the rest when it is.
+          newTab: _loaded.contains(RequestsTab.newTab)
+              ? state.newTab.copyWith(
+                  requests: state.newTab.requests.mapItems(
+                    (items) => [
+                      confirmed,
+                      ...items.where((r) => r.id != requestId),
+                    ]..sort((a, b) => b.receivedAt.compareTo(a.receivedAt)),
+                  ),
+                )
+              : state.newTab,
           maybeTab: _without(state.maybeTab, requestId),
           busy: _finish(requestId),
         ),
@@ -169,11 +179,26 @@ class RequestsListCubit extends Cubit<RequestsListState> {
         ),
       );
 
-  Future<void> _reloadAll({bool showLoading = true}) =>
-      Future.wait([
-        for (final tab in RequestsTab.values)
-          _loadFirstPage(tab, showLoading: showLoading),
-      ]);
+  /// Fetches [tab]'s first page unless it was already fetched.
+  Future<void> _loadTab(RequestsTab tab) async {
+    if (!_loaded.add(tab)) return;
+    await _loadFirstPage(tab);
+  }
+
+  /// Reloads the tab being shown. The others are reset instead of fetched:
+  /// they load again when opened, so nothing is requested that isn't on
+  /// screen.
+  Future<void> _reloadShown({bool showLoading = true}) {
+    final shown = state.tab;
+    for (final tab in RequestsTab.values) {
+      if (tab == shown) continue;
+      _generation[tab] = _generation[tab]! + 1; // drop a response in flight
+      _loaded.remove(tab);
+      emit(state.withTab(tab, const RequestsTabState()));
+    }
+    _loaded.add(shown);
+    return _loadFirstPage(shown, showLoading: showLoading);
+  }
 
   /// Replaces [tab]'s list with its first page. [showLoading] swaps the list
   /// for the skeleton meanwhile; without it the old rows stay until the new

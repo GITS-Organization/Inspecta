@@ -115,12 +115,4 @@ class RequestsRemoteDataSource {
     note: reason,
     extra: {'inspectorId': null, 'scheduledAt': null},
   );
-
-  /// Just `location`/`items` — filling in intake data doesn't change the
-  /// job's status either.
-  Future<void> completeIntake(
-    String requestId, {
-    required String location,
-    required List<Map<String, dynamic>> items,
-  }) => _doc(requestId).update({'location': location, 'items': items});
 }

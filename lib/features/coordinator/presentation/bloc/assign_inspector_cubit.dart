@@ -150,7 +150,7 @@ class AssignInspectorCubit extends Cubit<AssignInspectorState> {
       return switch (error.code) {
         RequestsFailureCode.permissionDenied => CoordinatorFailureCode.permissionDenied,
         RequestsFailureCode.network => CoordinatorFailureCode.network,
-        RequestsFailureCode.unknown => CoordinatorFailureCode.unknown,
+        RequestsFailureCode.conflict || RequestsFailureCode.unknown => CoordinatorFailureCode.unknown,
       };
     }
     return CoordinatorFailureCode.unknown;

@@ -167,6 +167,7 @@
   "emptySearch": "Nothing matches \"{query}\".",
   "@emptySearch": { "placeholders": { "query": { "type": "String" } } },
   "requestsLoadError": "Couldn't load the requests inbox.",
+  "requestsConflict": "This request was changed by someone else. Pull down to refresh the inbox, then open it again.",
   "requestsPermissionDenied": "You don't have permission to view the requests inbox.",
   "retry": "Retry",
 
@@ -194,7 +195,9 @@
   "notReadyToQuote": "Add the client, at least one equipment item and the location before quoting.",
   "completeRequestAction": "Complete request",
   "completeRequestSheetTitle": "Complete this request",
-  "completeRequestSheetSubtitle": "Add the equipment and location this request needs before it can be quoted.",
+  "completeRequestSheetSubtitle": "Add the client, location and equipment this request needs before it can be quoted.",
+  "clientNameLabel": "Client name",
+  "errorClientNameRequired": "Enter the client's name.",
   "addEquipmentItemAction": "+ Add equipment",
   "removeItemAction": "Remove",
   "equipmentTypeLabel": "Equipment type",
@@ -216,6 +219,7 @@
   "replyOfferSubtitle": "Set a price for this request",
   "replyReject": "Reject",
   "replyRejectSubtitle": "Tell the client why",
+  "chooseReplyTypeFirst": "Choose how you want to reply first.",
   "pricePerUnit": "Price per unit",
   "validFor": "Valid for",
   "validityDaysOption": "{days} days",
@@ -253,7 +257,6 @@
     "placeholders": { "quoteNumber": { "type": "String" }, "version": { "type": "String" } }
   },
   "tabOpen": "Open",
-  "tabReplied": "Replied",
   "tabAccepted": "Accepted",
   "tabLost": "Lost",
 
@@ -286,7 +289,6 @@
   "reminderSent": "Reminder logged.",
 
   "boardEmptyOpen": "Nothing awaiting a client right now.",
-  "boardEmptyReplied": "No replies waiting on you.",
   "boardEmptyAccepted": "Nothing accepted yet.",
   "boardEmptyLost": "Nothing lost — good sign.",
   "boardEmptySearch": "Nothing matches \"{query}\".",

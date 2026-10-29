@@ -896,6 +896,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load the requests inbox.'**
   String get requestsLoadError;
 
+  /// No description provided for @requestsConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'This request was changed by someone else. Pull down to refresh the inbox, then open it again.'**
+  String get requestsConflict;
+
   /// No description provided for @requestsPermissionDenied.
   ///
   /// In en, this message translates to:
@@ -1049,8 +1055,20 @@ abstract class AppLocalizations {
   /// No description provided for @completeRequestSheetSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Add the equipment and location this request needs before it can be quoted.'**
+  /// **'Add the client, location and equipment this request needs before it can be quoted.'**
   String get completeRequestSheetSubtitle;
+
+  /// No description provided for @clientNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Client name'**
+  String get clientNameLabel;
+
+  /// No description provided for @errorClientNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the client\'s name.'**
+  String get errorClientNameRequired;
 
   /// No description provided for @addEquipmentItemAction.
   ///
@@ -1159,6 +1177,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tell the client why'**
   String get replyRejectSubtitle;
+
+  /// No description provided for @chooseReplyTypeFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how you want to reply first.'**
+  String get chooseReplyTypeFirst;
 
   /// No description provided for @pricePerUnit.
   ///
@@ -1328,12 +1352,6 @@ abstract class AppLocalizations {
   /// **'Open'**
   String get tabOpen;
 
-  /// No description provided for @tabReplied.
-  ///
-  /// In en, this message translates to:
-  /// **'Replied'**
-  String get tabReplied;
-
   /// No description provided for @tabAccepted.
   ///
   /// In en, this message translates to:
@@ -1471,12 +1489,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing awaiting a client right now.'**
   String get boardEmptyOpen;
-
-  /// No description provided for @boardEmptyReplied.
-  ///
-  /// In en, this message translates to:
-  /// **'No replies waiting on you.'**
-  String get boardEmptyReplied;
 
   /// No description provided for @boardEmptyAccepted.
   ///

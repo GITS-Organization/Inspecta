@@ -18,7 +18,24 @@ class InspectorRootPage extends StatefulWidget {
 class _InspectorRootPageState extends State<InspectorRootPage> {
   InspectorTab _tab = InspectorTab.tasks;
 
-  void _openProfile() => setState(() => _tab = InspectorTab.profile);
+  /// A screen is only built the first time it's opened, so each one makes its
+  /// own requests then rather than all of them at launch; once built it stays
+  /// alive.
+  final _opened = {InspectorTab.tasks};
+
+  void _select(InspectorTab tab) => setState(() {
+    _tab = tab;
+    _opened.add(tab);
+  });
+
+  void _openProfile() => _select(InspectorTab.profile);
+
+  Widget _page(InspectorTab tab) => switch (tab) {
+    InspectorTab.tasks => InspectorTasksPage(onOpenProfile: _openProfile),
+    InspectorTab.certificates => InspectorCertificatesPage(onOpenProfile: _openProfile),
+    InspectorTab.timesheet => InspectorTimesheetPage(onOpenProfile: _openProfile),
+    InspectorTab.profile => const ProfilePage(),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -26,16 +43,11 @@ class _InspectorRootPageState extends State<InspectorRootPage> {
       body: IndexedStack(
         index: _tab.index,
         children: [
-          InspectorTasksPage(onOpenProfile: _openProfile),
-          InspectorCertificatesPage(onOpenProfile: _openProfile),
-          InspectorTimesheetPage(onOpenProfile: _openProfile),
-          const ProfilePage(),
+          for (final tab in InspectorTab.values)
+            _opened.contains(tab) ? _page(tab) : const SizedBox.shrink(),
         ],
       ),
-      bottomNavigationBar: InspectorBottomNav(
-        selected: _tab,
-        onSelectTab: (tab) => setState(() => _tab = tab),
-      ),
+      bottomNavigationBar: InspectorBottomNav(selected: _tab, onSelectTab: _select),
     );
   }
 }

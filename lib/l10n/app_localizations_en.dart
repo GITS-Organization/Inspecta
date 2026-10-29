@@ -466,6 +466,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get requestsLoadError => 'Couldn\'t load the requests inbox.';
 
   @override
+  String get requestsConflict =>
+      'This request was changed by someone else. Pull down to refresh the inbox, then open it again.';
+
+  @override
   String get requestsPermissionDenied =>
       'You don\'t have permission to view the requests inbox.';
 
@@ -546,7 +550,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get completeRequestSheetSubtitle =>
-      'Add the equipment and location this request needs before it can be quoted.';
+      'Add the client, location and equipment this request needs before it can be quoted.';
+
+  @override
+  String get clientNameLabel => 'Client name';
+
+  @override
+  String get errorClientNameRequired => 'Enter the client\'s name.';
 
   @override
   String get addEquipmentItemAction => '+ Add equipment';
@@ -605,6 +615,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get replyRejectSubtitle => 'Tell the client why';
+
+  @override
+  String get chooseReplyTypeFirst => 'Choose how you want to reply first.';
 
   @override
   String get pricePerUnit => 'Price per unit';
@@ -702,9 +715,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabOpen => 'Open';
 
   @override
-  String get tabReplied => 'Replied';
-
-  @override
   String get tabAccepted => 'Accepted';
 
   @override
@@ -787,9 +797,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get boardEmptyOpen => 'Nothing awaiting a client right now.';
-
-  @override
-  String get boardEmptyReplied => 'No replies waiting on you.';
 
   @override
   String get boardEmptyAccepted => 'Nothing accepted yet.';

@@ -1,6 +1,13 @@
 import '../../../../core/error/failure.dart';
 
-enum RequestsFailureCode { permissionDenied, network, unknown }
+enum RequestsFailureCode {
+  permissionDenied,
+  network,
+
+  /// The request was changed by someone else since it was loaded.
+  conflict,
+  unknown,
+}
 
 class RequestsFailure extends Failure {
   final RequestsFailureCode code;

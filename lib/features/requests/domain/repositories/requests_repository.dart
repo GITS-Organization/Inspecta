@@ -60,12 +60,16 @@ abstract interface class RequestsRepository {
   /// back to the coordinator's "ready to assign" queue.
   Future<void> declineAssignment({required String requestId, String? reason});
 
-  /// Fills in a request's equipment and location — the only way today to
-  /// make an intake-only request (e.g. one created straight from an
-  /// email, before either is known) satisfy [InspectionRequest.isReadyToQuote].
+  /// Fills in a [request]'s client name, location, access notes and
+  /// equipment through the API, by hand — the way to make an emailed request
+  /// satisfy [InspectionRequest.isReadyToQuote]. Details of [request] that
+  /// aren't passed (its client id, preferred date) are sent back unchanged,
+  /// since the API replaces them as a set. Throws [RequestsFailure].
   Future<void> completeIntake({
-    required String requestId,
+    required InspectionRequest request,
+    required String clientName,
     required String location,
+    String? accessNotes,
     required List<RequestItem> items,
   });
 }

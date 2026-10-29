@@ -28,6 +28,10 @@ class InspectionRequestModel {
   final String? assignmentNote;
   final DateTime? certificateSubmittedAt;
 
+  /// When the API last changed the request: sent back on an update so the
+  /// API can refuse it if someone else changed the request meanwhile.
+  final DateTime? updatedAt;
+
   const InspectionRequestModel({
     required this.id,
     required this.source,
@@ -49,6 +53,7 @@ class InspectionRequestModel {
     this.scheduledAt,
     this.assignmentNote,
     this.certificateSubmittedAt,
+    this.updatedAt,
   });
 
   /// A request as the Inspecta API returns it: ISO-8601 date strings instead
@@ -80,6 +85,7 @@ class InspectionRequestModel {
           .toList(),
       inspectorId: json['inspectorId'] as String?,
       scheduledAt: date('scheduledAt'),
+      updatedAt: date('updatedAt'),
     );
   }
 
@@ -139,6 +145,7 @@ class InspectionRequestModel {
       scheduledAt: scheduledAt,
       assignmentNote: assignmentNote,
       certificateSubmittedAt: certificateSubmittedAt,
+      updatedAt: updatedAt,
     );
   }
 }

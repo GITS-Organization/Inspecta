@@ -161,7 +161,7 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
       return switch (error.code) {
         RequestsFailureCode.permissionDenied => QuotationFailureCode.permissionDenied,
         RequestsFailureCode.network => QuotationFailureCode.network,
-        RequestsFailureCode.unknown => QuotationFailureCode.unknown,
+        RequestsFailureCode.conflict || RequestsFailureCode.unknown => QuotationFailureCode.unknown,
       };
     }
     return QuotationFailureCode.unknown;

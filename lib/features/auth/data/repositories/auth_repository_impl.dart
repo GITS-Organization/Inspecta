@@ -5,23 +5,29 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/base/safe_request_handler.dart';
 import '../../../../core/error/api_error_model.dart';
 import '../../../../core/error/api_failure.dart';
 import '../../domain/entities/auth_failure.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../datasources/auth_api_client_services.dart';
 import '../datasources/auth_local_datasource.dart';
 import '../datasources/auth_remote_datasource.dart';
+import '../models/auth_requests.dart';
 import '../models/auth_session_model.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
+  static const _safeApi = SafeApi();
+
+  final AuthApiClientServices _api;
   final AuthRemoteDataSource _remote;
   final AuthLocalDataSource _local;
 
   /// Session changes after the first [watch] event: sign-in and sign-out.
   final _changes = StreamController<AppUser?>.broadcast();
 
-  AuthRepositoryImpl(this._remote, this._local);
+  AuthRepositoryImpl(this._api, this._remote, this._local);
 
   @override
   Future<void> applySessionPolicy() async {
@@ -54,11 +60,23 @@ class AuthRepositoryImpl implements AuthRepository {
       if (session == null) return null;
       if (session.isExpired()) {
         // A remembered session outlives its access token: renew it quietly.
-        if (await refreshSession()) session = await _local.readSession();
+        switch (await _renewSession()) {
+          case _Renewal.renewed:
+            // The API just issued this session, so it is trusted as it
+            // stands: the device's clock isn't asked again.
+            session = await _local.readSession();
+          case _Renewal.unreachable:
+            // No answer (offline at startup, server down): keep the session.
+            // Its token is renewed when the first request needs it.
+            debugPrint('Session kept: refresh could not reach the API');
+          case _Renewal.rejected:
+            debugPrint('Session dropped: the API refused the refresh token');
+            await _local.clearSession();
+            return null;
+        }
       }
-      if (session == null ||
-          session.isExpired() ||
-          _validate(session.user) != null) {
+      if (session == null || _validate(session.user) != null) {
+        debugPrint('Session dropped: the stored user is not allowed in');
         await _local.clearSession();
         return null;
       }
@@ -68,28 +86,43 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
-  Future<bool>? _refreshing;
+  Future<_Renewal>? _renewing;
 
   @override
-  Future<bool> refreshSession() {
-    return _refreshing ??= _renew().whenComplete(() => _refreshing = null);
+  Future<bool> refreshSession() async => await _renewSession() == _Renewal.renewed;
+
+  /// One renewal at a time: callers that arrive while it runs share it.
+  Future<_Renewal> _renewSession() {
+    return _renewing ??= _renew().whenComplete(() => _renewing = null);
   }
 
-  Future<bool> _renew() async {
+  Future<_Renewal> _renew() async {
     try {
       final session = await _local.readSession();
-      if (session == null) return false;
-      final result = await _remote.refresh(refreshToken: session.refreshToken);
+      if (session == null) return _Renewal.rejected;
+      final result = await _safeApi(
+        () => _api.refresh(RefreshTokenRequest(refreshToken: session.refreshToken)),
+      );
+      Object? failure;
       final fresh = result.fold<AuthSessionModel?>((data) => data, (f) {
         debugPrint('Session refresh failed: $f');
+        failure = f;
         return null;
       });
-      if (fresh == null || _validate(fresh.user) != null) return false;
+      if (fresh == null) {
+        // A 4xx means the API understood and said no; anything else (no
+        // connection, a 5xx) says nothing about the refresh token.
+        final status = failure is ApiFailure ? (failure as ApiFailure).code : null;
+        return status != null && status >= 400 && status < 500
+            ? _Renewal.rejected
+            : _Renewal.unreachable;
+      }
+      if (_validate(fresh.user) != null) return _Renewal.rejected;
       await _local.saveSession(fresh);
-      return true;
+      return _Renewal.renewed;
     } catch (e) {
       debugPrint('Session refresh failed: $e');
-      return false;
+      return _Renewal.unreachable;
     }
   }
 
@@ -100,7 +133,9 @@ class AuthRepositoryImpl implements AuthRepository {
     required bool keepSignedIn,
   }) async {
     try {
-      final result = await _remote.login(email: email, password: password);
+      final result = await _safeApi(
+        () => _api.login(LoginRequest(email: email, password: password)),
+      );
       final session = result.fold((data) => data, (f) => throw _mapError(f));
       final failure = _validate(session.user);
       if (failure != null) {
@@ -155,9 +190,11 @@ class AuthRepositoryImpl implements AuthRepository {
   /// Best-effort server-side logout; a failure only means the refresh token
   /// stays valid until it expires.
   Future<void> _revoke(AuthSessionModel session) async {
-    final result = await _remote.logout(
-      accessToken: session.accessToken,
-      refreshToken: session.refreshToken,
+    final result = await _safeApi<void>(
+      () => _api.logout(
+        'Bearer ${session.accessToken}',
+        RefreshTokenRequest(refreshToken: session.refreshToken),
+      ),
     );
     result.fold((_) {}, (f) => debugPrint('Logout request failed: $f'));
   }
@@ -206,4 +243,16 @@ class AuthRepositoryImpl implements AuthRepository {
     debugPrint('Unexpected auth error: $error');
     return const AuthFailure(AuthFailureCode.unknown);
   }
+}
+
+/// How a session renewal ended.
+enum _Renewal {
+  /// New tokens were issued and stored.
+  renewed,
+
+  /// The API refused the refresh token: the session is over.
+  rejected,
+
+  /// There was no usable answer, so the session may still be good.
+  unreachable,
 }

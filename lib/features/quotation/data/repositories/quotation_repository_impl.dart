@@ -29,17 +29,9 @@ class QuotationRepositoryImpl implements QuotationRepository {
   }
 
   @override
-  Future<List<Quotation>> getForRequest(String requestId) async {
-    final result = await _api.getRequestQuotes(requestId);
-    final quotations = _toEntities(
-      result.fold((data) => data, (f) => throw _mapError(f)),
-    );
-    // Newest version first; a version-less (draft) quote counts as newest.
-    quotations.sort((a, b) {
-      final byVersion = (b.version ?? 1 << 30).compareTo(a.version ?? 1 << 30);
-      return byVersion != 0 ? byVersion : b.createdAt.compareTo(a.createdAt);
-    });
-    return quotations;
+  Future<List<Quotation>> list({int page = 1, int pageSize = 50}) async {
+    final result = await _api.getQuotations(page: page, pageSize: pageSize);
+    return _toEntities(result.fold((data) => data, (f) => throw _mapError(f)));
   }
 
   @override
@@ -89,6 +81,13 @@ class QuotationRepositoryImpl implements QuotationRepository {
     List<String>? notes,
     List<String>? scopeOfWork,
   }) async {
+    if (type != ReplyType.reject) {
+      // Offers and accepts are sent through the API, which records the quote
+      // and moves the request on itself.
+      final result = await _api.sendQuote(requestId, validForDays: validityDays);
+      final quote = result.fold((data) => data, (f) => throw _mapError(f));
+      return quote.version ?? 1;
+    }
     try {
       return await _remote.send(
         requestId: requestId,

@@ -3,6 +3,8 @@ import 'package:get_it/get_it.dart';
 
 import 'core/framework/app_cubit.dart';
 import 'core/framework/app_preferences.dart';
+import 'core/networking/dio_factory.dart';
+import 'features/auth/data/datasources/auth_api_client_services.dart';
 import 'features/auth/data/datasources/auth_local_datasource.dart';
 import 'features/auth/data/datasources/auth_remote_datasource.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
@@ -45,6 +47,7 @@ import 'features/inspector/presentation/bloc/inspector_tasks_cubit.dart';
 import 'features/quotation/data/datasources/quotation_api_datasource.dart';
 import 'features/quotation/data/datasources/quotation_remote_datasource.dart';
 import 'features/quotation/data/repositories/quotation_repository_impl.dart';
+import 'features/quotation/domain/entities/quotation.dart';
 import 'features/quotation/domain/repositories/quotation_repository.dart';
 import 'features/quotation/domain/usecases/get_quotation_board.dart';
 import 'features/quotation/domain/usecases/get_quotations.dart';
@@ -114,10 +117,11 @@ Future<void> setupDependencies() async {
 
 void _registerAuth(FlutterSecureStorage storage) {
   getIt
+    ..registerLazySingleton(() => AuthApiClientServices(DioFactory.getDio()))
     ..registerLazySingleton(AuthRemoteDataSource.new)
     ..registerLazySingleton(() => AuthLocalDataSource(storage))
     ..registerLazySingleton<AuthRepository>(
-      () => AuthRepositoryImpl(getIt(), getIt()),
+      () => AuthRepositoryImpl(getIt(), getIt(), getIt()),
     )
     ..registerLazySingleton(() => SignIn(getIt()))
     ..registerLazySingleton(() => SignOut(getIt()))
@@ -165,7 +169,7 @@ void _registerQuotation() {
     ..registerLazySingleton(() => SaveDraft(getIt()))
     ..registerLazySingleton(() => SendQuotation(getIt(), getIt()))
     ..registerLazySingleton(() => LogClientResponse(getIt(), getIt()))
-    ..registerLazySingleton(() => GetQuotationBoard(getIt(), getIt()))
+    ..registerLazySingleton(() => GetQuotationBoard(getIt()))
     ..registerFactory(() => QuotationsListCubit(getIt()))
     ..registerFactoryParam<QuotationFormCubit, InspectionRequest, void>(
       (request, _) => QuotationFormCubit(
@@ -174,10 +178,10 @@ void _registerQuotation() {
         sendQuotation: getIt(),
       ),
     )
-    ..registerFactoryParam<QuotationDetailCubit, String, void>(
-      (requestId, _) => QuotationDetailCubit(
+    ..registerFactoryParam<QuotationDetailCubit, String, Quotation?>(
+      (requestId, quotation) => QuotationDetailCubit(
         requestId: requestId,
-        repository: getIt(),
+        quotation: quotation,
         logClientResponse: getIt(),
         getRequestDetail: getIt(),
       ),

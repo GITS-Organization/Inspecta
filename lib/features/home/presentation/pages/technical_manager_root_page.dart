@@ -17,7 +17,23 @@ class TechnicalManagerRootPage extends StatefulWidget {
 class _TechnicalManagerRootPageState extends State<TechnicalManagerRootPage> {
   TechnicalManagerTab _tab = TechnicalManagerTab.review;
 
-  void _openProfile() => setState(() => _tab = TechnicalManagerTab.profile);
+  /// A screen is only built the first time it's opened, so each one makes its
+  /// own requests then rather than all of them at launch; once built it stays
+  /// alive.
+  final _opened = {TechnicalManagerTab.review};
+
+  void _select(TechnicalManagerTab tab) => setState(() {
+    _tab = tab;
+    _opened.add(tab);
+  });
+
+  void _openProfile() => _select(TechnicalManagerTab.profile);
+
+  Widget _page(TechnicalManagerTab tab) => switch (tab) {
+    TechnicalManagerTab.review => ReviewQueuePage(onOpenProfile: _openProfile),
+    TechnicalManagerTab.sent => SentCertificatesPage(onOpenProfile: _openProfile),
+    TechnicalManagerTab.profile => const ProfilePage(),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -25,15 +41,11 @@ class _TechnicalManagerRootPageState extends State<TechnicalManagerRootPage> {
       body: IndexedStack(
         index: _tab.index,
         children: [
-          ReviewQueuePage(onOpenProfile: _openProfile),
-          SentCertificatesPage(onOpenProfile: _openProfile),
-          const ProfilePage(),
+          for (final tab in TechnicalManagerTab.values)
+            _opened.contains(tab) ? _page(tab) : const SizedBox.shrink(),
         ],
       ),
-      bottomNavigationBar: ReviewBottomNav(
-        selected: _tab,
-        onSelectTab: (tab) => setState(() => _tab = tab),
-      ),
+      bottomNavigationBar: ReviewBottomNav(selected: _tab, onSelectTab: _select),
     );
   }
 }

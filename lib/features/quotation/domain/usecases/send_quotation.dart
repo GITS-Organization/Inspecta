@@ -1,14 +1,12 @@
-import '../../../../core/enums/job_status.dart';
 import '../../../requests/domain/repositories/requests_repository.dart';
 import '../entities/quote_line_item.dart';
 import '../entities/reply_type.dart';
 import '../repositories/quotation_repository.dart';
 
-/// BR-03.5/03.8: sends the quotation (creates its version) and moves the
-/// request on — `quote_sent` for accept/offer, `quote_rejected` for
-/// reject. Every reply type is recorded here so the Quotations tracker
-/// has a complete history (the earlier "reject bypasses the quotations
-/// collection" design didn't fit that tracker).
+/// BR-03.5/03.8: sends the quotation (creates its version). An accept or
+/// offer goes to the API (`POST /requests/{id}/quotes`), which moves the
+/// request to `quote_sent`; a reject is recorded and the request closed as
+/// `quote_rejected`.
 ///
 /// Emailing the client their PDF happens outside the app (a backend job
 /// this client can't do) — see the cubit's caller for how that gap is
@@ -44,14 +42,10 @@ class SendQuotation {
       scopeOfWork: scopeOfWork,
     );
 
+    // A rejection still closes the request here. A sent quote doesn't touch
+    // the request: the API moves it to `quote_sent` itself.
     if (type == ReplyType.reject) {
       await _requests.rejectRequest(requestId: requestId, reason: message ?? '');
-    } else {
-      await _requests.updateStatus(
-        requestId,
-        JobStatus.quoteSent,
-        note: 'Quotation v$version sent',
-      );
     }
     return version;
   }

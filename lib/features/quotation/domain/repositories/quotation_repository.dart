@@ -9,10 +9,10 @@ abstract interface class QuotationRepository {
   /// Quotations tab.
   Stream<List<Quotation>> watchAll();
 
-  /// A request's own quotations from the API, newest version first — its
-  /// version history, for the quote detail timeline. Throws
-  /// [QuotationFailure].
-  Future<List<Quotation>> getForRequest(String requestId);
+  /// One page of the user's quotations from the API across all requests,
+  /// without superseded versions — backs the Quotations tab. Rows carry no
+  /// line items. Throws [QuotationFailure].
+  Future<List<Quotation>> list({int page = 1, int pageSize = 50});
 
   /// Creates the request's draft if none exists yet, otherwise updates
   /// the existing one (US-03.4). Not used for [ReplyType.reject] — see

@@ -7,7 +7,7 @@ import '../../domain/entities/quotation.dart';
 
 /// What kind of reply the client left on a countered quote: a new price
 /// (a counter-offer) or just a note (a question). Shown instead of the
-/// generic status chip on a Replied-tab card.
+/// generic status chip on a countered quote's card.
 class QuoteReplyBadge extends StatelessWidget {
   final Quotation quotation;
 

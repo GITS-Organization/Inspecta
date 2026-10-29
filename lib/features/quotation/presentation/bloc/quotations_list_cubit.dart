@@ -10,13 +10,12 @@ import '../../domain/usecases/get_quotation_board.dart';
 part 'quotations_list_state.dart';
 
 /// Backs the Quotations tab: the coordinator's price tracker. Loads the
-/// board from the API a page of requests at a time, keeping each request's
-/// current quote — drafts and superseded versions don't get their own row
-/// (a draft is still visible on the Requests tab; superseded versions live
-/// in that request's quote detail timeline instead).
+/// board from `GET /quotations` a page at a time. Drafts are listed under
+/// Open; superseded versions aren't requested (they live in that request's
+/// quote detail timeline instead).
 class QuotationsListCubit extends Cubit<QuotationsListState> {
-  /// A page of requests can hold none that were ever quoted; the first load
-  /// reads on through that many pages rather than show an empty board.
+  /// A page can come back empty before the last one; the first load reads on
+  /// through that many pages rather than show an empty board.
   static const _maxEmptyPages = 5;
 
   final GetQuotationBoard _getBoard;
@@ -67,7 +66,7 @@ class QuotationsListCubit extends Cubit<QuotationsListState> {
       if (isClosed || generation != _generation) return;
       emit(
         state.copyWith(
-          page: state.page.merge(next, keyOf: (q) => q.requestId),
+          page: state.page.merge(next, keyOf: (q) => q.id),
           loadingMore: false,
         ),
       );

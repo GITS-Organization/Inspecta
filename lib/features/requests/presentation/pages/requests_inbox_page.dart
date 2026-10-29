@@ -45,12 +45,15 @@ class _RequestsInboxViewState extends State<_RequestsInboxView> {
     super.dispose();
   }
 
-  void _openDetail(BuildContext context, InspectionRequest request) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
+  Future<void> _openDetail(BuildContext context, InspectionRequest request) async {
+    final cubit = context.read<RequestsListCubit>();
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
         builder: (_) => RequestDetailPage(request: request),
       ),
     );
+    // The list isn't live: reload it when the request was completed.
+    if (changed == true) cubit.refresh();
   }
 
   @override

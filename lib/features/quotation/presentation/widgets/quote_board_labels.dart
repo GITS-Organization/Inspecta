@@ -4,7 +4,6 @@ import '../../domain/entities/quote_board_tab.dart';
 extension QuoteBoardTabLabel on QuoteBoardTab {
   String label(AppLocalizations t) => switch (this) {
     QuoteBoardTab.open => t.tabOpen,
-    QuoteBoardTab.replied => t.tabReplied,
     QuoteBoardTab.accepted => t.tabAccepted,
     QuoteBoardTab.lost => t.tabLost,
   };

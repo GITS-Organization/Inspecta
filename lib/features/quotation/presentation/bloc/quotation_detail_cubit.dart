@@ -9,18 +9,17 @@ import '../../domain/entities/client_response_outcome.dart';
 import '../../domain/entities/quotation.dart';
 import '../../domain/entities/quotation_failure.dart';
 import '../../domain/entities/quotation_status.dart';
-import '../../domain/repositories/quotation_repository.dart';
 import '../../domain/usecases/log_client_response.dart';
 
 part 'quotation_detail_state.dart';
 
-/// The quote detail screen: a request's full version timeline, plus
-/// logging the client's reply (BR-03.6/03.7). "Send reminder" lives on
-/// the tracker's cards instead — it's a one-tap action, not something
-/// that needs this screen open.
+/// The quote detail screen: the quote that was opened, plus logging the
+/// client's reply (BR-03.6/03.7). The quote comes from the Quotations list
+/// row that was tapped, so the screen makes no request for it. "Send
+/// reminder" lives on the tracker's cards instead — it's a one-tap action,
+/// not something that needs this screen open.
 class QuotationDetailCubit extends Cubit<QuotationDetailState> {
   final String requestId;
-  final QuotationRepository _repository;
   final LogClientResponse _logClientResponse;
   final GetRequestDetail _getRequestDetail;
 
@@ -28,59 +27,31 @@ class QuotationDetailCubit extends Cubit<QuotationDetailState> {
 
   QuotationDetailCubit({
     required this.requestId,
-    required this._repository,
-    required this._logClientResponse,
-    required this._getRequestDetail,
-  }) : super(const QuotationDetailState());
+    required Quotation? quotation,
+    required LogClientResponse logClientResponse,
+    required GetRequestDetail getRequestDetail,
+  }) : _logClientResponse = logClientResponse,
+       _getRequestDetail = getRequestDetail,
+       super(
+         QuotationDetailState(
+           status: QuotationDetailStatus.ready,
+           versions: quotation == null ? const [] : [quotation],
+         ),
+       );
 
   void start() {
     if (_started) return;
     _started = true;
-    _loadVersions();
 
     // Supplementary — the info card and "Request received" timeline step
     // degrade gracefully (just hide) if this fails or is slow, so it
-    // isn't allowed to block the quotations themselves from showing.
+    // isn't allowed to block the quotation from showing.
     _getRequestDetail(requestId)
         .then((request) {
           if (!isClosed && request != null)
             emit(state.copyWith(request: request));
         })
         .catchError((_) {});
-  }
-
-  /// Loads the request's quotes from the API. A failed reload keeps the
-  /// versions already on screen.
-  Future<void> _loadVersions() async {
-    try {
-      final versions = await _repository.getForRequest(requestId);
-      if (isClosed) return;
-      emit(
-        state.copyWith(
-          status: QuotationDetailStatus.ready,
-          versions: versions,
-          clearFailure: true,
-        ),
-      );
-    } catch (error) {
-      if (isClosed || state.status == QuotationDetailStatus.ready) return;
-      emit(
-        state.copyWith(
-          status: QuotationDetailStatus.error,
-          failure: error is QuotationFailure
-              ? error.code
-              : QuotationFailureCode.unknown,
-        ),
-      );
-    }
-  }
-
-  /// Reloads from the error screen.
-  Future<void> retry() {
-    emit(
-      state.copyWith(status: QuotationDetailStatus.loading, clearFailure: true),
-    );
-    return _loadVersions();
   }
 
   Future<void> logResponse({
@@ -101,7 +72,6 @@ class QuotationDetailCubit extends Cubit<QuotationDetailState> {
         note: note,
       );
       _complete(success: true);
-      await _loadVersions();
     } catch (e) {
       _complete(
         success: false,

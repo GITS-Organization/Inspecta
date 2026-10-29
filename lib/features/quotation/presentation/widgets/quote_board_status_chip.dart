@@ -26,7 +26,11 @@ class QuoteBoardStatusChip extends StatelessWidget {
     final Color background;
     final Color text;
     final String label;
-    if (expired) {
+    if (quotation.isDraft) {
+      background = AppColours.chipGreyBackground;
+      text = AppColours.chipGreyText;
+      label = t.quoteDraftLabel;
+    } else if (expired) {
       background = AppColours.chipGreyBackground;
       text = AppColours.chipGreyText;
       label = t.quotationExpiredLabel;
@@ -37,7 +41,6 @@ class QuoteBoardStatusChip extends StatelessWidget {
     } else {
       (background, text) = switch (tab) {
         QuoteBoardTab.open => (AppColours.chipBlueBackground, AppColours.chipBlueText),
-        QuoteBoardTab.replied => (AppColours.chipAmberBackground, AppColours.chipAmberText),
         QuoteBoardTab.accepted => (AppColours.chipGreenBackground, AppColours.chipGreenText),
         QuoteBoardTab.lost => (AppColours.chipRedBackground, AppColours.chipRedText),
       };
@@ -65,8 +68,8 @@ class QuoteWaitingLabel extends StatelessWidget {
     final now = DateTime.now();
 
     final String text;
-    final tab = QuoteBoardTabX.of(quotation, now: now);
-    if (tab == QuoteBoardTab.replied && quotation.clientRespondedAt != null) {
+    if (quotation.status == QuotationStatus.countered &&
+        quotation.clientRespondedAt != null) {
       text = t.repliedAgo(RelativeDuration.since(quotation.clientRespondedAt!, now: now).label(t));
     } else if (quotation.isExpired(now: now)) {
       text = t.expiredLabel(RelativeDuration.since(quotation.validUntil!, now: now).label(t));

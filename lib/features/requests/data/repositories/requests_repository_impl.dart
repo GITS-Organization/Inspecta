@@ -157,32 +157,23 @@ class RequestsRepositoryImpl implements RequestsRepository {
 
   @override
   Future<void> completeIntake({
-    required String requestId,
+    required InspectionRequest request,
+    required String clientName,
     required String location,
+    String? accessNotes,
     required List<RequestItem> items,
   }) async {
-    try {
-      await _remote.completeIntake(
-        requestId,
-        location: location,
-        items: items
-            .map(
-              (item) => {
-                'id': item.id,
-                'type': item.type,
-                'category': item.category,
-                'manufacturer': item.manufacturer,
-                'model': item.model,
-                'serialNumber': item.serialNumber,
-                'capacity': item.capacity,
-                'quantity': item.quantity,
-              },
-            )
-            .toList(),
-      );
-    } catch (e) {
-      throw _mapError(e);
-    }
+    final result = await _api.updateRequest(
+      request.id,
+      clientId: request.clientId,
+      clientName: clientName,
+      location: location,
+      preferredDate: request.preferredDate,
+      accessNotes: accessNotes,
+      items: items,
+      expectedUpdatedAt: request.updatedAt,
+    );
+    result.fold((_) {}, (f) => throw _mapError(f));
   }
 
   /// The entities of [models], leaving out any whose status the app doesn't
@@ -206,6 +197,7 @@ class RequestsRepositoryImpl implements RequestsRepository {
     if (error is ApiErrorModel) {
       return RequestsFailure(switch (error.code) {
         401 || 403 => RequestsFailureCode.permissionDenied,
+        409 || 412 => RequestsFailureCode.conflict,
         null => switch (error.dioException?.type) {
           DioExceptionType.connectionError ||
           DioExceptionType.connectionTimeout ||

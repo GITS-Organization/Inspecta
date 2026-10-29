@@ -110,20 +110,29 @@ class _Body extends StatelessWidget {
   }
 }
 
+/// Shown while a request can't be quoted yet, with a button that opens the
+/// sheet to fill in what is missing.
 class _NotReadyNotice extends StatelessWidget {
   final InspectionRequest request;
 
   const _NotReadyNotice({required this.request});
 
+  /// Only offer the fix the sheet can make: what it fills in is missing.
+  bool get _canComplete =>
+      request.clientName.isEmpty || request.location.isEmpty || request.items.isEmpty;
+
   Future<void> _complete(BuildContext context) async {
     final t = AppLocalizations.of(context)!;
     final completed = await CompleteRequestSheet.show(
       context,
-      onSubmit: ({required location, required items}) async {
+      request: request,
+      onSubmit: ({required clientName, required location, accessNotes, required items}) async {
         try {
           await getIt<CompleteIntake>()(
-            requestId: request.id,
+            request: request,
+            clientName: clientName,
             location: location,
+            accessNotes: accessNotes,
             items: items,
           );
           if (context.mounted) MToast.showSuccess(message: t.requestCompleted);
@@ -140,17 +149,14 @@ class _NotReadyNotice extends StatelessWidget {
         }
       },
     );
-    // The request is a static snapshot on this page — back to the inbox
-    // (which streams live) rather than trying to refresh it in place.
-    if (completed == true && context.mounted) Navigator.of(context).pop();
+    // The request is a static snapshot on this page — back to the inbox,
+    // which reloads on `true`, rather than trying to refresh it in place.
+    if (completed == true && context.mounted) Navigator.of(context).pop(true);
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    // Only offer the fix this sheet can actually make — a missing client
-    // is matched from the Clients tab instead (see MatchClientSheet).
-    final canComplete = request.location.isEmpty || request.items.isEmpty;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -163,7 +169,7 @@ class _NotReadyNotice extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           MNotice(type: MNoticeType.info, message: t.notReadyToQuote),
-          if (canComplete) ...[
+          if (_canComplete) ...[
             const SizedBox(height: 12),
             SizedBox(
               height: 48,

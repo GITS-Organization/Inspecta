@@ -127,7 +127,7 @@ class CertificateRepositoryImpl implements CertificateRepository {
       return CertificateFailure(switch (error.code) {
         RequestsFailureCode.permissionDenied => CertificateFailureCode.permissionDenied,
         RequestsFailureCode.network => CertificateFailureCode.network,
-        RequestsFailureCode.unknown => CertificateFailureCode.unknown,
+        RequestsFailureCode.conflict || RequestsFailureCode.unknown => CertificateFailureCode.unknown,
       });
     }
     if (error is FirebaseException) {

@@ -73,7 +73,15 @@ class QuotationFooter extends StatelessWidget {
             totalText: totalText,
             loading: state.isSubmitting,
             onSaveDraft: canSaveDraft ? cubit.saveDraft : null,
-            onSend: state.isSubmitting ? null : cubit.send,
+            onSend: state.isSubmitting
+                ? null
+                : () {
+                    if (state.replyType == null) {
+                      MToast.showError(message: t.chooseReplyTypeFirst);
+                      return;
+                    }
+                    cubit.send();
+                  },
           );
         },
       ),

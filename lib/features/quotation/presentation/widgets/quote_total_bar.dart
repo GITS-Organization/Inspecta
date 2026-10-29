@@ -42,7 +42,10 @@ class QuoteTotalBar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                Text(t.totalForUnits(unitsLabel), style: AppTextStyles.subtitle),
+                Text(
+                  t.totalForUnits(unitsLabel),
+                  style: AppTextStyles.subtitle,
+                ),
                 Text(
                   totalText,
                   style: AppTextStyles.cardTitle.copyWith(
@@ -72,7 +75,9 @@ class QuoteTotalBar extends StatelessWidget {
                   child: Text(
                     t.saveDraft,
                     style: AppTextStyles.buttonLabel.copyWith(
-                      color: onSaveDraft == null ? AppColours.inkMuted : AppColours.ink,
+                      color: onSaveDraft == null
+                          ? AppColours.inkMuted
+                          : AppColours.ink,
                     ),
                   ),
                 ),
@@ -96,7 +101,10 @@ class QuoteTotalBar extends StatelessWidget {
                                 color: Colors.white,
                               ),
                             )
-                          : Text(t.sendQuotation, style: AppTextStyles.buttonLabel),
+                          : Text(
+                              t.sendQuotation,
+                              style: AppTextStyles.buttonLabel,
+                            ),
                     ),
                   ),
                 ),

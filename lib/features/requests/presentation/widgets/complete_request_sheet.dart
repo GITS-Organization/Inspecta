@@ -4,31 +4,42 @@ import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/shared/m_primary_button.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/entities/inspection_request.dart';
 import '../../domain/entities/request_item.dart';
 
-/// The "Complete this request" bottom sheet: location + a dynamic list of
-/// equipment rows. The only in-app way to fill in the two fields a
-/// request needs before it's quotable (BR-02.5) when they didn't arrive
-/// with it — e.g. an email-sourced request whose body couldn't be parsed
-/// into structured fields.
-class CompleteRequestSheet extends StatefulWidget {
-  /// Returns whether the save succeeded — `false` keeps the sheet open
-  /// (the caller has already shown its own error) so the user can retry.
-  final Future<bool> Function({required String location, required List<RequestItem> items}) onSubmit;
+/// Saves what the sheet collected; returns whether it worked — `false` keeps
+/// the sheet open (the caller has already shown its own error) so the user
+/// can retry.
+typedef CompleteRequestSubmit = Future<bool> Function({
+  required String clientName,
+  required String location,
+  String? accessNotes,
+  required List<RequestItem> items,
+});
 
-  const CompleteRequestSheet({super.key, required this.onSubmit});
+/// The "Complete this request" bottom sheet: client name, location, access
+/// notes and a dynamic list of equipment rows, filled in by hand. The
+/// in-app way to supply what a request needs before it's quotable (BR-02.5)
+/// when it didn't arrive with it — e.g. an email-sourced request. Starts from
+/// what [request] already holds, so only the gaps need filling.
+class CompleteRequestSheet extends StatefulWidget {
+  final InspectionRequest request;
+  final CompleteRequestSubmit onSubmit;
+
+  const CompleteRequestSheet({super.key, required this.request, required this.onSubmit});
 
   /// Resolves to `true` once the request has been successfully completed,
   /// or `null` if the sheet was dismissed without saving.
   static Future<bool?> show(
     BuildContext context, {
-    required Future<bool> Function({required String location, required List<RequestItem> items}) onSubmit,
+    required InspectionRequest request,
+    required CompleteRequestSubmit onSubmit,
   }) {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => CompleteRequestSheet(onSubmit: onSubmit),
+      builder: (_) => CompleteRequestSheet(request: request, onSubmit: onSubmit),
     );
   }
 
@@ -36,10 +47,19 @@ class CompleteRequestSheet extends StatefulWidget {
   State<CompleteRequestSheet> createState() => _CompleteRequestSheetState();
 }
 
+/// One equipment row. A row for an item the request already has keeps that
+/// item's id (and the details this sheet doesn't edit); a new row has no id
+/// yet, and the API gives it one when the request is saved.
 class _ItemRowControllers {
-  final typeController = TextEditingController();
-  final capacityController = TextEditingController();
-  final quantityController = TextEditingController(text: '1');
+  final RequestItem? original;
+  final TextEditingController typeController;
+  final TextEditingController capacityController;
+  final TextEditingController quantityController;
+
+  _ItemRowControllers([this.original])
+    : typeController = TextEditingController(text: original?.type),
+      capacityController = TextEditingController(text: original?.capacity),
+      quantityController = TextEditingController(text: '${original?.quantity ?? 1}');
 
   void dispose() {
     typeController.dispose();
@@ -49,34 +69,50 @@ class _ItemRowControllers {
 }
 
 class _CompleteRequestSheetState extends State<CompleteRequestSheet> {
-  final _locationController = TextEditingController();
-  final _rows = [_ItemRowControllers()];
+  late final _clientNameController = TextEditingController(text: widget.request.clientName);
+  late final _locationController = TextEditingController(text: widget.request.location);
+  late final _accessNotesController = TextEditingController(text: widget.request.accessNotes);
+  late final List<_ItemRowControllers> _rows = widget.request.items.isEmpty
+      ? [_ItemRowControllers()]
+      : [for (final item in widget.request.items) _ItemRowControllers(item)];
   bool _submitted = false;
   bool _submitting = false;
 
   @override
   void dispose() {
+    _clientNameController.dispose();
     _locationController.dispose();
+    _accessNotesController.dispose();
     for (final row in _rows) {
       row.dispose();
     }
     super.dispose();
   }
 
+  bool get _clientNameMissing => _clientNameController.text.trim().isEmpty;
+
   bool get _locationMissing => _locationController.text.trim().isEmpty;
 
   List<RequestItem> get _validItems {
     final items = <RequestItem>[];
-    for (var i = 0; i < _rows.length; i++) {
-      final type = _rows[i].typeController.text.trim();
+    for (final row in _rows) {
+      final type = row.typeController.text.trim();
       if (type.isEmpty) continue;
-      final capacity = _rows[i].capacityController.text.trim();
+      final capacity = row.capacityController.text.trim();
+      final original = row.original;
       items.add(
         RequestItem(
-          id: 'item-${DateTime.now().microsecondsSinceEpoch}-$i',
+          // Empty for a new item: it has no id until the API saves it.
+          id: original?.id ?? '',
           type: type,
+          category: original?.category,
+          manufacturer: original?.manufacturer,
+          model: original?.model,
+          serialNumber: original?.serialNumber,
+          prNumber: original?.prNumber,
           capacity: capacity.isEmpty ? null : capacity,
-          quantity: int.tryParse(_rows[i].quantityController.text.trim()) ?? 1,
+          quantity: int.tryParse(row.quantityController.text.trim()) ?? 1,
+          location: original?.location,
         ),
       );
     }
@@ -93,10 +129,15 @@ class _CompleteRequestSheetState extends State<CompleteRequestSheet> {
   Future<void> _submit() async {
     setState(() => _submitted = true);
     final items = _validItems;
-    if (_locationMissing || items.isEmpty) return;
+    if (_clientNameMissing || _locationMissing || items.isEmpty) return;
 
     setState(() => _submitting = true);
-    final ok = await widget.onSubmit(location: _locationController.text.trim(), items: items);
+    final ok = await widget.onSubmit(
+      clientName: _clientNameController.text.trim(),
+      location: _locationController.text.trim(),
+      accessNotes: _accessNotesController.text.trim(),
+      items: items,
+    );
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pop(true);
@@ -138,10 +179,18 @@ class _CompleteRequestSheetState extends State<CompleteRequestSheet> {
               Text(t.completeRequestSheetSubtitle, style: AppTextStyles.caption),
               const SizedBox(height: 16),
               _Field(
+                label: t.clientNameLabel,
+                controller: _clientNameController,
+                errorText: _submitted && _clientNameMissing ? t.errorClientNameRequired : null,
+              ),
+              const SizedBox(height: 14),
+              _Field(
                 label: t.locationLabel,
                 controller: _locationController,
                 errorText: _submitted && _locationMissing ? t.errorLocationRequired : null,
               ),
+              const SizedBox(height: 14),
+              _Field(label: t.accessNotesLabel, controller: _accessNotesController),
               const SizedBox(height: 18),
               Text(t.equipmentLabel, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
               const SizedBox(height: 10),

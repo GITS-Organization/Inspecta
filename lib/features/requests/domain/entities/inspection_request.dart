@@ -45,6 +45,11 @@ class InspectionRequest extends Equatable {
   /// jobs submitted before it was recorded.
   final DateTime? certificateSubmittedAt;
 
+  /// When the API last changed the request; sent back on an update so the
+  /// API can refuse it if the request changed meanwhile. Null for requests
+  /// that didn't come from the API.
+  final DateTime? updatedAt;
+
   const InspectionRequest({
     required this.id,
     required this.source,
@@ -66,6 +71,7 @@ class InspectionRequest extends Equatable {
     this.scheduledAt,
     this.assignmentNote,
     this.certificateSubmittedAt,
+    this.updatedAt,
   });
 
   bool get isNew => RequestsTabX.isNew(status);
@@ -139,5 +145,6 @@ class InspectionRequest extends Equatable {
     scheduledAt,
     assignmentNote,
     certificateSubmittedAt,
+    updatedAt,
   ];
 }

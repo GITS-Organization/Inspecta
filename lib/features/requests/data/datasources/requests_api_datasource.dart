@@ -4,6 +4,7 @@ import '../../../../core/base/result.dart';
 import '../../../../core/base/safe_request_handler.dart';
 import '../../../../core/networking/api_urls.dart';
 import '../../../../core/networking/dio_factory.dart';
+import '../../domain/entities/request_item.dart';
 import '../../domain/entities/request_triage.dart';
 import '../models/inspection_request_model.dart';
 
@@ -48,6 +49,44 @@ class RequestsApiDataSource {
     return _safeApi(() async {
       final response = await _dio.post<Map<String, dynamic>>(
         '${ApiUrls.requests}/$id/confirm',
+      );
+      return InspectionRequestModel.fromApiJson(response.data!);
+    });
+  }
+
+  Future<Result<InspectionRequestModel>> updateRequest(
+    String id, {
+    String? clientId,
+    required String clientName,
+    required String location,
+    DateTime? preferredDate,
+    String? accessNotes,
+    required List<RequestItem> items,
+    DateTime? expectedUpdatedAt,
+  }) {
+    return _safeApi(() async {
+      final response = await _dio.put<Map<String, dynamic>>(
+        '${ApiUrls.requests}/$id',
+        data: {
+          'clientId': ?clientId,
+          'clientName': clientName,
+          'location': location,
+          'preferredDate': ?preferredDate?.toUtc().toIso8601String(),
+          'accessNotes': ?accessNotes,
+          'items': [
+            for (final item in items)
+              {
+                if (item.id.isNotEmpty) 'id': item.id,
+                'name': item.type,
+                'type': item.type,
+                'quantity': item.quantity,
+                'capacity': ?item.capacity,
+                'serialNumber': ?item.serialNumber,
+                'location': item.location ?? location,
+              },
+          ],
+          'expectedUpdatedAt': ?expectedUpdatedAt?.toUtc().toIso8601String(),
+        },
       );
       return InspectionRequestModel.fromApiJson(response.data!);
     });

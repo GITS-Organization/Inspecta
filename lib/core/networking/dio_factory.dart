@@ -93,7 +93,12 @@ class DioFactory {
           }
           // The access token ran out: renew it and send the request again.
           final options = error.requestOptions;
-          if (options.extra[_retriedKey] != true && await getIt<RefreshSession>()()) {
+          if (options.extra[_retriedKey] == true) {
+            // Refused even with a renewed token: this endpoint denies the
+            // user, which says nothing about whether the session is alive.
+            return handler.next(error);
+          }
+          if (await getIt<RefreshSession>()()) {
             options.extra[_retriedKey] = true;
             options.headers.remove('Authorization'); // re-attached with the new token
             try {
@@ -102,6 +107,7 @@ class DioFactory {
               return handler.next(retryError);
             }
           }
+          debugPrint('Signed out: 401 on ${options.path} and the refresh failed');
           MToast.showError(
             message: 'Session expired. Please sign in to continue.',
           );

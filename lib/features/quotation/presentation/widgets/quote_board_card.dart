@@ -5,6 +5,7 @@ import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/utils/currency.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/quotation.dart';
+import '../../domain/entities/quotation_status.dart';
 import '../../domain/entities/quote_board_tab.dart';
 import 'quote_board_status_chip.dart';
 import 'quote_reply_badge.dart';
@@ -28,7 +29,8 @@ class QuoteBoardCard extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     final tab = QuoteBoardTabX.of(quotation) ?? QuoteBoardTab.open;
     final expired = quotation.isExpired();
-    final showReplyBadge = tab == QuoteBoardTab.replied && QuoteReplyBadge.appliesTo(quotation);
+    final showReplyBadge =
+        quotation.status == QuotationStatus.countered && QuoteReplyBadge.appliesTo(quotation);
     final actionLabel = _actionLabel(t, tab, expired);
 
     return Container(
@@ -52,12 +54,10 @@ class QuoteBoardCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        t.quoteNumberVersion(
-                          quotation.id,
-                          quotation.version == null
-                              ? t.quoteDraftLabel
-                              : t.quoteVersionLabel(quotation.version!),
-                        ),
+                        // The proposal number already carries the revision.
+                        quotation.requestNumber.isEmpty
+                            ? quotation.id
+                            : quotation.requestNumber,
                         style: AppTextStyles.caption.copyWith(
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.24,
@@ -81,7 +81,7 @@ class QuoteBoardCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${quotation.equipmentSummary} · ${quotation.requestNumber}',
+                  quotation.equipmentSummary,
                   style: AppTextStyles.caption.copyWith(height: 18 / 13),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -112,8 +112,8 @@ class QuoteBoardCard extends StatelessWidget {
       return expired ? t.actionRequote : null;
     }
     return switch (tab) {
+      QuoteBoardTab.open when quotation.status == QuotationStatus.countered => t.actionRespond,
       QuoteBoardTab.open => quotation.isExpiringSoon() ? t.actionExtendOrResend : null,
-      QuoteBoardTab.replied => t.actionRespond,
       QuoteBoardTab.accepted => t.actionViewJob,
       QuoteBoardTab.lost => null,
     };

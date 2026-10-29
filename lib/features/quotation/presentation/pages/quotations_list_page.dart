@@ -83,7 +83,10 @@ class _QuotationsBoardViewState extends State<_QuotationsBoardView> {
   void _openDetail(Quotation quotation) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => QuotationDetailPage(requestId: quotation.requestId),
+        builder: (_) => QuotationDetailPage(
+          requestId: quotation.requestId,
+          quotation: quotation,
+        ),
       ),
     );
   }
@@ -221,7 +224,6 @@ class _QuotationsBoardViewState extends State<_QuotationsBoardView> {
     if (state.onlyExpiringSoon) return t.boardEmptyOpen;
     return switch (state.tab) {
       QuoteBoardTab.open => t.boardEmptyOpen,
-      QuoteBoardTab.replied => t.boardEmptyReplied,
       QuoteBoardTab.accepted => t.boardEmptyAccepted,
       QuoteBoardTab.lost => t.boardEmptyLost,
     };

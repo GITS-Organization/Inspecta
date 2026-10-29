@@ -134,6 +134,43 @@ class QuotationModel {
     );
   }
 
+  /// A row of `GET /quotations`: the summary a list needs, with no line
+  /// items or notes. `stage` says whether the quote was ever sent, so an
+  /// `open` quote is a draft until then. The row has no equipment summary, so
+  /// the request's location stands in for it.
+  factory QuotationModel.fromApiListJson(Map<String, dynamic> json) {
+    DateTime? date(String key) {
+      final value = json[key];
+      return value is String ? DateTime.tryParse(value) : null;
+    }
+
+    final status = json['status'] as String?;
+    final amount = (json['amountPiastres'] as num?)?.toInt();
+
+    return QuotationModel(
+      id: json['id'] as String,
+      requestId: json['requestId'] as String? ?? '',
+      requestNumber:
+          json['proposalNumber'] as String? ?? json['quotationNumber'] as String? ?? '',
+      clientName: json['clientName'] as String? ?? '',
+      equipmentSummary: json['location'] as String? ?? '',
+      version: (json['version'] as num?)?.toInt(),
+      type: ReplyType.offer.value,
+      items: const [],
+      subtotalPiastres: amount,
+      totalPiastres: amount,
+      validUntil: date('validUntil'),
+      status: status == 'open'
+          ? (json['stage'] == 'draft'
+                ? QuotationStatus.draft.value
+                : QuotationStatus.sent.value)
+          : status,
+      sentAt: date('sentAt'),
+      createdBy: '',
+      createdAt: date('createdAt') ?? DateTime.now(),
+    );
+  }
+
   /// "Overhead crane × 2", or with a second line "Overhead crane × 2, Hoist
   /// × 1" — what a list row says the quote is for.
   static String _summarise(List<QuoteLineItemModel> items) {

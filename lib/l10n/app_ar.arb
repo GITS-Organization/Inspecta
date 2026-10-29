@@ -150,6 +150,7 @@
   "deleteRequestError": "تعذّر حذف الطلب. حاول مرة أخرى.",
   "emptySearch": "لا توجد نتائج لـ \"{query}\".",
   "requestsLoadError": "تعذّر تحميل صندوق الطلبات.",
+  "requestsConflict": "تم تعديل هذا الطلب من قبل شخص آخر. اسحب للأسفل لتحديث الصندوق ثم افتحه مرة أخرى.",
   "requestsPermissionDenied": "ليس لديك صلاحية لعرض صندوق الطلبات.",
   "retry": "إعادة المحاولة",
 
@@ -176,7 +177,9 @@
   "notReadyToQuote": "أضف العميل وعنصر معدات واحدًا على الأقل والموقع قبل التسعير.",
   "completeRequestAction": "استكمال الطلب",
   "completeRequestSheetTitle": "استكمال بيانات هذا الطلب",
-  "completeRequestSheetSubtitle": "أضف المعدات والموقع اللازمين لهذا الطلب قبل إمكانية تسعيره.",
+  "completeRequestSheetSubtitle": "أضف العميل والموقع والمعدات اللازمة لهذا الطلب قبل إمكانية تسعيره.",
+  "clientNameLabel": "اسم العميل",
+  "errorClientNameRequired": "أدخل اسم العميل.",
   "addEquipmentItemAction": "+ إضافة معدة",
   "removeItemAction": "إزالة",
   "equipmentTypeLabel": "نوع المعدة",
@@ -196,6 +199,7 @@
   "replyOfferSubtitle": "حدد سعرًا لهذا الطلب",
   "replyReject": "رفض",
   "replyRejectSubtitle": "أخبر العميل بالسبب",
+  "chooseReplyTypeFirst": "اختر طريقة الرد أولاً.",
   "pricePerUnit": "السعر لكل وحدة",
   "validFor": "صالح لمدة",
   "validityDaysOption": "{days} يومًا",
@@ -226,7 +230,6 @@
 
   "quoteNumberVersion": "{quoteNumber} · {version}",
   "tabOpen": "مفتوح",
-  "tabReplied": "تم الرد",
   "tabAccepted": "مقبول",
   "tabLost": "خسارة",
 
@@ -255,7 +258,6 @@
   "reminderSent": "تم تسجيل التذكير.",
 
   "boardEmptyOpen": "لا يوجد شيء بانتظار العميل الآن.",
-  "boardEmptyReplied": "لا توجد ردود بانتظارك.",
   "boardEmptyAccepted": "لا شيء مقبول بعد.",
   "boardEmptyLost": "لا شيء مفقود — علامة جيدة.",
   "boardEmptySearch": "لا توجد نتائج لـ \"{query}\".",

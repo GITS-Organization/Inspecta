@@ -16,6 +16,7 @@ import '../../../requests/domain/usecases/get_request_detail.dart';
 import '../../../requests/presentation/pages/request_detail_page.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
 import '../../domain/entities/client_response_outcome.dart';
+import '../../domain/entities/quotation.dart';
 import '../../domain/entities/quotation_status.dart';
 import '../../domain/entities/reply_type.dart';
 import '../../domain/proposal_terms.dart';
@@ -37,12 +38,17 @@ import '../widgets/quotation_labels.dart';
 class QuotationDetailPage extends StatelessWidget {
   final String requestId;
 
-  const QuotationDetailPage({super.key, required this.requestId});
+  /// The quote to show, as the Quotations list has it. Without one the
+  /// screen has nothing to display.
+  final Quotation? quotation;
+
+  const QuotationDetailPage({super.key, required this.requestId, this.quotation});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => getIt<QuotationDetailCubit>(param1: requestId)..start(),
+      create: (_) =>
+          getIt<QuotationDetailCubit>(param1: requestId, param2: quotation)..start(),
       child: const _QuotationDetailView(),
     );
   }
