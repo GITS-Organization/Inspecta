@@ -158,7 +158,7 @@ public sealed class QuotationTests
             accepted.Fixture.Request.Id, accepted.QuoteId, CoordinatorId, "coordinator",
             new QuoteDecisionRequest { Decision = QuoteStatus.Accepted });
         Assert.Equal(QuoteStatus.Accepted, result.Status);
-        Assert.Equal(JobStatus.QuoteAccepted, accepted.Fixture.Request.Status);
+        Assert.Equal(JobStatus.Unassigned, accepted.Fixture.Request.Status);
 
         var rejected = await SentFixtureAsync();
         await Assert.ThrowsAsync<ArgumentException>(() => rejected.Fixture.Service.RecordDecisionAsync(
@@ -333,7 +333,7 @@ public sealed class QuotationTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.RejectRequestAsync(
             fixture.Request.Id, CoordinatorId, "coordinator", new RejectRequestRequest { Reason = "Too late" }));
 
-        Assert.Equal(JobStatus.QuoteAccepted, fixture.Request.Status);
+        Assert.Equal(JobStatus.Unassigned, fixture.Request.Status);
         var current = await fixture.Service.GetAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
         Assert.Equal(QuoteStatus.Accepted, current.Status);
     }
@@ -630,7 +630,7 @@ public sealed class QuotationTests
         var accepted = await fixture.Service.AcceptAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
 
         Assert.Equal(QuoteStatus.Accepted, accepted.Status);
-        Assert.Equal(JobStatus.QuoteAccepted, fixture.Request.Status);
+        Assert.Equal(JobStatus.Unassigned, fixture.Request.Status);
         Assert.Empty(fixture.Sender.Sent);
         Assert.Empty(accepted.Emails!);
     }
@@ -828,12 +828,12 @@ public sealed class QuotationTests
 
         Assert.Equal(QuoteStatus.Accepted, accepted.Status);
         Assert.NotNull(accepted.SentAt);
-        Assert.Equal(JobStatus.QuoteAccepted, fixture.Request.Status);
+        Assert.Equal(JobStatus.Unassigned, fixture.Request.Status);
         var email = Assert.Single(fixture.Sender.Sent);
         Assert.Contains("accept your request", email.BodyText, StringComparison.Ordinal);
         Assert.Equal(OutboundEmailKind.Accept, Assert.Single(accepted.Emails!).Kind);
         Assert.Contains(fixture.Request.History, entry => entry.ToStatus == JobStatus.QuoteSent);
-        Assert.Contains(fixture.Request.History, entry => entry.ToStatus == JobStatus.QuoteAccepted);
+        Assert.Contains(fixture.Request.History, entry => entry.ToStatus == JobStatus.Unassigned);
     }
 
     [Fact]
@@ -875,7 +875,7 @@ public sealed class QuotationTests
 
         Assert.Equal(QuoteStatus.Accepted, accepted.Status);
         Assert.Equal(2, sent.Fixture.Sender.Sent.Count);
-        Assert.Equal(JobStatus.QuoteAccepted, sent.Fixture.Request.Status);
+        Assert.Equal(JobStatus.Unassigned, sent.Fixture.Request.Status);
     }
 
     [Fact]
@@ -1134,6 +1134,7 @@ public sealed class QuotationTests
                     quote.Request!.Source != RequestSource.Email || quote.Request.CoordinatorId == coordinatorId)
                 .Where(quote => filter.InspectorId is not Guid inspectorId || quote.Request!.InspectorId == inspectorId)
                 .Where(quote => filter.Assigned is not bool assigned || (quote.Request!.InspectorId is not null) == assigned)
+                .Where(quote => filter.RequestStatuses is not { Count: > 0 } statuses || statuses.Contains(quote.Request!.Status))
                 .Where(quote => !filter.CurrentOnly || quote.SupersededAt is null)
                 .Where(quote => filter.Open is not bool open || (quote.Status == QuoteStatus.Open) == open)
                 .Where(quote => filter.Sent is not bool sent || quote.IsSent == sent)

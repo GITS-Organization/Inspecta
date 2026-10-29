@@ -43,7 +43,7 @@ public sealed class IncomingEmailRequestTests
             managerId: managerId);
         request.TransitionTo(JobStatus.QuoteDraft, Guid.NewGuid());
         request.TransitionTo(JobStatus.QuoteSent, Guid.NewGuid());
-        request.TransitionTo(JobStatus.QuoteAccepted, Guid.NewGuid());
+        request.TransitionTo(JobStatus.Unassigned, Guid.NewGuid());
         var otherManagerId = Guid.NewGuid();
         var inspector = AppUser.Create(
             "inspector@example.com",

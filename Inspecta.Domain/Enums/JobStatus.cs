@@ -8,7 +8,7 @@ public enum JobStatus
     ClientCountered,
     QuoteRejected,
     ClientDeclined,
-    QuoteAccepted,
+    Unassigned,
     Assigned,
     TaskAccepted,
     InProgress,

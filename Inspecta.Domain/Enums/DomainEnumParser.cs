@@ -11,7 +11,7 @@ public static class DomainEnumParser
             ["client_countered"] = JobStatus.ClientCountered,
             ["quote_rejected"] = JobStatus.QuoteRejected,
             ["client_declined"] = JobStatus.ClientDeclined,
-            ["quote_accepted"] = JobStatus.QuoteAccepted,
+            ["unassigned"] = JobStatus.Unassigned,
             ["assigned"] = JobStatus.Assigned,
             ["task_accepted"] = JobStatus.TaskAccepted,
             ["in_progress"] = JobStatus.InProgress,

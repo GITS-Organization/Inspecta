@@ -191,7 +191,7 @@ public sealed class RequestSaveTests
     [InlineData(JobStatus.ClientCountered)]
     [InlineData(JobStatus.QuoteRejected)]
     [InlineData(JobStatus.ClientDeclined)]
-    [InlineData(JobStatus.QuoteAccepted)]
+    [InlineData(JobStatus.Unassigned)]
     public async Task QuotationStepsCannotBeMovedThroughTheGenericTransitions(JobStatus target)
     {
         var fixture = new Fixture();
@@ -218,7 +218,7 @@ public sealed class RequestSaveTests
         fixture.Request.UpdateDetails("Al Noor", "Cairo", Guid.NewGuid(), null, null);
         fixture.Request.TransitionTo(JobStatus.QuoteDraft, CoordinatorId);
         fixture.Request.TransitionTo(JobStatus.QuoteSent, CoordinatorId);
-        fixture.Request.TransitionTo(JobStatus.QuoteAccepted, CoordinatorId);
+        fixture.Request.TransitionTo(JobStatus.Unassigned, CoordinatorId);
 
         var exception = await Assert.ThrowsAsync<AuthException>(() => fixture.Service.TransitionAsync(
             fixture.Request.Id, Guid.NewGuid(), "technical_manager", new TransitionRequest { Status = JobStatus.Assigned }));
@@ -235,7 +235,7 @@ public sealed class RequestSaveTests
         fixture.Request.UpdateDetails("Al Noor", "Cairo", Guid.NewGuid(), null, null);
         fixture.Request.TransitionTo(JobStatus.QuoteDraft, CoordinatorId);
         fixture.Request.TransitionTo(JobStatus.QuoteSent, CoordinatorId);
-        fixture.Request.TransitionTo(JobStatus.QuoteAccepted, CoordinatorId);
+        fixture.Request.TransitionTo(JobStatus.Unassigned, CoordinatorId);
         fixture.Request.AssignInspector(inspectorId, DateTimeOffset.UtcNow.AddDays(2), CoordinatorId);
 
         var accepted = await fixture.Service.TransitionAsync(

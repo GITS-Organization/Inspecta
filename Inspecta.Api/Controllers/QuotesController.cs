@@ -100,7 +100,7 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     }
 
     /// <summary>
-    /// Accept the request: the quotation is closed as <c>accepted</c> (request becomes <c>quote_accepted</c>) and its PDF
+    /// Accept the request: the quotation is closed as <c>accepted</c> (request becomes <c>unassigned</c>, waiting for an inspector) and its PDF
     /// is emailed, as a reply, to the sender of the original request. Works on a draft (it is sent at the same time,
     /// so every item needs a price) and on an already sent quotation. A failed email (<c>502</c>) changes nothing.
     /// </summary>

@@ -43,7 +43,7 @@ public sealed class AssignmentTests
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() => fixture.Service.AssignAsync(
             fixture.Request.Id, Guid.NewGuid(), "coordinator", fixture.Inspector.Id, DateTimeOffset.UtcNow.AddDays(1), null));
-        Assert.Equal(JobStatus.QuoteAccepted, fixture.Request.Status);
+        Assert.Equal(JobStatus.Unassigned, fixture.Request.Status);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public sealed class AssignmentTests
             {
                 Request.TransitionTo(JobStatus.QuoteDraft, CoordinatorId);
                 Request.TransitionTo(JobStatus.QuoteSent, CoordinatorId);
-                Request.TransitionTo(JobStatus.QuoteAccepted, CoordinatorId);
+                Request.TransitionTo(JobStatus.Unassigned, CoordinatorId);
             }
 
             Inspector = AppUser.Create("inspector@example.com", "Karim", UserRole.Inspector, managerId: ManagerId);

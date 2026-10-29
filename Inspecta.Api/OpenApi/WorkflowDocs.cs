@@ -57,7 +57,7 @@ public static class WorkflowDocs
             """
             **When:** the coordinator wants to pick a quotation to work on.
             **How:** `GET /quotations?stage=draft` for the ones still being prepared. Other stages: `sent` (waiting for the client), `accepted`, `rejected`. Use `q=` to search and `page`/`pageSize` to page. Only the newest revision of each request is shown unless `includeSuperseded=true`.
-            Pick a row with `canEdit: true`; its `requestId` and `id` are used by the next steps. After acceptance the same list shows who got the job (`inspectorName`, `scheduledAt`) and can be filtered with `assigned` and `inspectorId` (see step 14).
+            Pick a row with `canEdit: true`; its `requestId` and `id` are used by the next steps. After acceptance the same list shows who got the job (`inspectorName`, `scheduledAt`) and can be filtered with `assigned` and `inspectorId` (see the Quotation queue section).
             """),
         [Key<QuotesController>(nameof(QuotesController.Get))] = new(6, "Step 6 · Open a quotation",
             "**How:** `GET /requests/{requestId}/quotes/{quoteId}` returns the machines with their prices, `missingPrices`, notes, scope, the emails sent for it and `canEdit`."),
@@ -78,8 +78,8 @@ public static class WorkflowDocs
         [Key<QuotesController>(nameof(QuotesController.Accept))] = new(10, "Step 10 · Accept",
             """
             **When:** the offer is agreed. Works on a draft (it is sent at the same time, so every machine needs a price) and on a sent quotation.
-            **How:** no body. The quotation is closed as `accepted`, the request becomes `quote_accepted` and the PDF is emailed to the client.
-            **Next:** assign an inspector (`POST /requests/{requestId}/assignment`).
+            **How:** no body. The quotation is closed as `accepted`, the request becomes `unassigned` and the PDF is emailed to the client.
+            **Next:** the quotation appears in the **Quotation queue** section, where it is given to an inspector.
             """),
         [Key<QuotesController>(nameof(QuotesController.Create))] = new(11, "Step 11 · Counter offer",
             """
@@ -105,22 +105,56 @@ public static class WorkflowDocs
             "Step 4 saves the whole list at once; use this only to change a single machine."),
         [Key<RequestsController>(nameof(RequestsController.RemoveItem))] = new(25, "Extra · Remove one machine",
             "Step 4 saves the whole list at once; use this only to remove a single machine."),
-        [Key<InspectorsController>(nameof(InspectorsController.List))] = new(13, "Step 13 · Pick an inspector",
-            """
-            **When:** a quotation was accepted and the job must be given to someone.
-            **How:** `GET /inspectors` returns the active inspectors of your team with `isOnLeave` and `activeJobs` (unfinished jobs they already have), so you can pick the least busy one that is available. Admin may add `managerId`.
-            **Next:** assign the job (step 14).
-            """),
-        [Key<RequestsController>(nameof(RequestsController.Assign))] = new(14, "Step 14 · Assign the inspector",
-            """
-            **When:** the quotation is `accepted` (the request is `quote_accepted`). One inspector gets the whole job.
-            **How:** `POST /requests/{requestId}/assignment` with `inspectorId` (from step 13), `scheduledAt` and an optional `note`. The request becomes `assigned`. The owning coordinator, a manager or Admin may do it; an inspector from another team or one on leave at that time is refused.
-            **Find the work:** `GET /quotations?stage=accepted&assigned=false` lists accepted quotations still waiting for an inspector, and `GET /quotations?inspectorId=...` lists what one inspector was given. Rows show `inspectorName` and `scheduledAt`.
-            **The inspector's side:** the inspector signs in and calls `GET /quotations` to get their own accepted quotations, **without prices** (`amountPiastres` is empty), then `GET /requests/{requestId}` for the machines and the client data.
-            """),
         [Key<RequestsController>(nameof(RequestsController.Transition))] = new(31, "After acceptance · Move the job forward",
-            "Moves the job through inspector work and certificates. Quotation steps and the assignment are refused with `409`: use the steps above."),
+            "Moves the job through inspector work and certificates. Quotation steps and the assignment are refused with `409`: use the steps above and the **Quotation queue** section."),
     };
+
+    /// <summary>What happens to a quotation once the client accepted it: the queues, the inspector and the date.</summary>
+    public const string QueueTag = "Quotation queue";
+
+    private static readonly Dictionary<string, Step> QueueSteps = new()
+    {
+        [Key<QuotationQueueController>(nameof(QuotationQueueController.ListUnassigned))] = new(1, "Queue 1 · Unassigned quotations",
+            """
+            **When:** a quotation was accepted (workflow step 10). The request is now `unassigned` and waits for an inspector.
+            **How:** `GET /quotation-queue/unassigned` returns the accepted quotations nobody has been given yet, newest activity first. Each row has `requestId`, the client, the location and the price; `q` searches client, quotation number and location.
+            **Next:** pick an inspector (queue 2) and assign the job (queue 3). Open a row with `GET /requests/{requestId}/quotes/{id}`.
+            """),
+        [Key<InspectorsController>(nameof(InspectorsController.List))] = new(2, "Queue 2 · Pick an inspector",
+            """
+            **How:** `GET /inspectors` returns the active inspectors of your team with `isOnLeave` and `activeJobs` (unfinished jobs they already have), so you can pick the least busy one that is available. Admin may add `managerId`.
+            """),
+        [Key<RequestsController>(nameof(RequestsController.Assign))] = new(3, "Queue 3 · Assign the job to an inspector",
+            """
+            **When:** the request is `unassigned`. One inspector gets the whole job. It can be called again, while the job has not started (`assigned` or `task_accepted`), to hand it to someone else.
+            **How:** `POST /requests/{requestId}/assignment` with `inspectorId` (from queue 2), `scheduledAt` and an optional `note`. The request becomes `assigned` and the quotation moves to the assigned queue. The owning coordinator, a manager or Admin may do it; an inspector from another team or one on leave at that time is refused.
+            """),
+        [Key<QuotationQueueController>(nameof(QuotationQueueController.ListAssigned))] = new(4, "Queue 4 · Assigned quotations",
+            """
+            **How:** `GET /quotation-queue/assigned` returns the quotations given to an inspector whose inspection is not finished (`assigned`, `task_accepted`, `in_progress`). Rows show `inspectorName` and `scheduledAt`; the coordinator can filter with `inspectorId`.
+            **The inspector's side:** an inspector signs in and gets only their own jobs here, **without prices** (`amountPiastres` is empty). Open one with `GET /requests/{requestId}` for the machines and the company data. The coordinator keeps full access to every quotation of their requests.
+            """),
+        [Key<QuotationQueueController>(nameof(QuotationQueueController.ChangeInspectionDate))] = new(5, "Queue 5 · Change the inspection date",
+            """
+            **When:** the inspection has to move. This is the only change an inspector can make to a job; the coordinator, a manager or Admin can do it too.
+            **How:** `PUT /quotation-queue/{requestId}/inspection-date` with `scheduledAt` and an optional `note`. Allowed while the job is `assigned` or `task_accepted`; after the work started it is refused with `409`. The change is written to the request history.
+            """),
+        [Key<QuotationQueueController>(nameof(QuotationQueueController.ListCertify))] = new(6, "Queue 6 · Quotations in certification",
+            """
+            **How:** `GET /quotation-queue/certify` returns the quotations whose inspection is done and whose certificate is being prepared, reviewed or sent (`certificate_submitted`, `certificate_returned`, `certificate_approved`, `sent_to_client`).
+            **Note:** the certificate types and their PDF formats come with the certificates part.
+            """),
+    };
+
+    internal static string QueueDescription =>
+        """
+        Where an accepted quotation goes next. Each row of the queues is a quotation with `queue` set to `unassigned`, `assigned` or `certify`.
+
+        1. **Unassigned:** accepted, waiting for an inspector (`GET /quotation-queue/unassigned`).
+        2. **Pick an inspector** (`GET /inspectors`) and 3. **assign** the job (`POST /requests/{id}/assignment`). The coordinator that owns the quotation keeps full access and can hand the job to another inspector until the work starts.
+        4. **Assigned:** the inspector sees their own jobs, without prices (`GET /quotation-queue/assigned`), and 5. can **change the inspection date**, nothing else.
+        6. **Certify:** the inspection is done and the certificate is on its way (`GET /quotation-queue/certify`).
+        """;
 
     /// <summary>The setup section: clients with their contacts and the items registered for each client.</summary>
     public const string ConfigTag = "Configurations";
@@ -197,8 +231,8 @@ public static class WorkflowDocs
            - 10. **Accept**: the PDF is emailed and the request is accepted.
            - 11. **Counter offer**: new revision with the old prices, edit (7) and send (9) again.
            - 12. **Reject**: closes the request; no email.
-        13. **Pick an inspector** (`GET /inspectors`).
-        14. **Assign** the accepted job to that inspector (`POST /requests/{id}/assignment`). Find the work with `GET /quotations?stage=accepted&assigned=false` (waiting) or `?inspectorId=...` (what one inspector has). The inspector sees only their own accepted quotations, without prices.
+
+        After acceptance the quotation continues in the **Quotation queue** section: unassigned, assigned to an inspector, then certification.
 
         Amounts are in piastres (1 EGP = 100 piastres). Statuses and enums are lowercase snake_case in JSON.
         Email requests can only be changed by the coordinator whose mailbox received them; managers and admins can read them.
@@ -210,10 +244,11 @@ public static class WorkflowDocs
     {
         var type = context.MethodInfo.DeclaringType?.Name;
         var key = $"{type}.{context.MethodInfo.Name}";
-        if (type is not null && (Steps.TryGetValue(key, out var step) || ConfigSteps.TryGetValue(key, out step)))
+        if (type is not null &&
+            (Steps.TryGetValue(key, out var step) || QueueSteps.TryGetValue(key, out step) || ConfigSteps.TryGetValue(key, out step)))
         {
             (order, title, guide) = (step.Order, step.Title, step.Guide);
-            tag = Steps.ContainsKey(key) ? Tag : ConfigTag;
+            tag = Steps.ContainsKey(key) ? Tag : QueueSteps.ContainsKey(key) ? QueueTag : ConfigTag;
             return true;
         }
 
@@ -281,7 +316,10 @@ public sealed class WorkflowDocumentFilter : IDocumentFilter
         var names = swaggerDoc.Paths.Values.SelectMany(item => item.Operations.Values)
             .SelectMany(operation => operation.Tags.Select(tag => tag.Name))
             .Distinct()
-            .OrderBy(name => name == WorkflowDocs.Tag ? 0 : name == WorkflowDocs.ConfigTag ? 1 : WorkflowDocs.LegacyTags.ContainsKey(name) ? 3 : 2)
+            .OrderBy(name => name == WorkflowDocs.Tag ? 0
+                : name == WorkflowDocs.QueueTag ? 1
+                : name == WorkflowDocs.ConfigTag ? 2
+                : WorkflowDocs.LegacyTags.ContainsKey(name) ? 4 : 3)
             .ThenBy(name => name, StringComparer.OrdinalIgnoreCase);
         var described = (swaggerDoc.Tags ?? [])
             .Where(tag => !string.IsNullOrWhiteSpace(tag.Description))
@@ -293,6 +331,8 @@ public sealed class WorkflowDocumentFilter : IDocumentFilter
                 Name = name,
                 Description = name == WorkflowDocs.ConfigTag
                     ? WorkflowDocs.ConfigDescription
+                    : name == WorkflowDocs.QueueTag
+                    ? WorkflowDocs.QueueDescription
                     : name == WorkflowDocs.Tag
                     ? WorkflowDocs.Description
                     : WorkflowDocs.LegacyTags.GetValueOrDefault(name) ?? described.GetValueOrDefault(name)

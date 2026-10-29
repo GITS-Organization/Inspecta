@@ -400,3 +400,25 @@ Content-Type: application/json
     { "requestItemId": "replace-with-other-request-item-id", "unitPricePiastres": 850000 }
   ]
 }
+
+### Quotation queue: accepted quotations waiting for an inspector
+GET {{baseUrl}}/api/v1/quotation-queue/unassigned
+Authorization: Bearer {{accessToken}}
+
+### Quotation queue: jobs given to an inspector (an inspector gets only their own, without prices)
+GET {{baseUrl}}/api/v1/quotation-queue/assigned
+Authorization: Bearer {{accessToken}}
+
+### Quotation queue: inspection done, certificate on its way
+GET {{baseUrl}}/api/v1/quotation-queue/certify
+Authorization: Bearer {{accessToken}}
+
+### Change the inspection date (the inspector of the job, the coordinator, a manager or Admin)
+PUT {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/inspection-date
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "scheduledAt": "2026-11-05T09:00:00Z",
+  "note": "The site is closed that day"
+}

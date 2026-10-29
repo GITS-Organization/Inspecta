@@ -370,3 +370,13 @@ Content-Type: application/json
 {
   "refreshToken": "replace-with-refresh-token"
 }
+
+### Change the inspection date
+PUT {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/inspection-date
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "scheduledAt": "2026-11-05T09:00:00Z",
+  "note": "The site is closed that day"
+}

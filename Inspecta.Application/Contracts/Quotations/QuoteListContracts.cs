@@ -37,7 +37,8 @@ public sealed record QuoteListQuery(
 /// <summary>One row of the quotation list; open the full quotation with <c>GET /requests/{requestId}/quotes/{id}</c>.</summary>
 /// <remarks>
 /// <c>canEdit</c> is true for a draft the current user may price and send. <c>inspectorId</c>, <c>inspectorName</c> and
-/// <c>scheduledAt</c> are set once the accepted job was given to an inspector. An inspector only gets their own accepted
+/// <c>scheduledAt</c> are set once the accepted job was given to an inspector; <c>queue</c> (<c>unassigned</c>, <c>assigned</c>
+/// or <c>certify</c>) says where an accepted quotation is and is empty before acceptance. An inspector only gets their own accepted
 /// quotations and never sees prices: <c>amountPiastres</c> is empty for them.
 /// </remarks>
 public sealed record QuoteSummaryResponse(
@@ -63,4 +64,5 @@ public sealed record QuoteSummaryResponse(
     DateTimeOffset UpdatedAt,
     Guid? InspectorId = null,
     string? InspectorName = null,
-    DateTimeOffset? ScheduledAt = null);
+    DateTimeOffset? ScheduledAt = null,
+    QuotationQueue? Queue = null);

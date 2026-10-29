@@ -290,6 +290,29 @@ public sealed class InspectionRequestService(
         return RequestResponseMapper.Map(request);
     }
 
+    /// <summary>
+    /// Moves the inspection to another date. The inspector of the job may do it (and nothing else on it), and so may the
+    /// coordinator that owns the request, a manager or Admin, until the inspector starts the work.
+    /// </summary>
+    public async Task<RequestResponse> ChangeInspectionDateAsync(Guid requestId, Guid actorId, string role, DateTimeOffset scheduledAt, string? note, CancellationToken cancellationToken = default)
+    {
+        var request = await requestRepository.GetByIdAsync(requestId, tracking: true, cancellationToken);
+        if (request is null || !RequestAccess.IsVisible(request, actorId, role))
+            throw new KeyNotFoundException("Request was not found.");
+        if (role == "coordinator" && !RequestAccess.CanManageQuotes(request, actorId, role))
+            throw new AuthException("forbidden", "Only the coordinator that owns the request can change its date.", 403);
+        if (request.InspectorId is Guid inspectorId && role != "inspector")
+        {
+            var inspector = await userRepository.GetByIdAsync(inspectorId, cancellationToken);
+            if (inspector is { IsOnLeave: true } && (inspector.LeaveUntil is null || inspector.LeaveUntil >= scheduledAt))
+                throw new InvalidOperationException("The inspector is on leave at the new date.");
+        }
+
+        request.ChangeInspectionDate(scheduledAt, actorId, note);
+        await requestRepository.SaveAsync(request, cancellationToken);
+        return RequestResponseMapper.Map(request);
+    }
+
     /// <summary>Loads a request for editing: it must be visible to the actor and owned by them.</summary>
     private async Task<InspectionRequest> LoadForEditAsync(
         Guid requestId,
@@ -324,7 +347,7 @@ public sealed class InspectionRequestService(
         // Quotation steps and the inspector assignment have their own endpoints that keep the quotation, the email and
         // the inspector in step with the request. Moving the status directly would leave them out of sync.
         if (target is JobStatus.QuoteDraft or JobStatus.QuoteSent or JobStatus.ClientCountered or JobStatus.QuoteRejected
-            or JobStatus.ClientDeclined or JobStatus.QuoteAccepted)
+            or JobStatus.ClientDeclined or JobStatus.Unassigned)
             throw new AuthException(
                 "quote_flow",
                 "Quotation steps change through the quotation endpoints (quotes, send, accept, reject), not through transitions.",

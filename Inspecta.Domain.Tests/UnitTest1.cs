@@ -38,7 +38,7 @@ public sealed class RequestLifecycleTests
 
         request.TransitionTo(JobStatus.QuoteDraft, coordinatorId);
         request.TransitionTo(JobStatus.QuoteSent, coordinatorId);
-        request.TransitionTo(JobStatus.QuoteAccepted, coordinatorId);
+        request.TransitionTo(JobStatus.Unassigned, coordinatorId);
         request.AssignInspector(inspectorId, DateTimeOffset.UtcNow.AddDays(1), coordinatorId);
 
         Assert.Equal(JobStatus.Assigned, request.Status);

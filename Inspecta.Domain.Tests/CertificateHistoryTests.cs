@@ -21,7 +21,7 @@ public sealed class CertificateHistoryTests
             coordinatorId);
         request.TransitionTo(JobStatus.QuoteDraft, coordinatorId);
         request.TransitionTo(JobStatus.QuoteSent, coordinatorId);
-        request.TransitionTo(JobStatus.QuoteAccepted, coordinatorId);
+        request.TransitionTo(JobStatus.Unassigned, coordinatorId);
         request.AssignInspector(inspectorId, DateTimeOffset.UtcNow.AddDays(1), coordinatorId);
         request.TransitionTo(JobStatus.TaskAccepted, inspectorId);
         request.TransitionTo(JobStatus.InProgress, inspectorId);

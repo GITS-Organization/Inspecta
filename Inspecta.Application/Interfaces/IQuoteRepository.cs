@@ -13,6 +13,7 @@ namespace Inspecta.Application.Interfaces;
 /// <param name="Accepted">True for accepted, false for rejected, among closed quotations.</param>
 /// <param name="InspectorId">Only quotations whose request is assigned to this inspector.</param>
 /// <param name="Assigned">True for requests that have an inspector, false for those still without one.</param>
+/// <param name="RequestStatuses">Only quotations whose request is in one of these statuses.</param>
 /// <param name="CurrentOnly">Leave out revisions that a newer one replaced.</param>
 public sealed record QuoteListFilter(
     Guid? CoordinatorId = null,
@@ -25,7 +26,8 @@ public sealed record QuoteListFilter(
     bool CurrentOnly = true,
     string? Search = null,
     int Skip = 0,
-    int Take = int.MaxValue);
+    int Take = int.MaxValue,
+    IReadOnlyCollection<Inspecta.Domain.Enums.JobStatus>? RequestStatuses = null);
 
 public interface IQuoteRepository
 {

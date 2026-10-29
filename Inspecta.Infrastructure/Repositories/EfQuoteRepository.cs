@@ -32,6 +32,11 @@ public sealed class EfQuoteRepository(InspectaDbContext dbContext) : IQuoteRepos
         if (filter.InspectorId is Guid inspectorId) query = query.Where(quote => quote.Request!.InspectorId == inspectorId);
         if (filter.Assigned is true) query = query.Where(quote => quote.Request!.InspectorId != null);
         if (filter.Assigned is false) query = query.Where(quote => quote.Request!.InspectorId == null);
+        if (filter.RequestStatuses is { Count: > 0 } statuses)
+        {
+            var allowed = statuses.ToArray();
+            query = query.Where(quote => allowed.Contains(quote.Request!.Status));
+        }
         if (filter.CurrentOnly) query = query.Where(quote => quote.SupersededAt == null);
         if (filter.Open is true) query = query.Where(quote => quote.Status == QuoteStatus.Open);
         if (filter.Open is false) query = query.Where(quote => quote.Status != QuoteStatus.Open);

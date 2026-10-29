@@ -76,7 +76,40 @@ public sealed class QuoteService(
             Search: string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim(),
             Skip: (page - 1) * pageSize,
             Take: pageSize);
+        return await ListSummariesAsync(filter, actorId, role, cancellationToken);
+    }
 
+    public async Task<IReadOnlyList<QuoteSummaryResponse>> ListQueueAsync(
+        Guid actorId,
+        string role,
+        QuotationQueue queue,
+        QuotationQueueQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        // Same visibility as the quotation list; the queue only adds which accepted quotations are returned.
+        var pageSize = Math.Clamp(query.PageSize, 1, QuoteListQuery.MaxPageSize);
+        var page = Math.Max(query.Page, 1);
+        var isInspector = role == "inspector";
+        var filter = new QuoteListFilter(
+            CoordinatorId: role == "coordinator" ? actorId : null,
+            ManagerId: role == "admin" ? query.ManagerId : null,
+            InspectorId: isInspector ? actorId : query.InspectorId,
+            Open: false,
+            Accepted: true,
+            Search: string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim(),
+            Skip: (page - 1) * pageSize,
+            Take: pageSize,
+            RequestStatuses: QuotationQueues.Statuses(queue));
+        return await ListSummariesAsync(filter, actorId, role, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<QuoteSummaryResponse>> ListSummariesAsync(
+        QuoteListFilter filter,
+        Guid actorId,
+        string role,
+        CancellationToken cancellationToken)
+    {
+        var isInspector = role == "inspector";
         var quotes = (await quoteRepository.ListAsync(filter, cancellationToken))
             .Where(quote => quote.Request is not null)
             .ToArray();
@@ -133,7 +166,8 @@ public sealed class QuoteService(
             quote.UpdatedAt,
             request.InspectorId,
             inspectorName,
-            request.ScheduledAt);
+            request.ScheduledAt,
+            QuotationQueues.Of(request.Status));
     }
 
     public async Task<QuoteResponse> GetAsync(
@@ -423,7 +457,7 @@ public sealed class QuoteService(
         }
 
         quote.RecordClientDecision(QuoteStatus.Accepted);
-        request.TransitionTo(JobStatus.QuoteAccepted, actorId);
+        request.TransitionTo(JobStatus.Unassigned, actorId);
         await quoteRepository.SaveAsync(cancellationToken);
         return await MapAsync(quote, canManage: true, cancellationToken);
     }
@@ -442,7 +476,7 @@ public sealed class QuoteService(
         quote.RecordClientDecision(decision.Decision, decision.Note);
         var status = decision.Decision switch
         {
-            QuoteStatus.Accepted => JobStatus.QuoteAccepted,
+            QuoteStatus.Accepted => JobStatus.Unassigned,
             QuoteStatus.Rejected => JobStatus.QuoteRejected,
             _ => throw new ArgumentException("Decision must be accepted or rejected.", nameof(decision))
         };

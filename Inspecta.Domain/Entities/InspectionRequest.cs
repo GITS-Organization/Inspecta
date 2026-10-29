@@ -9,11 +9,12 @@ public sealed class InspectionRequest
         {
             [JobStatus.RequestReceived] = [JobStatus.QuoteDraft, JobStatus.QuoteRejected],
             [JobStatus.QuoteDraft] = [JobStatus.QuoteSent, JobStatus.QuoteRejected],
-            [JobStatus.QuoteSent] = [JobStatus.ClientCountered, JobStatus.QuoteRejected, JobStatus.QuoteAccepted, JobStatus.ClientDeclined, JobStatus.QuoteDraft],
+            [JobStatus.QuoteSent] = [JobStatus.ClientCountered, JobStatus.QuoteRejected, JobStatus.Unassigned, JobStatus.ClientDeclined, JobStatus.QuoteDraft],
             [JobStatus.ClientCountered] = [JobStatus.QuoteDraft],
-            [JobStatus.QuoteAccepted] = [JobStatus.Assigned],
-            [JobStatus.Assigned] = [JobStatus.TaskAccepted],
-            [JobStatus.TaskAccepted] = [JobStatus.InProgress],
+            [JobStatus.Unassigned] = [JobStatus.Assigned],
+            // Handing the job to another inspector keeps it in Assigned (and puts an accepted task back to it).
+            [JobStatus.Assigned] = [JobStatus.TaskAccepted, JobStatus.Assigned],
+            [JobStatus.TaskAccepted] = [JobStatus.InProgress, JobStatus.Assigned],
             [JobStatus.InProgress] = [JobStatus.CertificateSubmitted],
             [JobStatus.CertificateSubmitted] = [JobStatus.CertificateReturned, JobStatus.CertificateApproved],
             [JobStatus.CertificateReturned] = [JobStatus.InProgress],
@@ -347,14 +348,34 @@ public sealed class InspectionRequest
     public void AssignInspector(Guid inspectorId, DateTimeOffset scheduledAt, Guid coordinatorId, string? note = null)
     {
         if (coordinatorId == Guid.Empty) throw new ArgumentException("Coordinator is required.", nameof(coordinatorId));
-        if (Status != JobStatus.QuoteAccepted)
-            throw new InvalidOperationException("Only accepted jobs can be assigned.");
+        if (!CanAssign)
+            throw new InvalidOperationException(
+                $"A job can be given to an inspector while it is {JobStatus.Unassigned}, {JobStatus.Assigned} or {JobStatus.TaskAccepted}.");
         if (inspectorId == Guid.Empty) throw new ArgumentException("Inspector is required.", nameof(inspectorId));
 
         InspectorId = inspectorId;
         ScheduledAt = scheduledAt;
         AssignmentNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
         TransitionTo(JobStatus.Assigned, coordinatorId, note);
+    }
+
+    /// <summary>True while the job has not started: it waits for an inspector, or its inspector can still be replaced.</summary>
+    public bool CanAssign => Status is JobStatus.Unassigned or JobStatus.Assigned or JobStatus.TaskAccepted;
+
+    /// <summary>Moves the inspection to another date. Allowed until the inspector starts the work.</summary>
+    public void ChangeInspectionDate(DateTimeOffset scheduledAt, Guid actorId, string? note = null)
+    {
+        if (actorId == Guid.Empty) throw new ArgumentException("Actor is required.", nameof(actorId));
+        if (InspectorId is null || Status is not (JobStatus.Assigned or JobStatus.TaskAccepted))
+            throw new InvalidOperationException(
+                $"The inspection date can be changed while the job is {JobStatus.Assigned} or {JobStatus.TaskAccepted}.");
+
+        var previous = ScheduledAt;
+        ScheduledAt = scheduledAt;
+        UpdatedAt = DateTimeOffset.UtcNow;
+        var change = $"Inspection date changed from {previous:u} to {scheduledAt:u}.";
+        History.Add(JobStatusHistory.Create(
+            Id, Status, Status, actorId, UpdatedAt, string.IsNullOrWhiteSpace(note) ? change : $"{change} {note.Trim()}"));
     }
 
     public void TransitionTo(JobStatus nextStatus, Guid actorId, string? note = null)
