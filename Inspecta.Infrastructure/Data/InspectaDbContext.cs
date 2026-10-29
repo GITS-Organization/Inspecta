@@ -1,6 +1,7 @@
 using Inspecta.Domain.Entities;
 using Inspecta.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Inspecta.Infrastructure.Data;
 
@@ -256,5 +257,13 @@ public sealed class InspectaDbContext(
             .WithMany()
             .HasForeignKey(item => item.TenantId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Every Guid key is created by the application. Left as "generated on add", EF treats a new entity that was added
+        // through a tracked parent (a status history row, for example) as already existing and updates it instead of inserting.
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (entityType.FindPrimaryKey()?.Properties is [{ ClrType: var keyType } key] && keyType == typeof(Guid))
+                key.ValueGenerated = ValueGenerated.Never;
+        }
     }
 }

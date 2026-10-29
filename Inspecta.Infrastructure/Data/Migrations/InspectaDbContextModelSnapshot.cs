@@ -25,7 +25,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.AppUser", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -108,7 +107,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.Client", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("ArchivedAt")
@@ -159,7 +157,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.ClientContact", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ClientId")
@@ -193,7 +190,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.ClientMailRule", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("ClientId")
@@ -287,7 +283,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.InspectionCertificate", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("AnswersJson")
@@ -387,7 +382,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.InspectionRequest", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("AccessNotes")
@@ -492,7 +486,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.Item", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("ArchivedAt")
@@ -597,7 +590,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.JobStatusHistory", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ActorId")
@@ -629,7 +621,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.OutboundEmail", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<byte[]>("AttachmentContent")
@@ -728,7 +719,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.QuotationDraft", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<long?>("AmountPiastres")
@@ -832,7 +822,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.Quote", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<long>("AmountPiastres")
@@ -933,7 +922,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -972,7 +960,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.RequestEmail", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("AttachmentMetadataJson")
@@ -1053,7 +1040,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
             modelBuilder.Entity("Inspecta.Domain.Entities.RequestItem", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("Capacity")
