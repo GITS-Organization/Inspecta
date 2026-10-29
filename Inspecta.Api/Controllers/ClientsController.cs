@@ -40,6 +40,8 @@ public sealed class ClientsController(IClientService clientService) : Controller
 
     /// <summary>Create a client and its contacts.</summary>
     [HttpPost]
+    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ClientResponse>(StatusCodes.Status201Created)]
     public async Task<ActionResult<ClientResponse>> Create(CreateClientRequest request, CancellationToken cancellationToken)
     {
@@ -51,6 +53,8 @@ public sealed class ClientsController(IClientService clientService) : Controller
 
     /// <summary>Update a client's profile, location, and business details.</summary>
     [HttpPut("{clientId:guid}")]
+    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ClientResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ClientResponse>> Update(
@@ -64,6 +68,8 @@ public sealed class ClientsController(IClientService clientService) : Controller
 
     /// <summary>Archive a client.</summary>
     [HttpDelete("{clientId:guid}")]
+    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Archive(Guid clientId, CancellationToken cancellationToken)
     {

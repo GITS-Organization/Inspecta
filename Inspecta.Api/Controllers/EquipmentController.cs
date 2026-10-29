@@ -30,6 +30,8 @@ public sealed class EquipmentController(IEquipmentService equipmentService) : Co
 
     /// <summary>Create an item for a client.</summary>
     [HttpPost]
+    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<EquipmentResponse>(StatusCodes.Status201Created)]
     public async Task<ActionResult<EquipmentResponse>> Create(SaveEquipmentRequest request, CancellationToken cancellationToken)
     {
@@ -39,6 +41,8 @@ public sealed class EquipmentController(IEquipmentService equipmentService) : Co
 
     /// <summary>Update an item's registration and metadata.</summary>
     [HttpPut("{equipmentId:guid}")]
+    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<EquipmentResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<EquipmentResponse>> Update(Guid equipmentId, SaveEquipmentRequest request, CancellationToken cancellationToken) =>
         Ok(await equipmentService.UpdateAsync(equipmentId, request, cancellationToken));
@@ -54,6 +58,8 @@ public sealed class EquipmentController(IEquipmentService equipmentService) : Co
 
     /// <summary>Archive an item.</summary>
     [HttpDelete("{equipmentId:guid}")]
+    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Archive(Guid equipmentId, CancellationToken cancellationToken)
     {

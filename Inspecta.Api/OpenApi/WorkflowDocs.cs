@@ -130,7 +130,7 @@ public static class WorkflowDocs
         [Key<ClientsController>(nameof(ClientsController.Create))] = new(1, "Setup 1 · Create a client",
             """
             **When:** a new customer is set up, before registering its items.
-            **How:** send `name`, `isCompany`, `hasContract`, `location` (with optional `latitude`/`longitude`), `certificatesEmail` (where certificates are sent), `taxNumber`, `notes` and the `contacts` (name, email, phone, one `isPrimary`). A coordinator creates the client for their own team; Admin sends `managerId` to choose the team.
+            **How:** send `name`, `isCompany`, `hasContract`, `location` (with optional `latitude`/`longitude`), `certificatesEmail` (where certificates are sent), `taxNumber`, `notes` and the `contacts` (name, email, phone, one `isPrimary`). **Who:** Technical managers and Admin only (a coordinator gets `403`). A manager creates the client for their own team; Admin sends `managerId` to choose the team.
             **Next:** register the client's items (setup 5). Clients are also created automatically when a request is saved with a new client name.
             """),
         [Key<ClientsController>(nameof(ClientsController.List))] = new(2, "Setup 2 · List clients",
@@ -143,7 +143,7 @@ public static class WorkflowDocs
             """),
         [Key<EquipmentController>(nameof(EquipmentController.Create))] = new(5, "Setup 5 · Create an item for a client",
             """
-            **When:** a client has equipment to be inspected. Every item belongs to one client, and the client must exist and not be archived.
+            **When:** a client has equipment to be inspected. Every item belongs to one client, and the client must exist and not be archived. **Who:** Technical managers and Admin only.
             **How:** send `clientId`, `name` and, optionally, `itemType`, `category`, `manufacturer`, `model`, `serialNumber`, `capacity`, `locationInsideClientLocation`, `notes`, `labels`, `dates`, `checklist`, `attachments` and **`inspectionStandard`**, the standard the item is inspected against (for example `ASME B30.5`).
             **Note:** items are also registered automatically from the machines of a saved request. Select one in a request with its `equipmentId`.
             """),
@@ -167,7 +167,7 @@ public static class WorkflowDocs
 
     internal static string ConfigDescription =>
         """
-        One-time setup of the data the workflow uses, in the order to do it.
+        One-time setup of the data the workflow uses, in the order to do it. **Creating, updating and archiving clients and items is for Technical managers and Admin;** coordinators can list and open them (to pick a client in a request).
 
         1. **Create a client** with its contacts and emails.
         2. **Create the client's items** (equipment). Each item belongs to one client and carries its **standard of inspection**.
