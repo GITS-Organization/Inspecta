@@ -32,6 +32,10 @@ public sealed record SaveEquipmentRequest
     [MaxLength(500)]
     public string? LocationInsideClientLocation { get; init; }
 
+    /// <summary>The standard the item is inspected against, for example <c>ASME B30.5</c>. Send an empty text to clear it.</summary>
+    [MaxLength(200)]
+    public string? InspectionStandard { get; init; }
+
     public string? Notes { get; init; }
 
     public IReadOnlyList<string>? Labels { get; init; }

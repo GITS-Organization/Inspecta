@@ -28,6 +28,9 @@ public sealed class Item
     public string? AssetTag { get; private set; }
     public string? OwnerReference { get; private set; }
     public string? Notes { get; private set; }
+
+    /// <summary>The standard the item is inspected against, for example <c>ASME B30.5</c> or <c>LOLER 1998</c>.</summary>
+    public string? InspectionStandard { get; private set; }
     public string LabelsJson { get; private set; } = "[]";
     public string DatesJson { get; private set; } = "[]";
     public string ChecklistJson { get; private set; } = "[]";
@@ -116,7 +119,8 @@ public sealed class Item
         string? capacity,
         ItemType? itemType = null,
         string? locationInsideClientLocation = null,
-        string? notes = null)
+        string? notes = null,
+        string? inspectionStandard = null)
     {
         EnsureEditable();
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Item name is required.", nameof(name));
@@ -132,6 +136,8 @@ public sealed class Item
             ItemType = itemType.Value;
         if (locationInsideClientLocation is not null)
             Location = Normalize(locationInsideClientLocation);
+        if (inspectionStandard is not null)
+            InspectionStandard = Normalize(inspectionStandard);
         if (notes is not null)
             Notes = Normalize(notes);
     }

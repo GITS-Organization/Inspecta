@@ -122,6 +122,60 @@ public static class WorkflowDocs
             "Moves the job through inspector work and certificates. Quotation steps and the assignment are refused with `409`: use the steps above."),
     };
 
+    /// <summary>The setup section: clients with their contacts and the items registered for each client.</summary>
+    public const string ConfigTag = "Configurations";
+
+    private static readonly Dictionary<string, Step> ConfigSteps = new()
+    {
+        [Key<ClientsController>(nameof(ClientsController.Create))] = new(1, "Setup 1 · Create a client",
+            """
+            **When:** a new customer is set up, before registering its items.
+            **How:** send `name`, `isCompany`, `hasContract`, `location` (with optional `latitude`/`longitude`), `certificatesEmail` (where certificates are sent), `taxNumber`, `notes` and the `contacts` (name, email, phone, one `isPrimary`). A coordinator creates the client for their own team; Admin sends `managerId` to choose the team.
+            **Next:** register the client's items (setup 5). Clients are also created automatically when a request is saved with a new client name.
+            """),
+        [Key<ClientsController>(nameof(ClientsController.List))] = new(2, "Setup 2 · List clients",
+            "**How:** `GET /clients` returns the clients of your team with their contacts, by name. `includeArchived=true` also returns archived ones."),
+        [Key<ClientsController>(nameof(ClientsController.GetById))] = new(3, "Setup 3 · Open a client",
+            "**How:** `GET /clients/{clientId}` returns the profile and the contacts. The inspection history is under the extras."),
+        [Key<ClientsController>(nameof(ClientsController.Update))] = new(4, "Setup 4 · Update a client and its contacts",
+            """
+            **How:** `PUT /clients/{clientId}` with the profile fields. Add `contacts` to change them: a contact with an `id` of this client is kept and edited, one without an `id` is added, and one left out is removed. Leave `contacts` out to keep them as they are.
+            """),
+        [Key<EquipmentController>(nameof(EquipmentController.Create))] = new(5, "Setup 5 · Create an item for a client",
+            """
+            **When:** a client has equipment to be inspected. Every item belongs to one client, and the client must exist and not be archived.
+            **How:** send `clientId`, `name` and, optionally, `itemType`, `category`, `manufacturer`, `model`, `serialNumber`, `capacity`, `locationInsideClientLocation`, `notes`, `labels`, `dates`, `checklist`, `attachments` and **`inspectionStandard`**, the standard the item is inspected against (for example `ASME B30.5`).
+            **Note:** items are also registered automatically from the machines of a saved request. Select one in a request with its `equipmentId`.
+            """),
+        [Key<EquipmentController>(nameof(EquipmentController.List))] = new(6, "Setup 6 · List items",
+            "**How:** `GET /equipment?clientId=...` returns the items of one client (or of all your clients without `clientId`). `includeArchived=true` also returns archived ones."),
+        [Key<EquipmentController>(nameof(EquipmentController.GetById))] = new(7, "Setup 7 · Open an item",
+            "**How:** `GET /equipment/{equipmentId}` returns the item with its `inspectionStandard`, dates and checklist."),
+        [Key<EquipmentController>(nameof(EquipmentController.Update))] = new(8, "Setup 8 · Update an item",
+            """
+            **How:** `PUT /equipment/{equipmentId}` with the same body as the creation. `clientId` must stay the same: an item cannot move to another client. `inspectionStandard` is kept when left out, changed when sent, and cleared when sent as an empty text.
+            """),
+        [Key<ClientsController>(nameof(ClientsController.GetHistory))] = new(20, "Extra · Client history",
+            "**How:** `GET /clients/{clientId}/history` returns the client's previous requests with their certificates."),
+        [Key<ClientsController>(nameof(ClientsController.Archive))] = new(21, "Extra · Archive a client",
+            "**How:** `DELETE /clients/{clientId}` archives the client; it disappears from the default list and can no longer be edited."),
+        [Key<EquipmentController>(nameof(EquipmentController.RecordInspection))] = new(22, "Extra · Record an inspection",
+            "**How:** `POST /equipment/{equipmentId}/inspections` with `inspectedAt` and `nextDueAt`; sets the last inspection and the next due date."),
+        [Key<EquipmentController>(nameof(EquipmentController.Archive))] = new(23, "Extra · Archive an item",
+            "**How:** `DELETE /equipment/{equipmentId}` archives the item; it can no longer be edited."),
+    };
+
+    internal static string ConfigDescription =>
+        """
+        One-time setup of the data the workflow uses, in the order to do it.
+
+        1. **Create a client** with its contacts and emails.
+        2. **Create the client's items** (equipment). Each item belongs to one client and carries its **standard of inspection**.
+        3. List, open and update clients and items as they change. Contacts are edited together with the client.
+
+        Clients and items are also registered automatically when a request is saved with a new client name or new machines, so this section is for entering them up front or correcting them later.
+        """;
+
     /// <summary>Sections that are not part of the main workflow; they are listed last and say so.</summary>
     internal static readonly IReadOnlyDictionary<string, string> LegacyTags = new Dictionary<string, string>
     {
@@ -152,16 +206,18 @@ public static class WorkflowDocs
 
     private static string Key<TController>(string action) => $"{typeof(TController).Name}.{action}";
 
-    internal static bool TryGetStep(OperationFilterContext context, out double order, out string title, out string guide)
+    internal static bool TryGetStep(OperationFilterContext context, out double order, out string title, out string guide, out string tag)
     {
         var type = context.MethodInfo.DeclaringType?.Name;
-        if (type is not null && Steps.TryGetValue($"{type}.{context.MethodInfo.Name}", out var step))
+        var key = $"{type}.{context.MethodInfo.Name}";
+        if (type is not null && (Steps.TryGetValue(key, out var step) || ConfigSteps.TryGetValue(key, out step)))
         {
             (order, title, guide) = (step.Order, step.Title, step.Guide);
+            tag = Steps.ContainsKey(key) ? Tag : ConfigTag;
             return true;
         }
 
-        (order, title, guide) = (0, string.Empty, string.Empty);
+        (order, title, guide, tag) = (0, string.Empty, string.Empty, string.Empty);
         return false;
     }
 
@@ -179,11 +235,11 @@ public sealed class WorkflowOperationFilter : IOperationFilter
 {
     public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
-        if (!WorkflowDocs.TryGetStep(context, out var order, out var title, out var guide)) return;
+        if (!WorkflowDocs.TryGetStep(context, out var order, out var title, out var guide, out var tag)) return;
 
         var original = string.Join("\n\n", new[] { operation.Summary, operation.Description }
             .Where(text => !string.IsNullOrWhiteSpace(text)).Select(text => text!.Trim()));
-        operation.Tags = [new OpenApiTag { Name = WorkflowDocs.Tag }];
+        operation.Tags = [new OpenApiTag { Name = tag }];
         operation.Summary = title;
         operation.Description = string.IsNullOrEmpty(original)
             ? Dedent(guide)
@@ -225,7 +281,7 @@ public sealed class WorkflowDocumentFilter : IDocumentFilter
         var names = swaggerDoc.Paths.Values.SelectMany(item => item.Operations.Values)
             .SelectMany(operation => operation.Tags.Select(tag => tag.Name))
             .Distinct()
-            .OrderBy(name => name == WorkflowDocs.Tag ? 0 : WorkflowDocs.LegacyTags.ContainsKey(name) ? 2 : 1)
+            .OrderBy(name => name == WorkflowDocs.Tag ? 0 : name == WorkflowDocs.ConfigTag ? 1 : WorkflowDocs.LegacyTags.ContainsKey(name) ? 3 : 2)
             .ThenBy(name => name, StringComparer.OrdinalIgnoreCase);
         var described = (swaggerDoc.Tags ?? [])
             .Where(tag => !string.IsNullOrWhiteSpace(tag.Description))
@@ -235,7 +291,9 @@ public sealed class WorkflowDocumentFilter : IDocumentFilter
             .Select(name => new OpenApiTag
             {
                 Name = name,
-                Description = name == WorkflowDocs.Tag
+                Description = name == WorkflowDocs.ConfigTag
+                    ? WorkflowDocs.ConfigDescription
+                    : name == WorkflowDocs.Tag
                     ? WorkflowDocs.Description
                     : WorkflowDocs.LegacyTags.GetValueOrDefault(name) ?? described.GetValueOrDefault(name)
             })

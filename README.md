@@ -94,6 +94,15 @@ Each client retains its inspection request history. A request can have a certifi
 - Disabling a user's `IsActive` account is separate from deleting it. Admin can change user status with `PUT /api/v1/users/{userId}/status`; a Technical Manager can change the status of a member in their own team with `PUT /api/v1/manager/team/{userId}/status`.
 - Clients expose `isCompany` to identify company clients and `hasContract` to indicate whether a contract is in place; both default to `false`.
 
+### Clients and items (Configurations)
+
+In Swagger these are the **Configurations** section, listed after the request workflow (`Setup 1 · Create a client` … `Setup 8 · Update an item`).
+
+- `POST /api/v1/clients` creates a client with its profile (`name`, `isCompany`, `hasContract`, `location`, `latitude`/`longitude`, `certificatesEmail`, `taxNumber`, `notes`) and its `contacts` (name, email, phone, one `isPrimary`). A Coordinator or manager creates it for their own team; Admin sends `managerId`.
+- `PUT /api/v1/clients/{clientId}` updates the profile. `contacts` is optional: a contact with an `id` of the client is kept and edited, one without an `id` is added, one left out is removed, and leaving `contacts` out keeps them as they are.
+- `POST /api/v1/equipment` registers an item for a client: `clientId` is required and the client must exist and not be archived, so every item belongs to exactly one client, and `PUT /api/v1/equipment/{equipmentId}` cannot move it to another one. Besides `name` it takes `itemType`, `category`, `manufacturer`, `model`, `serialNumber`, `capacity`, `locationInsideClientLocation`, `notes`, `labels`, `dates`, `checklist`, `attachments` and **`inspectionStandard`**, the standard the item is inspected against (for example `ASME B30.5`, up to 200 characters). On update, `inspectionStandard` is kept when left out, changed when sent and cleared when sent empty. `GET /api/v1/equipment?clientId=...` lists one client's items.
+- Clients and items are also registered automatically when a request is saved with a new client name or new machines. Those items start without an inspection standard; set it with `PUT /equipment/{equipmentId}`.
+
 ## Local development
 
 Requires the .NET 8 SDK. From the repository root, configure a signing key and first admin with user secrets:

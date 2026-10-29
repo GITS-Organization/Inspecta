@@ -29,4 +29,10 @@ public sealed record UpdateClientRequest
 
     [MaxLength(4000)]
     public string? Notes { get; init; }
+
+    /// <summary>
+    /// The complete contact list as it should be after saving. Contacts with an <c>id</c> of this client are kept and edited,
+    /// contacts without one are added and contacts left out are removed. Leave it out (<c>null</c>) to keep the contacts as they are.
+    /// </summary>
+    public IReadOnlyList<CreateClientContactRequest>? Contacts { get; init; }
 }

@@ -521,6 +521,10 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("InspectionStandard")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<bool>("IsArchived")
                         .HasColumnType("boolean");
 

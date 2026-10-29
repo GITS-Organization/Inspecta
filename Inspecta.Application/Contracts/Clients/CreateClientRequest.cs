@@ -41,6 +41,9 @@ public sealed record CreateClientRequest
 /// <summary>Contact person belonging to a client.</summary>
 public sealed record CreateClientContactRequest
 {
+    /// <summary>When updating a client: the id of an existing contact to keep and edit. Leave empty for a new contact.</summary>
+    public Guid? Id { get; init; }
+
     [Required, MaxLength(200)]
     public required string Name { get; init; }
 

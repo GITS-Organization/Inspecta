@@ -85,6 +85,7 @@ public sealed class InspectaDbContext(
         item.HasKey(item => item.Id);
         item.Property(item => item.Name).HasMaxLength(200).IsRequired();
         item.Property(item => item.ItemType).HasConversion<string>().HasMaxLength(24);
+        item.Property(item => item.InspectionStandard).HasMaxLength(200);
         item.Property(item => item.Status).HasConversion<string>().HasMaxLength(24);
         item.Property(item => item.LastInspectionResult).HasConversion<string>().HasMaxLength(32);
         item.Property(item => item.LabelsJson).IsRequired();

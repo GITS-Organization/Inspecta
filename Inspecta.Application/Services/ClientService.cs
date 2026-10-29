@@ -76,6 +76,28 @@ public sealed class ClientService(
             request.Latitude,
             request.Longitude,
             request.Notes);
+        if (request.Contacts is { } contacts)
+        {
+            if (contacts.Count(contact => contact.IsPrimary) > 1)
+                throw new ArgumentException("A client can have only one primary contact.");
+            var kept = new List<ClientContact>();
+            foreach (var contact in contacts)
+            {
+                var existing = contact.Id is Guid contactId ? client.Contacts.FirstOrDefault(value => value.Id == contactId) : null;
+                if (existing is not null)
+                {
+                    existing.Update(contact.Name, existing.Role, contact.Email, contact.Phone, contact.IsPrimary);
+                    kept.Add(existing);
+                }
+                else
+                {
+                    kept.Add(ClientContact.Create(client.Id, contact.Name, contact.Email, contact.Phone, contact.IsPrimary));
+                }
+            }
+
+            client.ReplaceContacts(kept);
+        }
+
         await clientRepository.SaveAsync(cancellationToken);
         return Map(client);
     }
