@@ -23,6 +23,7 @@ public static class WorkflowDocs
             """
             **When:** the coordinator opens the app. Emails that look like work arrive as requests, the others as "maybe".
             **How:** `GET /requests` shows real requests. Add `triage=maybe` for the maybe tab, `status=quote_draft` (or any status) to filter, `q=` to search, `page`/`pageSize` to page.
+            Requests whose quotation is already open leave this list and continue in step 5 (ask for them with an explicit `status` if you need them).
             **Next:** open one (step 3), or confirm a maybe (step 2).
             """),
         [Key<RequestsController>(nameof(RequestsController.Create))] = new(1.1, "Step 1b · Create a request by hand",
@@ -48,8 +49,8 @@ public static class WorkflowDocs
             """
             **When:** the coordinator completes the data of the request: client, location and every machine.
             **How:** send `clientName` (or `clientId`), `location`, optional `preferredDate`/`accessNotes` and the whole `items` list. Items with an `id` are updated, items without one are added, items left out are removed. New clients and machines are registered automatically.
-            Set `"prepareQuotation": true` to also open the quotation in the same save. The response then has a `quotation` with its `id`, the machines with empty prices and `missingPrices`. Pressing it again refreshes the draft and keeps the prices already typed.
-            **Errors:** `409 request_incomplete` lists what is missing; nothing is saved. A request whose quotation was sent can no longer be edited.
+            No flag is needed: as soon as the request is complete this same save opens the quotation (`"prepareQuotation": false` only saves, `true` refuses an incomplete request with `409`). The request then leaves the request list and the response has a `quotation` with its `id`, the machines with empty prices and `missingPrices`. Pressing it again refreshes the draft and keeps the prices already typed.
+            **Incomplete data:** a save that is not complete yet is just saved, and no quotation is opened. With `prepareQuotation: true` it is refused with `409 request_incomplete` naming the missing fields. A request whose quotation was sent can no longer be edited.
             **Next:** price the machines (step 7).
             """),
         [Key<QuotationsController>(nameof(QuotationsController.List))] = new(5, "Step 5 · List my quotations",

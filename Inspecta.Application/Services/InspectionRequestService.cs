@@ -95,6 +95,7 @@ public sealed class InspectionRequestService(
         {
             Triage = query.Triage ?? RequestTriage.Request,
             Status = query.Status,
+            ExcludeStatuses = query.Status is null ? InQuotation : null,
             Search = string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim(),
             Skip = (page - 1) * pageSize,
             Take = pageSize
@@ -110,7 +111,7 @@ public sealed class InspectionRequestService(
     {
         var counts = await requestRepository.CountAsync(ScopeFor(actorId, role, managerId), cancellationToken);
         return new RequestSummaryResponse(
-            counts.Where(item => item.Triage == RequestTriage.Request).Sum(item => item.Count),
+            counts.Where(item => item.Triage == RequestTriage.Request && !InQuotation.Contains(item.Status)).Sum(item => item.Count),
             counts.Where(item => item.Triage == RequestTriage.Maybe).Sum(item => item.Count),
             counts.Where(item => item.Triage == RequestTriage.Request)
                 .GroupBy(item => item.Status)
@@ -134,6 +135,10 @@ public sealed class InspectionRequestService(
             throw new InvalidOperationException("Only a maybe email can be deleted.");
         await requestRepository.DeleteAsync(request, cancellationToken);
     }
+
+    // Once a quotation is open the work continues in the quotation list, so these requests leave the default request list.
+    // They stay reachable with an explicit status filter.
+    private static readonly JobStatus[] InQuotation = [JobStatus.QuoteDraft, JobStatus.QuoteSent, JobStatus.ClientCountered];
 
     private static RequestListFilter ScopeFor(Guid actorId, string role, Guid? managerId) => new(
         InspectorId: IsInspector(role) ? actorId : null,

@@ -36,11 +36,13 @@ public sealed record UpdateRequestDetailsRequest
     public DateTimeOffset? ExpectedUpdatedAt { get; init; }
 
     /// <summary>
-    /// Also open the quotation in the same save: its items are copied from the request (prices empty), the request moves to
-    /// <c>quote_draft</c>, and the response carries the quotation. If a draft already exists it is refreshed from the items and
-    /// keeps its prices. The request must be complete (client name, location and at least one item), otherwise nothing is saved.
+    /// Whether this save also opens the quotation: its items are copied from the request (prices empty), the request moves to
+    /// <c>quote_draft</c> and the response carries the quotation. If a draft already exists it is refreshed from the items and
+    /// keeps its prices. Left out (<c>null</c>), it opens the quotation as soon as the request is complete (client name, location
+    /// and at least one item) and otherwise just saves. <c>true</c> insists: an incomplete request is refused with
+    /// <c>409 request_incomplete</c> and nothing is saved. <c>false</c> only saves.
     /// </summary>
-    public bool PrepareQuotation { get; init; }
+    public bool? PrepareQuotation { get; init; }
 }
 
 /// <summary>One equipment item of the whole-request save.</summary>

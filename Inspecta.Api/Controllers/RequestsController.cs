@@ -19,6 +19,8 @@ public sealed class RequestsController(IInspectionRequestService requestService,
     /// <c>triage</c> is <c>request</c> (default) for real requests or <c>maybe</c> for emails from unknown senders
     /// that wait for the coordinator. <c>status</c> filters by workflow status (for example <c>quote_draft</c>),
     /// <c>q</c> searches client, location, subject and sender. <c>pageSize</c> defaults to 50 (max 100).
+    /// Requests whose quotation is open (<c>quote_draft</c>, <c>quote_sent</c>, <c>client_countered</c>) are not in the default list: they
+    /// are worked on in <c>GET /quotations</c>. Ask for them with an explicit <c>status</c>.
     /// Admin may narrow the global view with <c>managerId</c>. Use <c>GET /requests/summary</c> for tab counts.
     /// </remarks>
     [HttpGet]
@@ -124,7 +126,9 @@ public sealed class RequestsController(IInspectionRequestService requestService,
     /// Save the request screen in one step: client, location, preferred date, access notes and, optionally, the whole
     /// equipment list (<c>items</c>: items with an <c>id</c> of this request are updated, items without one (or with an id the
     /// request does not know) are added, new machines are registered in the catalog automatically, items left out are
-    /// removed; omit <c>items</c> to keep them). Everything is saved together or nothing is. Set <c>prepareQuotation</c> to open
+    /// removed; omit <c>items</c> to keep them). Everything is saved together or nothing is. As soon as the request is complete
+    /// (client name, location and an item) the quotation is opened by this same save; send <c>prepareQuotation: false</c> to only save,
+    /// or <c>true</c> to refuse an incomplete request with <c>409</c>. Details of the opening: 
     /// the quotation in the same save (items copied with empty prices, request moves to <c>quote_draft</c>, the response carries
     /// <c>quotation</c>; a complete request is required, otherwise <c>409 request_incomplete</c>). Send the <c>updatedAt</c> you
     /// read as <c>expectedUpdatedAt</c> to get <c>409</c> instead of overwriting newer changes. Owning coordinator only,
@@ -139,7 +143,7 @@ public sealed class RequestsController(IInspectionRequestService requestService,
     public async Task<ActionResult<RequestResponse>> UpdateDetails(Guid requestId, UpdateRequestDetailsRequest request, CancellationToken cancellationToken)
     {
         if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
-        return Ok(request.PrepareQuotation
+        return Ok(request.PrepareQuotation is not false
             ? await quoteService.SaveRequestAndPrepareQuotationAsync(requestId, actorId, role, request, cancellationToken)
             : await requestService.UpdateDetailsAsync(requestId, actorId, role, request, cancellationToken));
     }

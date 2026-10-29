@@ -107,6 +107,7 @@ public sealed class MailTriageTests
         Assert.Equal(Application.Contracts.Requests.RequestListQuery.MaxPageSize, repository.LastFilter.Take);
         Assert.Equal(2 * Application.Contracts.Requests.RequestListQuery.MaxPageSize, repository.LastFilter.Skip);
         Assert.Equal("noor", repository.LastFilter.Search);
+        Assert.Equal([JobStatus.QuoteDraft, JobStatus.QuoteSent, JobStatus.ClientCountered], repository.LastFilter.ExcludeStatuses);
 
         await service.ListVisibleAsync(CoordinatorId, "technical_manager", new Application.Contracts.Requests.RequestListQuery(Triage: RequestTriage.Maybe, Page: 0, PageSize: 0));
 
@@ -131,7 +132,7 @@ public sealed class MailTriageTests
 
         var summary = await service.GetSummaryAsync(CoordinatorId, "coordinator");
 
-        Assert.Equal(5, summary.Requests);
+        Assert.Equal(3, summary.Requests);
         Assert.Equal(40, summary.Maybe);
         Assert.Equal([JobStatus.RequestReceived, JobStatus.QuoteDraft], summary.ByStatus.Select(item => item.Status));
         Assert.Equal(CoordinatorId, repository.LastFilter!.CoordinatorId);

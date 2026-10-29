@@ -407,6 +407,35 @@ public sealed class QuotationTests
     }
 
     [Fact]
+    public async Task LeavingTheFlagOutOpensTheQuotationOnceTheRequestIsComplete()
+    {
+        var fixture = new Fixture();
+
+        var saved = await fixture.Service.SaveRequestAndPrepareQuotationAsync(
+            fixture.Request.Id, CoordinatorId, "coordinator", FullSave(fixture) with { PrepareQuotation = null });
+
+        Assert.Equal(JobStatus.QuoteDraft, saved.Status);
+        Assert.Equal(QuoteStatus.Open, saved.Quotation!.Status);
+        Assert.Single(await fixture.Quotes.ListForRequestAsync(fixture.Request.Id));
+    }
+
+    [Fact]
+    public async Task LeavingTheFlagOutOnAnIncompleteRequestJustSavesIt()
+    {
+        var incomplete = InspectionRequest.CreateFromEmail(ManagerId, CoordinatorId, Email());
+        var fixture = new Fixture(incomplete);
+
+        var saved = await fixture.Service.SaveRequestAndPrepareQuotationAsync(
+            incomplete.Id, CoordinatorId, "coordinator", new UpdateRequestDetailsRequest { ClientName = "Al Noor" });
+
+        Assert.Equal("Al Noor", saved.ClientName);
+        Assert.Equal(JobStatus.RequestReceived, saved.Status);
+        Assert.Null(saved.Quotation);
+        Assert.Empty(await fixture.Quotes.ListForRequestAsync(incomplete.Id));
+    }
+
+
+    [Fact]
     public async Task PressingTheButtonAgainRefreshesTheSameDraftAndKeepsItsPrices()
     {
         var fixture = new Fixture();

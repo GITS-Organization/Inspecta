@@ -75,6 +75,11 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
             .Include(item => item.History)
             .AsSplitQuery();
         if (filter.Status is JobStatus status) query = query.Where(item => item.Status == status);
+        if (filter.ExcludeStatuses is { Count: > 0 } excluded)
+        {
+            var excludedStatuses = excluded.ToArray();
+            query = query.Where(item => !excludedStatuses.Contains(item.Status));
+        }
         if (filter.Search is { Length: > 0 } search)
         {
             var escaped = search.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");

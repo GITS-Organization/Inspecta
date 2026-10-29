@@ -11,6 +11,7 @@ namespace Inspecta.Application.Interfaces;
 /// <param name="ManagerId">Only requests of this team (used by Admin to narrow the global view).</param>
 /// <param name="Triage">Real requests or "maybe" emails.</param>
 /// <param name="Status">Only requests in this workflow status.</param>
+/// <param name="ExcludeStatuses">Leave out requests in these workflow statuses.</param>
 /// <param name="Search">Case-insensitive text matched against client, subject, sender and location.</param>
 /// <param name="Skip">Rows to skip, for paging.</param>
 /// <param name="Take">Maximum rows to return.</param>
@@ -20,6 +21,7 @@ public sealed record RequestListFilter(
     Guid? ManagerId = null,
     RequestTriage? Triage = null,
     JobStatus? Status = null,
+    IReadOnlyCollection<JobStatus>? ExcludeStatuses = null,
     string? Search = null,
     int Skip = 0,
     int Take = int.MaxValue);

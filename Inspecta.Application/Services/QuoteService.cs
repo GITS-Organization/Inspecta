@@ -170,7 +170,16 @@ public sealed class QuoteService(
             throw new AuthException("forbidden", "Only the coordinator that owns the request can edit it.", 403);
 
         var changes = await new RequestDetailsEditor(requestRepository, equipmentRegistrar).ApplyAsync(request, details, cancellationToken);
-        if (request.GetMissingFields() is { Count: > 0 } missing)
+        var missing = request.GetMissingFields();
+
+        // Left to the server, the quotation opens as soon as the request is complete and a real request; until then it is a plain save.
+        if (details.PrepareQuotation is null && (missing.Count > 0 || request.Triage != RequestTriage.Request))
+        {
+            await requestRepository.SaveRevisionAsync(request, changes, cancellationToken);
+            return RequestResponseMapper.Map(request);
+        }
+
+        if (missing.Count > 0)
             throw new AuthException(
                 "request_incomplete",
                 $"Complete the request before preparing the quotation. Missing: {string.Join(", ", missing)}.",
