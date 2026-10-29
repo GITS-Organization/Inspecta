@@ -10,7 +10,7 @@ ASP.NET Core 8 REST API for Inspecta. This repository contains the backend only;
 
 Swagger is enabled by default in every environment so a separately hosted frontend and API consumers can discover the contract. Set `Swagger__Enabled=false` to disable it. Authenticated endpoints use JWT bearer tokens; use **Authorize** in Swagger UI and paste an access token.
 
-In Swagger the whole request and quotation workflow is one section, **Requests & Quotations**, listed first. Its endpoints are in the order a coordinator uses them (`Step 1 · List requests` … `Step 12 · Reject`), each with a short "when / how / next" guide, followed by the rarely needed extras. The titles and guides live in `Inspecta.Api/OpenApi/WorkflowDocs.cs`; when a workflow endpoint is added, add its step there. Sections that are not part of the workflow (legacy quotation drafts, email diagnostics) are listed last and labelled.
+In Swagger the whole request and quotation workflow is one section, **Requests & Quotations**, listed first. Its endpoints are in the order a coordinator uses them (`Step 1 · List requests` … `Step 12 · Reject`), each with a short "when / how / next" guide, followed by the rarely needed extras. The titles and guides live in `Inspecta.Api/OpenApi/WorkflowDocs.cs`; when a workflow endpoint is added, add its step there. The legacy quotation drafts are listed last and labelled. The Certificates, PDF diagnostics and email test endpoints are hidden from Swagger (`ApiExplorerSettings(IgnoreApi = true)`) but still work; remove the attribute from their controllers to show them again.
 
 ## API surface
 

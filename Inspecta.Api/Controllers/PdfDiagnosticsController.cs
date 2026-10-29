@@ -8,6 +8,7 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Checks that PDF generation works in the running environment (native libraries, fonts, license).</summary>
 [ApiController]
+[ApiExplorerSettings(IgnoreApi = true)] // hidden from Swagger; the endpoints keep working
 [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 [Route("api/v1/admin/pdf")]
 public sealed class PdfDiagnosticsController(IPdfGenerator pdfGenerator) : ControllerBase

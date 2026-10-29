@@ -9,6 +9,7 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Testing helpers for simulating incoming client emails.</summary>
 [ApiController]
+[ApiExplorerSettings(IgnoreApi = true)] // hidden from Swagger; the endpoints keep working
 [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
 [Route("api/v1/emails")]
 public sealed class EmailsController(IInspectionRequestService requestService) : ControllerBase

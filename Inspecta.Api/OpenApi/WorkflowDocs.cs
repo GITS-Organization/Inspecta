@@ -113,8 +113,7 @@ public static class WorkflowDocs
     /// <summary>Sections that are not part of the main workflow; they are listed last and say so.</summary>
     internal static readonly IReadOnlyDictionary<string, string> LegacyTags = new Dictionary<string, string>
     {
-        ["QuotationDrafts"] = "**Legacy.** The older quotation-draft flow. It is not part of the main workflow: use **Requests & Quotations**.",
-        ["Emails"] = "**Diagnostics.** `send-test` only checks that a mailbox can send; it is not part of the main workflow."
+        ["QuotationDrafts"] = "**Legacy.** The older quotation-draft flow. It is not part of the main workflow: use **Requests & Quotations**."
     };
 
     internal static string Description =>

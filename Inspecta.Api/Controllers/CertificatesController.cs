@@ -9,6 +9,7 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Manage inspection certificates associated with request items.</summary>
 [ApiController]
+[ApiExplorerSettings(IgnoreApi = true)] // hidden from Swagger; the endpoints keep working
 [Authorize(Policy = AuthorizationPolicies.TeamAccess)]
 [Route("api/v1/requests/{requestId:guid}/certificates")]
 public sealed class CertificatesController(ICertificateService certificateService) : ControllerBase
