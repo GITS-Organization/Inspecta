@@ -13,6 +13,8 @@ namespace Inspecta.Infrastructure.Mail;
 public sealed class MailKitSmtpEmailSender(ILogger<MailKitSmtpEmailSender> logger) : IEmailSender
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan ConnectAttemptTimeout = TimeSpan.FromSeconds(8);
+    private static readonly TimeSpan OverallConnectTimeout = TimeSpan.FromSeconds(20);
 
     public async Task SendAsync(SmtpSettings smtp, OutgoingEmail email, CancellationToken cancellationToken = default)
     {
@@ -60,16 +62,28 @@ public sealed class MailKitSmtpEmailSender(ILogger<MailKitSmtpEmailSender> logge
         if (addresses.Length == 0 || addresses.Any(PublicAddressGuard.IsNonPublic))
             throw new InvalidOperationException("SMTP server must resolve only to public IP addresses.");
 
+        // A blocked port never answers, so the operating system would wait minutes. Give up quickly and report it.
+        using var overall = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        overall.CancelAfter(OverallConnectTimeout);
+
         var options = smtp.UseSsl ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls;
         Exception? lastConnectionError = null;
-        foreach (var address in addresses)
+        foreach (var address in addresses.OrderBy(address => address.AddressFamily == AddressFamily.InterNetwork ? 0 : 1))
         {
             var socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             try
             {
-                await socket.ConnectAsync(new IPEndPoint(address, smtp.Port), cancellationToken);
-                await client.ConnectAsync(socket, smtp.Server, smtp.Port, options, cancellationToken);
+                using var attempt = CancellationTokenSource.CreateLinkedTokenSource(overall.Token);
+                attempt.CancelAfter(ConnectAttemptTimeout);
+                await socket.ConnectAsync(new IPEndPoint(address, smtp.Port), attempt.Token);
+                await client.ConnectAsync(socket, smtp.Server, smtp.Port, options, attempt.Token);
                 return;
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                socket.Dispose();
+                lastConnectionError = new TimeoutException($"No answer from {address}:{smtp.Port}.");
+                if (overall.IsCancellationRequested) break;
             }
             catch (Exception exception) when (exception is SocketException or IOException)
             {
@@ -97,6 +111,8 @@ public sealed class MailKitSmtpEmailSender(ILogger<MailKitSmtpEmailSender> logge
             "The mail server refused the recipient address.",
         SmtpCommandException =>
             "The mail server refused the message.",
+        IOException { InnerException: TimeoutException } =>
+            "The mail server did not answer. Check the SMTP server and port, and that the hosting environment allows outgoing mail on that port.",
         SslHandshakeException =>
             "A secure connection to the mail server could not be established. Check the SMTP port and SSL setting.",
         ParseException =>
