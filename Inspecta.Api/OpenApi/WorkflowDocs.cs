@@ -121,6 +121,7 @@ public static class WorkflowDocs
             - `status=unassigned`: accepted, waiting for an inspector (request status `unassigned`).
             - `status=assigned`: given to an inspector, inspection not finished (request status `assigned`, `task_accepted` or `in_progress`).
             - `status=certify`: inspection done, certificate being prepared, reviewed or sent (request status `certificate_submitted`, `certificate_returned`, `certificate_approved` or `sent_to_client`).
+            - one part of `certify`: `status=review` (technical manager), `status=returned` (inspector), `status=approved` (coordinator), `status=delivered`.
             Other filters: `inspectorId`, `q` (client, quotation number, location), `managerId` (Admin), `page`/`pageSize`. Each row has `requestId`, the client, the location, the price, `inspectorName` and `scheduledAt`. Open a row with `GET /requests/{requestId}/quotes/{id}`.
             **The inspector's side:** an inspector gets only their own jobs here, **without prices** (`amountPiastres` is empty), so `unassigned` is always empty for them. Open one with `GET /requests/{requestId}` for the machines and the company data. The coordinator keeps full access to every quotation of their requests.
             **Next:** pick an inspector (queue 2) for an `unassigned` row.
@@ -183,55 +184,79 @@ public static class WorkflowDocs
         [Key<MachineInspectionController>(nameof(MachineInspectionController.SubmitMachine))] = new(9, "Queue 9 · Inspector: submit the machine for review",
             """
             **How:** `POST /quotation-queue/{requestId}/machines/{requestItemId}/submit`, no body. If something is missing the answer is `409` with `code: certificate_incomplete` and a **`problems` array** with one entry per missing item (dates, questionnaire, unanswered checklist rows, notes for `no`) that the app can show as a list. Blank texts get the usual wording (`Satisfactory`, `NONE`, `N/A`).
-            When **every machine** of the job is submitted, the job moves to `certificate_submitted` and appears for the technical manager in `GET /quotation-queue?status=certify`.
+            When **every machine** of the job is submitted, the job moves to `certificate_submitted` and appears for the technical manager in `GET /quotation-queue?status=review`.
             """),
-        [Key<MachineInspectionController>(nameof(MachineInspectionController.ApproveMachine))] = new(10, "Queue 10 · Technical manager: approve a machine",
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.DownloadMachinePdf))] = new(10, "Queue 10 · Inspector and technical manager: see the certificate (PDF)",
             """
-            **Who:** the technical manager or Admin. **How:** `POST /quotation-queue/{requestId}/machines/{requestItemId}/approve`. The body is optional: `{ "signature": "[[0.1,0.2,0.3,0.4]]", "rememberSignature": true }` where `signature` is the hand-drawn signature as a JSON array of strokes (each stroke is x,y numbers between 0 and 1). Without a `signature` the one saved earlier is used, and without any the certificate carries the name only.
-            On approval the certificate gets its number (**`CERT-{year}-{0001...}`**, counting per team and year) and a **QR code** that opens the public check page (the QR is **not printed** on the certificate: it is kept with the issued certificate as `qrUrl` in the client's archive, to be sent to the client separately); the **final PDF is drawn once and filed under the client** (see the client's certificates in Configurations), and the machine's examination dates are written to its record. When every machine is approved the job becomes `certificate_approved`, ready for the coordinator.
+            **When:** any time after the machine was saved, to see exactly how the certificate will look. **Who:** the inspector of the job, the technical manager and Admin; the coordinator once the machine is approved (`409` before).
+            **How:** `GET /quotation-queue/{requestId}/machines/{requestItemId}/pdf`. Marked **DRAFT** until approved; after approval it is the **stored final file**, byte for byte as issued. The QR code is not printed on it (see queue 15).
             """),
-        [Key<MachineInspectionController>(nameof(MachineInspectionController.ReturnMachine))] = new(11, "Queue 11 · Technical manager: send a machine back",
+        [Key<QuotationQueueController>(nameof(QuotationQueueController.ListToReview))] = new(11, "Queue 11 · Technical manager: the jobs to review",
             """
-            **How:** `POST /quotation-queue/{requestId}/machines/{requestItemId}/return` with `{ "note": "what to fix" }` (required). The machine becomes `returned` with the note, the job goes to `certificate_returned`, the inspector edits (queue 8) and submits again (queue 9).
+            **Who:** the technical manager or Admin. **How:** `GET /quotation-queue/to-review` (the same as `GET /quotation-queue?status=review`) lists the jobs whose machines are all submitted (request status `certificate_submitted`), with `certificates` counting the machines. Open one with queue 6 (`canReview` marks the machines to look at) and the PDFs with queue 10.
+            The other parts of `certify` work the same way: `status=returned` (the inspector's jobs sent back to fix), `status=approved` (the coordinator's jobs ready to hand over), `status=delivered`.
             """),
-        [Key<MachineInspectionController>(nameof(MachineInspectionController.DownloadMachinePdf))] = new(12, "Queue 12 · Download a machine's certificate PDF",
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.ApproveAll))] = new(12, "Queue 12 · Technical manager: approve the job",
             """
-            **How:** `GET /quotation-queue/{requestId}/machines/{requestItemId}/pdf`. Marked DRAFT until approved; after approval it is the **stored final file**, byte for byte as issued. The inspector, technical manager and Admin get it at any time; the coordinator once the machine is approved (`409` before).
+            **Who:** the technical manager or Admin. **How:** `POST /quotation-queue/{requestId}/approve-all`. The body is optional: `{ "signature": "[[0.1,0.2,0.3,0.4]]", "rememberSignature": true }` where `signature` is the hand-drawn signature as a JSON array of strokes (each stroke is x,y numbers between 0 and 1). Without a `signature` the one saved earlier is used, and without any the certificate carries the name only.
+            Every machine waiting for review is approved: each certificate gets its number (**`CERT-{year}-{0001...}`**, counting per team and year) and its **QR code**, the **final PDF is drawn once and filed under the client** (see the client's certificates in Configurations), and the machines' examination dates are written to their records. The job becomes `certificate_approved`: it **reaches the coordinator** in `status=approved`, with the certificates and their QR codes (queues 15-18).
+            One machine at a time instead: `POST .../machines/{requestItemId}/approve` (queue 13).
             """),
-        [Key<MachineInspectionController>(nameof(MachineInspectionController.PreviewDelivery))] = new(13, "Queue 13 · Coordinator: preview the email to the client",
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.ApproveMachine))] = new(13, "Queue 13 · Technical manager: approve one machine",
+            "**How:** `POST /quotation-queue/{requestId}/machines/{requestItemId}/approve`, same optional body as queue 12, for one machine. When the last machine is approved the job becomes `certificate_approved`."),
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.ReturnToInspector))] = new(14, "Queue 14 · Technical manager: send the job back to the inspector",
             """
-            **When:** the job is `certificate_approved`. **How:** `GET /quotation-queue/{requestId}/deliver-to-client/preview`. It returns who the email would go to (**the sender of the original request first**, then the client's certificates email), the subject (`Re: ...`, so it stays in the same thread), the suggested text, the attachment names, and `emailEnabled`. When email delivery is switched off `notice` says so and nothing is sent later.
+            **How:** `POST /quotation-queue/{requestId}/return-to-inspector` with `{ "note": "what to fix" }` (required). Every machine waiting for review goes back with the note, or only the ones in `"requestItemIds": ["..."]`; machines already approved stay approved.
+            The job becomes `certificate_returned` and shows for the inspector in `status=returned`. The inspector sees `reviewNote` on each machine (queue 7), fixes it (queue 8) and submits again (queue 9); when everything is submitted again the job is back in `status=review`.
+            One machine at a time: `POST .../machines/{requestItemId}/return` with `{ "note": "..." }` (queue 14b).
             """),
-        [Key<MachineInspectionController>(nameof(MachineInspectionController.DownloadCertificatesZip))] = new(14, "Queue 14 · Download all certificates (ZIP)",
-            "**How:** `GET /quotation-queue/{requestId}/certificates.zip` returns every certificate of the job in one ZIP, for the coordinator, technical manager and Admin once the job is approved."),
-        [Key<MachineInspectionController>(nameof(MachineInspectionController.DeliverToClient))] = new(15, "Queue 15 · Coordinator: hand the certificates to the client",
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.ReturnMachine))] = new(14.5, "Queue 14b · Technical manager: send one machine back",
+            "**How:** `POST /quotation-queue/{requestId}/machines/{requestItemId}/return` with `{ \"note\": \"what to fix\" }` (required). The machine becomes `returned`, the job `certificate_returned`, and the inspector fixes and submits it again."),
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.DownloadMachineQrCode))] = new(15, "Queue 15 · Download a certificate's QR code (PNG)",
+            """
+            **When:** the machine is approved. **How:** `GET /quotation-queue/{requestId}/machines/{requestItemId}/qr.png`. The QR is **not printed on the certificate**; this image is what you send to the client. It opens the public check page that confirms the certificate is genuine.
+            The same QR stays with the certificate in the client's archive (`GET /clients/{clientId}/certificates`, field `qrUrl`, and `.../{id}/qr.png`), so it can be sent again at any time.
+            """),
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.PreviewDelivery))] = new(16, "Queue 16 · Coordinator: preview the email to the client",
+            """
+            **When:** the job is `certificate_approved` (`status=approved`). **How:** `GET /quotation-queue/{requestId}/deliver-to-client/preview`. It returns who the email would go to (**the sender of the original request first**, then the client's certificates email), the subject (`Re: ...`, so it stays in the same thread), the suggested text, the attachment names, and `emailEnabled`. When email delivery is switched off `notice` says so and nothing is sent later.
+            """),
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.DownloadCertificatesZip))] = new(17, "Queue 17 · Coordinator: download all certificates and QR codes (ZIP)",
+            "**How:** `GET /quotation-queue/{requestId}/certificates.zip` returns every certificate PDF of the job and, under `qr/`, the QR code of each one, for the coordinator, technical manager and Admin once the job is approved."),
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.DeliverToClient))] = new(18, "Queue 18 · Coordinator: hand the certificates to the client",
             """
             **When:** the job is `certificate_approved` (every machine approved).
             **How:** `POST /quotation-queue/{requestId}/deliver-to-client`, optional body `{ "sentTo": "someone@client.com", "message": "text of the email" }`. `sentTo` overrides the recipient from the preview and `message` replaces the suggested text.
             - **Email delivery on:** the certificates are emailed as a reply to the original request, from the coordinator's mailbox, with every PDF attached. If the mail server refuses, the answer is `502` and nothing changes, so it can be repeated (never two emails).
             - **Email delivery off (the default for now):** nothing is emailed and nothing fails; the certificates are just marked as handed over.
-            Either way the certificates become `delivered` and the job `sent_to_client`. The answer has `delivery: { emailSent, sentTo, notice }`. **Who:** the owning coordinator, the technical manager or Admin.
+            Either way the certificates become `delivered` and the job `sent_to_client` (`status=delivered`). The answer has `delivery: { emailSent, sentTo, notice }`. **Who:** the owning coordinator, the technical manager or Admin.
             """),
     };
 
     internal static string QueueDescription =>
         """
-        Where an accepted quotation goes next. **One list endpoint, `GET /quotation-queue?status=...`**, returns them by queue; each row carries `queue` too.
+        Where an accepted quotation goes next. **One list endpoint, `GET /quotation-queue?status=...`**, returns them by queue; each row carries `queue` (`unassigned`, `assigned` or `certify`) and `requestStatus`.
 
-        | `status` | Meaning |
-        |---|---|
-        | `unassigned` | Accepted, waiting for an inspector |
-        | `assigned` | Given to an inspector, inspection not finished |
-        | `certify` | Inspection done, certificate on its way |
+        | `status` | Meaning | Who acts next |
+        |---|---|---|
+        | `unassigned` | Accepted, waiting for an inspector | Coordinator |
+        | `assigned` | Given to an inspector, inspection not finished | Inspector |
+        | `certify` | Inspection done, certificate on its way (all four below) | — |
+        | `review` | Every machine submitted | Technical manager |
+        | `returned` | Sent back to fix | Inspector |
+        | `approved` | Every certificate approved, with its QR code | Coordinator |
+        | `delivered` | Handed to the client | — |
 
         1. **List** the queue you need. 2. **Pick an inspector** (`GET /inspectors`) and 3. **assign** the job (`POST /requests/{id}/assignment`). The coordinator that owns the quotation keeps full access and can hand the job to another inspector until the work starts.
         The inspector sees only their own jobs, without prices, and can **change the inspection date** (4), nothing else.
 
-        **Inspection and certificates (steps 5-13), per machine of the job:**
-        5. The inspector **starts the inspection**; 6. sees the **machines**; 7. **opens** one (the form of that kind of machine); 8. **saves** it as often as needed; 9. **submits** it. When every machine is submitted the job reaches the technical manager (`status=certify`).
-        10. The technical manager **approves** each machine or 11. **sends it back** with a note; the inspector fixes it and submits again.
-        12. The PDF of each certificate (final and stored once approved); 13-15. once everything is approved the **coordinator** previews the email, downloads the ZIP and **hands the certificates to the client** (emailed as a reply to the original request when email delivery is on).
-        Each machine's certificate status is `not_started`, `draft`, `submitted`, `returned`, `approved` or `delivered`. Each certificate's QR code (kept in the client's archive, not printed on the PDF) opens a public page that confirms it is genuine.
+        **Inspector (steps 5-10):** 5. **start** the inspection; 6. see the **machines**; 7. **open** one (the form of that kind of machine); 8. **save** it as often as needed; 9. **submit** it; 10. see the **certificate PDF** (marked DRAFT) at any time. When every machine is submitted the job goes to the technical manager (`status=review`).
+
+        **Technical manager (steps 10-14):** 11. list the jobs **to review** (`GET /quotation-queue/to-review`); 10. look at the certificates; then either 12. **approve the job** (or 13. one machine): numbers, QR codes and final PDFs are made and filed under the client, and the job goes to the coordinator (`status=approved`); or 14. **send the job back** to the inspector with a note (or 14b. one machine): it shows for the inspector in `status=returned`, who fixes and submits again.
+
+        **Coordinator (steps 15-18):** 15. the **QR code** of each certificate (not printed on the PDF; it is sent to the client); 16. **preview** the email, 17. download the **ZIP** (certificates and QR codes) and 18. **hand the certificates to the client**. Every certificate stays in the client's archive with its QR code (Configurations: the client's certificates).
+
+        Each machine's certificate status is `not_started`, `draft`, `submitted`, `returned`, `approved` or `delivered`.
         """;
 
     /// <summary>Admin-only client management, kept apart for testing.</summary>
@@ -299,6 +324,8 @@ public static class WorkflowDocs
             "**How:** `GET /clients/{clientId}/certificates` lists the certificates issued for the client, newest first (number, item, examination and next examination dates, SHA-256 of the PDF). A certificate is filed here when the technical manager approves it."),
         [Key<ClientCertificatesController>(nameof(ClientCertificatesController.DownloadPdf))] = new(19.5, "Extra · Download an issued certificate",
             "**How:** `GET /clients/{clientId}/certificates/{certificateFileId}/pdf` returns the PDF exactly as it was issued."),
+        [Key<ClientCertificatesController>(nameof(ClientCertificatesController.DownloadQrCode))] = new(19.6, "Extra · Download an issued certificate's QR code",
+            "**How:** `GET /clients/{clientId}/certificates/{certificateFileId}/qr.png` returns the certificate's QR code (not printed on the PDF) to send to the client; it opens the public check page (`qrUrl` in the list)."),
         [Key<ClientsController>(nameof(ClientsController.GetHistory))] = new(20, "Extra · Client history",
             "**How:** `GET /clients/{clientId}/history` returns the client's previous requests with their certificates."),
         [Key<ClientsController>(nameof(ClientsController.Archive))] = new(21, "Extra · Archive a client",

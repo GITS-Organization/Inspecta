@@ -174,6 +174,17 @@ public sealed record ReturnMachineRequest
     public string Note { get; init; } = string.Empty;
 }
 
+/// <summary>The technical manager sends a job back to the inspector.</summary>
+public sealed record ReturnJobRequest
+{
+    /// <summary>What to fix; shown to the inspector on every machine sent back.</summary>
+    [Required, MaxLength(4000)]
+    public string Note { get; init; } = string.Empty;
+
+    /// <summary>Only these machines (<c>requestItemId</c>); leave out to send back every machine waiting for review.</summary>
+    public IReadOnlyList<Guid>? RequestItemIds { get; init; }
+}
+
 /// <summary>Optional details when the coordinator hands the certificates to the client.</summary>
 public sealed record DeliverCertificatesRequest
 {

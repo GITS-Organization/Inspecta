@@ -23,13 +23,15 @@ public sealed class QuotationQueueController(IQuoteService quoteService, IInspec
     /// - <c>unassigned</c>: accepted, waiting for the coordinator to give the job to an inspector (request status <c>unassigned</c>).
     /// - <c>assigned</c>: given to an inspector whose inspection is not finished (request status <c>assigned</c>, <c>task_accepted</c> or <c>in_progress</c>).
     /// - <c>certify</c>: inspection done, the certificate is being prepared, reviewed or sent (request status <c>certificate_submitted</c>, <c>certificate_returned</c>, <c>certificate_approved</c> or <c>sent_to_client</c>).
+    ///   Narrow it to the jobs waiting on one person with <c>review</c> (technical manager: every machine submitted),
+    ///   <c>returned</c> (inspector: sent back to fix), <c>approved</c> (coordinator: ready to hand over) or <c>delivered</c>.
     /// Leave <c>status</c> out to get all of them; every row says which queue it is in with <c>queue</c>. A coordinator
     /// sees their own email requests and the team's manual ones; a manager sees their team; Admin sees everything (narrow
     /// it with <c>managerId</c>). An inspector only gets their own jobs, without prices, so <c>unassigned</c> is always empty
     /// for them. <c>inspectorId</c> narrows to the jobs of one inspector. <c>q</c> searches client, quotation number and
     /// location. <c>pageSize</c> defaults to 50 (max 100). Every row has <c>requestId</c> for the next calls.
     /// </remarks>
-    /// <param name="status">Which queue: <c>unassigned</c>, <c>assigned</c> or <c>certify</c>. Leave out for all.</param>
+    /// <param name="status">Which queue: <c>unassigned</c>, <c>assigned</c>, <c>certify</c>, or one part of certify: <c>review</c>, <c>returned</c>, <c>approved</c>, <c>delivered</c>. Leave out for all.</param>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<QuoteSummaryResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -48,12 +50,34 @@ public sealed class QuotationQueueController(IQuoteService quoteService, IInspec
         if (!string.IsNullOrWhiteSpace(status))
         {
             if (!Enum.TryParse<QuotationQueue>(status.Trim(), ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed))
-                return BadRequest(new ProblemDetails { Title = "status must be 'unassigned', 'assigned' or 'certify'." });
+                return BadRequest(new ProblemDetails { Title = "status must be 'unassigned', 'assigned', 'certify', 'review', 'returned', 'approved' or 'delivered'." });
             queue = parsed;
         }
 
         var query = new QuotationQueueQuery(managerId, inspectorId, q, page, pageSize);
         return Ok(await quoteService.ListQueueAsync(actorId, role, queue, query, cancellationToken));
+    }
+
+    /// <summary>The technical manager's work: jobs whose machines are all submitted and wait for review.</summary>
+    /// <remarks>
+    /// The same rows as <c>GET /quotation-queue?status=review</c> (request status <c>certificate_submitted</c>), for the technical
+    /// manager and Admin. Open a job with <c>GET /quotation-queue/{requestId}/machines</c>.
+    /// </remarks>
+    [HttpGet("to-review")]
+    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
+    [ProducesResponseType<IReadOnlyList<QuoteSummaryResponse>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<QuoteSummaryResponse>>> ListToReview(
+        [FromQuery] Guid? managerId,
+        [FromQuery] Guid? inspectorId,
+        [FromQuery] string? q,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = QuoteListQuery.DefaultPageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var role = User.FindFirst("role")?.Value ?? string.Empty;
+        if (!Guid.TryParse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value, out var actorId)) return Unauthorized();
+        var query = new QuotationQueueQuery(managerId, inspectorId, q, page, pageSize);
+        return Ok(await quoteService.ListQueueAsync(actorId, role, QuotationQueue.Review, query, cancellationToken));
     }
 
     /// <summary>Move the inspection to another date. The only change an inspector can make to a job.</summary>

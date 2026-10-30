@@ -49,6 +49,15 @@ public sealed class QuotationQueueTests
         fixture.Request.TransitionTo(JobStatus.CertificateSubmitted, fixture.Karim.Id);
         Assert.Equal(QuotationQueue.Certify, Assert.Single(await fixture.Quotes.Service.ListQueueAsync(
             CoordinatorId, "coordinator", null, new QuotationQueueQuery())).Queue);
+
+        // The parts of certify narrow it to who acts next; the row keeps saying certify.
+        Assert.Equal(QuotationQueue.Certify, Assert.Single(await fixture.QueueAsync(CoordinatorId, "coordinator", QuotationQueue.Review)).Queue);
+        Assert.Single(await fixture.QueueAsync(CoordinatorId, "coordinator", QuotationQueue.Certify));
+        Assert.Empty(await fixture.QueueAsync(CoordinatorId, "coordinator", QuotationQueue.Returned));
+        Assert.Empty(await fixture.QueueAsync(CoordinatorId, "coordinator", QuotationQueue.Approved));
+        fixture.Request.TransitionTo(JobStatus.CertificateReturned, CoordinatorId);
+        Assert.Single(await fixture.QueueAsync(CoordinatorId, "coordinator", QuotationQueue.Returned));
+        Assert.Empty(await fixture.QueueAsync(CoordinatorId, "coordinator", QuotationQueue.Review));
     }
 
     [Fact]
@@ -258,8 +267,18 @@ public sealed class QuotationQueueTests
     {
         var afterAcceptance = Enum.GetValues<JobStatus>().Where(status => status >= JobStatus.Unassigned);
 
+        QuotationQueue[] main = [QuotationQueue.Unassigned, QuotationQueue.Assigned, QuotationQueue.Certify];
+        QuotationQueue[] partsOfCertify = [QuotationQueue.Review, QuotationQueue.Returned, QuotationQueue.Approved, QuotationQueue.Delivered];
         foreach (var status in afterAcceptance)
-            Assert.Equal(1, Enum.GetValues<QuotationQueue>().Count(queue => QuotationQueues.Statuses(queue).Contains(status)));
+        {
+            Assert.Equal(1, main.Count(queue => QuotationQueues.Statuses(queue).Contains(status)));
+            Assert.Contains(status, QuotationQueues.AllStatuses);
+            Assert.NotNull(QuotationQueues.Of(status));
+        }
+
+        // Review, returned, approved and delivered split certify into one status each, with nothing left out.
+        Assert.Equal(QuotationQueues.Statuses(QuotationQueue.Certify).Order(), partsOfCertify.SelectMany(QuotationQueues.Statuses).Order());
+        Assert.All(partsOfCertify, queue => Assert.Single(QuotationQueues.Statuses(queue)));
         foreach (var status in Enum.GetValues<JobStatus>().Where(status => status < JobStatus.Unassigned))
             Assert.Null(QuotationQueues.Of(status));
     }

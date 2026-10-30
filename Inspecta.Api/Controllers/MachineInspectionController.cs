@@ -109,6 +109,57 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
         return Ok(await inspectionService.ReturnAsync(requestId, requestItemId, actorId, role, request.Note, cancellationToken));
     }
 
+    /// <summary>Approve every machine of the job that is waiting for review (technical manager).</summary>
+    /// <remarks>
+    /// Same as approving each machine: every certificate gets its number, QR code and final PDF, filed under the client. Optional body:
+    /// <c>signature</c> and <c>rememberSignature</c>. When every machine is approved the job is <c>certificate_approved</c> and reaches the coordinator.
+    /// </remarks>
+    [HttpPost("approve-all")]
+    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
+    [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<MachineListResponse>> ApproveAll(
+        Guid requestId, ApproveMachineRequest? request, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await inspectionService.ApproveAllAsync(requestId, actorId, role, request, cancellationToken));
+    }
+
+    /// <summary>Send the job back to the inspector with a note (technical manager).</summary>
+    /// <remarks>
+    /// Every machine waiting for review is sent back, or only those in <c>requestItemIds</c>; machines already approved stay approved.
+    /// The job becomes <c>certificate_returned</c>, the inspector fixes the machines and submits them again.
+    /// </remarks>
+    [HttpPost("return-to-inspector")]
+    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
+    [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<MachineListResponse>> ReturnToInspector(
+        Guid requestId, ReturnJobRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await inspectionService.ReturnToInspectorAsync(requestId, actorId, role, request, cancellationToken));
+    }
+
+    /// <summary>Download the QR code of an approved machine certificate as a PNG.</summary>
+    /// <remarks>The QR is not printed on the certificate; it is sent to the client separately and opens the public check page.</remarks>
+    [HttpGet("machines/{requestItemId:guid}/qr.png")]
+    [Produces("image/png")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DownloadMachineQrCode(Guid requestId, Guid requestItemId, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        var file = await inspectionService.GetQrCodeAsync(requestId, requestItemId, actorId, role, cancellationToken);
+        return File(file.Content, file.ContentType, file.FileName);
+    }
+
     /// <summary>Download a machine's certificate as PDF.</summary>
     /// <remarks>
     /// Marked DRAFT until it is approved. The inspector sees it at any time, the technical manager and Admin too, and the

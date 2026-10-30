@@ -149,16 +149,16 @@ public sealed class CertificateDeliveryService(
     }
 
     /// <summary>All the PDFs of a job in one ZIP.</summary>
-    public static byte[] Zip(IEnumerable<IssuedCertificateFile> files)
+    public static byte[] Zip(IEnumerable<IssuedCertificateFile> files, IEnumerable<(string Name, byte[] Content)>? extras = null)
     {
         using var stream = new MemoryStream();
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
         {
-            foreach (var file in files)
+            foreach (var (name, content) in files.Select(file => (file.FileName, file.Content)).Concat(extras ?? []))
             {
-                var entry = archive.CreateEntry(file.FileName, CompressionLevel.Optimal);
+                var entry = archive.CreateEntry(name, CompressionLevel.Optimal);
                 using var entryStream = entry.Open();
-                entryStream.Write(file.Content);
+                entryStream.Write(content);
             }
         }
 

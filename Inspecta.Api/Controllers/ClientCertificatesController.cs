@@ -34,4 +34,16 @@ public sealed class ClientCertificatesController(ClientCertificateService certif
         var file = await certificates.GetPdfAsync(clientId, certificateFileId, cancellationToken);
         return File(file.Content, PdfFile.ContentType, file.FileName);
     }
+
+    /// <summary>Download the QR code of an issued certificate as a PNG.</summary>
+    /// <remarks>The QR is not printed on the certificate; send this image to the client. It opens the public check page (<c>qrUrl</c> of the list).</remarks>
+    [HttpGet("{certificateFileId:guid}/qr.png")]
+    [Produces("image/png")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DownloadQrCode(Guid clientId, Guid certificateFileId, CancellationToken cancellationToken)
+    {
+        var file = await certificates.GetQrCodeAsync(clientId, certificateFileId, cancellationToken);
+        return File(file.Content, file.ContentType, file.FileName);
+    }
 }

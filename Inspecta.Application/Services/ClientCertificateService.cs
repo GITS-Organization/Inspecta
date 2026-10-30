@@ -7,7 +7,8 @@ namespace Inspecta.Application.Services;
 /// <summary>The certificates filed under a client, and the public check behind a certificate's QR code.</summary>
 public sealed class ClientCertificateService(
     IClientRepository clientRepository,
-    ICertificateFileRepository certificateFiles)
+    ICertificateFileRepository certificateFiles,
+    IQrCodeRenderer? qrCodes = null)
 {
     public const string Issuer = "Integrity International Inspection";
 
@@ -27,6 +28,16 @@ public sealed class ClientCertificateService(
         var file = await certificateFiles.GetForClientAsync(clientId, fileId, cancellationToken)
             ?? throw new KeyNotFoundException("Certificate was not found.");
         return new PdfFile(file.Content, file.FileName);
+    }
+
+    /// <summary>The QR code of an issued certificate as a PNG, to send to the client; it is not printed on the PDF.</summary>
+    public async Task<DownloadFile> GetQrCodeAsync(Guid clientId, Guid fileId, CancellationToken cancellationToken = default)
+    {
+        var file = await certificateFiles.GetForClientAsync(clientId, fileId, cancellationToken)
+            ?? throw new KeyNotFoundException("Certificate was not found.");
+        if (string.IsNullOrWhiteSpace(file.QrData) || qrCodes is null)
+            throw new KeyNotFoundException("This certificate has no QR code.");
+        return new DownloadFile(qrCodes.RenderPng(file.QrData), $"qr-{file.CertificateNumber}.png", "image/png");
     }
 
     /// <summary>

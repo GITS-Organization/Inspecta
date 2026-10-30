@@ -101,7 +101,7 @@ public sealed class QuoteService(
             Take: pageSize,
             RequestStatuses: queue is { } one
                 ? QuotationQueues.Statuses(one)
-                : Enum.GetValues<QuotationQueue>().SelectMany(QuotationQueues.Statuses).ToArray());
+                : QuotationQueues.AllStatuses);
         return await ListSummariesAsync(filter, actorId, role, cancellationToken);
     }
 

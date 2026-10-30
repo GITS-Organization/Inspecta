@@ -24,6 +24,15 @@ public interface IMachineInspectionService
 
     Task<MachineFormResponse> ReturnAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, string note, CancellationToken cancellationToken = default);
 
+    /// <summary>Approves every machine of the job that is waiting for review.</summary>
+    Task<MachineListResponse> ApproveAllAsync(Guid requestId, Guid actorId, string role, ApproveMachineRequest? approval = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Sends the machines waiting for review (all, or the ones named) back to the inspector with a note.</summary>
+    Task<MachineListResponse> ReturnToInspectorAsync(Guid requestId, Guid actorId, string role, ReturnJobRequest returned, CancellationToken cancellationToken = default);
+
+    /// <summary>The QR code of an approved certificate as a PNG.</summary>
+    Task<DownloadFile> GetQrCodeAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, CancellationToken cancellationToken = default);
+
     Task<PdfFile> GetPdfAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, CancellationToken cancellationToken = default);
 
     Task<MachineListResponse> DeliverAsync(Guid requestId, Guid actorId, string role, DeliverCertificatesRequest request, CancellationToken cancellationToken = default);

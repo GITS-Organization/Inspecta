@@ -18,7 +18,8 @@ public sealed class MachineInspectionService(
     IPdfGenerator pdfGenerator,
     ICertificateFileRepository certificateFiles,
     CertificateOptions? options = null,
-    CertificateDeliveryService? deliveryService = null) : IMachineInspectionService
+    CertificateDeliveryService? deliveryService = null,
+    IQrCodeRenderer? qrCodes = null) : IMachineInspectionService
 {
     private const int MaxTextLength = 4000;
 
@@ -246,7 +247,71 @@ public sealed class MachineInspectionService(
         return await BuildFormAsync(request, item, certificate, actorId, role, cancellationToken);
     }
 
-    // ---- PDF and delivery ---------------------------------------------------------------------------------------
+    /// <summary>Approves every machine of the job that is waiting for review, one after the other.</summary>
+    public async Task<MachineListResponse> ApproveAllAsync(
+        Guid requestId, Guid actorId, string role, ApproveMachineRequest? approval = null, CancellationToken cancellationToken = default)
+    {
+        EnsureReviewer(role);
+        var request = await LoadAsync(requestId, actorId, role, tracking: false, cancellationToken);
+        EnsureUnderReview(request);
+        var waiting = WaitingForReview(request);
+        if (waiting.Count == 0)
+            throw new AuthException("nothing_to_review", "No certificate of this job is waiting for review.", 409);
+
+        // Each machine gets its own number, PDF and save: if one fails the others stay approved and calling again finishes the rest.
+        foreach (var requestItemId in waiting)
+            await ApproveAsync(requestId, requestItemId, actorId, role, approval, cancellationToken);
+        return await ListMachinesAsync(requestId, actorId, role, cancellationToken);
+    }
+
+    /// <summary>Sends the job back to the inspector: every machine waiting for review, or only the ones named, with the same note.</summary>
+    public async Task<MachineListResponse> ReturnToInspectorAsync(
+        Guid requestId, Guid actorId, string role, ReturnJobRequest returned, CancellationToken cancellationToken = default)
+    {
+        EnsureReviewer(role);
+        if (string.IsNullOrWhiteSpace(returned.Note)) throw new ArgumentException("A note explaining what to fix is required.", nameof(returned));
+        var request = await LoadAsync(requestId, actorId, role, tracking: false, cancellationToken);
+        EnsureUnderReview(request);
+        var waiting = WaitingForReview(request);
+        var chosen = returned.RequestItemIds is { Count: > 0 } ids ? ids.Distinct().ToArray() : waiting.ToArray();
+        foreach (var requestItemId in chosen)
+        {
+            FindItem(request, requestItemId);
+            if (!waiting.Contains(requestItemId))
+                throw new AuthException("not_submitted", "Only machines waiting for review can be sent back.", 409);
+        }
+
+        if (chosen.Length == 0)
+            throw new AuthException("nothing_to_review", "No certificate of this job is waiting for review.", 409);
+        foreach (var requestItemId in chosen)
+            await ReturnAsync(requestId, requestItemId, actorId, role, returned.Note, cancellationToken);
+        return await ListMachinesAsync(requestId, actorId, role, cancellationToken);
+    }
+
+    private static IReadOnlyList<Guid> WaitingForReview(InspectionRequest request) =>
+        request.Items
+            .Where(item => StatusOf(request.Certificates.SingleOrDefault(value => value.RequestItemId == item.Id)) == MachineStatus.Submitted)
+            .Select(item => item.Id)
+            .ToArray();
+
+    // ---- PDF, QR and delivery -----------------------------------------------------------------------------------
+
+    /// <summary>The QR code of an approved certificate as a PNG, to send to the client; it is not printed on the PDF.</summary>
+    public async Task<DownloadFile> GetQrCodeAsync(
+        Guid requestId, Guid requestItemId, Guid actorId, string role, CancellationToken cancellationToken = default)
+    {
+        var request = await LoadAsync(requestId, actorId, role, tracking: false, cancellationToken);
+        FindItem(request, requestItemId);
+        var certificate = request.Certificates.SingleOrDefault(value => value.RequestItemId == requestItemId)
+            ?? throw new KeyNotFoundException("Certificate was not found.");
+        if (!certificate.IsApproved || string.IsNullOrWhiteSpace(certificate.QrData))
+            throw new AuthException("not_approved", "A certificate gets its QR code when it is approved.", 409);
+        return QrFile(certificate.QrData, certificate.CertificateNumber);
+    }
+
+    private DownloadFile QrFile(string qrData, string? certificateNumber) =>
+        new((qrCodes ?? throw new InvalidOperationException("QR codes are not available.")).RenderPng(qrData),
+            $"qr-{SafeName(certificateNumber ?? "certificate")}.png", "image/png");
 
     public async Task<PdfFile> GetPdfAsync(
         Guid requestId, Guid requestItemId, Guid actorId, string role, CancellationToken cancellationToken = default)
@@ -320,7 +385,13 @@ public sealed class MachineInspectionService(
         var request = await LoadDeliverableAsync(requestId, actorId, role, cancellationToken);
         var files = await certificateFiles.ListForRequestAsync(request.Id, cancellationToken);
         if (files.Count == 0) throw new KeyNotFoundException("The job has no issued certificates.");
-        return new DownloadFile(CertificateDeliveryService.Zip(files), $"certificates-{SafeName(request.ClientName)}.zip", "application/zip");
+        // Each certificate's QR code goes next to the PDFs, under qr/.
+        var qrImages = qrCodes is null
+            ? []
+            : files.Where(file => !string.IsNullOrWhiteSpace(file.QrData))
+                .Select(file => ($"qr/{Path.GetFileNameWithoutExtension(file.FileName)}.png", qrCodes.RenderPng(file.QrData!)))
+                .ToArray();
+        return new DownloadFile(CertificateDeliveryService.Zip(files, qrImages), $"certificates-{SafeName(request.ClientName)}.zip", "application/zip");
     }
 
     // The job's approved certificates are for the coordinator side (owner, technical manager, Admin) once every machine is approved.

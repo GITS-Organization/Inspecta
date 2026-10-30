@@ -430,6 +430,72 @@ public sealed class MachineInspectionTests : IDisposable
     }
 
     [Fact]
+    public async Task TheManagerSendsTheJobBackThenApprovesItWholeAndTheQrCodesGoWithTheCertificates()
+    {
+        await Start();
+        foreach (var (item, key) in new[] { (forkliftItemId, "forklift"), (chainItemId, "basic") })
+        {
+            await Run(service => service.SaveFormAsync(requestId, item, inspector.Id, "inspector", CompleteForm(key)));
+            await Run(service => service.SubmitAsync(requestId, item, inspector.Id, "inspector"));
+        }
+
+        // The inspector sees the certificate as it will look, and cannot review it.
+        Assert.Equal("%PDF-", Encoding.ASCII.GetString((await Run(service => service.GetPdfAsync(requestId, forkliftItemId, inspector.Id, "inspector"))).Content, 0, 5));
+        Assert.Equal(403, (await Assert.ThrowsAsync<AuthException>(() => Run(service => service.ApproveAllAsync(requestId, inspector.Id, "inspector")))).StatusCode);
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.ReturnToInspectorAsync(requestId, manager.Id, "technical_manager", new ReturnJobRequest())));
+
+        var returned = await Run(service => service.ReturnToInspectorAsync(requestId, manager.Id, "technical_manager", new ReturnJobRequest { Note = "Check the dates" }));
+        Assert.Equal(JobStatus.CertificateReturned, returned.RequestStatus);
+        Assert.All(returned.Machines, machine => Assert.Equal(MachineStatus.Returned, machine.Status));
+        Assert.All(returned.Machines, machine => Assert.Equal("Check the dates", machine.ReviewNote));
+        Assert.Equal(409, (await Assert.ThrowsAsync<AuthException>(() => Run(service => service.ApproveAllAsync(requestId, manager.Id, "technical_manager")))).StatusCode);
+
+        foreach (var item in new[] { forkliftItemId, chainItemId })
+            await Run(service => service.SubmitAsync(requestId, item, inspector.Id, "inspector"));
+        var approved = await Run(service => service.ApproveAllAsync(requestId, manager.Id, "technical_manager"));
+        Assert.Equal(JobStatus.CertificateApproved, approved.RequestStatus);
+        Assert.All(approved.Machines, machine => Assert.Equal(MachineStatus.Approved, machine.Status));
+        Assert.True(approved.CanDeliver);
+
+        var qr = await Run(service => service.GetQrCodeAsync(requestId, forkliftItemId, coordinator.Id, "coordinator"));
+        Assert.Equal("image/png", qr.ContentType);
+        Assert.Equal([0x89, 0x50, 0x4E, 0x47], qr.Content.Take(4).ToArray());
+
+        var zip = await Run(service => service.GetCertificatesZipAsync(requestId, coordinator.Id, "coordinator"));
+        using var archive = new System.IO.Compression.ZipArchive(new MemoryStream(zip.Content));
+        Assert.Equal(2, archive.Entries.Count(entry => entry.FullName.EndsWith(".pdf", StringComparison.Ordinal)));
+        Assert.Equal(2, archive.Entries.Count(entry => entry.FullName.StartsWith("qr/", StringComparison.Ordinal)));
+
+        await using var db = CreateContext();
+        var file = db.IssuedCertificateFiles.AsNoTracking().First();
+        var archived = await new ClientCertificateService(new EfClientRepository(db), new EfCertificateFileRepository(db), new Inspecta.Infrastructure.Services.QrCodeRenderer())
+            .GetQrCodeAsync(clientId, file.Id);
+        Assert.Equal("image/png", archived.ContentType);
+    }
+
+    [Fact]
+    public async Task OnlyMachinesWaitingForReviewCanBeSentBack()
+    {
+        await Start();
+        foreach (var (item, key) in new[] { (forkliftItemId, "forklift"), (chainItemId, "basic") })
+        {
+            await Run(service => service.SaveFormAsync(requestId, item, inspector.Id, "inspector", CompleteForm(key)));
+            await Run(service => service.SubmitAsync(requestId, item, inspector.Id, "inspector"));
+        }
+
+        await Run(service => service.ApproveAsync(requestId, forkliftItemId, manager.Id, "technical_manager"));
+        var refused = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.ReturnToInspectorAsync(
+            requestId, manager.Id, "technical_manager", new ReturnJobRequest { Note = "Fix", RequestItemIds = [forkliftItemId] })));
+        Assert.Equal("not_submitted", refused.Code);
+
+        var list = await Run(service => service.ReturnToInspectorAsync(
+            requestId, manager.Id, "technical_manager", new ReturnJobRequest { Note = "Fix the SWL", RequestItemIds = [chainItemId] }));
+        Assert.Equal(MachineStatus.Approved, list.Machines.Single(machine => machine.RequestItemId == forkliftItemId).Status);
+        Assert.Equal(MachineStatus.Returned, list.Machines.Single(machine => machine.RequestItemId == chainItemId).Status);
+        Assert.Equal(JobStatus.CertificateReturned, list.RequestStatus);
+    }
+
+    [Fact]
     public async Task CertificateNumbersCountUpPerTeamAndYear()
     {
         await using var db = CreateContext();
@@ -594,7 +660,8 @@ public sealed class MachineInspectionTests : IDisposable
             new EfEquipmentRepository(db),
             new EfClientRepository(db),
             pdfServices.GetRequiredService<IPdfGenerator>(),
-            new EfCertificateFileRepository(db));
+            new EfCertificateFileRepository(db),
+            qrCodes: new Inspecta.Infrastructure.Services.QrCodeRenderer());
         return await action(service);
     }
 
