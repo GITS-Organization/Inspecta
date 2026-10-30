@@ -100,9 +100,10 @@ public sealed class QuotationQueueController(IQuoteService quoteService, IInspec
         var role = User.FindFirst("role")?.Value ?? string.Empty;
         if (!Guid.TryParse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value, out var actorId)) return Unauthorized();
         return Ok(await requestService.ChangeInspectionDateAsync(
-            requestId, actorId, role, request.ScheduledAt, request.Note, cancellationToken));
+            requestId, actorId, role, request.ScheduledAt!.Value, request.Note, cancellationToken));
     }
 }
 
 /// <summary>The new date of an inspection.</summary>
-public sealed record ChangeInspectionDateRequest([property: Required] DateTimeOffset ScheduledAt, string? Note);
+// The attribute goes on the constructor parameter: MVC refuses validation attributes on a positional record's property.
+public sealed record ChangeInspectionDateRequest([Required] DateTimeOffset? ScheduledAt, string? Note);
