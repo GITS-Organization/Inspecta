@@ -110,6 +110,19 @@ public sealed class ClientService(
         await clientRepository.SaveAsync(cancellationToken);
     }
 
+    public async Task DeleteAsync(Guid clientId, CancellationToken cancellationToken = default)
+    {
+        var client = await clientRepository.GetByIdAsync(clientId, tracking: true, cancellationToken)
+            ?? throw new KeyNotFoundException("Client was not found.");
+        var (requests, items) = await clientRepository.CountDependenciesAsync(clientId, cancellationToken);
+        if (requests > 0 || items > 0)
+            throw new Exceptions.AuthException(
+                "client_in_use",
+                $"The client has {requests} request(s) and {items} item(s), so it cannot be deleted for good. Archive it instead.",
+                409);
+        await clientRepository.RemoveAsync(client, cancellationToken);
+    }
+
     private static ClientResponse Map(Client client) => new(
         client.Id,
         client.Name,

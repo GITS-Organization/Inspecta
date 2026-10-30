@@ -183,6 +183,11 @@ public sealed class CertificateHistoryTests
             Task.FromResult<IReadOnlyList<InspectionRequest>>(
                 request.ClientId == clientId ? [request] : []);
 
+        public Task<(int Requests, int Items)> CountDependenciesAsync(Guid clientId, CancellationToken cancellationToken = default) =>
+            Task.FromResult((request.ClientId == clientId ? 1 : 0, 0));
+
+        public Task RemoveAsync(Client value, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
         public Task SaveAsync(CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
     }

@@ -380,3 +380,28 @@ Content-Type: application/json
   "scheduledAt": "2026-11-05T09:00:00Z",
   "note": "The site is closed that day"
 }
+
+### Admin: add a client to a team (managerId is the technical manager of that team)
+POST {{baseUrl}}/api/v1/admin/clients
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "managerId": "{{managerId}}",
+  "name": "Test client",
+  "isCompany": true,
+  "location": "Cairo",
+  "certificatesEmail": "certificates@test-client.com",
+  "contacts": [ { "name": "Test Contact", "email": "contact@test-client.com", "isPrimary": true } ]
+}
+
+### Admin: change a client
+PUT {{baseUrl}}/api/v1/admin/clients/{{clientId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Test client (renamed)" }
+
+### Admin: archive a client (default) or delete it for good with ?permanent=true
+DELETE {{baseUrl}}/api/v1/admin/clients/{{clientId}}?permanent=true
+Authorization: Bearer {{token}}

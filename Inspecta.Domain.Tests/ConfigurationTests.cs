@@ -149,6 +149,48 @@ public sealed class ConfigurationTests : IDisposable
             created.Id, new SaveEquipmentRequest { ClientId = Guid.NewGuid(), Name = "Crane" }));
     }
 
+    [Fact]
+    public async Task AClientNothingUsesCanBeDeletedForGoodWithItsContacts()
+    {
+        var clientId = await CreateClientAsync();
+        await using var db = CreateContext();
+
+        await new ClientService(new EfClientRepository(db), new EfUserRepository(db)).DeleteAsync(clientId);
+
+        await using var check = CreateContext();
+        Assert.Null(await new ClientService(new EfClientRepository(check), new EfUserRepository(check)).GetByIdAsync(clientId));
+        Assert.Empty(check.ClientContacts.IgnoreQueryFilters().ToList());
+    }
+
+    [Fact]
+    public async Task AClientWithItemsCannotBeDeletedForGoodButCanBeArchived()
+    {
+        var clientId = await CreateClientAsync();
+        await using (var db = CreateContext())
+            await new EquipmentService(new EfEquipmentRepository(db)).CreateAsync(new SaveEquipmentRequest { ClientId = clientId, Name = "Crane" });
+
+        await using var attempt = CreateContext();
+        var service = new ClientService(new EfClientRepository(attempt), new EfUserRepository(attempt));
+        var refused = await Assert.ThrowsAsync<Inspecta.Application.Exceptions.AuthException>(() => service.DeleteAsync(clientId));
+        Assert.Equal("client_in_use", refused.Code);
+        Assert.Equal(409, refused.StatusCode);
+        Assert.Contains("1 item(s)", refused.Message);
+        Assert.NotNull(await service.GetByIdAsync(clientId));
+
+        await service.ArchiveAsync(clientId);
+        await using var check = CreateContext();
+        Assert.NotNull((await new ClientService(new EfClientRepository(check), new EfUserRepository(check)).GetByIdAsync(clientId))!.ArchivedAt);
+    }
+
+    [Fact]
+    public async Task DeletingAnUnknownClientIsNotFound()
+    {
+        await using var db = CreateContext();
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            new ClientService(new EfClientRepository(db), new EfUserRepository(db)).DeleteAsync(Guid.NewGuid()));
+    }
+
     private async Task<Guid> CreateClientAsync()
     {
         await using var db = CreateContext();

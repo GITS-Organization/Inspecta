@@ -224,6 +224,34 @@ public static class WorkflowDocs
         Each machine's certificate status is `not_started`, `draft`, `submitted`, `returned`, `approved` or `delivered`. The QR code on the certificate is added in a later step.
         """;
 
+    /// <summary>Admin-only client management, kept apart for testing.</summary>
+    public const string TalabatTag = "talabat 3rfa";
+
+    private static readonly Dictionary<string, Step> TalabatSteps = new()
+    {
+        [Key<AdminClientsController>(nameof(AdminClientsController.Create))] = new(1, "Admin 1 · Add a client",
+            """
+            **Who:** Admin only. **How:** `POST /admin/clients` with the client fields and the `contacts` (same body as setup 1) plus **`managerId`**, the technical manager whose team the client belongs to (required).
+            """),
+        [Key<AdminClientsController>(nameof(AdminClientsController.List))] = new(2, "Admin 2 · List the clients of every team",
+            "**How:** `GET /admin/clients` returns the clients of all teams by name; `includeArchived=true` also returns archived ones."),
+        [Key<AdminClientsController>(nameof(AdminClientsController.Get))] = new(3, "Admin 3 · Open a client",
+            "**How:** `GET /admin/clients/{clientId}` returns the client with its contacts."),
+        [Key<AdminClientsController>(nameof(AdminClientsController.Update))] = new(4, "Admin 4 · Change a client and its contacts",
+            "**How:** `PUT /admin/clients/{clientId}` with the profile fields. Add `contacts` to change them: a contact with an `id` is edited, one without is added, one left out is removed. Leave `contacts` out to keep them."),
+        [Key<AdminClientsController>(nameof(AdminClientsController.Delete))] = new(5, "Admin 5 · Archive or delete a client",
+            """
+            **How:** `DELETE /admin/clients/{clientId}`.
+            - Default (`permanent=false`): the client is **archived**: it leaves the lists and can no longer be edited.
+            - `permanent=true`: the client and its contacts are **deleted for good**. Refused with `409 client_in_use` while requests or registered items still use the client; archive it instead.
+            """),
+    };
+
+    internal static string TalabatDescription =>
+        """
+        Admin-only shortcuts for managing clients of any team while testing: add (with the team's `managerId`), list, open, change, and archive or delete. Technical managers keep using the same actions for their own team under **Configurations**.
+        """;
+
     /// <summary>The setup section: clients with their contacts and the items registered for each client.</summary>
     public const string ConfigTag = "Configurations";
 
@@ -313,10 +341,10 @@ public static class WorkflowDocs
         var type = context.MethodInfo.DeclaringType?.Name;
         var key = $"{type}.{context.MethodInfo.Name}";
         if (type is not null &&
-            (Steps.TryGetValue(key, out var step) || QueueSteps.TryGetValue(key, out step) || ConfigSteps.TryGetValue(key, out step)))
+            (Steps.TryGetValue(key, out var step) || QueueSteps.TryGetValue(key, out step) || ConfigSteps.TryGetValue(key, out step) || TalabatSteps.TryGetValue(key, out step)))
         {
             (order, title, guide) = (step.Order, step.Title, step.Guide);
-            tag = Steps.ContainsKey(key) ? Tag : QueueSteps.ContainsKey(key) ? QueueTag : ConfigTag;
+            tag = Steps.ContainsKey(key) ? Tag : QueueSteps.ContainsKey(key) ? QueueTag : TalabatSteps.ContainsKey(key) ? TalabatTag : ConfigTag;
             return true;
         }
 
@@ -387,7 +415,8 @@ public sealed class WorkflowDocumentFilter : IDocumentFilter
             .OrderBy(name => name == WorkflowDocs.Tag ? 0
                 : name == WorkflowDocs.QueueTag ? 1
                 : name == WorkflowDocs.ConfigTag ? 2
-                : WorkflowDocs.LegacyTags.ContainsKey(name) ? 4 : 3)
+                : name == WorkflowDocs.TalabatTag ? 3
+                : WorkflowDocs.LegacyTags.ContainsKey(name) ? 5 : 4)
             .ThenBy(name => name, StringComparer.OrdinalIgnoreCase);
         var described = (swaggerDoc.Tags ?? [])
             .Where(tag => !string.IsNullOrWhiteSpace(tag.Description))
@@ -401,6 +430,8 @@ public sealed class WorkflowDocumentFilter : IDocumentFilter
                     ? WorkflowDocs.ConfigDescription
                     : name == WorkflowDocs.QueueTag
                     ? WorkflowDocs.QueueDescription
+                    : name == WorkflowDocs.TalabatTag
+                    ? WorkflowDocs.TalabatDescription
                     : name == WorkflowDocs.Tag
                     ? WorkflowDocs.Description
                     : WorkflowDocs.LegacyTags.GetValueOrDefault(name) ?? described.GetValueOrDefault(name)

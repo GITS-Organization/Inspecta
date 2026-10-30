@@ -37,5 +37,15 @@ public sealed class EfClientRepository(InspectaDbContext dbContext) : IClientRep
             .OrderByDescending(request => request.ReceivedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task<(int Requests, int Items)> CountDependenciesAsync(Guid clientId, CancellationToken cancellationToken = default) =>
+        (await dbContext.Requests.IgnoreQueryFilters().CountAsync(request => request.ClientId == clientId, cancellationToken),
+         await dbContext.Items.IgnoreQueryFilters().CountAsync(item => item.ClientId == clientId, cancellationToken));
+
+    public async Task RemoveAsync(Client client, CancellationToken cancellationToken = default)
+    {
+        dbContext.Clients.Remove(client);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public Task SaveAsync(CancellationToken cancellationToken = default) => dbContext.SaveChangesAsync(cancellationToken);
 }

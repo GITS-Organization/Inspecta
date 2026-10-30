@@ -10,4 +10,7 @@ public interface IClientService
     Task<ClientHistoryResponse?> GetHistoryAsync(Guid clientId, CancellationToken cancellationToken = default);
     Task<ClientResponse> UpdateAsync(Guid clientId, UpdateClientRequest request, CancellationToken cancellationToken = default);
     Task ArchiveAsync(Guid clientId, CancellationToken cancellationToken = default);
+
+    /// <summary>Removes the client and its contacts for good. Refused while requests or registered items still use it.</summary>
+    Task DeleteAsync(Guid clientId, CancellationToken cancellationToken = default);
 }
