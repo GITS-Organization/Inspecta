@@ -8,10 +8,14 @@ public static class PdfAssets
 {
     private static readonly Lazy<byte[]> QuotationCoverImage = new(() => Load("quotation-cover.png"));
     private static readonly Lazy<byte[]> LogoImage = new(() => Load("logo.png"));
+    private static readonly Lazy<byte[]> CertificateLogoImage = new(() => Load("certificate-logo.png"));
     private static readonly Lazy<byte[]> AccreditationsImage = new(() => Load("accreditations.png"));
 
     public static byte[] QuotationCover => QuotationCoverImage.Value;
     public static byte[] Logo => LogoImage.Value;
+
+    /// <summary>The logo of the certificate forms ("Integrity International for Inspection").</summary>
+    public static byte[] CertificateLogo => CertificateLogoImage.Value;
 
     /// <summary>The EGAC and ISO marks printed at the foot of a certificate.</summary>
     public static byte[] Accreditations => AccreditationsImage.Value;

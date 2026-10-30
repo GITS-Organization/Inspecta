@@ -18,7 +18,7 @@ public sealed class ClientCertificateService(
         return (await certificateFiles.ListForClientAsync(clientId, cancellationToken))
             .Select(file => new ClientCertificateResponse(
                 file.Id, file.RequestId, file.CertificateNumber, file.ItemName, file.ExaminationDate, file.NextExaminationDate,
-                file.IssuedAt, file.FileName, file.Sha256, file.VerificationCode))
+                file.IssuedAt, file.FileName, file.Sha256, file.VerificationCode, file.QrData))
             .ToArray();
     }
 

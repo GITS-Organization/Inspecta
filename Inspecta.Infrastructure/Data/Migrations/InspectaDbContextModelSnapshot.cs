@@ -606,6 +606,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("bytea");
 
+                    b.Property<Guid?>("EquipmentId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateOnly?>("ExaminationDate")
                         .HasColumnType("date");
 
@@ -628,6 +631,14 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<DateOnly?>("NextExaminationDate")
                         .HasColumnType("date");
 
+                    b.Property<string>("PreparedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("QrData")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<Guid>("RequestId")
                         .HasColumnType("uuid");
 
@@ -645,6 +656,8 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
                     b.HasIndex("CertificateId")
                         .IsUnique();
+
+                    b.HasIndex("EquipmentId");
 
                     b.HasIndex("VerificationCode");
 

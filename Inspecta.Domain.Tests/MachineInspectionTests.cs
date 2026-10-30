@@ -397,6 +397,10 @@ public sealed class MachineInspectionTests : IDisposable
         var certificate = db.Certificates.AsNoTracking().Single(value => value.RequestItemId == forkliftItemId);
         Assert.Equal(file.VerificationCode, certificate.VerificationCode);
         Assert.Equal($"https://api.gitsplatform.com/verify/{file.VerificationCode}", certificate.QrData);
+        // The QR is not printed: the archive keeps what it encodes, so it can be sent to the client later.
+        Assert.Equal(certificate.QrData, file.QrData);
+        Assert.Equal(forkliftEquipmentId, file.EquipmentId);
+        Assert.Equal("Eng. Karim", file.PreparedBy);
 
         var served = await Run(service => service.GetPdfAsync(requestId, forkliftItemId, coordinator.Id, "coordinator"));
         Assert.Equal(file.Content, served.Content);
@@ -409,10 +413,20 @@ public sealed class MachineInspectionTests : IDisposable
         var repository = new EfCertificateFileRepository(read);
         var listed = Assert.Single(await repository.ListForClientAsync(clientId));
         Assert.Equal(file.CertificateNumber, listed.CertificateNumber);
+        Assert.Equal(file.QrData, listed.QrData);
         Assert.Equal(file.CertificateNumber, (await repository.FindByVerificationCodeAsync(file.VerificationCode))!.CertificateNumber);
         Assert.Null(await repository.FindByVerificationCodeAsync("NOPE"));
         Assert.Equal(file.Content, (await repository.GetForClientAsync(clientId, file.Id))!.Content);
         Assert.Null(await repository.GetForClientAsync(Guid.NewGuid(), file.Id));
+
+        // The machine's next certificate prints this one as its "Last Certificate No./Made by".
+        var previous = await repository.FindLatestForEquipmentAsync(forkliftEquipmentId, Guid.NewGuid());
+        Assert.Equal((file.CertificateNumber, "Eng. Karim", file.ExaminationDate), (previous!.CertificateNumber, previous.PreparedBy, previous.ExaminationDate));
+        Assert.Null(await repository.FindLatestForEquipmentAsync(forkliftEquipmentId, file.CertificateId));
+        Assert.Null(await repository.FindLatestForEquipmentAsync(Guid.NewGuid(), Guid.NewGuid()));
+
+        var archive = await new ClientCertificateService(new EfClientRepository(read), repository).ListAsync(clientId);
+        Assert.Equal(file.QrData, Assert.Single(archive).QrUrl);
     }
 
     [Fact]

@@ -16,7 +16,10 @@ public sealed record IssuedCertificateSummary(
     DateOnly? NextExaminationDate,
     string FileName,
     string Sha256,
-    DateTimeOffset IssuedAt);
+    DateTimeOffset IssuedAt,
+    Guid? EquipmentId = null,
+    string? QrData = null,
+    string? PreparedBy = null);
 
 /// <summary>The issued PDFs filed under each client, and the numbering of certificates.</summary>
 public interface ICertificateFileRepository
@@ -35,6 +38,9 @@ public interface ICertificateFileRepository
 
     /// <summary>Looks a certificate up by the code in its QR, ignoring the team filter: the public page has no signed-in user.</summary>
     Task<IssuedCertificateSummary?> FindByVerificationCodeAsync(string verificationCode, CancellationToken cancellationToken = default);
+
+    /// <summary>The newest certificate issued for a registered machine, other than <paramref name="excludingCertificateId"/>.</summary>
+    Task<IssuedCertificateSummary?> FindLatestForEquipmentAsync(Guid equipmentId, Guid excludingCertificateId, CancellationToken cancellationToken = default);
 
     /// <summary>Takes the next certificate number of the year for a team, for example <c>CERT-2026-0042</c>.</summary>
     Task<string> NextCertificateNumberAsync(Guid managerId, int year, CancellationToken cancellationToken = default);

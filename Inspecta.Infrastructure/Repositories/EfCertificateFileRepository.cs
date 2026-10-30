@@ -27,12 +27,7 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
 
     public async Task<IReadOnlyList<IssuedCertificateSummary>> ListForClientAsync(Guid clientId, CancellationToken cancellationToken = default)
     {
-        var rows = await dbContext.IssuedCertificateFiles.AsNoTracking()
-            .Where(file => file.ClientId == clientId)
-            .Select(file => new IssuedCertificateSummary(
-                file.Id, file.CertificateId, file.RequestId, file.ClientId, file.ClientName, file.ItemName,
-                file.CertificateNumber, file.VerificationCode, file.ExaminationDate, file.NextExaminationDate,
-                file.FileName, file.Sha256, file.IssuedAt))
+        var rows = await Summaries(dbContext.IssuedCertificateFiles.AsNoTracking().Where(file => file.ClientId == clientId))
             .ToListAsync(cancellationToken);
         return rows.OrderByDescending(row => row.IssuedAt).ToArray();
     }
@@ -42,13 +37,25 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
             .SingleOrDefaultAsync(file => file.ClientId == clientId && file.Id == fileId, cancellationToken);
 
     public async Task<IssuedCertificateSummary?> FindByVerificationCodeAsync(string verificationCode, CancellationToken cancellationToken = default) =>
-        await dbContext.IssuedCertificateFiles.IgnoreQueryFilters().AsNoTracking()
-            .Where(file => file.VerificationCode == verificationCode)
-            .Select(file => new IssuedCertificateSummary(
-                file.Id, file.CertificateId, file.RequestId, file.ClientId, file.ClientName, file.ItemName,
-                file.CertificateNumber, file.VerificationCode, file.ExaminationDate, file.NextExaminationDate,
-                file.FileName, file.Sha256, file.IssuedAt))
+        await Summaries(dbContext.IssuedCertificateFiles.IgnoreQueryFilters().AsNoTracking()
+                .Where(file => file.VerificationCode == verificationCode))
             .SingleOrDefaultAsync(cancellationToken);
+
+    public async Task<IssuedCertificateSummary?> FindLatestForEquipmentAsync(
+        Guid equipmentId, Guid excludingCertificateId, CancellationToken cancellationToken = default)
+    {
+        // Ordered in memory: SQLite cannot order by a DateTimeOffset, and a machine has few certificates.
+        var rows = await Summaries(dbContext.IssuedCertificateFiles.AsNoTracking()
+                .Where(file => file.EquipmentId == equipmentId && file.CertificateId != excludingCertificateId))
+            .ToListAsync(cancellationToken);
+        return rows.OrderByDescending(row => row.IssuedAt).FirstOrDefault();
+    }
+
+    private static IQueryable<IssuedCertificateSummary> Summaries(IQueryable<IssuedCertificateFile> files) =>
+        files.Select(file => new IssuedCertificateSummary(
+            file.Id, file.CertificateId, file.RequestId, file.ClientId, file.ClientName, file.ItemName,
+            file.CertificateNumber, file.VerificationCode, file.ExaminationDate, file.NextExaminationDate,
+            file.FileName, file.Sha256, file.IssuedAt, file.EquipmentId, file.QrData, file.PreparedBy));
 
     public async Task<string> NextCertificateNumberAsync(Guid managerId, int year, CancellationToken cancellationToken = default)
     {

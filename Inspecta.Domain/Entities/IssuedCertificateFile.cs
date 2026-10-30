@@ -4,7 +4,8 @@ namespace Inspecta.Domain.Entities;
 
 /// <summary>
 /// The final PDF of an approved certificate, kept exactly as it was issued (with its SHA-256) and filed under the
-/// client. Later changes to templates or company details never alter it.
+/// client. Later changes to templates or company details never alter it. The QR is not printed on the certificate:
+/// <see cref="QrData"/> keeps what it encodes so it can be sent to the client separately.
 /// </summary>
 public sealed class IssuedCertificateFile
 {
@@ -15,10 +16,13 @@ public sealed class IssuedCertificateFile
     public Guid RequestId { get; private set; }
     public Guid ManagerId { get; private set; }
     public Guid? ClientId { get; private set; }
+    public Guid? EquipmentId { get; private set; }
     public string ClientName { get; private set; } = string.Empty;
     public string ItemName { get; private set; } = string.Empty;
     public string CertificateNumber { get; private set; } = string.Empty;
     public string VerificationCode { get; private set; } = string.Empty;
+    public string? QrData { get; private set; }
+    public string? PreparedBy { get; private set; }
     public DateOnly? ExaminationDate { get; private set; }
     public DateOnly? NextExaminationDate { get; private set; }
     public string FileName { get; private set; } = string.Empty;
@@ -39,7 +43,10 @@ public sealed class IssuedCertificateFile
         DateOnly? nextExaminationDate,
         string fileName,
         byte[] content,
-        DateTimeOffset? issuedAt = null)
+        DateTimeOffset? issuedAt = null,
+        Guid? equipmentId = null,
+        string? qrData = null,
+        string? preparedBy = null)
     {
         if (certificateId == Guid.Empty || requestId == Guid.Empty)
             throw new ArgumentException("Certificate and request are required.");
@@ -54,10 +61,13 @@ public sealed class IssuedCertificateFile
             RequestId = requestId,
             ManagerId = managerId,
             ClientId = clientId,
+            EquipmentId = equipmentId,
             ClientName = clientName.Trim(),
             ItemName = itemName.Trim(),
             CertificateNumber = certificateNumber.Trim(),
             VerificationCode = verificationCode.Trim(),
+            QrData = string.IsNullOrWhiteSpace(qrData) ? null : qrData.Trim(),
+            PreparedBy = string.IsNullOrWhiteSpace(preparedBy) ? null : preparedBy.Trim(),
             ExaminationDate = examinationDate,
             NextExaminationDate = nextExaminationDate,
             FileName = fileName,

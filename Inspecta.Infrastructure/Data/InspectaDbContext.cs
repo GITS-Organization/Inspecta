@@ -190,10 +190,13 @@ public sealed class InspectaDbContext(
         issued.HasIndex(item => item.CertificateId).IsUnique();
         issued.HasIndex(item => item.VerificationCode);
         issued.HasIndex(item => new { item.ClientId, item.IssuedAt });
+        issued.HasIndex(item => item.EquipmentId);
         issued.Property(item => item.ClientName).HasMaxLength(200);
         issued.Property(item => item.ItemName).HasMaxLength(200);
         issued.Property(item => item.CertificateNumber).HasMaxLength(64);
         issued.Property(item => item.VerificationCode).HasMaxLength(64);
+        issued.Property(item => item.QrData).HasMaxLength(512);
+        issued.Property(item => item.PreparedBy).HasMaxLength(200);
         issued.Property(item => item.FileName).HasMaxLength(260);
         issued.Property(item => item.Sha256).HasMaxLength(64);
 

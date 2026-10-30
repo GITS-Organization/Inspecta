@@ -197,7 +197,8 @@ public sealed class MachineInspectionService(
         var template = CertificateTemplateCatalog.Find(certificate.TemplateId) ?? match.Template;
         var client = await FindClientAsync(request, cancellationToken);
         var inspector = await userRepository.GetByIdAsync(certificate.InspectorId, cancellationToken);
-        var pdf = pdfGenerator.Generate(BuildPdfModel(request, item, certificate, template, match, equipment, client, inspector));
+        var previous = await PreviousCertificateAsync(certificate, cancellationToken);
+        var pdf = pdfGenerator.Generate(BuildPdfModel(request, item, certificate, template, match, equipment, client, inspector, previous));
         var examined = certificate.DatesOf();
         await certificateFiles.AddAsync(
             IssuedCertificateFile.Create(
@@ -212,7 +213,10 @@ public sealed class MachineInspectionService(
                 examined.TryGetValue("examination", out var examinedOn) ? DateOnly.FromDateTime(examinedOn.UtcDateTime) : null,
                 examined.TryGetValue("nextExamination", out var nextOn) ? DateOnly.FromDateTime(nextOn.UtcDateTime) : null,
                 pdf.FileName,
-                pdf.Content),
+                pdf.Content,
+                equipmentId: certificate.EquipmentId,
+                qrData: certificate.QrData,
+                preparedBy: certificate.TextsOf().GetValueOrDefault("preparedByName")),
             cancellationToken);
 
         await requestRepository.SaveAsync(request, cancellationToken);
@@ -262,7 +266,8 @@ public sealed class MachineInspectionService(
         var template = CertificateTemplateCatalog.Find(certificate.TemplateId) ?? match.Template;
         var client = await FindClientAsync(request, cancellationToken);
         var inspector = await userRepository.GetByIdAsync(certificate.InspectorId, cancellationToken);
-        return pdfGenerator.Generate(BuildPdfModel(request, item, certificate, template, match, equipment, client, inspector));
+        var previous = await PreviousCertificateAsync(certificate, cancellationToken);
+        return pdfGenerator.Generate(BuildPdfModel(request, item, certificate, template, match, equipment, client, inspector, previous));
     }
 
     public async Task<MachineListResponse> DeliverAsync(
@@ -470,7 +475,8 @@ public sealed class MachineInspectionService(
         TemplateMatch match,
         Item? equipment,
         Client? client,
-        AppUser? inspector)
+        AppUser? inspector,
+        IssuedCertificateSummary? previous)
     {
         var texts = MachineFormRules.WithDefaults(certificate.TextsOf());
         var dates = certificate.DatesOf();
@@ -495,9 +501,12 @@ public sealed class MachineInspectionService(
             certificate.IsApproved ? certificate.ReviewedAt : null,
             IsDraft: !certificate.IsApproved,
             request.ClientName,
-            request.Location,
+            !string.IsNullOrWhiteSpace(client?.Location) ? client.Location : request.Location,
             Text("clientRepresentative") ?? PrimaryContact(client),
-            equipment?.LastInspectionAt,
+            previous?.ExaminationDate ??
+                (equipment?.LastInspectionAt is { } last ? DateOnly.FromDateTime(last.UtcDateTime) : null),
+            previous?.CertificateNumber,
+            previous?.PreparedBy,
             Date("examination"),
             Date("nextExamination"),
             match.Item?.Name ?? item.Name,
@@ -535,9 +544,7 @@ public sealed class MachineInspectionService(
             preparedName,
             string.IsNullOrWhiteSpace(qualifications) ? null : qualifications,
             certificate.ReviewerName,
-            certificate.SignatureStrokesJson,
-            certificate.VerificationCode,
-            certificate.QrData);
+            certificate.SignatureStrokesJson);
     }
 
     // ---- Helpers ------------------------------------------------------------------------------------------------
@@ -583,6 +590,12 @@ public sealed class MachineInspectionService(
             : null;
         return (CertificateTemplateCatalog.Resolve(item.Name, equipment?.Name), equipment);
     }
+
+    // The machine's previous certificate in the archive, printed as "Last Certificate No./Made by".
+    private async Task<IssuedCertificateSummary?> PreviousCertificateAsync(InspectionCertificate certificate, CancellationToken cancellationToken) =>
+        certificate.EquipmentId is Guid equipmentId
+            ? await certificateFiles.FindLatestForEquipmentAsync(equipmentId, certificate.Id, cancellationToken)
+            : null;
 
     private async Task<Client?> FindClientAsync(InspectionRequest request, CancellationToken cancellationToken) =>
         request.ClientId is Guid id ? await clientRepository.GetByIdAsync(id, tracking: false, cancellationToken) : null;
