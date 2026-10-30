@@ -82,7 +82,7 @@ public sealed class QuoteService(
     public async Task<IReadOnlyList<QuoteSummaryResponse>> ListQueueAsync(
         Guid actorId,
         string role,
-        QuotationQueue queue,
+        QuotationQueue? queue,
         QuotationQueueQuery query,
         CancellationToken cancellationToken = default)
     {
@@ -99,7 +99,9 @@ public sealed class QuoteService(
             Search: string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim(),
             Skip: (page - 1) * pageSize,
             Take: pageSize,
-            RequestStatuses: QuotationQueues.Statuses(queue));
+            RequestStatuses: queue is { } one
+                ? QuotationQueues.Statuses(one)
+                : Enum.GetValues<QuotationQueue>().SelectMany(QuotationQueues.Statuses).ToArray());
         return await ListSummariesAsync(filter, actorId, role, cancellationToken);
     }
 

@@ -30,6 +30,28 @@ public sealed class QuotationQueueTests
     }
 
     [Fact]
+    public async Task WithoutAStatusTheListReturnsEveryQueueAndEachRowSaysWhichOne()
+    {
+        var fixture = new Fixture();
+        await fixture.AcceptAsync();
+
+        var waiting = Assert.Single(await fixture.Quotes.Service.ListQueueAsync(
+            CoordinatorId, "coordinator", null, new QuotationQueueQuery()));
+        Assert.Equal(QuotationQueue.Unassigned, waiting.Queue);
+
+        await fixture.Requests.AssignAsync(fixture.Request.Id, CoordinatorId, "coordinator", fixture.Karim.Id, fixture.Date(2), null);
+        var given = Assert.Single(await fixture.Quotes.Service.ListQueueAsync(
+            CoordinatorId, "coordinator", null, new QuotationQueueQuery()));
+        Assert.Equal(QuotationQueue.Assigned, given.Queue);
+
+        fixture.Request.TransitionTo(JobStatus.TaskAccepted, fixture.Karim.Id);
+        fixture.Request.TransitionTo(JobStatus.InProgress, fixture.Karim.Id);
+        fixture.Request.TransitionTo(JobStatus.CertificateSubmitted, fixture.Karim.Id);
+        Assert.Equal(QuotationQueue.Certify, Assert.Single(await fixture.Quotes.Service.ListQueueAsync(
+            CoordinatorId, "coordinator", null, new QuotationQueueQuery())).Queue);
+    }
+
+    [Fact]
     public async Task AQuotationThatIsNotAcceptedIsInNoQueue()
     {
         var fixture = new Fixture();

@@ -401,16 +401,8 @@ Content-Type: application/json
   ]
 }
 
-### Quotation queue: accepted quotations waiting for an inspector
-GET {{baseUrl}}/api/v1/quotation-queue/unassigned
-Authorization: Bearer {{accessToken}}
-
-### Quotation queue: jobs given to an inspector (an inspector gets only their own, without prices)
-GET {{baseUrl}}/api/v1/quotation-queue/assigned
-Authorization: Bearer {{accessToken}}
-
-### Quotation queue: inspection done, certificate on its way
-GET {{baseUrl}}/api/v1/quotation-queue/certify
+### Quotation queue, one endpoint: status = unassigned (waiting for an inspector) | assigned (with an inspector) | certify (certificate on its way); leave status out for all
+GET {{baseUrl}}/api/v1/quotation-queue?status=unassigned
 Authorization: Bearer {{accessToken}}
 
 ### Change the inspection date (the inspector of the job, the coordinator, a manager or Admin)

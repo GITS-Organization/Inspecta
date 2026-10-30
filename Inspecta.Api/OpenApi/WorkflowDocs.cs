@@ -114,11 +114,16 @@ public static class WorkflowDocs
 
     private static readonly Dictionary<string, Step> QueueSteps = new()
     {
-        [Key<QuotationQueueController>(nameof(QuotationQueueController.ListUnassigned))] = new(1, "Queue 1 · Unassigned quotations",
+        [Key<QuotationQueueController>(nameof(QuotationQueueController.List))] = new(1, "Queue 1 · List the queue (one endpoint, filtered by status)",
             """
-            **When:** a quotation was accepted (workflow step 10). The request is now `unassigned` and waits for an inspector.
-            **How:** `GET /quotation-queue/unassigned` returns the accepted quotations nobody has been given yet, newest activity first. Each row has `requestId`, the client, the location and the price; `q` searches client, quotation number and location.
-            **Next:** pick an inspector (queue 2) and assign the job (queue 3). Open a row with `GET /requests/{requestId}/quotes/{id}`.
+            **When:** a quotation was accepted (workflow step 10), and whenever the app shows the work after acceptance.
+            **How:** `GET /quotation-queue?status=...`. `status` picks the queue; leave it out to get all of them, and every row says which one it is in with `queue`:
+            - `status=unassigned`: accepted, waiting for an inspector (request status `unassigned`).
+            - `status=assigned`: given to an inspector, inspection not finished (request status `assigned`, `task_accepted` or `in_progress`).
+            - `status=certify`: inspection done, certificate being prepared, reviewed or sent (request status `certificate_submitted`, `certificate_returned`, `certificate_approved` or `sent_to_client`).
+            Other filters: `inspectorId`, `q` (client, quotation number, location), `managerId` (Admin), `page`/`pageSize`. Each row has `requestId`, the client, the location, the price, `inspectorName` and `scheduledAt`. Open a row with `GET /requests/{requestId}/quotes/{id}`.
+            **The inspector's side:** an inspector gets only their own jobs here, **without prices** (`amountPiastres` is empty), so `unassigned` is always empty for them. Open one with `GET /requests/{requestId}` for the machines and the company data. The coordinator keeps full access to every quotation of their requests.
+            **Next:** pick an inspector (queue 2) for an `unassigned` row.
             """),
         [Key<InspectorsController>(nameof(InspectorsController.List))] = new(2, "Queue 2 · Pick an inspector",
             """
@@ -127,33 +132,27 @@ public static class WorkflowDocs
         [Key<RequestsController>(nameof(RequestsController.Assign))] = new(3, "Queue 3 · Assign the job to an inspector",
             """
             **When:** the request is `unassigned`. One inspector gets the whole job. It can be called again, while the job has not started (`assigned` or `task_accepted`), to hand it to someone else.
-            **How:** `POST /requests/{requestId}/assignment` with `inspectorId` (from queue 2), `scheduledAt` and an optional `note`. The request becomes `assigned` and the quotation moves to the assigned queue. The owning coordinator, a manager or Admin may do it; an inspector from another team or one on leave at that time is refused.
+            **How:** `POST /requests/{requestId}/assignment` with `inspectorId` (from queue 2), `scheduledAt` and an optional `note`. The request becomes `assigned` and the quotation moves from `status=unassigned` to `status=assigned`. The owning coordinator, a manager or Admin may do it; an inspector from another team or one on leave at that time is refused.
             """),
-        [Key<QuotationQueueController>(nameof(QuotationQueueController.ListAssigned))] = new(4, "Queue 4 · Assigned quotations",
-            """
-            **How:** `GET /quotation-queue/assigned` returns the quotations given to an inspector whose inspection is not finished (`assigned`, `task_accepted`, `in_progress`). Rows show `inspectorName` and `scheduledAt`; the coordinator can filter with `inspectorId`.
-            **The inspector's side:** an inspector signs in and gets only their own jobs here, **without prices** (`amountPiastres` is empty). Open one with `GET /requests/{requestId}` for the machines and the company data. The coordinator keeps full access to every quotation of their requests.
-            """),
-        [Key<QuotationQueueController>(nameof(QuotationQueueController.ChangeInspectionDate))] = new(5, "Queue 5 · Change the inspection date",
+        [Key<QuotationQueueController>(nameof(QuotationQueueController.ChangeInspectionDate))] = new(4, "Queue 4 · Change the inspection date",
             """
             **When:** the inspection has to move. This is the only change an inspector can make to a job; the coordinator, a manager or Admin can do it too.
             **How:** `PUT /quotation-queue/{requestId}/inspection-date` with `scheduledAt` and an optional `note`. Allowed while the job is `assigned` or `task_accepted`; after the work started it is refused with `409`. The change is written to the request history.
-            """),
-        [Key<QuotationQueueController>(nameof(QuotationQueueController.ListCertify))] = new(6, "Queue 6 · Quotations in certification",
-            """
-            **How:** `GET /quotation-queue/certify` returns the quotations whose inspection is done and whose certificate is being prepared, reviewed or sent (`certificate_submitted`, `certificate_returned`, `certificate_approved`, `sent_to_client`).
-            **Note:** the certificate types and their PDF formats come with the certificates part.
             """),
     };
 
     internal static string QueueDescription =>
         """
-        Where an accepted quotation goes next. Each row of the queues is a quotation with `queue` set to `unassigned`, `assigned` or `certify`.
+        Where an accepted quotation goes next. **One list endpoint, `GET /quotation-queue?status=...`**, returns them by queue; each row carries `queue` too.
 
-        1. **Unassigned:** accepted, waiting for an inspector (`GET /quotation-queue/unassigned`).
-        2. **Pick an inspector** (`GET /inspectors`) and 3. **assign** the job (`POST /requests/{id}/assignment`). The coordinator that owns the quotation keeps full access and can hand the job to another inspector until the work starts.
-        4. **Assigned:** the inspector sees their own jobs, without prices (`GET /quotation-queue/assigned`), and 5. can **change the inspection date**, nothing else.
-        6. **Certify:** the inspection is done and the certificate is on its way (`GET /quotation-queue/certify`).
+        | `status` | Meaning |
+        |---|---|
+        | `unassigned` | Accepted, waiting for an inspector |
+        | `assigned` | Given to an inspector, inspection not finished |
+        | `certify` | Inspection done, certificate on its way |
+
+        1. **List** the queue you need. 2. **Pick an inspector** (`GET /inspectors`) and 3. **assign** the job (`POST /requests/{id}/assignment`). The coordinator that owns the quotation keeps full access and can hand the job to another inspector until the work starts.
+        The inspector sees only their own jobs, without prices, and can **change the inspection date** (4), nothing else.
         """;
 
     /// <summary>The setup section: clients with their contacts and the items registered for each client.</summary>

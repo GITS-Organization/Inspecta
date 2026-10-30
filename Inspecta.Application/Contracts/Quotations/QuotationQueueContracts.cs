@@ -38,7 +38,7 @@ public static class QuotationQueues
         Enum.GetValues<QuotationQueue>().Cast<QuotationQueue?>().FirstOrDefault(queue => Statuses(queue!.Value).Contains(status));
 }
 
-/// <summary>Filters and paging for one queue.</summary>
+/// <summary>Filters and paging for the queue list.</summary>
 /// <param name="ManagerId">Admin only: narrow the global view to one team.</param>
 /// <param name="InspectorId">Only quotations given to this inspector (not for the unassigned queue).</param>
 public sealed record QuotationQueueQuery(
