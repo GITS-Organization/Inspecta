@@ -1,6 +1,6 @@
 {
   "key": "wheel_loader_bucket",
-  "version": 1,
+  "version": 2,
   "name": "Wheel Loader With Bucket",
   "fields": [
     {
@@ -22,11 +22,6 @@
       "key": "serialNumber",
       "label": "Serial Number",
       "prefill": "serialNumber"
-    },
-    {
-      "key": "manufacturer",
-      "label": "Manufacturer",
-      "prefill": "manufacturer"
     }
   ],
   "checklist": [

@@ -1,6 +1,6 @@
 {
   "key": "elevator",
-  "version": 1,
+  "version": 2,
   "name": "Elevator",
   "fields": [
     {
@@ -22,11 +22,6 @@
       "key": "serialNumber",
       "label": "Serial Number",
       "prefill": "serialNumber"
-    },
-    {
-      "key": "manufacturer",
-      "label": "Manufacturer",
-      "prefill": "manufacturer"
     }
   ],
   "checklist": [

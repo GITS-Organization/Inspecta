@@ -1,6 +1,6 @@
 {
   "key": "rtg",
-  "version": 1,
+  "version": 2,
   "name": "Rubber Tired Gantry Crane (RTG)",
   "fields": [
     {
@@ -22,11 +22,6 @@
       "key": "serialNumber",
       "label": "Serial Number",
       "prefill": "serialNumber"
-    },
-    {
-      "key": "manufacturer",
-      "label": "Manufacturer",
-      "prefill": "manufacturer"
     }
   ],
   "checklist": [

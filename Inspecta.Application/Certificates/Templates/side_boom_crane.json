@@ -1,6 +1,6 @@
 {
   "key": "side_boom_crane",
-  "version": 1,
+  "version": 2,
   "name": "Side Boom Crane",
   "fields": [
     {
@@ -22,11 +22,6 @@
       "key": "serialNumber",
       "label": "Serial Number",
       "prefill": "serialNumber"
-    },
-    {
-      "key": "manufacturer",
-      "label": "Manufacturer",
-      "prefill": "manufacturer"
     }
   ],
   "checklist": [

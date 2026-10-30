@@ -100,7 +100,11 @@ public sealed class CertificateCatalogTests
     {
         string[] Keys(string name) => CertificateTemplateCatalog.Resolve(name).Template.Fields.Select(field => field.Key).ToArray();
 
-        Assert.Equal(["description", "swl", "quantity", "serialNumber", "manufacturer"], Keys("Chain Block"));
+        // The forms that start with Description have exactly four boxes; Manufacturer is printed only where the form has it.
+        foreach (var name in new[] { "Chain Block", "Air Compressor", "Conveyor Belt System", "Diesel Generator", "Elevator",
+                     "Rubber Tired Gantry Crane (RTG)", "Side Boom Crane", "Wheel Excavator", "Wheel Loader With Bucket", "Wheel Loader With Fork Arm" })
+            Assert.Equal(["description", "swl", "quantity", "serialNumber"], Keys(name));
+        Assert.Equal(["manufacturer", "swl", "modelYear", "serialNumber"], Keys("Forklift").Take(4));
         Assert.Contains("spanLength", Keys("Jib Crane"));
         Assert.Contains("boomLength", Keys("Tower Crane"));
         Assert.Contains("maxPlatformHeight", Keys("Manlift"));
