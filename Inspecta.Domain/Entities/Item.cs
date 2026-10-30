@@ -31,6 +31,9 @@ public sealed class Item
 
     /// <summary>The standard the item is inspected against, for example <c>ASME B30.5</c> or <c>LOLER 1998</c>.</summary>
     public string? InspectionStandard { get; private set; }
+
+    /// <summary>How the item is tested (for example "Visual & function test"); printed on its certificates. Optional.</summary>
+    public string? TestType { get; private set; }
     public string LabelsJson { get; private set; } = "[]";
     public string DatesJson { get; private set; } = "[]";
     public string ChecklistJson { get; private set; } = "[]";
@@ -120,7 +123,8 @@ public sealed class Item
         ItemType? itemType = null,
         string? locationInsideClientLocation = null,
         string? notes = null,
-        string? inspectionStandard = null)
+        string? inspectionStandard = null,
+        string? testType = null)
     {
         EnsureEditable();
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Item name is required.", nameof(name));
@@ -138,6 +142,8 @@ public sealed class Item
             Location = Normalize(locationInsideClientLocation);
         if (inspectionStandard is not null)
             InspectionStandard = Normalize(inspectionStandard);
+        if (testType is not null)
+            TestType = Normalize(testType);
         if (notes is not null)
             Notes = Normalize(notes);
     }

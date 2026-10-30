@@ -36,6 +36,10 @@ public sealed record SaveEquipmentRequest
     [MaxLength(200)]
     public string? InspectionStandard { get; init; }
 
+    /// <summary>How the item is tested, for example <c>Visual &amp; function test</c>. Used on its certificates (the inspector can change it there). Optional; send an empty text to clear it.</summary>
+    [MaxLength(200)]
+    public string? TestType { get; init; }
+
     public string? Notes { get; init; }
 
     public IReadOnlyList<string>? Labels { get; init; }

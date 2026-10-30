@@ -20,11 +20,15 @@ public interface IMachineInspectionService
 
     Task<MachineFormResponse> SubmitAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, CancellationToken cancellationToken = default);
 
-    Task<MachineFormResponse> ApproveAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, CancellationToken cancellationToken = default);
+    Task<MachineFormResponse> ApproveAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, ApproveMachineRequest? options = null, CancellationToken cancellationToken = default);
 
     Task<MachineFormResponse> ReturnAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, string note, CancellationToken cancellationToken = default);
 
     Task<PdfFile> GetPdfAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, CancellationToken cancellationToken = default);
 
     Task<MachineListResponse> DeliverAsync(Guid requestId, Guid actorId, string role, DeliverCertificatesRequest request, CancellationToken cancellationToken = default);
+
+    Task<DeliveryPreviewResponse> PreviewDeliveryAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default);
+
+    Task<DownloadFile> GetCertificatesZipAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default);
 }

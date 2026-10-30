@@ -91,17 +91,17 @@ public sealed class QuoteDeliveryService(
     }
 
     // The sender asked to be answered at Reply-To when they set one; otherwise the From address.
-    private static EmailAddressInfo? ResolveRecipient(RequestEmail source)
+    internal static EmailAddressInfo? ResolveRecipient(RequestEmail source)
     {
         var replyTo = source.GetReplyToAddresses().FirstOrDefault(address => !string.IsNullOrWhiteSpace(address.Address));
         if (replyTo is not null) return replyTo;
         return string.IsNullOrWhiteSpace(source.FromAddress) ? null : new EmailAddressInfo(source.FromAddress, source.FromName);
     }
 
-    private static string ResolveFromAddress(CoordinatorEmailConfig config, AppUser coordinator) =>
+    internal static string ResolveFromAddress(CoordinatorEmailConfig config, AppUser coordinator) =>
         config.EmailUsername.Contains('@', StringComparison.Ordinal) ? config.EmailUsername : coordinator.Email;
 
-    private static string DomainOf(string address)
+    internal static string DomainOf(string address)
     {
         var at = address.LastIndexOf('@');
         return at >= 0 && at < address.Length - 1 ? address[(at + 1)..] : "inspecta.local";

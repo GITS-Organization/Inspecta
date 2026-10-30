@@ -416,6 +416,7 @@ Content-Type: application/json
 }
 
 @machineId = replace-with-request-item-id
+@clientId = replace-with-client-id
 
 ### Inspector: start the inspection (accepts the task, moves the job to in_progress) and get the machines
 POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/start-inspection
@@ -453,6 +454,13 @@ Authorization: Bearer {{accessToken}}
 POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/approve
 Authorization: Bearer {{accessToken}}
 
+### Technical manager: approve the machine with a drawn signature (kept for the next approvals)
+POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/approve
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "signature": "[[0.05,0.7,0.12,0.3,0.2,0.75,0.3,0.25,0.38,0.8]]", "rememberSignature": true }
+
 ### Technical manager: send the machine back with a note
 POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/return
 Authorization: Bearer {{accessToken}}
@@ -470,3 +478,25 @@ Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 { "sentTo": "certificates@client.com" }
+
+### Coordinator: see the email that would carry the certificates to the client
+GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/deliver-to-client/preview
+Authorization: Bearer {{accessToken}}
+
+### Coordinator: all the certificates of the job in one ZIP
+GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/certificates.zip
+Authorization: Bearer {{accessToken}}
+
+### Coordinator: hand over, choosing the recipient and the text (both optional)
+POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/deliver-to-client
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "sentTo": "quality@client.com", "message": "Dear team, the certificates are attached." }
+
+### The certificates issued for a client
+GET {{baseUrl}}/api/v1/clients/{{clientId}}/certificates
+Authorization: Bearer {{accessToken}}
+
+### Public check behind a certificate's QR code (no sign-in)
+GET {{baseUrl}}/api/v1/verify/A1B2C3D4E5F60718

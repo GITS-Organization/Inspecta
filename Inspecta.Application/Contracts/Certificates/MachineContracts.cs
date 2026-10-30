@@ -58,7 +58,25 @@ public sealed record MachineListResponse(
     MachineProgress Progress,
     bool CanStartInspection,
     bool CanDeliver,
-    IReadOnlyList<MachineSummaryResponse> Machines);
+    IReadOnlyList<MachineSummaryResponse> Machines,
+    MachineDelivery? Delivery = null);
+
+/// <summary>What happened when the certificates were handed over: whether an email went out, to whom, and a note when it did not.</summary>
+public sealed record MachineDelivery(bool EmailSent, string? SentTo, string? Notice);
+
+/// <summary>The email that would carry the certificates to the client, for the coordinator to check and edit.</summary>
+public sealed record DeliveryPreviewResponse(
+    bool EmailEnabled,
+    string? To,
+    string? ToName,
+    string Subject,
+    string Body,
+    IReadOnlyList<string> Attachments,
+    bool RepliesToOriginalEmail,
+    string? Notice);
+
+/// <summary>A file to download.</summary>
+public sealed record DownloadFile(byte[] Content, string FileName, string ContentType);
 
 public sealed record MachineFormHeader(
     string ClientName,
@@ -139,6 +157,16 @@ public sealed record SaveMachineFormRequest
     public IReadOnlyDictionary<string, DateOnly>? Dates { get; init; }
 }
 
+/// <summary>Optional details when the technical manager approves a machine.</summary>
+public sealed record ApproveMachineRequest
+{
+    /// <summary>The hand-drawn signature as normalised strokes (a JSON array); printed above the manager's name.</summary>
+    public string? Signature { get; init; }
+
+    /// <summary>Keep this signature for the next approvals, so it need not be drawn again.</summary>
+    public bool RememberSignature { get; init; }
+}
+
 /// <summary>The technical manager's reason for sending a certificate back.</summary>
 public sealed record ReturnMachineRequest
 {
@@ -152,4 +180,8 @@ public sealed record DeliverCertificatesRequest
     /// <summary>Who received them (defaults to the client's certificates email).</summary>
     [MaxLength(320)]
     public string? SentTo { get; init; }
+
+    /// <summary>The text of the email to the client; leave out to use the suggested text from the preview.</summary>
+    [MaxLength(8000)]
+    public string? Message { get; init; }
 }

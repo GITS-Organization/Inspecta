@@ -80,16 +80,18 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     }
 
     /// <summary>Approve a submitted machine certificate (technical manager).</summary>
+    /// <remarks>Optional body: <c>signature</c> (the drawn strokes) and <c>rememberSignature</c>. Without a signature the one saved earlier is used.</remarks>
     [HttpPost("machines/{requestItemId:guid}/approve")]
     [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
     [ProducesResponseType<MachineFormResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<MachineFormResponse>> ApproveMachine(Guid requestId, Guid requestItemId, CancellationToken cancellationToken)
+    public async Task<ActionResult<MachineFormResponse>> ApproveMachine(
+        Guid requestId, Guid requestItemId, ApproveMachineRequest? request, CancellationToken cancellationToken)
     {
         if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
-        return Ok(await inspectionService.ApproveAsync(requestId, requestItemId, actorId, role, cancellationToken));
+        return Ok(await inspectionService.ApproveAsync(requestId, requestItemId, actorId, role, request, cancellationToken));
     }
 
     /// <summary>Send a submitted machine certificate back to the inspector with a note (technical manager).</summary>
@@ -124,10 +126,44 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
         return File(file.Content, PdfFile.ContentType, file.FileName);
     }
 
+    /// <summary>See the email that would carry the certificates to the client.</summary>
+    /// <remarks>
+    /// Returns the recipient (the sender of the original request first, then the client's certificates email), the subject, the suggested
+    /// text and the attachments, so the coordinator can check and edit the text before handing the certificates over.
+    /// </remarks>
+    [HttpGet("deliver-to-client/preview")]
+    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
+    [ProducesResponseType<DeliveryPreviewResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<DeliveryPreviewResponse>> PreviewDelivery(Guid requestId, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await inspectionService.PreviewDeliveryAsync(requestId, actorId, role, cancellationToken));
+    }
+
+    /// <summary>Download every certificate of the job in one ZIP.</summary>
+    [HttpGet("certificates.zip")]
+    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
+    [Produces("application/zip")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DownloadCertificatesZip(Guid requestId, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        var file = await inspectionService.GetCertificatesZipAsync(requestId, actorId, role, cancellationToken);
+        return File(file.Content, file.ContentType, file.FileName);
+    }
+
     /// <summary>The coordinator hands the approved certificates to the client.</summary>
     /// <remarks>
     /// Possible once every machine of the job is approved. Marks the certificates as delivered and the job as
-    /// <c>sent_to_client</c>. The owning coordinator, the technical manager or Admin can do it.
+    /// <c>sent_to_client</c>. The owning coordinator, the technical manager or Admin can do it. When email delivery is on, the
+    /// certificates are also emailed as a reply to the original request (see the preview); if the mail server refuses, the answer is
+    /// <c>502</c> and nothing changes. The answer's <c>delivery</c> says whether an email went out.
     /// </remarks>
     [HttpPost("deliver-to-client")]
     [Authorize(Policy = AuthorizationPolicies.TeamOperations)]

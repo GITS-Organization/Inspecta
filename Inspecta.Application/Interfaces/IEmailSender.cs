@@ -3,7 +3,10 @@ namespace Inspecta.Application.Interfaces;
 /// <summary>Outgoing mail server and the mailbox login used to send through it.</summary>
 public sealed record SmtpSettings(string Server, int Port, bool UseSsl, string Username, string Password);
 
-/// <summary>A message with one PDF attachment, optionally part of an existing email thread.</summary>
+/// <summary>A file attached to an outgoing email.</summary>
+public sealed record EmailAttachment(string FileName, byte[] Content, string ContentType);
+
+/// <summary>A message with a PDF attachment (and optionally more files), optionally part of an existing email thread.</summary>
 public sealed record OutgoingEmail(
     string FromAddress,
     string? FromName,
@@ -15,7 +18,8 @@ public sealed record OutgoingEmail(
     string? InReplyTo,
     string? References,
     string AttachmentFileName,
-    byte[] AttachmentContent);
+    byte[] AttachmentContent,
+    IReadOnlyList<EmailAttachment>? MoreAttachments = null);
 
 public interface IEmailSender
 {

@@ -101,7 +101,32 @@ builder.Services.AddScoped<IQuoteRepository, EfQuoteRepository>();
 builder.Services.AddScoped<IQuoteService, QuoteService>();
 builder.Services.AddScoped<ICertificateRepository, EfCertificateRepository>();
 builder.Services.AddScoped<ICertificateService, CertificateService>();
+builder.Services.AddScoped<ICertificateFileRepository, EfCertificateFileRepository>();
+builder.Services.AddScoped<ICertificateDeliveryRepository, EfCertificateDeliveryRepository>();
+builder.Services.AddSingleton(new Inspecta.Application.Certificates.CertificateOptions(
+    builder.Configuration["Certificates:PublicBaseUrl"] is { Length: > 0 } publicBaseUrl ? publicBaseUrl : "https://api.gitsplatform.com"));
 builder.Services.AddScoped<IMachineInspectionService, MachineInspectionService>();
+builder.Services.AddScoped<Inspecta.Application.Services.ClientCertificateService>();
+builder.Services.AddSingleton(new Inspecta.Application.Services.CertificateDeliveryOptions(builder.Configuration.GetValue("CertificateDelivery:Enabled", false)));
+builder.Services.AddScoped<Inspecta.Application.Services.CertificateDeliveryService>();
+// The public page behind a certificate's QR code is open to everyone, so it is limited per address
+// (the first X-Forwarded-For address when behind the host's proxy).
+builder.Services.AddRateLimiter(limiter =>
+{
+    limiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    limiter.AddPolicy(Inspecta.Api.Controllers.VerificationController.RateLimitPolicy, context =>
+    {
+        var forwarded = context.Request.Headers["X-Forwarded-For"].ToString().Split(',')[0].Trim();
+        var key = forwarded.Length > 0 ? forwarded : context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(key, _ =>
+            new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
+    });
+});
 builder.Services.AddScoped<IPasswordService, IdentityPasswordService>();
 builder.Services.AddSingleton<IAccessTokenService, JwtAccessTokenService>();
 builder.Services.AddSingleton<ISecretProtector, AesGcmSecretProtector>();
@@ -252,6 +277,7 @@ app.UseHttpsRedirection();
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapHealthChecks("/health").AllowAnonymous();
 app.MapControllers();

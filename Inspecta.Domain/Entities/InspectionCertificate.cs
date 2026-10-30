@@ -270,13 +270,20 @@ public sealed class InspectionCertificate
     }
 
     /// <summary>Approves a submitted template certificate. The QR code is added later, so <paramref name="qrData"/> may stay empty.</summary>
-    public void ApproveForm(Guid reviewerId, string reviewerName, string certificateNumber, string verificationCode, string? qrData = null)
+    public void ApproveForm(
+        Guid reviewerId, string reviewerName, string certificateNumber, string verificationCode, string? qrData = null, string? signatureStrokesJson = null)
     {
         EnsureTemplateForm();
         EnsureSubmitted();
         if (reviewerId == Guid.Empty) throw new ArgumentException("Reviewer is required.", nameof(reviewerId));
         if (string.IsNullOrWhiteSpace(certificateNumber) || string.IsNullOrWhiteSpace(verificationCode))
             throw new ArgumentException("Certificate number and verification code are required.");
+        if (!string.IsNullOrWhiteSpace(signatureStrokesJson))
+        {
+            ValidateSignature(signatureStrokesJson);
+            SignatureStrokesJson = signatureStrokesJson;
+        }
+
         CertificateNumber = certificateNumber.Trim();
         VerificationCode = verificationCode.Trim();
         QrData = string.IsNullOrWhiteSpace(qrData) ? null : qrData.Trim();

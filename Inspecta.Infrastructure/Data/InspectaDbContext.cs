@@ -27,6 +27,9 @@ public sealed class InspectaDbContext(
     public DbSet<InspectionCertificate> Certificates => Set<InspectionCertificate>();
     public DbSet<CoordinatorEmailConfig> CoordinatorEmailConfigs => Set<CoordinatorEmailConfig>();
     public DbSet<QuotationDraft> QuotationDrafts => Set<QuotationDraft>();
+    public DbSet<CertificateCounter> CertificateCounters => Set<CertificateCounter>();
+    public DbSet<IssuedCertificateFile> IssuedCertificateFiles => Set<IssuedCertificateFile>();
+    public DbSet<CertificateDelivery> CertificateDeliveries => Set<CertificateDelivery>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -86,6 +89,7 @@ public sealed class InspectaDbContext(
         item.Property(item => item.Name).HasMaxLength(200).IsRequired();
         item.Property(item => item.ItemType).HasConversion<string>().HasMaxLength(24);
         item.Property(item => item.InspectionStandard).HasMaxLength(200);
+        item.Property(item => item.TestType).HasMaxLength(200);
         item.Property(item => item.Status).HasConversion<string>().HasMaxLength(24);
         item.Property(item => item.LastInspectionResult).HasConversion<string>().HasMaxLength(32);
         item.Property(item => item.LabelsJson).IsRequired();
@@ -171,6 +175,36 @@ public sealed class InspectaDbContext(
         certificate.HasIndex(item => new { item.RequestId, item.RequestItemId }).IsUnique();
         certificate.Property(item => item.FunctionCheck).HasConversion<string>().HasMaxLength(24);
         certificate.Property(item => item.FinalResult).HasConversion<string>().HasMaxLength(32);
+        certificate.HasIndex(item => item.VerificationCode);
+        certificate.HasIndex(item => item.CertificateNumber);
+
+        var counter = modelBuilder.Entity<CertificateCounter>();
+        counter.HasKey(item => item.Id);
+        counter.HasIndex(item => new { item.ManagerId, item.Year }).IsUnique();
+        // Two approvals taking the same number: the second save fails and takes the next one.
+        counter.Property(item => item.LastNumber).IsConcurrencyToken();
+
+        var issued = modelBuilder.Entity<IssuedCertificateFile>();
+        issued.HasKey(item => item.Id);
+        issued.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
+        issued.HasIndex(item => item.CertificateId).IsUnique();
+        issued.HasIndex(item => item.VerificationCode);
+        issued.HasIndex(item => new { item.ClientId, item.IssuedAt });
+        issued.Property(item => item.ClientName).HasMaxLength(200);
+        issued.Property(item => item.ItemName).HasMaxLength(200);
+        issued.Property(item => item.CertificateNumber).HasMaxLength(64);
+        issued.Property(item => item.VerificationCode).HasMaxLength(64);
+        issued.Property(item => item.FileName).HasMaxLength(260);
+        issued.Property(item => item.Sha256).HasMaxLength(64);
+
+        var delivery = modelBuilder.Entity<CertificateDelivery>();
+        delivery.HasKey(item => item.Id);
+        delivery.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
+        delivery.HasIndex(item => item.RequestId);
+        delivery.Property(item => item.ToAddress).HasMaxLength(320);
+        delivery.Property(item => item.Subject).HasMaxLength(500);
+        delivery.Property(item => item.MessageId).HasMaxLength(255);
+        delivery.Property(item => item.AttachmentNames).HasMaxLength(2000);
 
         var emailConfig = modelBuilder.Entity<CoordinatorEmailConfig>();
         emailConfig.HasKey(item => item.CoordinatorId);

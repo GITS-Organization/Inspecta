@@ -14,7 +14,7 @@ public sealed class EquipmentService(IEquipmentRepository equipmentRepository) :
         equipment.UpdateDetails(
             request.Name, request.Category, request.Manufacturer, request.Model, request.SerialNumber, request.Capacity,
             request.ItemType ?? Inspecta.Domain.Enums.ItemType.Equipment,
-            request.LocationInsideClientLocation, request.Notes, request.InspectionStandard);
+            request.LocationInsideClientLocation, request.Notes, request.InspectionStandard, request.TestType);
         equipment.UpdateMetadata(request.Labels, request.Dates, request.Checklist, request.Attachments);
         await equipmentRepository.AddAsync(equipment, cancellationToken);
         return Map(equipment);
@@ -36,7 +36,7 @@ public sealed class EquipmentService(IEquipmentRepository equipmentRepository) :
         if (equipment.ClientId != request.ClientId) throw new InvalidOperationException("Equipment cannot be reassigned to another client.");
         equipment.UpdateDetails(
             request.Name, request.Category, request.Manufacturer, request.Model, request.SerialNumber, request.Capacity,
-            request.ItemType, request.LocationInsideClientLocation, request.Notes, request.InspectionStandard);
+            request.ItemType, request.LocationInsideClientLocation, request.Notes, request.InspectionStandard, request.TestType);
         equipment.UpdateMetadata(request.Labels, request.Dates, request.Checklist, request.Attachments);
         await equipmentRepository.SaveAsync(cancellationToken);
         return Map(equipment);
@@ -64,5 +64,5 @@ public sealed class EquipmentService(IEquipmentRepository equipmentRepository) :
         equipment.LocationInsideClientLocation, equipment.Notes, equipment.GetLabels(), equipment.GetDates(),
         equipment.GetChecklist(), equipment.GetAttachments(), equipment.CertificateExpiryDate,
         equipment.LastInspectedOn, equipment.LastInspectionAt, equipment.NextInspectionDueAt, equipment.ArchivedAt,
-        equipment.InspectionStandard);
+        equipment.InspectionStandard, equipment.TestType);
 }

@@ -150,6 +150,28 @@ public sealed class ConfigurationTests : IDisposable
     }
 
     [Fact]
+    public async Task TheTestTypeIsOptionalAndKeptChangedAndCleared()
+    {
+        var clientId = await CreateClientAsync();
+        await using var db = CreateContext();
+        var service = new EquipmentService(new EfEquipmentRepository(db));
+        var created = await service.CreateAsync(new SaveEquipmentRequest { ClientId = clientId, Name = "Crane" });
+        Assert.Null(created.TestType);
+
+        var set = await service.UpdateAsync(created.Id, new SaveEquipmentRequest { ClientId = clientId, Name = "Crane", TestType = "  Visual & function test " });
+        Assert.Equal("Visual & function test", set.TestType);
+
+        var kept = await service.UpdateAsync(created.Id, new SaveEquipmentRequest { ClientId = clientId, Name = "Crane" });
+        Assert.Equal("Visual & function test", kept.TestType);
+
+        var changed = await service.UpdateAsync(created.Id, new SaveEquipmentRequest { ClientId = clientId, Name = "Crane", TestType = "Load test" });
+        Assert.Equal("Load test", changed.TestType);
+
+        var cleared = await service.UpdateAsync(created.Id, new SaveEquipmentRequest { ClientId = clientId, Name = "Crane", TestType = "" });
+        Assert.Null(cleared.TestType);
+    }
+
+    [Fact]
     public async Task AClientNothingUsesCanBeDeletedForGoodWithItsContacts()
     {
         var clientId = await CreateClientAsync();

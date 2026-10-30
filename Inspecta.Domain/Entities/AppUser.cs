@@ -23,6 +23,12 @@ public class AppUser
     public bool IsActive { get; private set; } = true;
     public string QualificationsJson { get; private set; } = "[]";
     public string? SignatureImageId { get; private set; }
+
+    /// <summary>The hand-drawn signature (normalised strokes) put on the certificates this user approves. Empty until saved.</summary>
+    public string? SignatureStrokesJson { get; private set; }
+
+    public void SetSignature(string? strokesJson) =>
+        SignatureStrokesJson = string.IsNullOrWhiteSpace(strokesJson) ? null : strokesJson.Trim();
     public bool IsOnLeave { get; private set; }
     public DateTimeOffset? LeaveUntil { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;

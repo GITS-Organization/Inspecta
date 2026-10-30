@@ -51,7 +51,9 @@ public sealed class MailKitSmtpEmailSender(ILogger<MailKitSmtpEmailSender> logge
             message.References.Add(reference);
 
         var body = new BodyBuilder { TextBody = email.BodyText };
-        body.Attachments.Add(email.AttachmentFileName, email.AttachmentContent, ContentType.Parse("application/pdf"));
+        body.Attachments.Add(email.AttachmentFileName, email.AttachmentContent, ContentType.Parse(email.AttachmentFileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ? "application/zip" : "application/pdf"));
+        foreach (var more in email.MoreAttachments ?? [])
+            body.Attachments.Add(more.FileName, more.Content, ContentType.Parse(more.ContentType));
         message.Body = body.ToMessageBody();
         return message;
     }

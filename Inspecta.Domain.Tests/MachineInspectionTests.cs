@@ -69,7 +69,7 @@ public sealed class MachineInspectionTests : IDisposable
             }, manager.Id).Result.Id;
             forkliftEquipmentId = new EquipmentService(new EfEquipmentRepository(db)).CreateAsync(new SaveEquipmentRequest
             {
-                ClientId = clientId, Name = "Forklift Truck", Manufacturer = "Toyota", SerialNumber = "FK-100"
+                ClientId = clientId, Name = "Forklift Truck", Manufacturer = "Toyota", SerialNumber = "FK-100", TestType = "Visual & function test"
             }).Result.Id;
         }
 
@@ -195,6 +195,8 @@ public sealed class MachineInspectionTests : IDisposable
         Assert.Equal(6, form.Checklist.Count);
         Assert.Equal(["yes", "no", "na"], form.ChecklistValues);
         Assert.Equal(JobStatus.InProgress, form.RequestStatus);
+        // The registered item's test type starts the certificate's Test type (the inspector can change it).
+        Assert.Equal("Visual & function test", form.Texts["testType"]);
         Assert.False(form.ReadyToSubmit);
         Assert.Contains("the examination date", form.Missing);
         Assert.Contains("35 checklist row(s)", form.Missing);
@@ -335,7 +337,7 @@ public sealed class MachineInspectionTests : IDisposable
         Assert.True(returned.CanEdit);
         var approved = await Run(service => service.ApproveAsync(requestId, forkliftItemId, manager.Id, "technical_manager"));
         Assert.Equal(MachineStatus.Approved, approved.Status);
-        Assert.StartsWith("CRT-", approved.CertificateNumber);
+        Assert.Equal($"CERT-{DateTimeOffset.UtcNow.Year}-0001", approved.CertificateNumber);
         Assert.Equal(JobStatus.CertificateReturned, (await Run(service => service.ListMachinesAsync(requestId, manager.Id, "technical_manager"))).RequestStatus);
 
         // The inspector fixes it and submits again; the manager approves; the job is ready for the coordinator.
@@ -345,7 +347,8 @@ public sealed class MachineInspectionTests : IDisposable
         }));
         await Run(service => service.SubmitAsync(requestId, chainItemId, inspector.Id, "inspector"));
         Assert.Equal(JobStatus.CertificateSubmitted, (await Run(service => service.ListMachinesAsync(requestId, manager.Id, "technical_manager"))).RequestStatus);
-        await Run(service => service.ApproveAsync(requestId, chainItemId, manager.Id, "technical_manager"));
+        var secondApproved = await Run(service => service.ApproveAsync(requestId, chainItemId, manager.Id, "technical_manager"));
+        Assert.Equal($"CERT-{DateTimeOffset.UtcNow.Year}-0002", secondApproved.CertificateNumber);
         var ready = await Run(service => service.ListMachinesAsync(requestId, coordinator.Id, "coordinator"));
         Assert.Equal(JobStatus.CertificateApproved, ready.RequestStatus);
         Assert.Equal(new MachineProgress(2, 2, 2, 0), ready.Progress);
@@ -367,6 +370,88 @@ public sealed class MachineInspectionTests : IDisposable
         Assert.All(delivered.Machines, machine => Assert.Equal(MachineStatus.Delivered, machine.Status));
         await using var check = CreateContext();
         Assert.All(check.Certificates.AsNoTracking().ToList(), certificate => Assert.Equal("certificates@alnoor.com", certificate.SentTo));
+    }
+
+    [Fact]
+    public async Task ApprovingFilesTheFinalPdfUnderTheClientAndServesExactlyThatFile()
+    {
+        await Start();
+        await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", CompleteForm("forklift")));
+        await Run(service => service.SubmitAsync(requestId, forkliftItemId, inspector.Id, "inspector"));
+        await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", CompleteForm("basic")));
+        await Run(service => service.SubmitAsync(requestId, chainItemId, inspector.Id, "inspector"));
+
+        var approved = await Run(service => service.ApproveAsync(requestId, forkliftItemId, manager.Id, "technical_manager"));
+
+        await using var db = CreateContext();
+        var file = Assert.Single(db.IssuedCertificateFiles.AsNoTracking().ToList());
+        Assert.Equal(approved.CertificateNumber, file.CertificateNumber);
+        Assert.Equal(clientId, file.ClientId);
+        Assert.Equal("Al Noor Industries", file.ClientName);
+        Assert.Equal("Forklift Truck", file.ItemName);
+        Assert.Equal(new DateOnly(2026, 11, 5), file.ExaminationDate);
+        Assert.Equal(new DateOnly(2027, 11, 5), file.NextExaminationDate);
+        Assert.Equal("%PDF-", Encoding.ASCII.GetString(file.Content, 0, 5));
+        Assert.Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(file.Content)).ToLowerInvariant(), file.Sha256);
+        Assert.Equal(16, file.VerificationCode.Length);
+        var certificate = db.Certificates.AsNoTracking().Single(value => value.RequestItemId == forkliftItemId);
+        Assert.Equal(file.VerificationCode, certificate.VerificationCode);
+        Assert.Equal($"https://api.gitsplatform.com/verify/{file.VerificationCode}", certificate.QrData);
+
+        var served = await Run(service => service.GetPdfAsync(requestId, forkliftItemId, coordinator.Id, "coordinator"));
+        Assert.Equal(file.Content, served.Content);
+        Assert.Equal(file.FileName, served.FileName);
+        var again = await Run(service => service.GetPdfAsync(requestId, forkliftItemId, manager.Id, "technical_manager"));
+        Assert.Equal(file.Content, again.Content);
+
+        // The client's archive and the public lookup see it without the PDF being loaded.
+        await using var read = CreateContext();
+        var repository = new EfCertificateFileRepository(read);
+        var listed = Assert.Single(await repository.ListForClientAsync(clientId));
+        Assert.Equal(file.CertificateNumber, listed.CertificateNumber);
+        Assert.Equal(file.CertificateNumber, (await repository.FindByVerificationCodeAsync(file.VerificationCode))!.CertificateNumber);
+        Assert.Null(await repository.FindByVerificationCodeAsync("NOPE"));
+        Assert.Equal(file.Content, (await repository.GetForClientAsync(clientId, file.Id))!.Content);
+        Assert.Null(await repository.GetForClientAsync(Guid.NewGuid(), file.Id));
+    }
+
+    [Fact]
+    public async Task CertificateNumbersCountUpPerTeamAndYear()
+    {
+        await using var db = CreateContext();
+        var repository = new EfCertificateFileRepository(db);
+        var team = Guid.NewGuid();
+
+        Assert.Equal("CERT-2026-0001", await repository.NextCertificateNumberAsync(team, 2026));
+        Assert.Equal("CERT-2026-0002", await repository.NextCertificateNumberAsync(team, 2026));
+        Assert.Equal("CERT-2027-0001", await repository.NextCertificateNumberAsync(team, 2027));
+        Assert.Equal("CERT-2026-0001", await repository.NextCertificateNumberAsync(Guid.NewGuid(), 2026));
+
+        // A second connection to the same database continues the count instead of starting over.
+        await using var other = CreateContext();
+        Assert.Equal("CERT-2026-0003", await new EfCertificateFileRepository(other).NextCertificateNumberAsync(team, 2026));
+    }
+
+    [Fact]
+    public async Task TheManagersSignatureIsPrintedAndCanBeRememberedForTheNextApprovals()
+    {
+        const string signature = "[[0.1,0.2,0.3,0.4,0.5,0.6]]";
+        await Start();
+        foreach (var (item, key) in new[] { (forkliftItemId, "forklift"), (chainItemId, "basic") })
+        {
+            await Run(service => service.SaveFormAsync(requestId, item, inspector.Id, "inspector", CompleteForm(key)));
+            await Run(service => service.SubmitAsync(requestId, item, inspector.Id, "inspector"));
+        }
+
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.ApproveAsync(
+            requestId, forkliftItemId, manager.Id, "technical_manager", new ApproveMachineRequest { Signature = "not json" })));
+        await Run(service => service.ApproveAsync(
+            requestId, forkliftItemId, manager.Id, "technical_manager", new ApproveMachineRequest { Signature = signature, RememberSignature = true }));
+        await Run(service => service.ApproveAsync(requestId, chainItemId, manager.Id, "technical_manager"));
+
+        await using var db = CreateContext();
+        Assert.All(db.Certificates.AsNoTracking().ToList(), certificate => Assert.Equal(signature, certificate.SignatureStrokesJson));
+        Assert.Equal(signature, db.Users.AsNoTracking().Single(user => user.Id == manager.Id).SignatureStrokesJson);
     }
 
     [Fact]
@@ -494,7 +579,8 @@ public sealed class MachineInspectionTests : IDisposable
             new EfUserRepository(db),
             new EfEquipmentRepository(db),
             new EfClientRepository(db),
-            pdfServices.GetRequiredService<IPdfGenerator>());
+            pdfServices.GetRequiredService<IPdfGenerator>(),
+            new EfCertificateFileRepository(db));
         return await action(service);
     }
 

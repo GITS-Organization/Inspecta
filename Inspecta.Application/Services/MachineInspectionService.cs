@@ -15,7 +15,10 @@ public sealed class MachineInspectionService(
     IUserRepository userRepository,
     IEquipmentRepository equipmentRepository,
     IClientRepository clientRepository,
-    IPdfGenerator pdfGenerator) : IMachineInspectionService
+    IPdfGenerator pdfGenerator,
+    ICertificateFileRepository certificateFiles,
+    CertificateOptions? options = null,
+    CertificateDeliveryService? deliveryService = null) : IMachineInspectionService
 {
     private const int MaxTextLength = 4000;
 
@@ -150,7 +153,8 @@ public sealed class MachineInspectionService(
     // ---- Technical manager: review ------------------------------------------------------------------------------
 
     public async Task<MachineFormResponse> ApproveAsync(
-        Guid requestId, Guid requestItemId, Guid actorId, string role, CancellationToken cancellationToken = default)
+        Guid requestId, Guid requestItemId, Guid actorId, string role, ApproveMachineRequest? approval = null,
+        CancellationToken cancellationToken = default)
     {
         EnsureReviewer(role);
         var request = await LoadAsync(requestId, actorId, role, tracking: true, cancellationToken);
@@ -163,7 +167,13 @@ public sealed class MachineInspectionService(
             throw new AuthException("not_submitted", "Only a submitted certificate can be approved.", 409);
 
         var reviewer = await userRepository.GetByIdAsync(actorId, cancellationToken);
-        certificate.ApproveForm(actorId, reviewer?.FullName ?? string.Empty, NewCertificateNumber(), NewVerificationCode());
+        var signature = !string.IsNullOrWhiteSpace(approval?.Signature) ? approval.Signature : reviewer?.SignatureStrokesJson;
+        var number = await certificateFiles.NextCertificateNumberAsync(request.ManagerId ?? Guid.Empty, DateTimeOffset.UtcNow.Year, cancellationToken);
+        var code = NewVerificationCode();
+        certificate.ApproveForm(
+            actorId, reviewer?.FullName ?? string.Empty, number, code, (options ?? new CertificateOptions()).VerifyUrl(code), signature);
+        if (approval is { RememberSignature: true } && !string.IsNullOrWhiteSpace(approval.Signature))
+            reviewer?.SetSignature(approval.Signature);
 
         if (certificate.EquipmentId is Guid equipmentId &&
             certificate.DatesOf() is { } dates &&
@@ -181,6 +191,29 @@ public sealed class MachineInspectionService(
         if (request.Items.Count > 0 && request.Items.All(value =>
                 request.Certificates.Any(existing => existing.RequestItemId == value.Id && existing.IsApproved)))
             request.TransitionTo(JobStatus.CertificateApproved, actorId);
+
+        // The PDF is drawn once, now, and filed under the client exactly as issued.
+        var (match, equipment) = await ResolveAsync(item, cancellationToken);
+        var template = CertificateTemplateCatalog.Find(certificate.TemplateId) ?? match.Template;
+        var client = await FindClientAsync(request, cancellationToken);
+        var inspector = await userRepository.GetByIdAsync(certificate.InspectorId, cancellationToken);
+        var pdf = pdfGenerator.Generate(BuildPdfModel(request, item, certificate, template, match, equipment, client, inspector));
+        var examined = certificate.DatesOf();
+        await certificateFiles.AddAsync(
+            IssuedCertificateFile.Create(
+                certificate.Id,
+                request.Id,
+                request.ManagerId ?? Guid.Empty,
+                request.ClientId,
+                request.ClientName,
+                match.Item?.Name ?? item.Name,
+                number,
+                code,
+                examined.TryGetValue("examination", out var examinedOn) ? DateOnly.FromDateTime(examinedOn.UtcDateTime) : null,
+                examined.TryGetValue("nextExamination", out var nextOn) ? DateOnly.FromDateTime(nextOn.UtcDateTime) : null,
+                pdf.FileName,
+                pdf.Content),
+            cancellationToken);
 
         await requestRepository.SaveAsync(request, cancellationToken);
         return await BuildFormAsync(request, item, certificate, actorId, role, cancellationToken);
@@ -221,6 +254,9 @@ public sealed class MachineInspectionService(
         EnsureTemplateCertificate(certificate);
         if (role == "coordinator" && !certificate.IsApproved)
             throw new AuthException("not_approved", "The certificate is available to the coordinator once it is approved.", 409);
+        // An approved certificate is served exactly as it was issued.
+        if (certificate.IsApproved && await certificateFiles.GetByCertificateIdAsync(certificate.Id, cancellationToken) is { } issued)
+            return new PdfFile(issued.Content, issued.FileName);
 
         var (match, equipment) = await ResolveAsync(item, cancellationToken);
         var template = CertificateTemplateCatalog.Find(certificate.TemplateId) ?? match.Template;
@@ -241,13 +277,64 @@ public sealed class MachineInspectionService(
             throw new AuthException("not_approved", "Every certificate of the job must be approved before it is delivered.", 409);
 
         var client = await FindClientAsync(request, cancellationToken);
-        var sentTo = string.IsNullOrWhiteSpace(delivery.SentTo) ? client?.CertificatesEmail : delivery.SentTo;
+        var files = await certificateFiles.ListForRequestAsync(request.Id, cancellationToken);
+        // The email goes first: if the mail server refuses it nothing below changes and the call can be repeated.
+        var sent = deliveryService is null
+            ? new CertificateDeliveryResult(false, null, "Email delivery is not available, so no email was sent. The certificates are marked as handed over.")
+            : await deliveryService.DeliverAsync(request, files, delivery.SentTo, delivery.Message, cancellationToken);
+        var sentTo = sent.SentTo ?? (string.IsNullOrWhiteSpace(delivery.SentTo) ? client?.CertificatesEmail : delivery.SentTo);
         foreach (var certificate in request.Certificates.Where(value => value.IsApproved && !value.IsDelivered))
             certificate.MarkDelivered(sentTo);
         request.TransitionTo(JobStatus.SentToClient, actorId, string.IsNullOrWhiteSpace(sentTo) ? null : $"Delivered to {sentTo}");
 
         await requestRepository.SaveAsync(request, cancellationToken);
-        return await BuildListAsync(request, actorId, role, cancellationToken);
+        return (await BuildListAsync(request, actorId, role, cancellationToken)) with
+        {
+            Delivery = new MachineDelivery(sent.EmailSent, sentTo, sent.Notice)
+        };
+    }
+
+    public async Task<DeliveryPreviewResponse> PreviewDeliveryAsync(
+        Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
+    {
+        var request = await LoadDeliverableAsync(requestId, actorId, role, cancellationToken);
+        var files = await certificateFiles.ListForRequestAsync(request.Id, cancellationToken);
+        if (deliveryService is null)
+            return new DeliveryPreviewResponse(false, null, null, string.Empty, string.Empty, files.Select(file => file.FileName).ToArray(), false, "Email delivery is not available.");
+        var plan = await deliveryService.PlanAsync(request, files, null, null, cancellationToken);
+        var notice = !deliveryService.Enabled
+            ? "Email delivery is switched off: handing the certificates over will not send this email."
+            : plan.ToAddress is null ? "There is no address to email: the request has no source email and the client has no certificates email." : null;
+        return new DeliveryPreviewResponse(
+            deliveryService.Enabled, plan.ToAddress, plan.ToName, plan.Subject, plan.Body, plan.AttachmentNames, plan.RepliesToOriginalEmail, notice);
+    }
+
+    public async Task<DownloadFile> GetCertificatesZipAsync(
+        Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
+    {
+        var request = await LoadDeliverableAsync(requestId, actorId, role, cancellationToken);
+        var files = await certificateFiles.ListForRequestAsync(request.Id, cancellationToken);
+        if (files.Count == 0) throw new KeyNotFoundException("The job has no issued certificates.");
+        return new DownloadFile(CertificateDeliveryService.Zip(files), $"certificates-{SafeName(request.ClientName)}.zip", "application/zip");
+    }
+
+    // The job's approved certificates are for the coordinator side (owner, technical manager, Admin) once every machine is approved.
+    private async Task<InspectionRequest> LoadDeliverableAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken)
+    {
+        var request = await LoadAsync(requestId, actorId, role, tracking: false, cancellationToken);
+        if (role == "inspector")
+            throw new AuthException("forbidden", "Inspectors cannot hand over certificates.", 403);
+        if (role == "coordinator" && !RequestAccess.CanManageQuotes(request, actorId, role))
+            throw new AuthException("forbidden", "Only the coordinator that owns the request can do this.", 403);
+        if (request.Status is not (JobStatus.CertificateApproved or JobStatus.SentToClient))
+            throw new AuthException("not_approved", "Every certificate of the job must be approved first.", 409);
+        return request;
+    }
+
+    private static string SafeName(string value)
+    {
+        var cleaned = new string(value.Select(character => char.IsLetterOrDigit(character) ? character : '-').ToArray()).Trim('-');
+        return cleaned.Length > 0 ? cleaned : "client";
     }
 
     // ---- Building responses -------------------------------------------------------------------------------------
@@ -333,6 +420,8 @@ public sealed class MachineInspectionService(
 
         if (!texts.ContainsKey("clientRepresentative") && PrimaryContact(client) is { } representative)
             texts["clientRepresentative"] = representative;
+        if (!texts.ContainsKey("testType") && !string.IsNullOrWhiteSpace(equipment?.TestType))
+            texts["testType"] = equipment.TestType;
 
         var header = new MachineFormHeader(
             request.ClientName,
@@ -406,14 +495,14 @@ public sealed class MachineInspectionService(
             certificate.IsApproved ? certificate.ReviewedAt : null,
             IsDraft: !certificate.IsApproved,
             request.ClientName,
-            client?.Location ?? request.Location,
+            request.Location,
             Text("clientRepresentative") ?? PrimaryContact(client),
             equipment?.LastInspectionAt,
             Date("examination"),
             Date("nextExamination"),
             match.Item?.Name ?? item.Name,
             standards,
-            Text("testType"),
+            Text("testType") ?? equipment?.TestType,
             Text("conclusion") ?? MachineFormRules.DefaultConclusion,
             template.Fields
                 .Select(field => new CertificatePdfField(field.Label, technical.TryGetValue(field.Key, out var value) ? value : Prefill(field, item, equipment)))
@@ -443,8 +532,10 @@ public sealed class MachineInspectionService(
                             : new CertificatePdfRow(row.Label, null, null);
                     }).ToArray()))
                 .ToArray(),
-            string.IsNullOrWhiteSpace(preparedBy) ? null : preparedBy,
+            preparedName,
+            string.IsNullOrWhiteSpace(qualifications) ? null : qualifications,
             certificate.ReviewerName,
+            certificate.SignatureStrokesJson,
             certificate.VerificationCode,
             certificate.QrData);
     }
@@ -526,10 +617,8 @@ public sealed class MachineInspectionService(
         _ => MachineStatus.Draft
     };
 
-    private static string NewCertificateNumber() =>
-        $"CRT-{DateTimeOffset.UtcNow.Year}-{Guid.NewGuid().ToString("N")[..6].ToUpperInvariant()}";
-
-    private static string NewVerificationCode() => Guid.NewGuid().ToString("N")[..10].ToUpperInvariant();
+    // Long enough that a code cannot be guessed from the QR of another certificate.
+    private static string NewVerificationCode() => Guid.NewGuid().ToString("N")[..16].ToUpperInvariant();
 
     private static Dictionary<string, T> Merge<T>(IReadOnlyDictionary<string, T> current, IReadOnlyDictionary<string, T> changes)
     {

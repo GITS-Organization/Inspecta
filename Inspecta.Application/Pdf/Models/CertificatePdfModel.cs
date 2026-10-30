@@ -6,7 +6,7 @@ public sealed record CertificatePdfModel(
     DateTimeOffset? CertificateDate,
     bool IsDraft,
     string ClientName,
-    string? ClientAddress,
+    string Location,
     string? ClientRepresentative,
     DateTimeOffset? LastExaminationDate,
     DateOnly? ExaminationDate,
@@ -18,8 +18,10 @@ public sealed record CertificatePdfModel(
     IReadOnlyList<CertificatePdfField> Fields,
     CertificatePdfQuestionnaire Questionnaire,
     IReadOnlyList<CertificatePdfSection> Checklist,
-    string? PreparedBy,
+    string? PreparedByName,
+    string? PreparedByQualifications,
     string? SignedBy,
+    string? SignatureStrokesJson,
     string? VerificationCode,
     string? QrData);
 

@@ -85,6 +85,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<string>("SignatureImageId")
                         .HasColumnType("text");
 
+                    b.Property<string>("SignatureStrokesJson")
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset?>("SubscriptionEndDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -102,6 +105,86 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasIndex("ManagerId", "Role");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.CertificateCounter", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("LastNumber")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ManagerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ManagerId", "Year")
+                        .IsUnique();
+
+                    b.ToTable("CertificateCounters");
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.CertificateDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AttachmentNames")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("BodyText")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ManagerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MessageId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Sent")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ToAddress")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestId");
+
+                    b.ToTable("CertificateDeliveries");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.Client", b =>
@@ -382,7 +465,11 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CertificateNumber");
+
                     b.HasIndex("RequestItemId");
+
+                    b.HasIndex("VerificationCode");
 
                     b.HasIndex("RequestId", "RequestItemId")
                         .IsUnique();
@@ -494,6 +581,78 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.ToTable("Requests");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.IssuedCertificateFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CertificateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CertificateNumber")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("ClientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClientName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<DateOnly?>("ExaminationDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("character varying(260)");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ManagerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("NextExaminationDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("VerificationCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CertificateId")
+                        .IsUnique();
+
+                    b.HasIndex("VerificationCode");
+
+                    b.HasIndex("ClientId", "IssuedAt");
+
+                    b.ToTable("IssuedCertificateFiles");
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.Item", b =>
                 {
                     b.Property<Guid>("Id")
@@ -591,6 +750,10 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(24)
                         .HasColumnType("character varying(24)");
+
+                    b.Property<string>("TestType")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<short?>("YearOfManufacture")
                         .HasColumnType("smallint");
