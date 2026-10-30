@@ -1,0 +1,273 @@
+{
+  "key": "tower_crane",
+  "version": 1,
+  "name": "Tower Crane",
+  "fields": [
+    {
+      "key": "manufacturer",
+      "label": "Manufacturer",
+      "prefill": "manufacturer"
+    },
+    {
+      "key": "swl",
+      "label": "SWL",
+      "prefill": "capacity"
+    },
+    {
+      "key": "modelYear",
+      "label": "Model/Manufacturing year",
+      "prefill": "model"
+    },
+    {
+      "key": "serialNumber",
+      "label": "Serial Number",
+      "prefill": "serialNumber"
+    },
+    {
+      "key": "boomLength",
+      "label": "Boom length"
+    },
+    {
+      "key": "maxLoadLoadTest",
+      "label": "Max. Load/ Load test"
+    },
+    {
+      "key": "radius",
+      "label": "Radius"
+    },
+    {
+      "key": "angle",
+      "label": "Angle"
+    },
+    {
+      "key": "wireDiaRev",
+      "label": "Wire Dia. / Rev."
+    },
+    {
+      "key": "counterweight",
+      "label": "Counterweight"
+    },
+    {
+      "key": "hookSerialNo",
+      "label": "Hook Serial No."
+    },
+    {
+      "key": "hookSwlNoOfSheaves",
+      "label": "Hook SWL / No. of Sheaves"
+    }
+  ],
+  "checklist": [
+    {
+      "key": "tower_structure",
+      "title": "TOWER STRUCTURE",
+      "items": [
+        {
+          "key": "base_anchoring",
+          "label": "BASE ANCHORING"
+        },
+        {
+          "key": "main_chord_tubular",
+          "label": "MAIN CHORD (TUBULAR)"
+        },
+        {
+          "key": "main_chord_angle",
+          "label": "MAIN CHORD (ANGLE)"
+        },
+        {
+          "key": "pins_and_bushings",
+          "label": "PINS AND BUSHINGS"
+        },
+        {
+          "key": "ladder",
+          "label": "LADDER"
+        },
+        {
+          "key": "plarform",
+          "label": "PLARFORM"
+        }
+      ]
+    },
+    {
+      "key": "brakes_mechanical",
+      "title": "BRAKES (MECHANICAL)",
+      "items": [
+        {
+          "key": "hoist_main_and_aux",
+          "label": "HOIST (MAIN AND AUX.)"
+        },
+        {
+          "key": "boom_hoist",
+          "label": "BOOM HOIST"
+        }
+      ]
+    },
+    {
+      "key": "superstructure",
+      "title": "SUPERSTRUCTURE",
+      "items": [
+        {
+          "key": "swing_motion",
+          "label": "SWING MOTION"
+        },
+        {
+          "key": "motion_control_levers",
+          "label": "MOTION CONTROL LEVERS"
+        },
+        {
+          "key": "load_range_charts",
+          "label": "LOAD RANGE CHARTS"
+        },
+        {
+          "key": "crane_control_valves",
+          "label": "CRANE CONTROL VALVES"
+        },
+        {
+          "key": "boom_raise_limits",
+          "label": "BOOM RAISE LIMITS"
+        },
+        {
+          "key": "counterweight_mounting",
+          "label": "COUNTERWEIGHT MOUNTING"
+        },
+        {
+          "key": "guards",
+          "label": "GUARDS"
+        },
+        {
+          "key": "welds",
+          "label": "WELDS"
+        }
+      ]
+    },
+    {
+      "key": "electrical",
+      "title": "ELECTRICAL",
+      "items": [
+        {
+          "key": "gauges_instrument_panel",
+          "label": "GAUGES (INSTRUMENT PANEL)"
+        },
+        {
+          "key": "wiring",
+          "label": "WIRING"
+        },
+        {
+          "key": "lights_indicators_hazard",
+          "label": "LIGHTS/INDICATORS/HAZARD"
+        },
+        {
+          "key": "lights_reversing_audible",
+          "label": "LIGHTS/REVERSING & AUDIBLE"
+        }
+      ]
+    },
+    {
+      "key": "lattice_boom",
+      "title": "LATTICE BOOM",
+      "items": [
+        {
+          "key": "operation_raise_lower",
+          "label": "OPERATION (RAISE/LOWER)"
+        },
+        {
+          "key": "wear_pads",
+          "label": "WEAR PADS"
+        },
+        {
+          "key": "tip_sheaves_and_shafts",
+          "label": "TIP SHEAVES AND SHAFTS"
+        },
+        {
+          "key": "lattice_type",
+          "label": "LATTICE TYPE"
+        },
+        {
+          "key": "main_chord_tubular",
+          "label": "MAIN CHORD (TUBULAR)"
+        },
+        {
+          "key": "main_chord_angle",
+          "label": "MAIN CHORD (ANGLE)"
+        }
+      ]
+    },
+    {
+      "key": "hoist_and_boom_cables",
+      "title": "HOIST AND BOOM CABLES",
+      "items": [
+        {
+          "key": "main_hoist_reeved",
+          "label": "MAIN HOIST (REEVED)"
+        },
+        {
+          "key": "aux_hoist_reeved",
+          "label": "AUX. HOIST (REEVED)"
+        },
+        {
+          "key": "boom_hoist",
+          "label": "BOOM HOIST"
+        },
+        {
+          "key": "hoist_units",
+          "label": "HOIST UNITS"
+        },
+        {
+          "key": "planetary_gear_free_fall",
+          "label": "PLANETARY GEAR (FREE FALL)"
+        }
+      ]
+    },
+    {
+      "key": "load_blocks",
+      "title": "LOAD BLOCKS",
+      "items": [
+        {
+          "key": "sheaves_shafts",
+          "label": "SHEAVES/SHAFTS"
+        },
+        {
+          "key": "hook",
+          "label": "HOOK"
+        },
+        {
+          "key": "safety_latch",
+          "label": "SAFETY LATCH"
+        },
+        {
+          "key": "swivel",
+          "label": "SWIVEL"
+        },
+        {
+          "key": "cable_dead_end",
+          "label": "CABLE DEAD END"
+        }
+      ]
+    },
+    {
+      "key": "safety_devices",
+      "title": "SAFETY DEVICES",
+      "items": [
+        {
+          "key": "load_indicator",
+          "label": "LOAD INDICATOR"
+        },
+        {
+          "key": "warning_audible",
+          "label": "WARNING (AUDIBLE)"
+        },
+        {
+          "key": "anti_two_block_system",
+          "label": "ANTI TWO BLOCK SYSTEM"
+        },
+        {
+          "key": "level_indicators",
+          "label": "LEVEL INDICATORS"
+        },
+        {
+          "key": "electrocution_warning",
+          "label": "ELECTROCUTION WARNING"
+        }
+      ]
+    }
+  ]
+}

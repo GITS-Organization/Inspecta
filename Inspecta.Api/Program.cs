@@ -38,6 +38,7 @@ builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
 }));
 builder.Services.AddSwaggerGen(options =>
 {
+    options.MapType<DateOnly>(() => new Microsoft.OpenApi.Models.OpenApiSchema { Type = "string", Format = "date", Example = new Microsoft.OpenApi.Any.OpenApiString("2026-11-05") });
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Inspecta API",
@@ -100,6 +101,7 @@ builder.Services.AddScoped<IQuoteRepository, EfQuoteRepository>();
 builder.Services.AddScoped<IQuoteService, QuoteService>();
 builder.Services.AddScoped<ICertificateRepository, EfCertificateRepository>();
 builder.Services.AddScoped<ICertificateService, CertificateService>();
+builder.Services.AddScoped<IMachineInspectionService, MachineInspectionService>();
 builder.Services.AddScoped<IPasswordService, IdentityPasswordService>();
 builder.Services.AddSingleton<IAccessTokenService, JwtAccessTokenService>();
 builder.Services.AddSingleton<ISecretProtector, AesGcmSecretProtector>();

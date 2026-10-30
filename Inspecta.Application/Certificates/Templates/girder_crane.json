@@ -1,0 +1,355 @@
+{
+  "key": "girder_crane",
+  "version": 1,
+  "name": "Girder crane (Gantry, Jib, Overhead)",
+  "fields": [
+    {
+      "key": "manufacturer",
+      "label": "Manufacturer",
+      "prefill": "manufacturer"
+    },
+    {
+      "key": "swl",
+      "label": "SWL",
+      "prefill": "capacity"
+    },
+    {
+      "key": "modelYear",
+      "label": "Model/Manufacturing year",
+      "prefill": "model"
+    },
+    {
+      "key": "serialNumber",
+      "label": "Serial Number",
+      "prefill": "serialNumber"
+    },
+    {
+      "key": "spanLength",
+      "label": "Span length"
+    },
+    {
+      "key": "staticLoadTestDynamicLoadTest",
+      "label": "Static Load test/ Dynamic load test"
+    },
+    {
+      "key": "allowableDeflection",
+      "label": "Allowable deflection"
+    },
+    {
+      "key": "actualDeflection",
+      "label": "Actual Deflection"
+    }
+  ],
+  "checklist": [
+    {
+      "key": "bridge_and_gantry",
+      "title": "BRIDGE AND GANTRY",
+      "items": [
+        {
+          "key": "tracks_and_fittings",
+          "label": "TRACKS AND FITTINGS"
+        },
+        {
+          "key": "bolted_connections",
+          "label": "BOLTED CONNECTIONS"
+        },
+        {
+          "key": "travel_and_zone_limits_switch",
+          "label": "TRAVEL AND ZONE LIMITS SWITCH"
+        },
+        {
+          "key": "rail_sweeps",
+          "label": "RAIL SWEEPS"
+        },
+        {
+          "key": "drop_bars",
+          "label": "DROP BARS"
+        },
+        {
+          "key": "gears_and_pinions",
+          "label": "GEARS AND PINIONS"
+        },
+        {
+          "key": "wheels",
+          "label": "WHEELS"
+        },
+        {
+          "key": "couplings",
+          "label": "COUPLINGS"
+        },
+        {
+          "key": "shafts",
+          "label": "SHAFTS"
+        },
+        {
+          "key": "brakes",
+          "label": "BRAKES"
+        },
+        {
+          "key": "gear_boxes",
+          "label": "GEAR BOXES"
+        },
+        {
+          "key": "motors",
+          "label": "MOTORS"
+        },
+        {
+          "key": "rail_clamps",
+          "label": "RAIL CLAMPS"
+        },
+        {
+          "key": "trolley_stops",
+          "label": "TROLLEY STOPS"
+        },
+        {
+          "key": "cab",
+          "label": "CAB"
+        },
+        {
+          "key": "locker_plates",
+          "label": "LOCKER PLATES"
+        },
+        {
+          "key": "storage_locks_and_receptacles",
+          "label": "STORAGE LOCKS AND RECEPTACLES"
+        },
+        {
+          "key": "capacity_signs",
+          "label": "CAPACITY SIGNS"
+        },
+        {
+          "key": "guards",
+          "label": "GUARDS"
+        }
+      ]
+    },
+    {
+      "key": "electrical",
+      "title": "ELECTRICAL",
+      "items": [
+        {
+          "key": "elect_piping_and_enclosures",
+          "label": "ELECT. PIPING AND ENCLOSURES"
+        },
+        {
+          "key": "wiring",
+          "label": "WIRING"
+        },
+        {
+          "key": "push_button_operation",
+          "label": "PUSH BUTTON OPERATION"
+        },
+        {
+          "key": "strain_cable",
+          "label": "STRAIN CABLE"
+        },
+        {
+          "key": "controller_operation",
+          "label": "CONTROLLER OPERATION"
+        },
+        {
+          "key": "mainline_disconnect_switch",
+          "label": "MAINLINE DISCONNECT SWITCH"
+        },
+        {
+          "key": "festoon_collectors",
+          "label": "FESTOON COLLECTORS"
+        },
+        {
+          "key": "lights_and_warning_devices",
+          "label": "LIGHTS AND WARNING DEVICES"
+        }
+      ]
+    },
+    {
+      "key": "hook_block",
+      "title": "HOOK BLOCK",
+      "items": [
+        {
+          "key": "sheaves_and_shafts",
+          "label": "SHEAVES AND SHAFTS"
+        },
+        {
+          "key": "hook",
+          "label": "HOOK"
+        },
+        {
+          "key": "safety_latch",
+          "label": "SAFETY LATCH"
+        },
+        {
+          "key": "swivel",
+          "label": "SWIVEL"
+        },
+        {
+          "key": "cross_head",
+          "label": "CROSS HEAD"
+        }
+      ]
+    },
+    {
+      "key": "trolley",
+      "title": "TROLLEY",
+      "items": [
+        {
+          "key": "collector_post",
+          "label": "COLLECTOR POST"
+        },
+        {
+          "key": "bolted_connections",
+          "label": "BOLTED CONNECTIONS"
+        },
+        {
+          "key": "drop_bars",
+          "label": "DROP BARS"
+        },
+        {
+          "key": "storage_locks",
+          "label": "STORAGE LOCKS"
+        },
+        {
+          "key": "bumpers",
+          "label": "BUMPERS"
+        },
+        {
+          "key": "travel_zone_limit_switches",
+          "label": "TRAVEL & ZONE LIMIT SWITCHES"
+        },
+        {
+          "key": "tracks_and_fittings",
+          "label": "TRACKS AND FITTINGS"
+        },
+        {
+          "key": "wheels",
+          "label": "WHEELS"
+        },
+        {
+          "key": "gears_and_pinions",
+          "label": "GEARS AND PINIONS"
+        },
+        {
+          "key": "couplings",
+          "label": "COUPLINGS"
+        },
+        {
+          "key": "shafts",
+          "label": "SHAFTS"
+        },
+        {
+          "key": "brakes",
+          "label": "BRAKES"
+        },
+        {
+          "key": "gear_boxes",
+          "label": "GEAR BOXES"
+        },
+        {
+          "key": "motors",
+          "label": "MOTORS"
+        },
+        {
+          "key": "rail_clamps",
+          "label": "RAIL CLAMPS"
+        },
+        {
+          "key": "guards",
+          "label": "GUARDS"
+        },
+        {
+          "key": "locker_plates",
+          "label": "LOCKER PLATES"
+        },
+        {
+          "key": "drums",
+          "label": "DRUMS"
+        },
+        {
+          "key": "sheaves_and_pins",
+          "label": "SHEAVES AND PINS"
+        },
+        {
+          "key": "idler_sheaves_and_equalizer",
+          "label": "IDLER SHEAVES AND EQUALIZER"
+        },
+        {
+          "key": "load_chain",
+          "label": "LOAD CHAIN"
+        },
+        {
+          "key": "wire_rope",
+          "label": "WIRE ROPE"
+        },
+        {
+          "key": "rope_anchorage",
+          "label": "ROPE ANCHORAGE"
+        },
+        {
+          "key": "hoist_limit_switch_upper",
+          "label": "HOIST LIMIT SWITCH (UPPER)"
+        },
+        {
+          "key": "hoist_limit_switch_lower",
+          "label": "HOIST LIMIT SWITCH (LOWER)"
+        },
+        {
+          "key": "anti_two_block",
+          "label": "ANTI TWO BLOCK"
+        }
+      ]
+    },
+    {
+      "key": "operation",
+      "title": "OPERATION",
+      "items": [
+        {
+          "key": "oil_levels",
+          "label": "OIL LEVELS"
+        },
+        {
+          "key": "slewing",
+          "label": "SLEWING"
+        },
+        {
+          "key": "jib_swing",
+          "label": "JIB SWING"
+        },
+        {
+          "key": "hook_approaches",
+          "label": "HOOK APPROACHES"
+        },
+        {
+          "key": "bridge_trolley_traction",
+          "label": "BRIDGE & TROLLEY TRACTION"
+        },
+        {
+          "key": "gantry_traction",
+          "label": "GANTRY TRACTION"
+        },
+        {
+          "key": "clearances",
+          "label": "CLEARANCES"
+        },
+        {
+          "key": "welds",
+          "label": "WELDS"
+        },
+        {
+          "key": "ladders_platform_walkways",
+          "label": "LADDERS PLATFORM & WALKWAYS"
+        },
+        {
+          "key": "overspeed_devices",
+          "label": "OVERSPEED DEVICES"
+        },
+        {
+          "key": "overload_devices",
+          "label": "OVERLOAD DEVICES"
+        },
+        {
+          "key": "tracking",
+          "label": "TRACKING"
+        }
+      ]
+    }
+  ]
+}

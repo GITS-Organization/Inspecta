@@ -1,0 +1,211 @@
+{
+  "key": "manlift",
+  "version": 1,
+  "name": "Manlift",
+  "fields": [
+    {
+      "key": "manufacturer",
+      "label": "Manufacturer",
+      "prefill": "manufacturer"
+    },
+    {
+      "key": "swl",
+      "label": "SWL",
+      "prefill": "capacity"
+    },
+    {
+      "key": "modelYear",
+      "label": "Model/Manufacturing year",
+      "prefill": "model"
+    },
+    {
+      "key": "serialNumber",
+      "label": "Serial Number",
+      "prefill": "serialNumber"
+    },
+    {
+      "key": "ndt",
+      "label": "NDT (method/result)"
+    },
+    {
+      "key": "loadTest",
+      "label": "Load test"
+    },
+    {
+      "key": "maxPlatformHeight",
+      "label": "Max. Platform Height"
+    }
+  ],
+  "checklist": [
+    {
+      "key": "tires_and_wheels",
+      "title": "TIRES AND WHEELS",
+      "items": [
+        {
+          "key": "sidewalls_cracks",
+          "label": "SIDEWALLS/CRACKS"
+        },
+        {
+          "key": "lug_nuts",
+          "label": "LUG NUTS"
+        },
+        {
+          "key": "air_pressure",
+          "label": "AIR PRESSURE"
+        }
+      ]
+    },
+    {
+      "key": "brakes_mechanical",
+      "title": "BRAKES (MECHANICAL)",
+      "items": [
+        {
+          "key": "swing",
+          "label": "SWING"
+        },
+        {
+          "key": "system_oil_leaks",
+          "label": "SYSTEM OIL LEAKS"
+        }
+      ]
+    },
+    {
+      "key": "brakes",
+      "title": "BRAKES",
+      "items": [
+        {
+          "key": "brakes_air_assisted",
+          "label": "BRAKES (AIR ASSISTED)"
+        },
+        {
+          "key": "hoses_condition_and_leaks",
+          "label": "HOSES (CONDITION AND LEAKS)"
+        },
+        {
+          "key": "line_fittings_valves",
+          "label": "LINE FITTINGS/VALVES"
+        }
+      ]
+    },
+    {
+      "key": "superstructure",
+      "title": "SUPERSTRUCTURE",
+      "items": [
+        {
+          "key": "swing_motion",
+          "label": "SWING MOTION"
+        },
+        {
+          "key": "motion_control_levers",
+          "label": "MOTION CONTROL LEVERS"
+        },
+        {
+          "key": "loadrange_charts",
+          "label": "LOADRANGE CHARTS"
+        },
+        {
+          "key": "man_lift_control_valves",
+          "label": "MAN, LIFT CONTROL VALVES"
+        },
+        {
+          "key": "counterweight_mounting",
+          "label": "COUNTERWEIGHT MOUNTING"
+        },
+        {
+          "key": "guards",
+          "label": "GUARDS"
+        },
+        {
+          "key": "welds",
+          "label": "WELDS"
+        }
+      ]
+    },
+    {
+      "key": "steering_system",
+      "title": "STEERING SYSTEM",
+      "items": [
+        {
+          "key": "all_linkages",
+          "label": "ALL LINKAGES"
+        },
+        {
+          "key": "hoses_and_fittings",
+          "label": "HOSES AND FITTINGS"
+        },
+        {
+          "key": "cylinders_valves",
+          "label": "CYLINDERS/VALVES"
+        }
+      ]
+    },
+    {
+      "key": "boom",
+      "title": "BOOM",
+      "items": [
+        {
+          "key": "operation_telescoping",
+          "label": "OPERATION (TELESCOPING)"
+        },
+        {
+          "key": "operation_raise_lower",
+          "label": "OPERATION (RAISE/LOWER)"
+        },
+        {
+          "key": "lift_cylinder_pins_and_bushings",
+          "label": "LIFT CYLINDER PINS AND BUSHINGS"
+        }
+      ]
+    },
+    {
+      "key": "safety_devices",
+      "title": "SAFETY DEVICES",
+      "items": [
+        {
+          "key": "overload_indicator",
+          "label": "OVERLOAD INDICATOR"
+        },
+        {
+          "key": "warning_audible",
+          "label": "WARNING (AUDIBLE)"
+        }
+      ]
+    },
+    {
+      "key": "electrical",
+      "title": "ELECTRICAL",
+      "items": [
+        {
+          "key": "gauges_instrument_panel",
+          "label": "GAUGES (INSTRUMENT PANEL)"
+        },
+        {
+          "key": "wiring",
+          "label": "WIRING"
+        },
+        {
+          "key": "lights_indicators_hazard",
+          "label": "LIGHTS/INDICATORS/HAZARD"
+        }
+      ]
+    },
+    {
+      "key": "hoist_and_boom_cables",
+      "title": "HOIST AND BOOM CABLES",
+      "items": [
+        {
+          "key": "boom_hoist",
+          "label": "BOOM HOIST"
+        },
+        {
+          "key": "hoist_units",
+          "label": "HOIST UNITS"
+        },
+        {
+          "key": "planetary_gear_free_fall",
+          "label": "PLANETARY GEAR (FREE FALL)"
+        }
+      ]
+    }
+  ]
+}

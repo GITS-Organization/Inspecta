@@ -52,6 +52,29 @@ public sealed class QuotationQueueTests
     }
 
     [Fact]
+    public async Task AssignedRowsShowHowFarTheMachineCertificatesAre()
+    {
+        var fixture = new Fixture();
+        await fixture.AcceptAsync();
+        Assert.Null(Assert.Single(await fixture.QueueAsync(CoordinatorId, "coordinator", QuotationQueue.Unassigned)).Certificates);
+
+        await fixture.Requests.AssignAsync(fixture.Request.Id, CoordinatorId, "coordinator", fixture.Karim.Id, fixture.Date(2), null);
+        var start = Assert.Single(await fixture.QueueAsync(CoordinatorId, "coordinator", QuotationQueue.Assigned)).Certificates;
+        Assert.Equal(new Application.Contracts.Certificates.MachineProgress(2, 0, 0, 0), start);
+
+        var certificate = InspectionCertificate.CreateForTemplate(
+            fixture.Request.Id, fixture.Karim.Id, fixture.Crane.Id, null, "basic", 1);
+        certificate.SaveForm(
+            new Dictionary<string, string>(), new Dictionary<string, CertificateChecklistEntry>(),
+            new Dictionary<string, string>(), new Dictionary<string, DateTimeOffset>(), new Dictionary<string, bool>());
+        certificate.SubmitForm("Eng. Karim", null);
+        fixture.Request.Certificates.Add(certificate);
+
+        var progress = Assert.Single(await fixture.QueueAsync(CoordinatorId, "coordinator", QuotationQueue.Assigned)).Certificates;
+        Assert.Equal(new Application.Contracts.Certificates.MachineProgress(2, 1, 0, 0), progress);
+    }
+
+    [Fact]
     public async Task AQuotationThatIsNotAcceptedIsInNoQueue()
     {
         var fixture = new Fixture();

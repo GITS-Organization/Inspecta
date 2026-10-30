@@ -10,4 +10,8 @@
     <ProjectReference Include="..\Inspecta.Domain\Inspecta.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Certificates\Templates\*.json" />
+  </ItemGroup>
+
 </Project>

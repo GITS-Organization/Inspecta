@@ -1,0 +1,236 @@
+{
+  "key": "elevator",
+  "version": 1,
+  "name": "Elevator",
+  "fields": [
+    {
+      "key": "description",
+      "label": "Description",
+      "prefill": "name"
+    },
+    {
+      "key": "swl",
+      "label": "SWL",
+      "prefill": "capacity"
+    },
+    {
+      "key": "quantity",
+      "label": "Qty.",
+      "prefill": "quantity"
+    },
+    {
+      "key": "serialNumber",
+      "label": "Serial Number",
+      "prefill": "serialNumber"
+    },
+    {
+      "key": "manufacturer",
+      "label": "Manufacturer",
+      "prefill": "manufacturer"
+    }
+  ],
+  "checklist": [
+    {
+      "key": "1_elevator_inside_of_car",
+      "title": "1 ELEVATOR — INSIDE OF CAR",
+      "items": [
+        {
+          "key": "1_1_door_reopening_device",
+          "label": "1.1 Door reopening device"
+        },
+        {
+          "key": "1_2_stop_switches",
+          "label": "1.2 Stop switches"
+        },
+        {
+          "key": "1_3_operating_control_devices",
+          "label": "1.3 Operating control devices"
+        },
+        {
+          "key": "1_4_sills_and_car_floor",
+          "label": "1.4 Sills and car floor"
+        },
+        {
+          "key": "1_5_car_lighting_and_receptacles",
+          "label": "1.5 Car lighting and receptacles"
+        },
+        {
+          "key": "1_6_car_emergency_signal",
+          "label": "1.6 Car emergency signal"
+        },
+        {
+          "key": "1_7_car_door_or_gate",
+          "label": "1.7 Car door or gate"
+        },
+        {
+          "key": "1_8_door_closing_force",
+          "label": "1.8 Door closing force"
+        },
+        {
+          "key": "1_9_car_enclosure",
+          "label": "1.9 Car enclosure"
+        },
+        {
+          "key": "1_10_emergency_exit",
+          "label": "1.10 Emergency exit"
+        },
+        {
+          "key": "1_11_ventilation",
+          "label": "1.11 Ventilation"
+        },
+        {
+          "key": "1_12_signs_and_operating_device_symbols",
+          "label": "1.12 Signs and operating device symbols"
+        },
+        {
+          "key": "1_13_rated_load_platform_area_and_data_plate",
+          "label": "1.13 Rated load, platform area, and data plate"
+        }
+      ]
+    },
+    {
+      "key": "2_elevator_machine_room",
+      "title": "2 ELEVATOR — MACHINE ROOM",
+      "items": [
+        {
+          "key": "2_1_ventilation",
+          "label": "2.1 Ventilation"
+        },
+        {
+          "key": "2_2_static_control",
+          "label": "2.2 Static control"
+        },
+        {
+          "key": "2_3_pipes_wiring_and_ducts",
+          "label": "2.3 Pipes, wiring, and ducts"
+        },
+        {
+          "key": "2_4_guarding_of_exposed_auxiliary_equipment",
+          "label": "2.4 Guarding of exposed auxiliary equipment"
+        },
+        {
+          "key": "2_5_numbering_of_elevators_machines_and_disconnect_switches",
+          "label": "2.5 Numbering of elevators, machines, and disconnect switches"
+        },
+        {
+          "key": "2_6_governor_overspeed_switch_and_seal",
+          "label": "2.6 Governor, overspeed switch, and seal"
+        },
+        {
+          "key": "2_7_code_data_plate",
+          "label": "2.7 Code data plate"
+        },
+        {
+          "key": "2_8_overhead_beam_and_fastenings",
+          "label": "2.8 Overhead beam and fastenings"
+        },
+        {
+          "key": "2_9_maintenance_records",
+          "label": "2.9 Maintenance records"
+        },
+        {
+          "key": "2_10_drive_machine_brake",
+          "label": "2.10 Drive machine brake"
+        },
+        {
+          "key": "2_11_belt_or_chain_drive_machine",
+          "label": "2.11 Belt- or chain-drive machine"
+        },
+        {
+          "key": "2_12_rope_fastenings",
+          "label": "2.12 Rope fastenings"
+        },
+        {
+          "key": "2_13_terminal_stopping_devices",
+          "label": "2.13 Terminal stopping devices"
+        },
+        {
+          "key": "2_14_car_and_counterweight_safeties",
+          "label": "2.14 Car and counterweight safeties"
+        }
+      ]
+    },
+    {
+      "key": "3_elevators_top_of_car",
+      "title": "3 ELEVATORS — TOP OF CAR",
+      "items": [
+        {
+          "key": "3_1_top_of_car_stop_switch",
+          "label": "3.1 Top-of-car stop switch"
+        },
+        {
+          "key": "3_2_car_top_light_and_outlet",
+          "label": "3.2 Car top light and outlet"
+        },
+        {
+          "key": "3_3_top_of_car_operating_device",
+          "label": "3.3 Top-of-car operating device"
+        },
+        {
+          "key": "3_4_hoist_way_construction",
+          "label": "3.4 hoist way construction"
+        },
+        {
+          "key": "3_5_hoist_way_smoke_control",
+          "label": "3.5 Hoist way smoke control"
+        },
+        {
+          "key": "3_6_pipes_wiring_and_ducts",
+          "label": "3.6 Pipes, wiring, and ducts"
+        },
+        {
+          "key": "3_7_travelling_cables_and_junction_boxes",
+          "label": "3.7 Travelling cables and junction boxes"
+        }
+      ]
+    },
+    {
+      "key": "4_elevator_parking_devices",
+      "title": "4. Elevator Parking devices",
+      "items": [
+        {
+          "key": "4_1_emergency_doors_in_blind_hoist_ways",
+          "label": "4.1 Emergency doors in blind hoist ways"
+        },
+        {
+          "key": "4_1_separate_counterweight_hoist_way",
+          "label": "4.1 Separate counterweight hoist way"
+        },
+        {
+          "key": "4_1_standby_power_selection_switch",
+          "label": "4.1 Standby power selection switch"
+        }
+      ]
+    },
+    {
+      "key": "5_elevators_pit",
+      "title": "5 ELEVATORS — PIT",
+      "items": [
+        {
+          "key": "5_1_pit_access_lighting_stop_switch_and_condition",
+          "label": "5.1 Pit access, lighting, stop switch, and Condition"
+        },
+        {
+          "key": "5_2_final_and_emergency_terminal_stopping_devices",
+          "label": "5.2 Final and emergency terminal stopping Devices"
+        },
+        {
+          "key": "5_3_normal_terminal_stopping_devices",
+          "label": "5.3 Normal terminal stopping devices"
+        },
+        {
+          "key": "5_4_travelling_cables",
+          "label": "5.4 Travelling cables"
+        },
+        {
+          "key": "5_5_car_frame_and_platform",
+          "label": "5.5 Car Frame and platform"
+        },
+        {
+          "key": "5_6_compensating_chains_ropes_and_sheaves",
+          "label": "5.6 Compensating chains, ropes, and sheaves"
+        }
+      ]
+    }
+  ]
+}

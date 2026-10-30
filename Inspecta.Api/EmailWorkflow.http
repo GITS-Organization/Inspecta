@@ -414,3 +414,59 @@ Content-Type: application/json
   "scheduledAt": "2026-11-05T09:00:00Z",
   "note": "The site is closed that day"
 }
+
+@machineId = replace-with-request-item-id
+
+### Inspector: start the inspection (accepts the task, moves the job to in_progress) and get the machines
+POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/start-inspection
+Authorization: Bearer {{accessToken}}
+
+### The machines of the job with the state of each certificate
+GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines
+Authorization: Bearer {{accessToken}}
+
+### Open one machine: header, technical fields, checklist and saved answers
+GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}
+Authorization: Bearer {{accessToken}}
+
+### Inspector: save the machine (send only what changed; keys come from the form)
+PUT {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "fields": { "ndt": "MT, no cracks" },
+  "checklist": {
+    "tires_and_wheels.tread_tread_mounting": { "value": "yes" },
+    "tires_and_wheels.sidewalls_cracks": { "value": "no", "note": "Cut on the rear-left tyre" }
+  },
+  "answers": { "firstExamination": false, "within12Months": true, "examinationScheme": true, "exceptionalCircumstances": false, "existingDanger": false, "futureDanger": false },
+  "texts": { "testType": "Visual and function", "defectDescription": "Cut tyre", "conclusion": "Not satisfactory until the tyre is replaced" },
+  "dates": { "examination": "2026-11-05", "nextExamination": "2027-11-05" }
+}
+
+### Inspector: submit the machine to the technical manager
+POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/submit
+Authorization: Bearer {{accessToken}}
+
+### Technical manager: approve the machine
+POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/approve
+Authorization: Bearer {{accessToken}}
+
+### Technical manager: send the machine back with a note
+POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/return
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "note": "Please add the serial numbers" }
+
+### Download the certificate PDF (DRAFT until approved)
+GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/pdf
+Authorization: Bearer {{accessToken}}
+
+### Coordinator: hand the approved certificates to the client
+POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/deliver-to-client
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "sentTo": "certificates@client.com" }

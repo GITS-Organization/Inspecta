@@ -1,0 +1,206 @@
+{
+  "key": "wheel_loader_bucket",
+  "version": 1,
+  "name": "Wheel Loader With Bucket",
+  "fields": [
+    {
+      "key": "description",
+      "label": "Description",
+      "prefill": "name"
+    },
+    {
+      "key": "swl",
+      "label": "SWL",
+      "prefill": "capacity"
+    },
+    {
+      "key": "quantity",
+      "label": "Qty.",
+      "prefill": "quantity"
+    },
+    {
+      "key": "serialNumber",
+      "label": "Serial Number",
+      "prefill": "serialNumber"
+    },
+    {
+      "key": "manufacturer",
+      "label": "Manufacturer",
+      "prefill": "manufacturer"
+    }
+  ],
+  "checklist": [
+    {
+      "key": "tires_and_wheels",
+      "title": "TIRES AND WHEELS",
+      "items": [
+        {
+          "key": "tread_tread_mounting",
+          "label": "TREAD/TREAD MOUNTING"
+        },
+        {
+          "key": "sidewalls_cracks",
+          "label": "SIDEWALLS/CRACKS"
+        },
+        {
+          "key": "lug_nuts",
+          "label": "LUG NUTS"
+        },
+        {
+          "key": "hub_end_seals",
+          "label": "HUB END SEALS"
+        },
+        {
+          "key": "air_pressure",
+          "label": "AIR PRESSURE"
+        }
+      ]
+    },
+    {
+      "key": "brakes",
+      "title": "BRAKES",
+      "items": [
+        {
+          "key": "hydraulic_cylinders",
+          "label": "HYDRAULIC CYLINDERS"
+        },
+        {
+          "key": "air_oil_lines",
+          "label": "AIR / OIL LINES"
+        },
+        {
+          "key": "foot_brake",
+          "label": "FOOT BRAKE"
+        },
+        {
+          "key": "parking_brake",
+          "label": "PARKING BRAKE"
+        }
+      ]
+    },
+    {
+      "key": "loader_arm_and_steering_system",
+      "title": "LOADER ARM AND STEERING SYSTEM",
+      "items": [
+        {
+          "key": "cylinder_seals",
+          "label": "CYLINDER SEALS"
+        },
+        {
+          "key": "cylinder_seals_jacks",
+          "label": "CYLINDER SEALS (JACKS)"
+        },
+        {
+          "key": "hyd_hose_and_fittings",
+          "label": "HYD. HOSE AND FITTINGS"
+        },
+        {
+          "key": "hyd_oil_leaks",
+          "label": "HYD. OIL LEAKS"
+        },
+        {
+          "key": "linkages",
+          "label": "LINKAGES"
+        },
+        {
+          "key": "hoses_and_fittings",
+          "label": "HOSES AND FITTINGS"
+        },
+        {
+          "key": "cylinders_valves",
+          "label": "CYLINDERS/VALVES"
+        },
+        {
+          "key": "steering_rams",
+          "label": "STEERING RAMS"
+        },
+        {
+          "key": "steering_cylinders",
+          "label": "STEERING CYLINDERS"
+        },
+        {
+          "key": "steering_cylinders_seals",
+          "label": "STEERING CYLINDERS SEALS"
+        },
+        {
+          "key": "steering_hyd_hose_and_fittings",
+          "label": "STEERING HYD. HOSE AND FITTINGS"
+        },
+        {
+          "key": "steering_hyd_oil_leaks",
+          "label": "STEERING HYD. OIL LEAKS"
+        },
+        {
+          "key": "steering_linkages",
+          "label": "STEERING LINKAGES"
+        }
+      ]
+    },
+    {
+      "key": "bucket",
+      "title": "Bucket",
+      "items": [
+        {
+          "key": "surface",
+          "label": "SURFACE"
+        },
+        {
+          "key": "straightness_of_blade_shank",
+          "label": "STRAIGHTNESS OF BLADE & SHANK"
+        },
+        {
+          "key": "bucket_angle",
+          "label": "Bucket ANGLE"
+        },
+        {
+          "key": "bucket_blade_shank",
+          "label": "Bucket BLADE/SHANK"
+        },
+        {
+          "key": "bucket_hooks",
+          "label": "Bucket HOOKS"
+        }
+      ]
+    },
+    {
+      "key": "markings",
+      "title": "MARKINGS",
+      "items": [
+        {
+          "key": "model_serial_number",
+          "label": "MODEL & SERIAL NUMBER"
+        },
+        {
+          "key": "approx_wt_of_truck",
+          "label": "APPROX. WT. OF TRUCK"
+        },
+        {
+          "key": "capacity",
+          "label": "CAPACITY"
+        },
+        {
+          "key": "maximum_elevation",
+          "label": "MAXIMUM ELEVATION"
+        },
+        {
+          "key": "control_functions",
+          "label": "CONTROL FUNCTIONS"
+        }
+      ]
+    },
+    {
+      "key": "controls",
+      "title": "CONTROLS",
+      "items": [
+        {
+          "key": "connections",
+          "label": "CONNECTIONS"
+        },
+        {
+          "key": "functions",
+          "label": "FUNCTIONS"
+        }
+      ]
+    }
+  ]
+}

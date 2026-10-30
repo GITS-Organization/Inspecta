@@ -292,6 +292,10 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<string>("CertificateNumber")
                         .HasColumnType("text");
 
+                    b.Property<string>("ChecklistJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("DatesJson")
                         .IsRequired()
                         .HasColumnType("text");
@@ -358,9 +362,16 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset?>("SubmittedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("TechnicalJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("TemplateId")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("TemplateVersion")
+                        .HasColumnType("integer");
 
                     b.Property<string>("TextsJson")
                         .IsRequired()

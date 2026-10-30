@@ -29,6 +29,7 @@ public static class PdfServiceCollectionExtensions
 
         services.AddSingleton<IPdfGenerator, PdfGenerator>();
         services.AddPdfTemplate<QuotationPdfModel, QuotationPdfTemplate>();
+        services.AddPdfTemplate<CertificatePdfModel, CertificatePdfTemplate>();
         return services;
     }
 

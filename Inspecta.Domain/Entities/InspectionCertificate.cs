@@ -43,6 +43,11 @@ public sealed class InspectionCertificate
     }
     public string? SentTo { get; private set; }
     public DateTimeOffset? SentAt { get; private set; }
+
+    /// <summary>0 for the older form that has no template; 1 or more for a certificate built from a catalogue template.</summary>
+    public int TemplateVersion { get; private set; }
+    public string TechnicalJson { get; private set; } = "{}";
+    public string ChecklistJson { get; private set; } = "{}";
     public InspectionRequest? Request { get; private set; }
     public RequestItem? RequestItem { get; private set; }
 
@@ -189,6 +194,111 @@ public sealed class InspectionCertificate
 
     public bool IsReadyToSubmit() => Draft.IsReadyToSubmit(HasAngle);
     public bool IsApproved => ReviewedAt is not null && CertificateNumber is not null;
+    public bool UsesTemplate => TemplateVersion > 0;
+    public bool IsDelivered => SentAt is not null;
+
+    /// <summary>Copies of the saved texts, dates and questionnaire answers (changing them does not change the certificate).</summary>
+    public Dictionary<string, string> TextsOf() => Deserialize<Dictionary<string, string>>(TextsJson);
+    public Dictionary<string, DateTimeOffset> DatesOf() => Deserialize<Dictionary<string, DateTimeOffset>>(DatesJson);
+    public Dictionary<string, bool> AnswersOf() => Deserialize<Dictionary<string, bool>>(AnswersJson);
+
+    /// <summary>Technical fields the inspector filled, by field key.</summary>
+    [NotMapped]
+    public IReadOnlyDictionary<string, string> Technical => Deserialize<Dictionary<string, string>>(TechnicalJson);
+
+    /// <summary>Checklist answers by <c>section.item</c>.</summary>
+    [NotMapped]
+    public IReadOnlyDictionary<string, CertificateChecklistEntry> Checklist =>
+        Deserialize<Dictionary<string, CertificateChecklistEntry>>(ChecklistJson);
+
+    /// <summary>Starts the certificate of one machine from a catalogue template.</summary>
+    public static InspectionCertificate CreateForTemplate(
+        Guid requestId,
+        Guid inspectorId,
+        Guid requestItemId,
+        Guid? equipmentId,
+        string templateKey,
+        int templateVersion)
+    {
+        if (string.IsNullOrWhiteSpace(templateKey)) throw new ArgumentException("Template is required.", nameof(templateKey));
+        if (templateVersion < 1) throw new ArgumentOutOfRangeException(nameof(templateVersion));
+        var certificate = Create(requestId, inspectorId, equipmentId, requestItemId: requestItemId);
+        certificate.TemplateId = templateKey.Trim();
+        certificate.TemplateVersion = templateVersion;
+        return certificate;
+    }
+
+    /// <summary>
+    /// Saves what the inspector entered for a template certificate. The values are stored as given; the application
+    /// checks them against the template before the certificate is submitted.
+    /// </summary>
+    public void SaveForm(
+        IReadOnlyDictionary<string, string> technical,
+        IReadOnlyDictionary<string, CertificateChecklistEntry> checklist,
+        IReadOnlyDictionary<string, string> texts,
+        IReadOnlyDictionary<string, DateTimeOffset> dates,
+        IReadOnlyDictionary<string, bool> answers)
+    {
+        EnsureTemplateForm();
+        EnsureEditable();
+        TechnicalJson = JsonSerializer.Serialize(technical);
+        ChecklistJson = JsonSerializer.Serialize(checklist);
+        TextsJson = JsonSerializer.Serialize(texts);
+        DatesJson = JsonSerializer.Serialize(dates);
+        AnswersJson = JsonSerializer.Serialize(answers);
+    }
+
+    /// <summary>Sends a template certificate to the technical manager, recording who prepared it.</summary>
+    public void SubmitForm(string preparedByName, string? preparedByQualifications)
+    {
+        EnsureTemplateForm();
+        EnsureEditable();
+        if (string.IsNullOrWhiteSpace(preparedByName))
+            throw new ArgumentException("Inspector name is required.", nameof(preparedByName));
+        var texts = Deserialize<Dictionary<string, string>>(TextsJson);
+        texts["preparedByName"] = preparedByName.Trim();
+        if (string.IsNullOrWhiteSpace(preparedByQualifications)) texts.Remove("preparedByQualifications");
+        else texts["preparedByQualifications"] = preparedByQualifications.Trim();
+        TextsJson = JsonSerializer.Serialize(texts);
+        SubmittedAt = DateTimeOffset.UtcNow;
+        ReviewedAt = null;
+        ReviewerId = null;
+        ReviewerName = null;
+        ReviewerLicense = null;
+        ReviewNote = null;
+        ReviewerComments = null;
+    }
+
+    /// <summary>Approves a submitted template certificate. The QR code is added later, so <paramref name="qrData"/> may stay empty.</summary>
+    public void ApproveForm(Guid reviewerId, string reviewerName, string certificateNumber, string verificationCode, string? qrData = null)
+    {
+        EnsureTemplateForm();
+        EnsureSubmitted();
+        if (reviewerId == Guid.Empty) throw new ArgumentException("Reviewer is required.", nameof(reviewerId));
+        if (string.IsNullOrWhiteSpace(certificateNumber) || string.IsNullOrWhiteSpace(verificationCode))
+            throw new ArgumentException("Certificate number and verification code are required.");
+        CertificateNumber = certificateNumber.Trim();
+        VerificationCode = verificationCode.Trim();
+        QrData = string.IsNullOrWhiteSpace(qrData) ? null : qrData.Trim();
+        ReviewerId = reviewerId;
+        ReviewerName = string.IsNullOrWhiteSpace(reviewerName) ? null : reviewerName.Trim();
+        ReviewedAt = DateTimeOffset.UtcNow;
+        ReviewNote = null;
+    }
+
+    /// <summary>Records that the approved certificate was handed to the client.</summary>
+    public void MarkDelivered(string? sentTo, DateTimeOffset? at = null)
+    {
+        if (!IsApproved) throw new InvalidOperationException("Only an approved certificate can be delivered.");
+        SentTo = string.IsNullOrWhiteSpace(sentTo) ? null : sentTo.Trim();
+        SentAt = at ?? DateTimeOffset.UtcNow;
+    }
+
+    private void EnsureTemplateForm()
+    {
+        if (!UsesTemplate)
+            throw new InvalidOperationException("This certificate was created with the older form.");
+    }
 
     public void Submit()
     {

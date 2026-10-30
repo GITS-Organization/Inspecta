@@ -1,0 +1,182 @@
+{
+  "key": "diesel_generator",
+  "version": 1,
+  "name": "Diesel Generator",
+  "fields": [
+    {
+      "key": "description",
+      "label": "Description",
+      "prefill": "name"
+    },
+    {
+      "key": "swl",
+      "label": "SWL",
+      "prefill": "capacity"
+    },
+    {
+      "key": "quantity",
+      "label": "Qty.",
+      "prefill": "quantity"
+    },
+    {
+      "key": "serialNumber",
+      "label": "Serial Number",
+      "prefill": "serialNumber"
+    },
+    {
+      "key": "manufacturer",
+      "label": "Manufacturer",
+      "prefill": "manufacturer"
+    }
+  ],
+  "checklist": [
+    {
+      "key": "section_1",
+      "title": "Section 1",
+      "items": [
+        {
+          "key": "1_general_condition",
+          "label": "1. General Condition"
+        },
+        {
+          "key": "check_overall_generator_cleanliness_no_dust_oil_or_debris",
+          "label": "Check overall generator cleanliness (no dust, oil, or debris)"
+        },
+        {
+          "key": "inspect_for_loose_bolts_damaged_parts_or_abnormal_vibrations",
+          "label": "inspect for loose bolts, damaged parts, or abnormal vibrations"
+        },
+        {
+          "key": "verify_that_all_safety_guards_and_covers_are_in_place",
+          "label": "Verify that all safety guards and covers are in place"
+        },
+        {
+          "key": "ensure_the_generator_area_has_proper_ventilation",
+          "label": "Ensure the generator area has proper ventilation"
+        },
+        {
+          "key": "2_engine_system",
+          "label": "2. Engine System"
+        },
+        {
+          "key": "check_engine_oil_level_using_dipstick",
+          "label": "Check engine oil level using dipstick"
+        },
+        {
+          "key": "inspect_for_oil_leaks_around_engine_seals_and_hoses",
+          "label": "Inspect for oil leaks around engine, seals, and hoses"
+        },
+        {
+          "key": "check_fuel_level_in_tank",
+          "label": "Check fuel level in tank"
+        },
+        {
+          "key": "3_air_intake_exhaust",
+          "label": "3. Air Intake & Exhaust"
+        },
+        {
+          "key": "inspect_air_filter_for_dust_and_clogging",
+          "label": "Inspect air filter for dust and clogging"
+        },
+        {
+          "key": "check_intake_system_for_obstructions",
+          "label": "Check intake system for obstructions"
+        },
+        {
+          "key": "inspect_exhaust_system_for_leaks_smoke_abnormality_or_unusual_odor",
+          "label": "Inspect exhaust system for leaks, smoke abnormality, or unusual odor"
+        },
+        {
+          "key": "ensure_exhaust_outlet_is_clear_and_properly_directed",
+          "label": "Ensure exhaust outlet is clear and properly directed."
+        },
+        {
+          "key": "4_battery_electrical_system",
+          "label": "4. Battery & Electrical System"
+        },
+        {
+          "key": "check_battery_voltage_and_charge_level",
+          "label": "Check battery voltage and charge level"
+        },
+        {
+          "key": "inspect_battery_terminals_for_corrosion_or_loose_connections",
+          "label": "Inspect battery terminals for corrosion or loose connections"
+        },
+        {
+          "key": "check_control_panel_indicators_and_alarms",
+          "label": "Check control panel indicators and alarms"
+        },
+        {
+          "key": "validate_emergency_stop_button_functionality",
+          "label": "Validate emergency stop button functionality"
+        }
+      ]
+    },
+    {
+      "key": "section_2",
+      "title": "Section 2",
+      "items": [
+        {
+          "key": "5_belts_hoses",
+          "label": "5. Belts & Hoses"
+        },
+        {
+          "key": "inspect_belts_for_cracks_tension_or_wear",
+          "label": "Inspect belts for cracks, tension, or wear"
+        },
+        {
+          "key": "check_all_hoses_for_leaks_swelling_or_soft_spots",
+          "label": "Check all hoses for leaks, swelling, or soft spots."
+        },
+        {
+          "key": "6_lubrication_filters",
+          "label": "6. Lubrication & Filters"
+        },
+        {
+          "key": "inspect_oil_filter_condition",
+          "label": "Inspect oil filter condition"
+        },
+        {
+          "key": "check_fuel_filter_and_water_separator",
+          "label": "Check fuel filter and water separator"
+        },
+        {
+          "key": "confirm_replacement_dates_are_current",
+          "label": "Confirm replacement dates are current"
+        },
+        {
+          "key": "7_safety_emergency_equipment",
+          "label": "7. Safety & Emergency Equipment"
+        },
+        {
+          "key": "ensure_fire_extinguisher_is_in_place_and_functional",
+          "label": "Ensure fire extinguisher is in place and functional"
+        },
+        {
+          "key": "check_grounding_cable_condition",
+          "label": "Check grounding cable condition"
+        },
+        {
+          "key": "verify_all_warning_labels_and_signage_are_readable",
+          "label": "Verify all warning labels and signage are readable"
+        },
+        {
+          "key": "10_documentation",
+          "label": "10. Documentation"
+        },
+        {
+          "key": "update_maintenance_log_and_inspection_checklist",
+          "label": "Update maintenance log and inspection checklist"
+        },
+        {
+          "key": "record_fuel_consumption_and_running_hours",
+          "label": "Record fuel consumption and running hours"
+        },
+        {
+          "key": "note_any_corrective_actions_required",
+          "label": "Note any corrective actions required."
+        }
+      ]
+    }
+  ]
+}

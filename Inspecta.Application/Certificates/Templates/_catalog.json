@@ -1,0 +1,485 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "name": "Air Compressor",
+      "aliases": [],
+      "standards": [
+        "BS ISO 5389: 2005"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Bow Shackle Bolt and Nut Pin",
+      "aliases": [],
+      "standards": [
+        "BS EN 13889:2003 +A1:2008"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Bow Shackle Screw pin",
+      "aliases": [],
+      "standards": [
+        "BS EN 13889:2003 +A1:2008"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Chain Block",
+      "aliases": [],
+      "standards": [
+        "BS EN 13157:2004 +A1:2009"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Chain Sling grade 4",
+      "aliases": [],
+      "standards": [
+        "BS EN 818-5+A1:2008"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Chain Sling grade 8",
+      "aliases": [],
+      "standards": [
+        "BS EN 818-4+A1:2008"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Clamp Horizontal plate clamp",
+      "aliases": [],
+      "standards": [
+        "BS EN 13155:2020"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Clamp Vertical plate clamp",
+      "aliases": [],
+      "standards": [
+        "BS EN 13155:2020"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Container",
+      "aliases": [],
+      "standards": [],
+      "template": "basic"
+    },
+    {
+      "name": "Conveyor Belt System",
+      "aliases": [],
+      "standards": [
+        "ASME B20.1:2021"
+      ],
+      "template": "conveyor_belt"
+    },
+    {
+      "name": "Crawler excavator",
+      "aliases": [],
+      "standards": [
+        "BS EN 474-5:2022"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Crusher",
+      "aliases": [],
+      "standards": [
+        "BS EN 1009-2:2020"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Diesel Generator",
+      "aliases": [],
+      "standards": [
+        "ISO 8528-1:2005"
+      ],
+      "template": "diesel_generator"
+    },
+    {
+      "name": "Electric Hoist (Monorail)",
+      "aliases": [],
+      "standards": [
+        "BS EN 7121-2-7:2012 +A1:2015"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Elevator",
+      "aliases": [],
+      "standards": [
+        "ASME A17.2:2001"
+      ],
+      "template": "elevator"
+    },
+    {
+      "name": "Eye Bolt",
+      "aliases": [],
+      "standards": [
+        "BS EN ISO 3266:2010 +A1:2015"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Fall Arrestor",
+      "aliases": [],
+      "standards": [
+        "BS EN 360:2002"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Flat woven webbing sling",
+      "aliases": [],
+      "standards": [
+        "BS EN 1492-1 +A1:2008"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Forklift Truck",
+      "aliases": [
+        "Forklift"
+      ],
+      "standards": [
+        "BS EN ISO 3691-1:2011",
+        "BS ISO 2330:2002"
+      ],
+      "template": "forklift"
+    },
+    {
+      "name": "Full Body Safety Harness",
+      "aliases": [],
+      "standards": [
+        "BS EN 361:2002"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Gantry Crane",
+      "aliases": [],
+      "standards": [
+        "BS 7121-2-7:2012"
+      ],
+      "template": "girder_crane"
+    },
+    {
+      "name": "Grader",
+      "aliases": [],
+      "standards": [
+        "BS EN 474-8:2022"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Hand Pallet",
+      "aliases": [],
+      "standards": [
+        "BS EN ISO 3691-5:2015 +A1:2020"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Hook With Safety Latch",
+      "aliases": [],
+      "standards": [
+        "BS EN 1677-5:2001 +A1:2008"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Hydraulic Jack",
+      "aliases": [],
+      "standards": [
+        "BS EN 1494:2000 +A1:2008"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Jaw Winch (Tirfor)",
+      "aliases": [
+        "Jaw Winch",
+        "Tirfor"
+      ],
+      "standards": [
+        "BS EN 13157:2004 +A1:2009"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Jib Crane",
+      "aliases": [],
+      "standards": [
+        "BS EN 14985:2012"
+      ],
+      "template": "girder_crane"
+    },
+    {
+      "name": "Lattice Boom Crawler Crane",
+      "aliases": [
+        "Lattice boom crawler carne"
+      ],
+      "standards": [
+        "BS 7121-2-3:2012"
+      ],
+      "template": "lattice_boom_crane"
+    },
+    {
+      "name": "Level Hoist",
+      "aliases": [],
+      "standards": [
+        "BS EN 13157:2004 +A1:2009"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Light Tower",
+      "aliases": [],
+      "standards": [
+        "BS EN 16110-2: 2010"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Man Basket",
+      "aliases": [],
+      "standards": [
+        "BS EN 14502-1:2010"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Manlift",
+      "aliases": [],
+      "standards": [
+        "BS EN 280:2013"
+      ],
+      "template": "manlift"
+    },
+    {
+      "name": "Manual Jack",
+      "aliases": [],
+      "standards": [
+        "BS EN 14502-1:2010"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Overhead Crane",
+      "aliases": [
+        "Over head crane"
+      ],
+      "standards": [
+        "BS EN 7121-2-7:2012 +A1:2015"
+      ],
+      "template": "girder_crane"
+    },
+    {
+      "name": "Packing and sealing unit",
+      "aliases": [],
+      "standards": [
+        "EN 415-1:2001"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Pilling Drilling machine",
+      "aliases": [
+        "Piling Drilling machine"
+      ],
+      "standards": [
+        "ISO 18758-2:2018"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Pipe Hook",
+      "aliases": [],
+      "standards": [
+        "BS EN 1677-5+A1:2008"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Reach Stacker",
+      "aliases": [],
+      "standards": [
+        "BS EN 7121-2-9:2013"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Round Webbing Sling",
+      "aliases": [],
+      "standards": [
+        "BS EN 1492-2 +A1:2008"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Rubber Tired Gantry Crane (RTG)",
+      "aliases": [
+        "Rubber Tired Gantry Crane",
+        "RTG"
+      ],
+      "standards": [
+        "BS 7121-2-9:2013",
+        "BS 7121-13:2009"
+      ],
+      "template": "rtg"
+    },
+    {
+      "name": "Scissor Lift",
+      "aliases": [],
+      "standards": [
+        "BS EN 280:2013"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Ship to Shore Container crane (STS)",
+      "aliases": [
+        "Ship to Shore Container crane",
+        "STS"
+      ],
+      "standards": [],
+      "template": "basic"
+    },
+    {
+      "name": "Shock Absorber",
+      "aliases": [],
+      "standards": [
+        "BS EN 355:2002"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Side Boom Crane",
+      "aliases": [],
+      "standards": [
+        "BS 7121-14:2005"
+      ],
+      "template": "side_boom_crane"
+    },
+    {
+      "name": "Skid Steer Loader",
+      "aliases": [],
+      "standards": [
+        "EN 474-3:2022"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Snatch Block",
+      "aliases": [],
+      "standards": [
+        "BS EN 13157:2004 +A1:2009"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Spreader Bar",
+      "aliases": [],
+      "standards": [
+        "BS EN 13155:2020"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Steel Wire Rope Sling",
+      "aliases": [],
+      "standards": [
+        "BS EN 13414-1:2003 +A2:2008"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Telescopic boom mobile Crane",
+      "aliases": [],
+      "standards": [
+        "BS 7121-2-3:2012"
+      ],
+      "template": "telescopic_crane"
+    },
+    {
+      "name": "Terminal tractor",
+      "aliases": [],
+      "standards": [
+        "BS EN 7121-2-4:2012",
+        "ISO 3691-1:2011"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Tower Crane",
+      "aliases": [],
+      "standards": [
+        "BS 7121-2-5:2019"
+      ],
+      "template": "tower_crane"
+    },
+    {
+      "name": "Trailer Truck",
+      "aliases": [],
+      "standards": [],
+      "template": "basic"
+    },
+    {
+      "name": "Vehicle",
+      "aliases": [],
+      "standards": [
+        "BS EN 474-1:2022"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Vibrator Compactor",
+      "aliases": [
+        "Vibrator Comapactor"
+      ],
+      "standards": [
+        "BS EN 474-11:2022"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "VNA Lifter",
+      "aliases": [],
+      "standards": [
+        "BS ISO 2330:2002"
+      ],
+      "template": "basic"
+    },
+    {
+      "name": "Wheel Excavator",
+      "aliases": [],
+      "standards": [
+        "BS EN 474-5:2022"
+      ],
+      "template": "wheel_excavator"
+    },
+    {
+      "name": "Wheel Loader With Bucket",
+      "aliases": [],
+      "standards": [
+        "BS EN 7121-2-4:2012"
+      ],
+      "template": "wheel_loader_bucket"
+    },
+    {
+      "name": "Wheel Loader With Fork Arm",
+      "aliases": [],
+      "standards": [
+        "BS EN 7121-2-4:2012"
+      ],
+      "template": "wheel_loader_fork"
+    }
+  ]
+}

@@ -132,6 +132,20 @@ public sealed class QuoteService(
             .ToArray();
     }
 
+    // How far the certificates of an assigned job are; not shown before the job is given to an inspector.
+    private static Contracts.Certificates.MachineProgress? CertificateProgressOf(InspectionRequest request)
+    {
+        if (QuotationQueues.Of(request.Status) is not (QuotationQueue.Assigned or QuotationQueue.Certify)) return null;
+        var states = request.Items
+            .Select(item => MachineInspectionService.StatusOf(request.Certificates.SingleOrDefault(value => value.RequestItemId == item.Id)))
+            .ToArray();
+        return new Contracts.Certificates.MachineProgress(
+            states.Length,
+            states.Count(state => state is Contracts.Certificates.MachineStatus.Submitted or Contracts.Certificates.MachineStatus.Approved or Contracts.Certificates.MachineStatus.Delivered),
+            states.Count(state => state is Contracts.Certificates.MachineStatus.Approved or Contracts.Certificates.MachineStatus.Delivered),
+            states.Count(state => state == Contracts.Certificates.MachineStatus.Delivered));
+    }
+
     private static QuoteSummaryResponse MapSummary(
         Quote quote,
         InspectionRequest request,
@@ -169,7 +183,8 @@ public sealed class QuoteService(
             request.InspectorId,
             inspectorName,
             request.ScheduledAt,
-            QuotationQueues.Of(request.Status));
+            QuotationQueues.Of(request.Status),
+            CertificateProgressOf(request));
     }
 
     public async Task<QuoteResponse> GetAsync(

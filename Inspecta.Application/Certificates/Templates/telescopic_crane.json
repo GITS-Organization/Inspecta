@@ -1,0 +1,347 @@
+{
+  "key": "telescopic_crane",
+  "version": 1,
+  "name": "Telescopic boom mobile Crane",
+  "fields": [
+    {
+      "key": "manufacturer",
+      "label": "Manufacturer",
+      "prefill": "manufacturer"
+    },
+    {
+      "key": "swl",
+      "label": "SWL",
+      "prefill": "capacity"
+    },
+    {
+      "key": "modelYear",
+      "label": "Model/Manufacturing year",
+      "prefill": "model"
+    },
+    {
+      "key": "serialNumber",
+      "label": "Serial Number",
+      "prefill": "serialNumber"
+    },
+    {
+      "key": "boomLength",
+      "label": "Boom length"
+    },
+    {
+      "key": "maxLoadLoadTest",
+      "label": "Max. Load/ Load test"
+    },
+    {
+      "key": "radius",
+      "label": "Radius"
+    },
+    {
+      "key": "angle",
+      "label": "Angle"
+    },
+    {
+      "key": "wireDiaRev",
+      "label": "Wire Dia. / Rev."
+    },
+    {
+      "key": "counterweight",
+      "label": "Counterweight"
+    },
+    {
+      "key": "hookSerialNo",
+      "label": "Hook Serial No."
+    },
+    {
+      "key": "hookSwlNoOfSheaves",
+      "label": "Hook SWL / No. of Sheaves"
+    }
+  ],
+  "checklist": [
+    {
+      "key": "tires_and_wheels",
+      "title": "TIRES AND WHEELS",
+      "items": [
+        {
+          "key": "sidewalls_cracks",
+          "label": "SIDEWALLS/CRACKS"
+        },
+        {
+          "key": "lug_nuts",
+          "label": "LUG NUTS"
+        },
+        {
+          "key": "air_pressure",
+          "label": "AIR PRESSURE"
+        }
+      ]
+    },
+    {
+      "key": "brakes_mechanical",
+      "title": "BRAKES (MECHANICAL)",
+      "items": [
+        {
+          "key": "swing_foot_and_hand",
+          "label": "SWING (FOOT AND HAND)"
+        },
+        {
+          "key": "hoist_main_and_aux",
+          "label": "HOIST (MAIN AND AUX.)"
+        },
+        {
+          "key": "boom_hoist",
+          "label": "BOOM HOIST"
+        },
+        {
+          "key": "system_oil_leaks",
+          "label": "SYSTEM OIL LEAKS"
+        }
+      ]
+    },
+    {
+      "key": "brakes_air_assisted",
+      "title": "BRAKES (AIR ASSISTED)",
+      "items": [
+        {
+          "key": "hoses_condition_and_leaks",
+          "label": "HOSES (CONDITION AND LEAKS)"
+        },
+        {
+          "key": "line_fittings_valves",
+          "label": "LINE FITTINGS/VALVES"
+        }
+      ]
+    },
+    {
+      "key": "outriggers",
+      "title": "OUTRIGGERS",
+      "items": [
+        {
+          "key": "cylinder_seals_beam",
+          "label": "CYLINDER SEALS (BEAM)"
+        },
+        {
+          "key": "cylinder_seals_jacks",
+          "label": "CYLINDER SEALS (JACKS)"
+        },
+        {
+          "key": "hyd_hose_and_fittings",
+          "label": "HYD. HOSE AND FITTINGS"
+        },
+        {
+          "key": "outrigger_pads_and_retainers",
+          "label": "OUTRIGGER PADS AND RETAINERS"
+        },
+        {
+          "key": "hyd_oil_leaks",
+          "label": "HYD. OIL LEAKS"
+        },
+        {
+          "key": "outriggers_box_sections",
+          "label": "OUTRIGGERS BOX SECTIONS"
+        }
+      ]
+    },
+    {
+      "key": "superstructure",
+      "title": "SUPERSTRUCTURE",
+      "items": [
+        {
+          "key": "swing_motion",
+          "label": "SWING MOTION"
+        },
+        {
+          "key": "motion_control_levers",
+          "label": "MOTION CONTROL LEVERS"
+        },
+        {
+          "key": "load_range_charts",
+          "label": "LOAD RANGE CHARTS"
+        },
+        {
+          "key": "crane_control_valves",
+          "label": "CRANE CONTROL VALVES"
+        },
+        {
+          "key": "boom_raise_limits",
+          "label": "BOOM RAISE LIMITS"
+        },
+        {
+          "key": "counterweight_mounting",
+          "label": "COUNTERWEIGHT MOUNTING"
+        },
+        {
+          "key": "guards",
+          "label": "GUARDS"
+        },
+        {
+          "key": "welds",
+          "label": "WELDS"
+        }
+      ]
+    },
+    {
+      "key": "electrical",
+      "title": "ELECTRICAL",
+      "items": [
+        {
+          "key": "gauges_instrument_panel",
+          "label": "GAUGES (INSTRUMENT PANEL)"
+        },
+        {
+          "key": "wiring",
+          "label": "WIRING"
+        },
+        {
+          "key": "lights_indicators_hazard",
+          "label": "LIGHTS/INDICATORS/HAZARD"
+        },
+        {
+          "key": "lights_reversing_audible",
+          "label": "LIGHTS/REVERSING & AUDIBLE"
+        }
+      ]
+    },
+    {
+      "key": "steering_system",
+      "title": "STEERING SYSTEM",
+      "items": [
+        {
+          "key": "all_linkages",
+          "label": "ALL LINKAGES"
+        },
+        {
+          "key": "hoses_and_fittings",
+          "label": "HOSES AND FITTINGS"
+        },
+        {
+          "key": "cylinders_valves",
+          "label": "CYLINDERS/VALVES"
+        }
+      ]
+    },
+    {
+      "key": "boom",
+      "title": "BOOM",
+      "items": [
+        {
+          "key": "operation_telescoping",
+          "label": "OPERATION (TELESCOPING)"
+        },
+        {
+          "key": "operation_raise_lower",
+          "label": "OPERATION (RAISE/LOWER)"
+        },
+        {
+          "key": "wear_pads",
+          "label": "WEAR PADS"
+        },
+        {
+          "key": "lift_cylinder_pins_and_bushings",
+          "label": "LIFT CYLINDER PINS AND BUSHINGS"
+        },
+        {
+          "key": "tip_sheaves_and_shafts",
+          "label": "TIP SHEAVES AND SHAFTS"
+        },
+        {
+          "key": "lattice_type",
+          "label": "LATTICE TYPE"
+        },
+        {
+          "key": "main_chord_tubular",
+          "label": "MAIN CHORD (TUBULAR)"
+        },
+        {
+          "key": "main_chord_angle",
+          "label": "MAIN CHORD (ANGLE)"
+        }
+      ]
+    },
+    {
+      "key": "hoist_and_boom_cables",
+      "title": "HOIST AND BOOM CABLES",
+      "items": [
+        {
+          "key": "main_hoist_reeved",
+          "label": "MAIN HOIST (REEVED)"
+        },
+        {
+          "key": "aux_hoist_reeved",
+          "label": "AUX. HOIST (REEVED)"
+        },
+        {
+          "key": "boom_hoist",
+          "label": "BOOM HOIST"
+        },
+        {
+          "key": "hoist_units",
+          "label": "HOIST UNITS"
+        },
+        {
+          "key": "planetary_gear_free_fall",
+          "label": "PLANETARY GEAR (FREE FALL)"
+        }
+      ]
+    },
+    {
+      "key": "load_blocks",
+      "title": "LOAD BLOCKS",
+      "items": [
+        {
+          "key": "sheaves_shafts",
+          "label": "SHEAVES/SHAFTS"
+        },
+        {
+          "key": "hook",
+          "label": "HOOK"
+        },
+        {
+          "key": "safety_latch",
+          "label": "SAFETY LATCH"
+        },
+        {
+          "key": "swivel",
+          "label": "SWIVEL"
+        },
+        {
+          "key": "cable_dead_end",
+          "label": "CABLE DEAD END"
+        }
+      ]
+    },
+    {
+      "key": "safety_devices",
+      "title": "SAFETY DEVICES",
+      "items": [
+        {
+          "key": "load_indicator",
+          "label": "LOAD INDICATOR"
+        },
+        {
+          "key": "angle_indicator",
+          "label": "ANGLE INDICATOR"
+        },
+        {
+          "key": "warning_audible",
+          "label": "WARNING (AUDIBLE)"
+        },
+        {
+          "key": "anti_two_block_system",
+          "label": "ANTI TWO BLOCK SYSTEM"
+        },
+        {
+          "key": "door_back_latch",
+          "label": "DOOR BACK LATCH"
+        },
+        {
+          "key": "level_indicators",
+          "label": "LEVEL INDICATORS"
+        },
+        {
+          "key": "electrocution_warning",
+          "label": "ELECTROCUTION WARNING"
+        }
+      ]
+    }
+  ]
+}

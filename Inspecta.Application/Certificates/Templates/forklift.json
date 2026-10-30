@@ -1,0 +1,221 @@
+{
+  "key": "forklift",
+  "version": 1,
+  "name": "Forklift Truck",
+  "fields": [
+    {
+      "key": "manufacturer",
+      "label": "Manufacturer",
+      "prefill": "manufacturer"
+    },
+    {
+      "key": "swl",
+      "label": "SWL",
+      "prefill": "capacity"
+    },
+    {
+      "key": "modelYear",
+      "label": "Model/Manufacturing year",
+      "prefill": "model"
+    },
+    {
+      "key": "serialNumber",
+      "label": "Serial Number",
+      "prefill": "serialNumber"
+    },
+    {
+      "key": "ndt",
+      "label": "NDT (method/result)"
+    },
+    {
+      "key": "loadTest",
+      "label": "Load test"
+    },
+    {
+      "key": "verticalDisplacementDueToLoadSuspended",
+      "label": "Vertical Displacement Due to Load Suspended"
+    },
+    {
+      "key": "boomLengthIfTelescopic",
+      "label": "Boom Length if telescopic"
+    }
+  ],
+  "checklist": [
+    {
+      "key": "tires_and_wheels",
+      "title": "TIRES AND WHEELS",
+      "items": [
+        {
+          "key": "tread_tread_mounting",
+          "label": "TREAD/TREAD MOUNTING"
+        },
+        {
+          "key": "sidewalls_cracks",
+          "label": "SIDEWALLS/CRACKS"
+        },
+        {
+          "key": "lug_nuts",
+          "label": "LUG NUTS"
+        },
+        {
+          "key": "hub_end_seals",
+          "label": "HUB END SEALS"
+        },
+        {
+          "key": "air_pressure",
+          "label": "AIR PRESSURE"
+        }
+      ]
+    },
+    {
+      "key": "brakes",
+      "title": "BRAKES",
+      "items": [
+        {
+          "key": "hydraulic_cylinders",
+          "label": "HYDRAULIC CYLINDERS"
+        },
+        {
+          "key": "air_oil_lines",
+          "label": "AIR / OIL LINES"
+        },
+        {
+          "key": "foot_brake",
+          "label": "FOOT BRAKE"
+        },
+        {
+          "key": "parking_brake",
+          "label": "PARKING BRAKE"
+        }
+      ]
+    },
+    {
+      "key": "mast",
+      "title": "MAST",
+      "items": [
+        {
+          "key": "cylinder_seals",
+          "label": "CYLINDER SEALS"
+        },
+        {
+          "key": "cylinder_seals_jacks",
+          "label": "CYLINDER SEALS (JACKS)"
+        },
+        {
+          "key": "hyd_hose_and_fittings",
+          "label": "HYD. HOSE AND FITTINGS"
+        },
+        {
+          "key": "hyd_oil_leaks",
+          "label": "HYD. OIL LEAKS"
+        },
+        {
+          "key": "mast_rollers_channels",
+          "label": "MAST ROLLERS & CHANNELS"
+        },
+        {
+          "key": "reach_carriage_adjustments",
+          "label": "REACH CARRIAGE ADJUSTMENTS"
+        },
+        {
+          "key": "reach_carriage_rollers_channels",
+          "label": "REACH CARRIAGE ROLLERS & CHANNELS"
+        },
+        {
+          "key": "reach_chain_adjustment",
+          "label": "REACH CHAIN ADJUSTMENT"
+        },
+        {
+          "key": "lift_chain_anchors_locked",
+          "label": "LIFT CHAIN ANCHORS LOCKED"
+        },
+        {
+          "key": "lift_chain_connectors",
+          "label": "LIFT CHAIN CONNECTORS"
+        },
+        {
+          "key": "linkages",
+          "label": "LINKAGES"
+        },
+        {
+          "key": "hoses_and_fittings",
+          "label": "HOSES AND FITTINGS"
+        },
+        {
+          "key": "cylinders_valves",
+          "label": "CYLINDERS/VALVES"
+        },
+        {
+          "key": "steering_rams",
+          "label": "STEERING RAMS"
+        }
+      ]
+    },
+    {
+      "key": "fork_arms",
+      "title": "FORK ARMS",
+      "items": [
+        {
+          "key": "surface",
+          "label": "SURFACE"
+        },
+        {
+          "key": "straightness_of_blade_shank",
+          "label": "STRAIGHTNESS OF BLADE & SHANK"
+        },
+        {
+          "key": "fork_angle",
+          "label": "FORK ANGLE"
+        },
+        {
+          "key": "fork_blade_shank",
+          "label": "FORK BLADE/SHANK"
+        },
+        {
+          "key": "fork_hooks",
+          "label": "FORK HOOKS"
+        }
+      ]
+    },
+    {
+      "key": "markings",
+      "title": "MARKINGS",
+      "items": [
+        {
+          "key": "model_serial_number",
+          "label": "MODEL & SERIAL NUMBER"
+        },
+        {
+          "key": "approx_wt_of_truck",
+          "label": "APPROX. WT. OF TRUCK"
+        },
+        {
+          "key": "capacity",
+          "label": "CAPACITY"
+        },
+        {
+          "key": "maximum_elevation",
+          "label": "MAXIMUM ELEVATION"
+        },
+        {
+          "key": "control_functions",
+          "label": "CONTROL FUNCTIONS"
+        }
+      ]
+    },
+    {
+      "key": "controls",
+      "title": "CONTROLS",
+      "items": [
+        {
+          "key": "connections",
+          "label": "CONNECTIONS"
+        },
+        {
+          "key": "functions",
+          "label": "FUNCTIONS"
+        }
+      ]
+    }
+  ]
+}

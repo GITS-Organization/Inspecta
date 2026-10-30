@@ -23,7 +23,9 @@ public sealed class EfQuoteRepository(InspectaDbContext dbContext) : IQuoteRepos
 
     public async Task<IReadOnlyList<Quote>> ListAsync(QuoteListFilter filter, CancellationToken cancellationToken = default)
     {
-        var query = dbContext.Quotes.AsNoTracking().Include(quote => quote.Request)
+        var query = dbContext.Quotes.AsNoTracking()
+            .Include(quote => quote.Request).ThenInclude(request => request!.Items)
+            .Include(quote => quote.Request).ThenInclude(request => request!.Certificates)
             .Where(quote => quote.Request != null);
         if (filter.CoordinatorId is Guid coordinatorId)
             query = query.Where(quote =>

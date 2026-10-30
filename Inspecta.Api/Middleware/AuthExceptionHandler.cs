@@ -39,6 +39,7 @@ public sealed class AuthExceptionHandler(ILogger<AuthExceptionHandler> logger) :
             Instance = httpContext.Request.Path
         };
         problem.Extensions["code"] = code;
+        if (exception is AuthException { Problems: { Count: > 0 } problems }) problem.Extensions["problems"] = problems;
         await httpContext.Response.WriteAsJsonAsync(problem, cancellationToken);
         return true;
     }

@@ -38,7 +38,7 @@ public sealed record QuoteListQuery(
 /// <remarks>
 /// <c>canEdit</c> is true for a draft the current user may price and send. <c>inspectorId</c>, <c>inspectorName</c> and
 /// <c>scheduledAt</c> are set once the accepted job was given to an inspector; <c>queue</c> (<c>unassigned</c>, <c>assigned</c>
-/// or <c>certify</c>) says where an accepted quotation is and is empty before acceptance. An inspector only gets their own accepted
+/// or <c>certify</c>) says where an accepted quotation is and is empty before acceptance; <c>certificates</c> counts the machines of an assigned job whose certificate is submitted, approved or delivered. An inspector only gets their own accepted
 /// quotations and never sees prices: <c>amountPiastres</c> is empty for them.
 /// </remarks>
 public sealed record QuoteSummaryResponse(
@@ -65,4 +65,5 @@ public sealed record QuoteSummaryResponse(
     Guid? InspectorId = null,
     string? InspectorName = null,
     DateTimeOffset? ScheduledAt = null,
-    QuotationQueue? Queue = null);
+    QuotationQueue? Queue = null,
+    Inspecta.Application.Contracts.Certificates.MachineProgress? Certificates = null);

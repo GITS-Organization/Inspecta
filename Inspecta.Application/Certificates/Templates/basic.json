@@ -1,0 +1,33 @@
+{
+  "key": "basic",
+  "version": 1,
+  "name": "Standard certificate",
+  "fields": [
+    {
+      "key": "description",
+      "label": "Description",
+      "prefill": "name"
+    },
+    {
+      "key": "swl",
+      "label": "SWL",
+      "prefill": "capacity"
+    },
+    {
+      "key": "quantity",
+      "label": "Qty.",
+      "prefill": "quantity"
+    },
+    {
+      "key": "serialNumber",
+      "label": "Serial Number",
+      "prefill": "serialNumber"
+    },
+    {
+      "key": "manufacturer",
+      "label": "Manufacturer",
+      "prefill": "manufacturer"
+    }
+  ],
+  "checklist": []
+}

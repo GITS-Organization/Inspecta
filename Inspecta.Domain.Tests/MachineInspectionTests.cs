@@ -1,0 +1,524 @@
+using System.Security.Claims;
+using System.Text;
+using Inspecta.Application.Certificates;
+using Inspecta.Application.Contracts.Certificates;
+using Inspecta.Application.Contracts.Clients;
+using Inspecta.Application.Contracts.Equipment;
+using Inspecta.Application.Exceptions;
+using Inspecta.Application.Pdf;
+using Inspecta.Application.Services;
+using Inspecta.Domain.Entities;
+using Inspecta.Domain.Enums;
+using Inspecta.Infrastructure.Data;
+using Inspecta.Infrastructure.Pdf;
+using Inspecta.Infrastructure.Repositories;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Inspecta.Domain.Tests;
+
+/// <summary>
+/// An assigned job from the inspector's first call to the coordinator handing the certificates over, run against a
+/// real (SQLite) database with the real repositories and the real PDF generator.
+/// </summary>
+public sealed class MachineInspectionTests : IDisposable
+{
+    private readonly SqliteConnection connection = new("Data Source=:memory:");
+    private readonly DbContextOptions<InspectaDbContext> options;
+    private readonly ServiceProvider pdfServices;
+    private readonly AppUser manager = AppUser.Create("manager@example.com", "Manager Mona", UserRole.TechnicalManager);
+    private readonly AppUser coordinator;
+    private readonly AppUser inspector;
+    private readonly AppUser otherInspector;
+    private readonly Guid clientId;
+    private readonly Guid forkliftEquipmentId;
+    private readonly Guid requestId;
+    private readonly Guid forkliftItemId;
+    private readonly Guid chainItemId;
+
+    public MachineInspectionTests()
+    {
+        connection.Open();
+        options = new DbContextOptionsBuilder<InspectaDbContext>().UseSqlite(connection).Options;
+        coordinator = AppUser.Create("coordinator@example.com", "Coordinator Ali", UserRole.Coordinator, managerId: manager.Id);
+        inspector = AppUser.Create("inspector@example.com", "Eng. Karim", UserRole.Inspector, managerId: manager.Id);
+        inspector.SetQualifications([new UserQualification("FOU"), new UserQualification("LAC")]);
+        otherInspector = AppUser.Create("other@example.com", "Eng. Sara", UserRole.Inspector, managerId: manager.Id);
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddPdfGeneration(new ConfigurationBuilder().Build());
+        pdfServices = services.BuildServiceProvider();
+
+        using (var db = CreateContext())
+        {
+            db.Database.EnsureCreated();
+            db.Users.AddRange(manager, coordinator, inspector, otherInspector);
+            db.SaveChanges();
+        }
+
+        using (var db = CreateContext())
+        {
+            clientId = new ClientService(new EfClientRepository(db), new EfUserRepository(db)).CreateAsync(new CreateClientRequest
+            {
+                Name = "Al Noor Industries", Location = "Cairo, Industrial City", CertificatesEmail = "certificates@alnoor.com",
+                Contacts = [new CreateClientContactRequest { Name = "Mona Samir", Email = "mona@alnoor.com", IsPrimary = true }]
+            }, manager.Id).Result.Id;
+            forkliftEquipmentId = new EquipmentService(new EfEquipmentRepository(db)).CreateAsync(new SaveEquipmentRequest
+            {
+                ClientId = clientId, Name = "Forklift Truck", Manufacturer = "Toyota", SerialNumber = "FK-100"
+            }).Result.Id;
+        }
+
+        using (var db = CreateContext())
+        {
+            var forklift = RequestItem.Create("Forklift Truck", 1, forkliftEquipmentId, capacity: "3 ton", serialNumber: "FK-100", manufacturer: "Toyota");
+            var chain = RequestItem.Create("Chain Block", 4, capacity: "2 ton");
+            var request = InspectionRequest.Create("Al Noor Industries", "Cairo, Industrial City", clientId, [forklift, chain], coordinator.Id, managerId: manager.Id);
+            request.TransitionTo(JobStatus.QuoteDraft, coordinator.Id);
+            request.TransitionTo(JobStatus.QuoteSent, coordinator.Id);
+            request.TransitionTo(JobStatus.Unassigned, coordinator.Id);
+            request.AssignInspector(inspector.Id, DateTimeOffset.UtcNow.AddDays(2), coordinator.Id);
+            db.Requests.Add(request);
+            db.SaveChanges();
+            requestId = request.Id;
+            forkliftItemId = forklift.Id;
+            chainItemId = chain.Id;
+        }
+    }
+
+    [Fact]
+    public async Task StartingTheInspectionAcceptsTheTaskAndListsTheMachines()
+    {
+        var before = await Run(service => service.ListMachinesAsync(requestId, inspector.Id, "inspector"));
+        Assert.True(before.CanStartInspection);
+        Assert.All(before.Machines, machine => Assert.False(machine.CanEdit));
+        Assert.False((await Run(service => service.ListMachinesAsync(requestId, coordinator.Id, "coordinator"))).CanStartInspection);
+
+        var list = await Run(service => service.StartInspectionAsync(requestId, inspector.Id, "inspector"));
+
+        Assert.Equal(JobStatus.InProgress, list.RequestStatus);
+        Assert.Equal(2, list.Machines.Count);
+        var forklift = list.Machines.Single(machine => machine.Name == "Forklift Truck");
+        Assert.Equal("forklift", forklift.TemplateKey);
+        Assert.Equal(MachineStatus.NotStarted, forklift.Status);
+        Assert.Equal(35, forklift.ChecklistTotal);
+        var chain = list.Machines.Single(machine => machine.Name == "Chain Block");
+        Assert.Equal("basic", chain.TemplateKey);
+        Assert.Equal(0, chain.ChecklistTotal);
+        Assert.Equal(new MachineProgress(2, 0, 0, 0), list.Progress);
+        Assert.False(list.CanStartInspection);
+        Assert.False(list.CanDeliver);
+        Assert.All(list.Machines, machine => Assert.True(machine.CanEdit));
+        Assert.All(list.Machines, machine => Assert.False(machine.CanReview));
+
+        var again = await Run(service => service.StartInspectionAsync(requestId, inspector.Id, "inspector"));
+        Assert.Equal(JobStatus.InProgress, again.RequestStatus);
+    }
+
+    [Fact]
+    public async Task OnlyTheAssignedInspectorSeesAndStartsTheJob()
+    {
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Run(service => service.StartInspectionAsync(requestId, otherInspector.Id, "inspector")));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Run(service => service.ListMachinesAsync(requestId, otherInspector.Id, "inspector")));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Run(service => service.GetFormAsync(requestId, forkliftItemId, otherInspector.Id, "inspector")));
+        var denied = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.StartInspectionAsync(requestId, coordinator.Id, "coordinator")));
+        Assert.Equal(403, denied.StatusCode);
+    }
+
+    // The same JSON options as the API (camelCase, snake_case enums).
+    private static readonly System.Text.Json.JsonSerializerOptions Json = new(System.Text.Json.JsonSerializerDefaults.Web)
+    {
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.SnakeCaseLower) }
+    };
+
+    [Fact]
+    public void TheSaveBodyTheFrontendSendsIsUnderstood()
+    {
+        const string body = """
+            { "fields": { "ndt": "MT" },
+              "checklist": { "tires_and_wheels.sidewalls_cracks": { "value": "no", "note": "Cut" } },
+              "answers": { "firstExamination": false },
+              "texts": { "testType": "Visual" },
+              "dates": { "examination": "2026-11-05", "nextExamination": "2027-11-05" } }
+            """;
+
+        var request = System.Text.Json.JsonSerializer.Deserialize<SaveMachineFormRequest>(body, Json)!;
+
+        Assert.Equal("MT", request.Fields!["ndt"]);
+        Assert.Equal("no", request.Checklist!["tires_and_wheels.sidewalls_cracks"].Value);
+        Assert.Equal("Cut", request.Checklist["tires_and_wheels.sidewalls_cracks"].Note);
+        Assert.False(request.Answers!["firstExamination"]);
+        Assert.Equal(new DateOnly(2027, 11, 5), request.Dates!["nextExamination"]);
+        Assert.Null(System.Text.Json.JsonSerializer.Deserialize<SaveMachineFormRequest>("{}", Json)!.Fields);
+    }
+
+    [Fact]
+    public async Task TheFormJsonUsesReadableNames()
+    {
+        await Start();
+
+        var form = await Run(service => service.GetFormAsync(requestId, forkliftItemId, inspector.Id, "inspector"));
+        var json = System.Text.Json.JsonSerializer.Serialize(form, Json);
+
+        Assert.Contains("\"requestStatus\":\"in_progress\"", json);
+        Assert.Contains("\"status\":\"not_started\"", json);
+        Assert.Contains("\"canEdit\":true", json);
+        Assert.Contains("\"readyToSubmit\":false", json);
+        Assert.Contains("\"templateKey\":\"forklift\"", json);
+        var list = System.Text.Json.JsonSerializer.Serialize(await Run(service => service.ListMachinesAsync(requestId, inspector.Id, "inspector")), Json);
+        Assert.Contains("\"canStartInspection\":false", list);
+        Assert.Contains("\"requestItemId\":\"" + forkliftItemId, list);
+    }
+
+    [Fact]
+    public async Task TheFormHasTheTemplateTheMachinesOwnDetailsAndTheStandards()
+    {
+        await Start();
+
+        var form = await Run(service => service.GetFormAsync(requestId, forkliftItemId, inspector.Id, "inspector"));
+
+        Assert.Equal("forklift", form.TemplateKey);
+        Assert.True(form.CanEdit);
+        Assert.Equal(MachineStatus.NotStarted, form.Status);
+        Assert.Equal("Al Noor Industries", form.Header.ClientName);
+        Assert.Equal("Cairo, Industrial City", form.Header.ClientAddress);
+        Assert.Equal("Mona Samir", form.Header.ClientRepresentative);
+        Assert.Equal(["BS EN ISO 3691-1:2011", "BS ISO 2330:2002"], form.Header.Standards);
+        Assert.Equal("Toyota", form.Fields.Single(field => field.Key == "manufacturer").Value);
+        Assert.Equal("3 ton", form.Fields.Single(field => field.Key == "swl").Value);
+        Assert.Equal("FK-100", form.Fields.Single(field => field.Key == "serialNumber").Value);
+        Assert.Null(form.Fields.Single(field => field.Key == "ndt").Value);
+        Assert.Equal(6, form.Checklist.Count);
+        Assert.Equal(["yes", "no", "na"], form.ChecklistValues);
+        Assert.Equal(JobStatus.InProgress, form.RequestStatus);
+        Assert.False(form.ReadyToSubmit);
+        Assert.Contains("the examination date", form.Missing);
+        Assert.Contains("35 checklist row(s)", form.Missing);
+
+        var chain = await Run(service => service.GetFormAsync(requestId, chainItemId, inspector.Id, "inspector"));
+        Assert.Equal("basic", chain.TemplateKey);
+        Assert.Equal("4", chain.Fields.Single(field => field.Key == "quantity").Value);
+        Assert.Equal("Chain Block", chain.Fields.Single(field => field.Key == "description").Value);
+        Assert.Equal(["BS EN 13157:2004 +A1:2009"], chain.Header.Standards);
+        Assert.Empty(chain.Checklist);
+    }
+
+    [Fact]
+    public async Task SavingNeedsTheInspectionToHaveStartedAndKnownKeys()
+    {
+        var early = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.SaveFormAsync(
+            requestId, chainItemId, inspector.Id, "inspector", new SaveMachineFormRequest())));
+        Assert.Equal("inspection_not_started", early.Code);
+
+        await Start();
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.SaveFormAsync(
+            requestId, chainItemId, inspector.Id, "inspector", new SaveMachineFormRequest { Fields = new Dictionary<string, string> { ["spanLength"] = "9" } })));
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.SaveFormAsync(
+            requestId, forkliftItemId, inspector.Id, "inspector", new SaveMachineFormRequest
+            {
+                Checklist = new Dictionary<string, ChecklistAnswerRequest> { ["nope.nope"] = new() { Value = "yes" } }
+            })));
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.SaveFormAsync(
+            requestId, forkliftItemId, inspector.Id, "inspector", new SaveMachineFormRequest
+            {
+                Checklist = new Dictionary<string, ChecklistAnswerRequest> { [FirstRow("forklift")] = new() { Value = "maybe" } }
+            })));
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.SaveFormAsync(
+            requestId, chainItemId, inspector.Id, "inspector", new SaveMachineFormRequest { Answers = new Dictionary<string, bool> { ["bogus"] = true } })));
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.SaveFormAsync(
+            requestId, chainItemId, inspector.Id, "inspector", new SaveMachineFormRequest
+            {
+                Answers = new Dictionary<string, bool> { ["within6Months"] = true, ["within12Months"] = true }
+            })));
+    }
+
+    [Fact]
+    public async Task ASavedDraftComesBackAndTheQuestionnaireAnswersAreDerived()
+    {
+        await Start();
+
+        var saved = await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", new SaveMachineFormRequest
+        {
+            Fields = new Dictionary<string, string> { ["ndt"] = "MT, no cracks" },
+            Checklist = new Dictionary<string, ChecklistAnswerRequest> { [FirstRow("forklift")] = new() { Value = "YES" } },
+            Answers = new Dictionary<string, bool> { ["firstExamination"] = false, ["within12Months"] = true },
+            Texts = new Dictionary<string, string> { ["testType"] = "Visual" }
+        }));
+
+        Assert.Equal(MachineStatus.Draft, saved.Status);
+        Assert.Equal("MT, no cracks", saved.Fields.Single(field => field.Key == "ndt").Value);
+        Assert.Equal("yes", saved.Checklist.SelectMany(section => section.Items).Single(row => row.Key == FirstRow("forklift")).Value);
+        Assert.False(saved.Answers["within6Months"]);
+        Assert.True(saved.Answers["within12Months"]);
+
+        var reopened = await Run(service => service.GetFormAsync(requestId, forkliftItemId, inspector.Id, "inspector"));
+        Assert.Equal("Visual", reopened.Texts["testType"]);
+        var list = await Run(service => service.ListMachinesAsync(requestId, inspector.Id, "inspector"));
+        Assert.Equal(1, list.Machines.Single(machine => machine.Name == "Forklift Truck").ChecklistAnswered);
+    }
+
+    [Fact]
+    public async Task TheFormSaysWhenTheMachineIsReadyToSubmitAndDatesAreDatesNotTimestamps()
+    {
+        await Start();
+
+        var saved = await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", CompleteForm("basic")));
+
+        Assert.True(saved.ReadyToSubmit);
+        Assert.Empty(saved.Missing);
+        Assert.Equal(new DateOnly(2026, 11, 5), saved.Dates["examination"]);
+        Assert.Equal(new DateOnly(2027, 11, 5), saved.Dates["nextExamination"]);
+        var json = System.Text.Json.JsonSerializer.Serialize(saved.Dates);
+        Assert.Contains("\"2026-11-05\"", json);
+    }
+
+    [Fact]
+    public async Task AnIncompleteCertificateCannotBeSubmittedAndTheMessageSaysWhatIsMissing()
+    {
+        await Start();
+        await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", new SaveMachineFormRequest
+        {
+            Checklist = new Dictionary<string, ChecklistAnswerRequest> { [FirstRow("forklift")] = new() { Value = "no" } }
+        }));
+
+        var incomplete = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.SubmitAsync(requestId, forkliftItemId, inspector.Id, "inspector")));
+
+        Assert.Equal("certificate_incomplete", incomplete.Code);
+        Assert.Equal(409, incomplete.StatusCode);
+        Assert.Contains("examination date", incomplete.Message);
+        Assert.Contains("34 checklist row(s)", incomplete.Message);
+        Assert.Contains("a note for 1 checklist row(s) answered No", incomplete.Message);
+        Assert.Contains("the description of the defect", incomplete.Message);
+        Assert.Contains("the conclusion", incomplete.Message);
+        Assert.Contains("the examination date", incomplete.Problems!);
+        Assert.Contains("the conclusion", incomplete.Problems!);
+
+        var nothing = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.SubmitAsync(requestId, chainItemId, inspector.Id, "inspector")));
+        Assert.Equal("nothing_to_submit", nothing.Code);
+    }
+
+    [Fact]
+    public async Task TheWholeJobFromInspectionToDeliveryToTheClient()
+    {
+        await Start();
+        await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", CompleteForm("forklift")));
+        await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", CompleteForm("basic")));
+
+        var submitted = await Run(service => service.SubmitAsync(requestId, forkliftItemId, inspector.Id, "inspector"));
+        Assert.Equal(MachineStatus.Submitted, submitted.Status);
+        Assert.False(submitted.CanEdit);
+        Assert.Equal(JobStatus.InProgress, (await Run(service => service.ListMachinesAsync(requestId, inspector.Id, "inspector"))).RequestStatus);
+        await Assert.ThrowsAsync<AuthException>(() => Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", new SaveMachineFormRequest())));
+        await Run(service => service.SubmitAsync(requestId, chainItemId, inspector.Id, "inspector"));
+
+        var review = await Run(service => service.ListMachinesAsync(requestId, manager.Id, "technical_manager"));
+        Assert.Equal(JobStatus.CertificateSubmitted, review.RequestStatus);
+        Assert.All(review.Machines, machine => Assert.True(machine.CanReview));
+        Assert.All(review.Machines, machine => Assert.False(machine.CanEdit));
+        Assert.All((await Run(service => service.ListMachinesAsync(requestId, inspector.Id, "inspector"))).Machines, machine => Assert.False(machine.CanReview));
+        Assert.Equal(new MachineProgress(2, 2, 0, 0), review.Progress);
+        var preparedBy = (await Run(service => service.GetFormAsync(requestId, forkliftItemId, manager.Id, "technical_manager"))).Texts;
+        Assert.Equal("Eng. Karim", preparedBy["preparedByName"]);
+        Assert.Equal("FOU, LAC", preparedBy["preparedByQualifications"]);
+        Assert.Equal("Satisfactory", preparedBy["conclusion"]);
+        Assert.Equal("NONE", preparedBy["defectDescription"]);
+
+        // The manager sends one machine back and approves the other.
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.ReturnAsync(requestId, chainItemId, manager.Id, "technical_manager", " ")));
+        var returned = await Run(service => service.ReturnAsync(requestId, chainItemId, manager.Id, "technical_manager", "Serial numbers are missing"));
+        Assert.Equal(MachineStatus.Returned, returned.Status);
+        Assert.Equal("Serial numbers are missing", returned.ReviewNote);
+        Assert.True(returned.CanEdit);
+        var approved = await Run(service => service.ApproveAsync(requestId, forkliftItemId, manager.Id, "technical_manager"));
+        Assert.Equal(MachineStatus.Approved, approved.Status);
+        Assert.StartsWith("CRT-", approved.CertificateNumber);
+        Assert.Equal(JobStatus.CertificateReturned, (await Run(service => service.ListMachinesAsync(requestId, manager.Id, "technical_manager"))).RequestStatus);
+
+        // The inspector fixes it and submits again; the manager approves; the job is ready for the coordinator.
+        await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", new SaveMachineFormRequest
+        {
+            Fields = new Dictionary<string, string> { ["serialNumber"] = "CB-1, CB-2, CB-3, CB-4" }
+        }));
+        await Run(service => service.SubmitAsync(requestId, chainItemId, inspector.Id, "inspector"));
+        Assert.Equal(JobStatus.CertificateSubmitted, (await Run(service => service.ListMachinesAsync(requestId, manager.Id, "technical_manager"))).RequestStatus);
+        await Run(service => service.ApproveAsync(requestId, chainItemId, manager.Id, "technical_manager"));
+        var ready = await Run(service => service.ListMachinesAsync(requestId, coordinator.Id, "coordinator"));
+        Assert.Equal(JobStatus.CertificateApproved, ready.RequestStatus);
+        Assert.Equal(new MachineProgress(2, 2, 2, 0), ready.Progress);
+        Assert.True(ready.CanDeliver);
+        Assert.False((await Run(service => service.ListMachinesAsync(requestId, inspector.Id, "inspector"))).CanDeliver);
+
+        // The approved machine updated its own record.
+        await using (var db = CreateContext())
+        {
+            var equipment = await new EfEquipmentRepository(db).GetByIdAsync(forkliftEquipmentId, tracking: false);
+            Assert.Equal(new DateTimeOffset(2026, 11, 5, 0, 0, 0, TimeSpan.Zero), equipment!.LastInspectionAt);
+            Assert.Equal(new DateTimeOffset(2027, 11, 5, 0, 0, 0, TimeSpan.Zero), equipment.NextInspectionDueAt);
+        }
+
+        // Only the coordinator side delivers; the client's certificates email is recorded.
+        await Assert.ThrowsAsync<AuthException>(() => Run(service => service.DeliverAsync(requestId, inspector.Id, "inspector", new DeliverCertificatesRequest())));
+        var delivered = await Run(service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest()));
+        Assert.Equal(JobStatus.SentToClient, delivered.RequestStatus);
+        Assert.All(delivered.Machines, machine => Assert.Equal(MachineStatus.Delivered, machine.Status));
+        await using var check = CreateContext();
+        Assert.All(check.Certificates.AsNoTracking().ToList(), certificate => Assert.Equal("certificates@alnoor.com", certificate.SentTo));
+    }
+
+    [Fact]
+    public async Task OnlyTheTechnicalManagerReviewsAndOnlyASubmittedCertificate()
+    {
+        await Start();
+        await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", CompleteForm("basic")));
+        await Run(service => service.SubmitAsync(requestId, chainItemId, inspector.Id, "inspector"));
+
+        var notYet = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.ApproveAsync(requestId, chainItemId, manager.Id, "technical_manager")));
+        Assert.Equal("not_under_review", notYet.Code);
+        foreach (var role in new[] { "inspector", "coordinator" })
+        {
+            var denied = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.ApproveAsync(requestId, chainItemId, inspector.Id, role)));
+            Assert.Equal(403, denied.StatusCode);
+        }
+
+        var early = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest())));
+        Assert.Equal("not_approved", early.Code);
+    }
+
+    [Fact]
+    public async Task ANoAnswerNeedsANoteAndAnExplanationBeforeItCanBeSubmitted()
+    {
+        await Start();
+        var form = CompleteForm("forklift");
+        var row = FirstRow("forklift");
+        var checklist = new Dictionary<string, ChecklistAnswerRequest>(form.Checklist!)
+        {
+            [row] = new() { Value = "no", Note = "Cut on the rear-left tyre" }
+        };
+        await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", form with { Checklist = checklist }));
+
+        var needsText = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.SubmitAsync(requestId, forkliftItemId, inspector.Id, "inspector")));
+        Assert.DoesNotContain("checklist row(s) answered No", needsText.Message);
+        Assert.Contains("the description of the defect", needsText.Message);
+
+        await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", new SaveMachineFormRequest
+        {
+            Texts = new Dictionary<string, string> { ["defectDescription"] = "Cut tyre", ["conclusion"] = "Not satisfactory until the tyre is replaced" }
+        }));
+        var submitted = await Run(service => service.SubmitAsync(requestId, forkliftItemId, inspector.Id, "inspector"));
+        Assert.Equal(MachineStatus.Submitted, submitted.Status);
+        Assert.Equal("Cut on the rear-left tyre", submitted.Checklist.SelectMany(section => section.Items).Single(item => item.Key == row).Note);
+    }
+
+    [Fact]
+    public async Task TheCoordinatorGetsTheCertificatePdfOnlyOnceItIsApprovedAndOthersGetADraft()
+    {
+        await Start();
+        await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", CompleteForm("forklift")));
+        await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", CompleteForm("basic")));
+
+        var draft = await Run(service => service.GetPdfAsync(requestId, forkliftItemId, inspector.Id, "inspector"));
+        Assert.StartsWith("certificate-", draft.FileName);
+        Assert.Equal("%PDF-", Encoding.ASCII.GetString(draft.Content, 0, 5));
+        Assert.True(PageCount(draft.Content) >= 2, "the forklift certificate has a checklist page");
+        var chainDraft = await Run(service => service.GetPdfAsync(requestId, chainItemId, manager.Id, "technical_manager"));
+        Assert.Equal(1, PageCount(chainDraft.Content));
+
+        var notReady = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.GetPdfAsync(requestId, forkliftItemId, coordinator.Id, "coordinator")));
+        Assert.Equal("not_approved", notReady.Code);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Run(service => service.GetPdfAsync(requestId, forkliftItemId, otherInspector.Id, "inspector")));
+
+        await Run(service => service.SubmitAsync(requestId, forkliftItemId, inspector.Id, "inspector"));
+        await Run(service => service.SubmitAsync(requestId, chainItemId, inspector.Id, "inspector"));
+        await Run(service => service.ApproveAsync(requestId, forkliftItemId, manager.Id, "technical_manager"));
+        var approved = await Run(service => service.GetPdfAsync(requestId, forkliftItemId, coordinator.Id, "coordinator"));
+        Assert.True(approved.Content.Length > 1000);
+    }
+
+    [Fact]
+    public async Task AnOlderCertificateWithoutATemplateIsLeftAlone()
+    {
+        await using (var db = CreateContext())
+        {
+            db.Certificates.Add(InspectionCertificate.Create(requestId, inspector.Id, requestItemId: chainItemId));
+            await db.SaveChangesAsync();
+        }
+
+        await Start();
+
+        var blocked = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.GetFormAsync(requestId, chainItemId, inspector.Id, "inspector")));
+        Assert.Equal("legacy_certificate", blocked.Code);
+    }
+
+    // ---- Helpers ------------------------------------------------------------------------------------------------
+
+    private async Task Start() => await Run(service => service.StartInspectionAsync(requestId, inspector.Id, "inspector"));
+
+    private static string FirstRow(string templateKey)
+    {
+        var template = CertificateTemplateCatalog.Find(templateKey)!;
+        return $"{template.Checklist[0].Key}.{template.Checklist[0].Items[0].Key}";
+    }
+
+    /// <summary>Every field, row and question answered the way a normal inspection goes.</summary>
+    private static SaveMachineFormRequest CompleteForm(string templateKey)
+    {
+        var template = CertificateTemplateCatalog.Find(templateKey)!;
+        return new SaveMachineFormRequest
+        {
+            Fields = template.Fields.Where(field => field.Prefill is null).ToDictionary(field => field.Key, _ => "n/a"),
+            Checklist = template.ChecklistPaths.ToDictionary(path => path, _ => new ChecklistAnswerRequest { Value = "yes" }),
+            Answers = new Dictionary<string, bool>
+            {
+                ["firstExamination"] = false, ["within12Months"] = true, ["examinationScheme"] = true,
+                ["exceptionalCircumstances"] = false, ["existingDanger"] = false, ["futureDanger"] = false
+            },
+            Texts = new Dictionary<string, string> { ["testType"] = "Visual and function" },
+            Dates = new Dictionary<string, DateOnly>
+            {
+                ["examination"] = new(2026, 11, 5),
+                ["nextExamination"] = new(2027, 11, 5)
+            }
+        };
+    }
+
+    private async Task<T> Run<T>(Func<MachineInspectionService, Task<T>> action)
+    {
+        await using var db = CreateContext();
+        var service = new MachineInspectionService(
+            new EfCertificateRepository(db),
+            new EfRequestRepository(db),
+            new EfUserRepository(db),
+            new EfEquipmentRepository(db),
+            new EfClientRepository(db),
+            pdfServices.GetRequiredService<IPdfGenerator>());
+        return await action(service);
+    }
+
+    private static int PageCount(byte[] pdf)
+    {
+        var matches = System.Text.RegularExpressions.Regex.Matches(Encoding.Latin1.GetString(pdf), @"/Count (\d+)");
+        return matches.Count == 0 ? -1 : matches.Max(match => int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    private InspectaDbContext CreateContext()
+    {
+        var accessor = new HttpContextAccessor
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("role", "admin")], "test"))
+            }
+        };
+        return new InspectaDbContext(options, new CurrentTenant(accessor));
+    }
+
+    public void Dispose()
+    {
+        pdfServices.Dispose();
+        connection.Dispose();
+    }
+}

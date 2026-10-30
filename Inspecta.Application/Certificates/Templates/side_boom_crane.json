@@ -1,0 +1,238 @@
+{
+  "key": "side_boom_crane",
+  "version": 1,
+  "name": "Side Boom Crane",
+  "fields": [
+    {
+      "key": "description",
+      "label": "Description",
+      "prefill": "name"
+    },
+    {
+      "key": "swl",
+      "label": "SWL",
+      "prefill": "capacity"
+    },
+    {
+      "key": "quantity",
+      "label": "Qty.",
+      "prefill": "quantity"
+    },
+    {
+      "key": "serialNumber",
+      "label": "Serial Number",
+      "prefill": "serialNumber"
+    },
+    {
+      "key": "manufacturer",
+      "label": "Manufacturer",
+      "prefill": "manufacturer"
+    }
+  ],
+  "checklist": [
+    {
+      "key": "crawler",
+      "title": "CRAWLER",
+      "items": [
+        {
+          "key": "track_links",
+          "label": "TRACK LINKS"
+        },
+        {
+          "key": "track_shoe",
+          "label": "TRACK SHOE"
+        },
+        {
+          "key": "idler",
+          "label": "IDLER"
+        },
+        {
+          "key": "track_roller",
+          "label": "TRACK ROLLER"
+        },
+        {
+          "key": "carier_roller",
+          "label": "CARIER ROLLER"
+        },
+        {
+          "key": "sprocket",
+          "label": "SPROCKET"
+        }
+      ]
+    },
+    {
+      "key": "brakes_mechanical",
+      "title": "BRAKES (MECHANICAL)",
+      "items": [
+        {
+          "key": "hoist_main_and_aux",
+          "label": "HOIST (MAIN AND AUX.)"
+        },
+        {
+          "key": "boom_hoist",
+          "label": "BOOM HOIST"
+        }
+      ]
+    },
+    {
+      "key": "superstructure",
+      "title": "SUPERSTRUCTURE",
+      "items": [
+        {
+          "key": "swing_motion",
+          "label": "SWING MOTION"
+        },
+        {
+          "key": "motion_control_levers",
+          "label": "MOTION CONTROL LEVERS"
+        },
+        {
+          "key": "load_range_charts",
+          "label": "LOAD RANGE CHARTS"
+        },
+        {
+          "key": "crane_control_valves",
+          "label": "CRANE CONTROL VALVES"
+        },
+        {
+          "key": "boom_raise_limits",
+          "label": "BOOM RAISE LIMITS"
+        },
+        {
+          "key": "counterweight_mounting",
+          "label": "COUNTERWEIGHT MOUNTING"
+        },
+        {
+          "key": "guards",
+          "label": "GUARDS"
+        },
+        {
+          "key": "welds",
+          "label": "WELDS"
+        }
+      ]
+    },
+    {
+      "key": "electrical",
+      "title": "ELECTRICAL",
+      "items": [
+        {
+          "key": "gauges_instrument_panel",
+          "label": "GAUGES (INSTRUMENT PANEL)"
+        },
+        {
+          "key": "wiring",
+          "label": "WIRING"
+        },
+        {
+          "key": "lights_indicators_hazard",
+          "label": "LIGHTS/INDICATORS/HAZARD"
+        },
+        {
+          "key": "lights_reversing_audible",
+          "label": "LIGHTS/REVERSING & AUDIBLE"
+        }
+      ]
+    },
+    {
+      "key": "boom",
+      "title": "BOOM",
+      "items": [
+        {
+          "key": "operation_raise_lower",
+          "label": "OPERATION (RAISE/LOWER)"
+        },
+        {
+          "key": "wear_pads",
+          "label": "WEAR PADS"
+        },
+        {
+          "key": "tip_sheaves_and_shafts",
+          "label": "TIP SHEAVES AND SHAFTS"
+        },
+        {
+          "key": "structure",
+          "label": "STRUCTURE"
+        }
+      ]
+    },
+    {
+      "key": "hoist_and_boom_cables",
+      "title": "HOIST AND BOOM CABLES",
+      "items": [
+        {
+          "key": "main_hoist_reeved",
+          "label": "MAIN HOIST (REEVED)"
+        },
+        {
+          "key": "boom_hoist",
+          "label": "BOOM HOIST"
+        },
+        {
+          "key": "hoist_units",
+          "label": "HOIST UNITS"
+        }
+      ]
+    },
+    {
+      "key": "load_blocks",
+      "title": "LOAD BLOCKS",
+      "items": [
+        {
+          "key": "sheaves_shafts",
+          "label": "SHEAVES/SHAFTS"
+        },
+        {
+          "key": "hook",
+          "label": "HOOK"
+        },
+        {
+          "key": "safety_latch",
+          "label": "SAFETY LATCH"
+        },
+        {
+          "key": "swivel",
+          "label": "SWIVEL"
+        },
+        {
+          "key": "cable_dead_end",
+          "label": "CABLE DEAD END"
+        }
+      ]
+    },
+    {
+      "key": "safety_devices",
+      "title": "SAFETY DEVICES",
+      "items": [
+        {
+          "key": "load_indicator",
+          "label": "LOAD INDICATOR"
+        },
+        {
+          "key": "angle_indicator",
+          "label": "ANGLE INDICATOR"
+        },
+        {
+          "key": "warning_audible",
+          "label": "WARNING (AUDIBLE)"
+        },
+        {
+          "key": "anti_two_block_system",
+          "label": "ANTI TWO BLOCK SYSTEM"
+        },
+        {
+          "key": "door_back_latch",
+          "label": "DOOR BACK LATCH"
+        },
+        {
+          "key": "level_indicators",
+          "label": "LEVEL INDICATORS"
+        },
+        {
+          "key": "electrocution_warning",
+          "label": "ELECTROCUTION WARNING"
+        }
+      ]
+    }
+  ]
+}

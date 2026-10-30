@@ -1,0 +1,118 @@
+{
+  "key": "conveyor_belt",
+  "version": 1,
+  "name": "Conveyor Belt System",
+  "fields": [
+    {
+      "key": "description",
+      "label": "Description",
+      "prefill": "name"
+    },
+    {
+      "key": "swl",
+      "label": "SWL",
+      "prefill": "capacity"
+    },
+    {
+      "key": "quantity",
+      "label": "Qty.",
+      "prefill": "quantity"
+    },
+    {
+      "key": "serialNumber",
+      "label": "Serial Number",
+      "prefill": "serialNumber"
+    },
+    {
+      "key": "manufacturer",
+      "label": "Manufacturer",
+      "prefill": "manufacturer"
+    }
+  ],
+  "checklist": [
+    {
+      "key": "general_condition",
+      "title": "General condition:",
+      "items": [
+        {
+          "key": "conveyor_structure",
+          "label": "Conveyor structure"
+        },
+        {
+          "key": "guards",
+          "label": "Guards"
+        },
+        {
+          "key": "walkways",
+          "label": "Walkways"
+        },
+        {
+          "key": "platforms",
+          "label": "platforms"
+        },
+        {
+          "key": "handrails",
+          "label": "handrails"
+        }
+      ]
+    },
+    {
+      "key": "drive_and_motor",
+      "title": "Drive and motor",
+      "items": [
+        {
+          "key": "motor",
+          "label": "Motor"
+        },
+        {
+          "key": "gearbox",
+          "label": "Gearbox"
+        }
+      ]
+    },
+    {
+      "key": "belt_conveyer_system",
+      "title": "Belt Conveyer system",
+      "items": [
+        {
+          "key": "pully_system",
+          "label": "Pully system"
+        },
+        {
+          "key": "rollers",
+          "label": "Rollers"
+        },
+        {
+          "key": "belt",
+          "label": "Belt"
+        },
+        {
+          "key": "tension",
+          "label": "Tension"
+        }
+      ]
+    },
+    {
+      "key": "control",
+      "title": "Control",
+      "items": [
+        {
+          "key": "connections",
+          "label": "Connections"
+        },
+        {
+          "key": "function",
+          "label": "Function"
+        },
+        {
+          "key": "emergency_stop",
+          "label": "Emergency stop"
+        },
+        {
+          "key": "start_stop_unit",
+          "label": "Start/stop unit"
+        }
+      ]
+    }
+  ]
+}
