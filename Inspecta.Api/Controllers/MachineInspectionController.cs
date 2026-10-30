@@ -147,7 +147,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     }
 
     /// <summary>Download the QR code of an approved machine certificate as a PNG.</summary>
-    /// <remarks>The QR is not printed on the certificate; it is sent to the client separately and opens the public check page.</remarks>
+    /// <remarks>The QR printed on the approved certificate, as an image to send to the client. It opens the public check page with the PDF download.</remarks>
     [HttpGet("machines/{requestItemId:guid}/qr.png")]
     [Produces("image/png")]
     [ProducesResponseType(StatusCodes.Status200OK)]

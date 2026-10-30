@@ -2,7 +2,7 @@ namespace Inspecta.Application.Contracts.Certificates;
 
 /// <summary>
 /// An issued certificate filed under a client. Download it with <c>GET /clients/{clientId}/certificates/{id}/pdf</c>.
-/// <c>qrUrl</c> is what the certificate's QR code opens; the QR is not printed on the PDF and is sent to the client separately.
+/// <c>qrUrl</c> is what the certificate's QR code opens: the public check page, from which the client downloads the PDF.
 /// </summary>
 public sealed record ClientCertificateResponse(
     Guid Id,
@@ -27,4 +27,5 @@ public sealed record CertificateVerificationResponse(
     DateOnly? ExaminationDate,
     DateOnly? NextExaminationDate,
     DateTimeOffset? IssuedAt,
-    string? IssuedBy);
+    string? IssuedBy,
+    string? PdfUrl = null);

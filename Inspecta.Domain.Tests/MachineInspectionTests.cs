@@ -397,7 +397,7 @@ public sealed class MachineInspectionTests : IDisposable
         var certificate = db.Certificates.AsNoTracking().Single(value => value.RequestItemId == forkliftItemId);
         Assert.Equal(file.VerificationCode, certificate.VerificationCode);
         Assert.Equal($"https://api.gitsplatform.com/verify/{file.VerificationCode}", certificate.QrData);
-        // The QR is not printed: the archive keeps what it encodes, so it can be sent to the client later.
+        // The archive keeps what the printed QR opens, so it can also be sent to the client as an image.
         Assert.Equal(certificate.QrData, file.QrData);
         Assert.Equal(forkliftEquipmentId, file.EquipmentId);
         Assert.Equal("Eng. Karim", file.PreparedBy);

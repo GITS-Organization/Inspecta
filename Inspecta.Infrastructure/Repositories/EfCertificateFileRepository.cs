@@ -41,6 +41,10 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
                 .Where(file => file.VerificationCode == verificationCode))
             .SingleOrDefaultAsync(cancellationToken);
 
+    public Task<IssuedCertificateFile?> GetByVerificationCodeAsync(string verificationCode, CancellationToken cancellationToken = default) =>
+        dbContext.IssuedCertificateFiles.IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(file => file.VerificationCode == verificationCode, cancellationToken);
+
     public async Task<IssuedCertificateSummary?> FindLatestForEquipmentAsync(
         Guid equipmentId, Guid excludingCertificateId, CancellationToken cancellationToken = default)
     {

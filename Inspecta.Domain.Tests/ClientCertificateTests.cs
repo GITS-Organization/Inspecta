@@ -79,6 +79,13 @@ public sealed class ClientCertificateTests : IDisposable
         Assert.Equal("CERT-2026-0001", valid.CertificateNumber);
         Assert.Equal("Al Noor Industries", valid.ClientName);
         Assert.Equal("Integrity International Inspection", valid.IssuedBy);
+        Assert.Equal("/verify/A1B2C3D4E5F60718/pdf", valid.PdfUrl);
+
+        // The page's button downloads the certificate exactly as it was filed.
+        await using (var check = CreateContext())
+            Assert.Equal(check.IssuedCertificateFiles.AsNoTracking().Single().Content, (await service.GetPdfByCodeAsync("a1b2c3d4e5f60718"))!.Content);
+        Assert.Null(await service.GetPdfByCodeAsync("A1B2C3D4E5F60719"));
+        Assert.Null(await service.GetPdfByCodeAsync("short"));
 
         var expired = await service.VerifyAsync("A1B2C3D4E5F60718", new DateOnly(2028, 1, 1));
         Assert.True(expired.Valid);
@@ -90,6 +97,7 @@ public sealed class ClientCertificateTests : IDisposable
             Assert.False(unknown.Valid);
             Assert.Equal("not_found", unknown.Status);
             Assert.Null(unknown.ClientName);
+            Assert.Null(unknown.PdfUrl);
         }
     }
 

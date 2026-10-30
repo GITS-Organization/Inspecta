@@ -30,7 +30,7 @@ public sealed class ClientCertificateService(
         return new PdfFile(file.Content, file.FileName);
     }
 
-    /// <summary>The QR code of an issued certificate as a PNG, to send to the client; it is not printed on the PDF.</summary>
+    /// <summary>The QR code of an issued certificate (the one printed on it) as a PNG, to send to the client.</summary>
     public async Task<DownloadFile> GetQrCodeAsync(Guid clientId, Guid fileId, CancellationToken cancellationToken = default)
     {
         var file = await certificateFiles.GetForClientAsync(clientId, fileId, cancellationToken)
@@ -46,8 +46,8 @@ public sealed class ClientCertificateService(
     /// </summary>
     public async Task<CertificateVerificationResponse> VerifyAsync(string? code, DateOnly today, CancellationToken cancellationToken = default)
     {
-        var normalized = code?.Trim().ToUpperInvariant();
-        if (string.IsNullOrEmpty(normalized) || normalized.Length is < 8 or > 64)
+        var normalized = Normalize(code);
+        if (normalized is null)
             return Unknown();
         var file = await certificateFiles.FindByVerificationCodeAsync(normalized, cancellationToken);
         if (file is null) return Unknown();
@@ -61,8 +61,27 @@ public sealed class ClientCertificateService(
             file.ExaminationDate,
             file.NextExaminationDate,
             file.IssuedAt,
-            Issuer);
+            Issuer,
+            PdfPath(normalized));
     }
+
+    /// <summary>
+    /// The issued PDF behind a QR code, for the public page's download button. Anyone holding the code may download it:
+    /// the code is 16 random characters and the route is rate limited.
+    /// </summary>
+    public async Task<PdfFile?> GetPdfByCodeAsync(string? code, CancellationToken cancellationToken = default)
+    {
+        var normalized = Normalize(code);
+        if (normalized is null) return null;
+        var file = await certificateFiles.GetByVerificationCodeAsync(normalized, cancellationToken);
+        return file is null ? null : new PdfFile(file.Content, file.FileName);
+    }
+
+    /// <summary>Where the public page downloads the certificate from.</summary>
+    public static string PdfPath(string code) => $"/verify/{Uri.EscapeDataString(code)}/pdf";
+
+    private static string? Normalize(string? code) =>
+        code?.Trim().ToUpperInvariant() is { Length: >= 8 and <= 64 } normalized ? normalized : null;
 
     private static CertificateVerificationResponse Unknown() =>
         new(false, "not_found", null, null, null, null, null, null, null);

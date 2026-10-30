@@ -296,7 +296,7 @@ public sealed class MachineInspectionService(
 
     // ---- PDF, QR and delivery -----------------------------------------------------------------------------------
 
-    /// <summary>The QR code of an approved certificate as a PNG, to send to the client; it is not printed on the PDF.</summary>
+    /// <summary>The QR code of an approved certificate (the one printed on it) as a PNG, to send to the client.</summary>
     public async Task<DownloadFile> GetQrCodeAsync(
         Guid requestId, Guid requestItemId, Guid actorId, string role, CancellationToken cancellationToken = default)
     {
@@ -615,7 +615,8 @@ public sealed class MachineInspectionService(
             preparedName,
             string.IsNullOrWhiteSpace(qualifications) ? null : qualifications,
             certificate.ReviewerName,
-            certificate.SignatureStrokesJson);
+            certificate.SignatureStrokesJson,
+            certificate.IsApproved ? certificate.QrData : null);
     }
 
     // ---- Helpers ------------------------------------------------------------------------------------------------

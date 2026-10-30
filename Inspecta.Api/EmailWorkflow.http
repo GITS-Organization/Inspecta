@@ -517,7 +517,7 @@ Content-Type: application/json
 GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/deliver-to-client/preview
 Authorization: Bearer {{accessToken}}
 
-### The QR code of an approved certificate (not printed on the PDF; send it to the client)
+### The QR code of an approved certificate as an image (the one printed on it; send it to the client)
 GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/qr.png
 Authorization: Bearer {{accessToken}}
 
@@ -540,5 +540,11 @@ Authorization: Bearer {{accessToken}}
 GET {{baseUrl}}/api/v1/clients/{{clientId}}/certificates/{{certificateFileId}}/qr.png
 Authorization: Bearer {{accessToken}}
 
-### Public check behind a certificate's QR code (no sign-in)
+### Public page behind a certificate's QR code (no sign-in), with the Download certificate button
+GET {{baseUrl}}/verify/A1B2C3D4E5F60718
+
+### The certificate PDF behind the page's button (no sign-in)
+GET {{baseUrl}}/verify/A1B2C3D4E5F60718/pdf
+
+### Public check behind a certificate's QR code as JSON (no sign-in; pdfUrl is the download)
 GET {{baseUrl}}/api/v1/verify/A1B2C3D4E5F60718

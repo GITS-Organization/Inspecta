@@ -4,8 +4,8 @@ namespace Inspecta.Domain.Entities;
 
 /// <summary>
 /// The final PDF of an approved certificate, kept exactly as it was issued (with its SHA-256) and filed under the
-/// client. Later changes to templates or company details never alter it. The QR is not printed on the certificate:
-/// <see cref="QrData"/> keeps what it encodes so it can be sent to the client separately.
+/// client. Later changes to templates or company details never alter it. <see cref="QrData"/> keeps what the QR printed
+/// on it opens (the public check page with the PDF download), so it can also be sent to the client as an image.
 /// </summary>
 public sealed class IssuedCertificateFile
 {

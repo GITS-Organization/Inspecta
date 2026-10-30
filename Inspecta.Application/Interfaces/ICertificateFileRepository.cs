@@ -39,6 +39,9 @@ public interface ICertificateFileRepository
     /// <summary>Looks a certificate up by the code in its QR, ignoring the team filter: the public page has no signed-in user.</summary>
     Task<IssuedCertificateSummary?> FindByVerificationCodeAsync(string verificationCode, CancellationToken cancellationToken = default);
 
+    /// <summary>The issued file (with its PDF) for the code in its QR, ignoring the team filter, for the public download.</summary>
+    Task<IssuedCertificateFile?> GetByVerificationCodeAsync(string verificationCode, CancellationToken cancellationToken = default);
+
     /// <summary>The newest certificate issued for a registered machine, other than <paramref name="excludingCertificateId"/>.</summary>
     Task<IssuedCertificateSummary?> FindLatestForEquipmentAsync(Guid equipmentId, Guid excludingCertificateId, CancellationToken cancellationToken = default);
 

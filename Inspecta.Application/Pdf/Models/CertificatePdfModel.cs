@@ -1,8 +1,8 @@
 namespace Inspecta.Application.Pdf.Models;
 
 /// <summary>
-/// Everything printed on one machine's Report of Thorough Examination. The QR code is not printed: it is kept with the
-/// issued certificate and sent to the client separately.
+/// Everything printed on one machine's Report of Thorough Examination. <c>QrData</c> is what the QR code opens; it is
+/// empty until the certificate is approved, and the QR box stays blank until then.
 /// </summary>
 public sealed record CertificatePdfModel(
     string? CertificateNumber,
@@ -26,7 +26,8 @@ public sealed record CertificatePdfModel(
     string? PreparedByName,
     string? PreparedByQualifications,
     string? SignedBy,
-    string? SignatureStrokesJson);
+    string? SignatureStrokesJson,
+    string? QrData = null);
 
 /// <summary>A label and its value; a missing value prints as a dash.</summary>
 public sealed record CertificatePdfField(string Label, string? Value);

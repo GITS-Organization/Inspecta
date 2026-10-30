@@ -189,7 +189,7 @@ public static class WorkflowDocs
         [Key<MachineInspectionController>(nameof(MachineInspectionController.DownloadMachinePdf))] = new(10, "Queue 10 · Inspector and technical manager: see the certificate (PDF)",
             """
             **When:** any time after the machine was saved, to see exactly how the certificate will look. **Who:** the inspector of the job, the technical manager and Admin; the coordinator once the machine is approved (`409` before).
-            **How:** `GET /quotation-queue/{requestId}/machines/{requestItemId}/pdf`. Marked **DRAFT** until approved; after approval it is the **stored final file**, byte for byte as issued. The QR code is not printed on it (see queue 15).
+            **How:** `GET /quotation-queue/{requestId}/machines/{requestItemId}/pdf`. Marked **DRAFT** until approved; after approval it is the **stored final file**, byte for byte as issued, with the **QR code** in the last box of the signature row (blank before approval).
             """),
         [Key<QuotationQueueController>(nameof(QuotationQueueController.ListToReview))] = new(11, "Queue 11 · Technical manager: the jobs to review",
             """
@@ -214,7 +214,7 @@ public static class WorkflowDocs
             "**How:** `POST /quotation-queue/{requestId}/machines/{requestItemId}/return` with `{ \"note\": \"what to fix\" }` (required). The machine becomes `returned`, the job `certificate_returned`, and the inspector fixes and submits it again."),
         [Key<MachineInspectionController>(nameof(MachineInspectionController.DownloadMachineQrCode))] = new(15, "Queue 15 · Download a certificate's QR code (PNG)",
             """
-            **When:** the machine is approved. **How:** `GET /quotation-queue/{requestId}/machines/{requestItemId}/qr.png`. The QR is **not printed on the certificate**; this image is what you send to the client. It opens the public check page that confirms the certificate is genuine.
+            **When:** the machine is approved. **How:** `GET /quotation-queue/{requestId}/machines/{requestItemId}/qr.png`. The same QR that is printed on the approved certificate, as an image to send to the client. Scanning it opens the **public check page** (no sign-in): it confirms the certificate is genuine (valid, or expired after its next examination date) and has a **Download certificate (PDF)** button that gives the certificate exactly as it was issued (`GET /verify/{code}/pdf`).
             The same QR stays with the certificate in the client's archive (`GET /clients/{clientId}/certificates`, field `qrUrl`, and `.../{id}/qr.png`), so it can be sent again at any time.
             """),
         [Key<MachineInspectionController>(nameof(MachineInspectionController.PreviewDelivery))] = new(16, "Queue 16 · Coordinator: preview the email to the client",
@@ -254,7 +254,7 @@ public static class WorkflowDocs
 
         **Technical manager (steps 10-14):** 11. list the jobs **to review** (`GET /quotation-queue/to-review`); 10. look at the certificates; then either 12. **approve the job** (or 13. one machine): numbers, QR codes and final PDFs are made and filed under the client, and the job goes to the coordinator (`status=approved`); or 14. **send the job back** to the inspector with a note (or 14b. one machine): it shows for the inspector in `status=returned`, who fixes and submits again.
 
-        **Coordinator (steps 15-18):** 15. the **QR code** of each certificate (not printed on the PDF; it is sent to the client); 16. **preview** the email, 17. download the **ZIP** (certificates and QR codes) and 18. **hand the certificates to the client**. Every certificate stays in the client's archive with its QR code (Configurations: the client's certificates).
+        **Coordinator (steps 15-18):** 15. the **QR code** of each certificate (printed on it once approved; scanning it opens the public check page with the certificate's PDF); 16. **preview** the email, 17. download the **ZIP** (certificates and QR codes) and 18. **hand the certificates to the client**. Every certificate stays in the client's archive with its QR code (Configurations: the client's certificates).
 
         Each machine's certificate status is `not_started`, `draft`, `submitted`, `returned`, `approved` or `delivered`.
         """;
@@ -325,7 +325,7 @@ public static class WorkflowDocs
         [Key<ClientCertificatesController>(nameof(ClientCertificatesController.DownloadPdf))] = new(19.5, "Extra · Download an issued certificate",
             "**How:** `GET /clients/{clientId}/certificates/{certificateFileId}/pdf` returns the PDF exactly as it was issued."),
         [Key<ClientCertificatesController>(nameof(ClientCertificatesController.DownloadQrCode))] = new(19.6, "Extra · Download an issued certificate's QR code",
-            "**How:** `GET /clients/{clientId}/certificates/{certificateFileId}/qr.png` returns the certificate's QR code (not printed on the PDF) to send to the client; it opens the public check page (`qrUrl` in the list)."),
+            "**How:** `GET /clients/{clientId}/certificates/{certificateFileId}/qr.png` returns the certificate's QR code (the one printed on it) as an image to send to the client; it opens the public check page with the PDF download (`qrUrl` in the list)."),
         [Key<ClientsController>(nameof(ClientsController.GetHistory))] = new(20, "Extra · Client history",
             "**How:** `GET /clients/{clientId}/history` returns the client's previous requests with their certificates."),
         [Key<ClientsController>(nameof(ClientsController.Archive))] = new(21, "Extra · Archive a client",

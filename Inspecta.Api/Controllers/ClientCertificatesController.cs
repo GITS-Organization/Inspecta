@@ -36,7 +36,7 @@ public sealed class ClientCertificatesController(ClientCertificateService certif
     }
 
     /// <summary>Download the QR code of an issued certificate as a PNG.</summary>
-    /// <remarks>The QR is not printed on the certificate; send this image to the client. It opens the public check page (<c>qrUrl</c> of the list).</remarks>
+    /// <remarks>The QR printed on the certificate, as an image to send to the client. It opens the public check page with the PDF download (<c>qrUrl</c> of the list).</remarks>
     [HttpGet("{certificateFileId:guid}/qr.png")]
     [Produces("image/png")]
     [ProducesResponseType(StatusCodes.Status200OK)]

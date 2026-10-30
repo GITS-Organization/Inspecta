@@ -9,8 +9,8 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace Inspecta.Api.Controllers;
 
 /// <summary>
-/// The public check behind the QR code of a certificate. No sign-in is needed; it only says whether the certificate was
-/// issued by us and shows what is printed on it. Limited per address.
+/// The public check behind the QR code of a certificate. No sign-in is needed; it says whether the certificate was
+/// issued by us, shows what is printed on it and lets the holder download the certificate itself. Limited per address.
 /// </summary>
 [ApiController]
 [AllowAnonymous]
@@ -33,6 +33,19 @@ public sealed class VerificationController(ClientCertificateService certificates
             ContentType = "text/html; charset=utf-8",
             StatusCode = result.Valid ? StatusCodes.Status200OK : StatusCodes.Status404NotFound
         };
+    }
+
+    /// <summary>The certificate itself, as it was issued, opened from the page's download button.</summary>
+    [HttpGet("/verify/{code}/pdf")]
+    [Produces("application/pdf")]
+    public async Task<IActionResult> Pdf(string code, CancellationToken cancellationToken)
+    {
+        var file = await certificates.GetPdfByCodeAsync(code, cancellationToken);
+        if (file is null) return NotFound();
+        Response.Headers.CacheControl = "no-store";
+        // Inline, so a phone opens it in the browser; the name is used when it is saved.
+        Response.Headers.ContentDisposition = $"inline; filename=\"{file.FileName}\"";
+        return File(file.Content, "application/pdf");
     }
 
     /// <summary>The same check as JSON, for an app.</summary>
@@ -70,6 +83,8 @@ public sealed class VerificationController(ClientCertificateService certificates
             body.Append(Row("Issued", result.IssuedAt?.UtcDateTime.ToString("dd/MM/yyyy")));
             body.Append(Row("Issued by", result.IssuedBy));
             body.Append("</table>");
+            if (result.PdfUrl is { } pdfUrl)
+                body.Append($"<a class=\"button\" href=\"{WebUtility.HtmlEncode(pdfUrl)}\">Download certificate (PDF)</a>");
         }
         else
         {
@@ -83,6 +98,7 @@ public sealed class VerificationController(ClientCertificateService certificates
                "h1{font-size:20px;margin:0 0 14px}table{width:100%;border-collapse:collapse}" +
                "th{text-align:left;color:#5b6b85;font-weight:600;padding:6px 8px 6px 0;width:42%}td{padding:6px 0}" +
                "tr+tr{border-top:1px solid #edf1f7}.foot{margin-top:16px;color:#5b6b85;font-size:12px}" +
+               ".button{display:block;margin-top:18px;padding:12px;border-radius:8px;background:#2b66a6;color:#fff;text-align:center;font-weight:600;text-decoration:none}" +
                "</style></head><body><div class=\"card\">" + body +
                "<div class=\"foot\">Integrity International Inspection - Report of Thorough Examination</div></div></body></html>";
     }

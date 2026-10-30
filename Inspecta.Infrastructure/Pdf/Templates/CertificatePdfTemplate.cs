@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Inspecta.Application.Pdf.Models;
+using Inspecta.Infrastructure.Services;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -11,7 +12,7 @@ namespace Inspecta.Infrastructure.Pdf.Templates;
 /// <summary>
 /// The Report of Thorough Examination of one machine, laid out like the company's Word forms. One layout serves every
 /// machine: the technical fields and the checklist come from the machine's template, the rest (client, dates,
-/// questionnaire, notes, signatures) is the same for all. The QR code is not printed; it is sent to the client separately.
+/// questionnaire, notes, signatures and QR code) is the same for all. The QR box stays blank until the certificate is approved.
 /// </summary>
 public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfModel>
 {
@@ -26,6 +27,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
     private const float Gap = 4f;
     private const string CompanySigner = "Ahmed Khalil";
     private const string Phones = "+201287374933 - 01035945426";
+    private static readonly QrCodeRenderer QrCodes = new();
 
     private static readonly string[] GeneralNotes =
     [
@@ -280,12 +282,14 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
             table.ColumnsDefinition(columns =>
             {
                 columns.RelativeColumn(3.1f);
-                columns.RelativeColumn(4.1f);
-                columns.RelativeColumn(3.1f);
+                columns.RelativeColumn(3.8f);
+                columns.RelativeColumn(2.4f);
+                columns.RelativeColumn(1.9f);
             });
             Head(table, "Name & Qualifications of person making this report");
             Head(table, "Name of person signing or authenticating this report on behalf of the author");
             Head(table, "For Integrity for inspection and Engineering Solutions");
+            Head(table, "QR Code");
 
             table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Column(column =>
             {
@@ -301,6 +305,12 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
                 column.Item().AlignCenter().Text(model.SignedBy ?? "—").Bold();
             });
             table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Text(CompanySigner).Bold();
+            // Filled when the technical manager approves; scanning it opens the public check page with the PDF.
+            table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Element(qr =>
+            {
+                if (string.IsNullOrWhiteSpace(model.QrData)) return;
+                qr.Width(48).Height(48).Image(QrCodes.RenderPng(model.QrData)).FitArea();
+            });
         });
 
     // ---- Checklist ----------------------------------------------------------------------------------------------
