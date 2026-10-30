@@ -718,7 +718,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabAccepted => 'Accepted';
 
   @override
-  String get tabLost => 'Lost';
+  String get tabRejected => 'Rejected';
 
   @override
   String get tileAwaitingClient => 'Awaiting client';
@@ -802,7 +802,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get boardEmptyAccepted => 'Nothing accepted yet.';
 
   @override
-  String get boardEmptyLost => 'Nothing lost — good sign.';
+  String get boardEmptyRejected => 'Nothing rejected — good sign.';
 
   @override
   String boardEmptySearch(String query) {
@@ -1848,4 +1848,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resetNotes => 'Reset to standard';
+
+  @override
+  String get newTotalPriceLabel => 'New total price';
+
+  @override
+  String get errorTotalPriceRequired => 'Enter the new total price.';
+
+  @override
+  String get newPriceSent => 'New price sent.';
+
+  @override
+  String get replyToRequestAction => 'Reply to request';
 }

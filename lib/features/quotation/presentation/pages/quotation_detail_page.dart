@@ -3,14 +3,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
+import '../../../../core/enums/job_status.dart';
 import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/loading.dart';
 import '../../../../core/shared/m_back_button.dart';
 import '../../../../core/shared/m_notice.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/pdf_preview_page.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
+import '../../../requests/domain/entities/request_item.dart';
+import '../../../requests/domain/entities/request_source.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/domain/usecases/get_request_detail.dart';
 import '../../../requests/presentation/pages/request_detail_page.dart';
@@ -19,14 +23,17 @@ import '../../domain/entities/client_response_outcome.dart';
 import '../../domain/entities/quotation.dart';
 import '../../domain/entities/quotation_status.dart';
 import '../../domain/entities/reply_type.dart';
-import '../../domain/proposal_terms.dart';
+import '../../domain/usecases/get_quote_pdf.dart';
 import '../bloc/quotation_detail_cubit.dart';
-import '../pdf/proposal_pdf_preview.dart';
+import '../bloc/quotation_form_cubit.dart';
 import '../widgets/log_client_reply_sheet.dart';
+import '../widgets/quotation_footer.dart';
+import '../widgets/quotation_reply_card.dart';
 import '../widgets/quote_board_status_chip.dart';
 import '../widgets/quote_detail_info_card.dart';
 import '../widgets/quote_history_timeline.dart';
 import '../widgets/quote_respond_section.dart';
+import '../widgets/send_new_price_sheet.dart';
 import '../widgets/quotation_labels.dart';
 
 /// The quote detail screen: quote + client identity up top, the full
@@ -42,13 +49,24 @@ class QuotationDetailPage extends StatelessWidget {
   /// screen has nothing to display.
   final Quotation? quotation;
 
-  const QuotationDetailPage({super.key, required this.requestId, this.quotation});
+  /// The request, when the caller already has it; otherwise it is fetched
+  /// only if the reply form needs it.
+  final InspectionRequest? request;
+
+  const QuotationDetailPage({
+    super.key,
+    required this.requestId,
+    this.quotation,
+    this.request,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) =>
-          getIt<QuotationDetailCubit>(param1: requestId, param2: quotation)..start(),
+      create: (_) => getIt<QuotationDetailCubit>(
+        param1: requestId,
+        param2: (quotation: quotation, request: request),
+      ),
       child: const _QuotationDetailView(),
     );
   }
@@ -183,8 +201,14 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
                             ),
                           );
                         }
-                        if (current == null) {
-                          return const SizedBox.shrink();
+                        // Nothing has gone out yet: this is where the reply is
+                        // chosen, priced and sent.
+                        if (current == null || current.isDraft) {
+                          return _DraftBody(
+                            current: current,
+                            state: state,
+                            onOpenRequest: () => _openRequest(state.request),
+                          );
                         }
 
                         return ListView(
@@ -197,20 +221,22 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
                             const SizedBox(height: 12),
                             QuoteHistoryTimeline(request: state.request, versions: state.versions),
                             const SizedBox(height: 12),
-                            if (current.type == ReplyType.offer && state.request != null) ...[
+                            if (current.type == ReplyType.offer) ...[
                               SizedBox(
                                 width: double.infinity,
                                 height: 48,
                                 child: OutlinedButton.icon(
-                                  onPressed: () => previewProposalPdf(
+                                  // The API generates the proposal PDF.
+                                  onPressed: () => PdfPreviewPage.open(
                                     context,
-                                    request: state.request!,
-                                    lines: current.items,
-                                    notes: current.notes.isEmpty ? defaultProposalNotes : current.notes,
-                                    scopeOfWork: current.scopeOfWork,
-                                    version: current.version ?? 1,
-                                    date: current.sentAt ?? current.createdAt,
-                                    validUntil: current.validUntil,
+                                    title: t.proposalTitle,
+                                    subtitle: current.requestNumber,
+                                    fileName: '${current.requestNumber.replaceAll(' ', '-')}.pdf',
+                                    allowDownload: false,
+                                    build: () => getIt<GetQuotePdf>()(
+                                      requestId: cubit.requestId,
+                                      quotationId: current.id,
+                                    ),
                                   ),
                                   icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
                                   label: Text(t.previewProposal),
@@ -236,7 +262,11 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
                             else
                               QuoteRespondSection(
                                 current: current,
-                                onSendNewPrice: () => _openRequest(state.request),
+                                onSendNewPrice: () => SendNewPriceSheet.show(
+                                  context,
+                                  nextVersion: (current.version ?? 0) + 1,
+                                  onSubmit: cubit.sendNewPrice,
+                                ),
                                 onAcceptClientPrice: current.clientCounterPricePiastres == null
                                     ? null
                                     : () => cubit.logResponse(
@@ -257,6 +287,98 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
             },
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// What a quote that hasn't been sent shows: its details (from the list row)
+/// with the reply options below — Accept, Send price offer or Reject. Nothing
+/// is requested to show them: when the request isn't at hand, the form is
+/// built from the list row (one price per unit, scope of work, validity,
+/// notes), and the request's items are only fetched when the offer is saved.
+/// A successful send closes the screen with `true`, so the screen behind
+/// reloads.
+class _DraftBody extends StatelessWidget {
+  /// The draft, or null when the screen was opened from a request that has
+  /// no quote yet.
+  final Quotation? current;
+  final QuotationDetailState state;
+  final VoidCallback onOpenRequest;
+
+  const _DraftBody({
+    required this.current,
+    required this.state,
+    required this.onOpenRequest,
+  });
+
+  /// A stand-in for the request, made from the list row: it has the client,
+  /// the location and how many units, but not the equipment lines, so it holds
+  /// one line for all of them.
+  InspectionRequest _provisionalRequest(Quotation quote, String lineTitle) {
+    return InspectionRequest(
+      id: quote.requestId,
+      source: RequestSource.email,
+      clientName: quote.clientName,
+      receivedAt: quote.createdAt,
+      location: quote.location,
+      status: JobStatus.quoteDraft,
+      items: [
+        RequestItem(
+          id: '',
+          type: lineTitle,
+          quantity: quote.totalUnits > 0 ? quote.totalUnits : 1,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final quote = current;
+    final loaded = state.request;
+
+    final details = <Widget>[
+      if (quote != null) ...[
+        QuoteDetailInfoCard(current: quote, onOpenRequest: onOpenRequest),
+        const SizedBox(height: 12),
+        QuoteHistoryTimeline(request: loaded, versions: state.versions),
+        const SizedBox(height: 12),
+      ],
+    ];
+    const padding = EdgeInsets.fromLTRB(16, 12, 16, 16);
+
+    if (loaded != null && !loaded.isQuotable) {
+      return ListView(
+        padding: padding,
+        children: [
+          ...details,
+          MNotice(type: MNoticeType.info, message: t.notReadyToQuote),
+        ],
+      );
+    }
+
+    final request =
+        loaded ?? (quote == null ? null : _provisionalRequest(quote, t.equipmentLabel));
+    if (request == null) return const SizedBox.shrink();
+
+    return BlocProvider(
+      key: ValueKey(request.id),
+      create: (_) => getIt<QuotationFormCubit>(param1: request, param2: quote?.id),
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: padding,
+              children: [...details, const QuotationReplyCard()],
+            ),
+          ),
+          QuotationFooter(
+            unitsLabel: t.unitsCount(request.totalUnits),
+            onSent: () => Navigator.of(context).pop(true),
+          ),
+        ],
       ),
     );
   }

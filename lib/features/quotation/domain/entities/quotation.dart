@@ -22,7 +22,12 @@ class Quotation extends Equatable {
   final String clientName;
 
   /// A short summary of what's being quoted, e.g. "Overhead crane × 2".
+  /// Empty when the row doesn't carry the equipment (list rows only know how
+  /// many [totalUnits]).
   final String equipmentSummary;
+
+  /// Where the inspection is; empty when unknown.
+  final String location;
 
   /// `null` while still a draft; assigned when sent.
   final int? version;
@@ -44,6 +49,10 @@ class Quotation extends Equatable {
   final DateTime? sentAt;
   final String createdBy;
   final DateTime createdAt;
+
+  /// How many units the quote covers, as the list rows report it. 0 when
+  /// unknown (rows that carry [items] don't need it).
+  final int totalUnits;
 
   // BR-03.6: the client's answer, logged by the coordinator.
   final ClientResponseOutcome? clientResponseOutcome;
@@ -67,6 +76,8 @@ class Quotation extends Equatable {
     required this.createdBy,
     required this.createdAt,
     this.version,
+    this.location = '',
+    this.totalUnits = 0,
     this.subtotalPiastres,
     this.totalPiastres,
     this.validUntil,
@@ -110,6 +121,7 @@ class Quotation extends Equatable {
     requestNumber,
     clientName,
     equipmentSummary,
+    location,
     version,
     type,
     items,
@@ -123,6 +135,7 @@ class Quotation extends Equatable {
     sentAt,
     createdBy,
     createdAt,
+    totalUnits,
     clientResponseOutcome,
     clientCounterPricePiastres,
     clientResponseNote,

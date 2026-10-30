@@ -1,23 +1,25 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/base/paginated.dart';
+import '../../../../core/base/safe_request_handler.dart';
 import '../../../../core/enums/job_status.dart';
-import '../../../../core/error/api_error_model.dart';
+import '../../../../core/error/api_error_handler.dart';
 import '../../../../core/error/api_failure.dart';
 import '../../domain/entities/inspection_request.dart';
 import '../../domain/entities/request_item.dart';
 import '../../domain/entities/request_triage.dart';
 import '../../domain/entities/requests_failure.dart';
 import '../../domain/repositories/requests_repository.dart';
-import '../datasources/requests_api_datasource.dart';
+import '../datasources/requests_api_client_services.dart';
 import '../datasources/requests_remote_datasource.dart';
 import '../models/inspection_request_model.dart';
+import '../models/requests_bodies.dart';
 
 class RequestsRepositoryImpl implements RequestsRepository {
+  static const _safeApi = SafeApi();
+
   final RequestsRemoteDataSource _remote;
-  final RequestsApiDataSource _api;
+  final RequestsApiClientServices _api;
 
   const RequestsRepositoryImpl(this._remote, this._api);
 
@@ -28,25 +30,29 @@ class RequestsRepositoryImpl implements RequestsRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final result = await _api.getRequests(
-      triage: triage,
-      query: query,
-      page: page,
-      pageSize: pageSize,
-    );
+    final result = await _safeApi(() async {
+      final rows = await _api.getRequests(triage.value, query, page, pageSize);
+      return [
+        for (final json in (rows as List).whereType<Map<String, dynamic>>())
+          InspectionRequestModel.fromApiJson(json),
+      ];
+    });
     final models = result.fold((data) => data, (f) => throw _mapError(f));
     return Paginated.page(
       items: _entities(models),
       page: page,
       pageSize: pageSize,
-      // Rows with an unknown status are dropped, which mustn't end the paging.
       rawCount: models.length,
     );
   }
 
   @override
   Future<InspectionRequest> confirmRequest(String requestId) async {
-    final result = await _api.confirmRequest(requestId);
+    final result = await _safeApi(
+      () async => InspectionRequestModel.fromApiJson(
+        await _api.confirmRequest(requestId) as Map<String, dynamic>,
+      ),
+    );
     final model = result.fold((data) => data, (f) => throw _mapError(f));
     final entity = model.toEntity();
     if (entity == null) {
@@ -58,7 +64,7 @@ class RequestsRepositoryImpl implements RequestsRepository {
 
   @override
   Future<void> deleteRequest(String requestId) async {
-    final result = await _api.deleteRequest(requestId);
+    final result = await _safeApi<void>(() => _api.deleteRequest(requestId));
     result.fold((_) {}, (f) => throw _mapError(f));
   }
 
@@ -80,12 +86,16 @@ class RequestsRepositoryImpl implements RequestsRepository {
 
   @override
   Future<InspectionRequest?> getById(String id) async {
-    try {
-      final model = await _remote.getById(id);
-      return model?.toEntity();
-    } catch (e) {
-      throw _mapError(e);
-    }
+    final result = await _safeApi(
+      () async => InspectionRequestModel.fromApiJson(
+        await _api.getRequest(id) as Map<String, dynamic>,
+      ),
+    );
+    final model = result.fold<InspectionRequestModel?>(
+      (data) => data,
+      (f) => f is ApiFailure && f.code == 404 ? null : throw _mapError(f),
+    );
+    return model?.toEntity();
   }
 
   @override
@@ -115,16 +125,10 @@ class RequestsRepositoryImpl implements RequestsRepository {
     required String requestId,
     required String reason,
   }) async {
-    try {
-      await _remote.updateStatus(
-        requestId,
-        JobStatus.quoteRejected,
-        note: reason,
-        extra: {'rejectReason': reason},
-      );
-    } catch (e) {
-      throw _mapError(e);
-    }
+    final result = await _safeApi<void>(
+      () => _api.rejectRequest(requestId, RejectRequestBody(reason: reason)),
+    );
+    result.fold((_) {}, (f) => throw _mapError(f));
   }
 
   @override
@@ -134,20 +138,24 @@ class RequestsRepositoryImpl implements RequestsRepository {
     required DateTime scheduledAt,
     String? note,
   }) async {
-    try {
-      await _remote.assignInspector(
+    final result = await _safeApi<void>(
+      () => _api.assignInspector(
         requestId,
-        inspectorId: inspectorId,
-        scheduledAt: scheduledAt,
-        note: note,
-      );
-    } catch (e) {
-      throw _mapError(e);
-    }
+        AssignInspectorBody(
+          inspectorId: inspectorId,
+          scheduledAt: scheduledAt,
+          note: note,
+        ),
+      ),
+    );
+    result.fold((_) {}, (f) => throw _mapError(f));
   }
 
   @override
-  Future<void> declineAssignment({required String requestId, String? reason}) async {
+  Future<void> declineAssignment({
+    required String requestId,
+    String? reason,
+  }) async {
     try {
       await _remote.declineAssignment(requestId, reason: reason);
     } catch (e) {
@@ -163,15 +171,19 @@ class RequestsRepositoryImpl implements RequestsRepository {
     String? accessNotes,
     required List<RequestItem> items,
   }) async {
-    final result = await _api.updateRequest(
-      request.id,
-      clientId: request.clientId,
-      clientName: clientName,
-      location: location,
-      preferredDate: request.preferredDate,
-      accessNotes: accessNotes,
-      items: items,
-      expectedUpdatedAt: request.updatedAt,
+    final result = await _safeApi(
+      () => _api.updateRequest(
+        request.id,
+        UpdateRequestBody(
+          clientId: request.clientId,
+          clientName: clientName,
+          location: location,
+          preferredDate: request.preferredDate,
+          accessNotes: accessNotes,
+          items: items,
+          expectedUpdatedAt: request.updatedAt,
+        ),
+      ),
     );
     result.fold((_) {}, (f) => throw _mapError(f));
   }
@@ -191,32 +203,14 @@ class RequestsRepositoryImpl implements RequestsRepository {
     return requests;
   }
 
+  /// The requests failure for [error]; [ApiErrorHandler] does the classifying.
   RequestsFailure _mapError(Object error) {
     if (error is RequestsFailure) return error;
-    if (error is ApiFailure) error = error.error;
-    if (error is ApiErrorModel) {
-      return RequestsFailure(switch (error.code) {
-        401 || 403 => RequestsFailureCode.permissionDenied,
-        409 || 412 => RequestsFailureCode.conflict,
-        null => switch (error.dioException?.type) {
-          DioExceptionType.connectionError ||
-          DioExceptionType.connectionTimeout ||
-          DioExceptionType.sendTimeout ||
-          DioExceptionType.receiveTimeout ||
-          DioExceptionType.unknown => RequestsFailureCode.network,
-          _ => RequestsFailureCode.unknown,
-        },
-        _ => RequestsFailureCode.unknown,
-      });
-    }
-    if (error is FirebaseException) {
-      return RequestsFailure(switch (error.code) {
-        'permission-denied' => RequestsFailureCode.permissionDenied,
-        'unavailable' => RequestsFailureCode.network,
-        _ => RequestsFailureCode.unknown,
-      });
-    }
-    debugPrint('Unexpected requests error: $error');
-    return const RequestsFailure(RequestsFailureCode.unknown);
+    return RequestsFailure(switch (ApiErrorHandler.classify(error)) {
+      ApiErrorKind.permissionDenied => RequestsFailureCode.permissionDenied,
+      ApiErrorKind.conflict => RequestsFailureCode.conflict,
+      ApiErrorKind.network => RequestsFailureCode.network,
+      ApiErrorKind.unknown => RequestsFailureCode.unknown,
+    });
   }
 }

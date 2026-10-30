@@ -13,6 +13,7 @@ class QuotationModel {
   final String requestNumber;
   final String clientName;
   final String equipmentSummary;
+  final String location;
   final int? version;
   final String? type;
   final List<QuoteLineItemModel> items;
@@ -26,6 +27,7 @@ class QuotationModel {
   final DateTime? sentAt;
   final String createdBy;
   final DateTime createdAt;
+  final int totalUnits;
   final String? clientResponseOutcome;
   final int? clientCounterPricePiastres;
   final String? clientResponseNote;
@@ -42,6 +44,8 @@ class QuotationModel {
     required this.createdBy,
     required this.createdAt,
     this.version,
+    this.location = '',
+    this.totalUnits = 0,
     this.type,
     this.subtotalPiastres,
     this.totalPiastres,
@@ -115,6 +119,7 @@ class QuotationModel {
       requestNumber: json['proposalNumber'] as String? ?? '',
       clientName: json['clientName'] as String? ?? '',
       equipmentSummary: _summarise(items),
+      location: json['location'] as String? ?? '',
       version: (json['version'] as num?)?.toInt(),
       type: ReplyType.offer.value,
       items: items,
@@ -126,7 +131,7 @@ class QuotationModel {
       scopeOfWork: strings('scopeOfWork'),
       status: status == 'open'
           ? (sentAt == null ? QuotationStatus.draft.value : QuotationStatus.sent.value)
-          : status,
+          : (status == 'rejected' ? QuotationStatus.declined.value : status),
       sentAt: sentAt,
       createdBy: '',
       createdAt: date('createdAt') ?? DateTime.now(),
@@ -136,8 +141,8 @@ class QuotationModel {
 
   /// A row of `GET /quotations`: the summary a list needs, with no line
   /// items or notes. `stage` says whether the quote was ever sent, so an
-  /// `open` quote is a draft until then. The row has no equipment summary, so
-  /// the request's location stands in for it.
+  /// `open` quote is a draft until then. The row has no equipment names, only
+  /// how many units, so the equipment summary is left empty.
   factory QuotationModel.fromApiListJson(Map<String, dynamic> json) {
     DateTime? date(String key) {
       final value = json[key];
@@ -153,8 +158,10 @@ class QuotationModel {
       requestNumber:
           json['proposalNumber'] as String? ?? json['quotationNumber'] as String? ?? '',
       clientName: json['clientName'] as String? ?? '',
-      equipmentSummary: json['location'] as String? ?? '',
+      equipmentSummary: '',
+      location: json['location'] as String? ?? '',
       version: (json['version'] as num?)?.toInt(),
+      totalUnits: (json['totalUnits'] as num?)?.toInt() ?? 0,
       type: ReplyType.offer.value,
       items: const [],
       subtotalPiastres: amount,
@@ -164,7 +171,7 @@ class QuotationModel {
           ? (json['stage'] == 'draft'
                 ? QuotationStatus.draft.value
                 : QuotationStatus.sent.value)
-          : status,
+          : (status == 'rejected' ? QuotationStatus.declined.value : status),
       sentAt: date('sentAt'),
       createdBy: '',
       createdAt: date('createdAt') ?? DateTime.now(),
@@ -193,7 +200,9 @@ class QuotationModel {
       requestNumber: requestNumber,
       clientName: clientName,
       equipmentSummary: equipmentSummary,
+      location: location,
       version: version,
+      totalUnits: totalUnits,
       type: replyType,
       items: items.map((item) => item.toEntity()).toList(),
       subtotalPiastres: subtotalPiastres,

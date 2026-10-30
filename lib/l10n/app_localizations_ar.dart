@@ -722,7 +722,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get tabAccepted => 'مقبول';
 
   @override
-  String get tabLost => 'خسارة';
+  String get tabRejected => 'مرفوض';
 
   @override
   String get tileAwaitingClient => 'بانتظار العميل';
@@ -809,7 +809,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get boardEmptyAccepted => 'لا شيء مقبول بعد.';
 
   @override
-  String get boardEmptyLost => 'لا شيء مفقود — علامة جيدة.';
+  String get boardEmptyRejected => 'لا شيء مرفوض — علامة جيدة.';
 
   @override
   String boardEmptySearch(String query) {
@@ -1843,4 +1843,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get resetNotes => 'استعادة القياسية';
+
+  @override
+  String get newTotalPriceLabel => 'السعر الإجمالي الجديد';
+
+  @override
+  String get errorTotalPriceRequired => 'أدخل السعر الإجمالي الجديد.';
+
+  @override
+  String get newPriceSent => 'تم إرسال السعر الجديد.';
+
+  @override
+  String get replyToRequestAction => 'الرد على الطلب';
 }

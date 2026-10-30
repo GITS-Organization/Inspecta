@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
@@ -11,10 +10,7 @@ import '../../../../core/shared/m_notice.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../quotation/presentation/bloc/quotation_form_cubit.dart';
 import '../../../quotation/presentation/pages/quotation_detail_page.dart';
-import '../../../quotation/presentation/widgets/quotation_footer.dart';
-import '../../../quotation/presentation/widgets/quotation_reply_card.dart';
 import '../../domain/entities/inspection_request.dart';
 import '../../domain/entities/requests_failure.dart';
 import '../../domain/usecases/complete_intake.dart';
@@ -26,12 +22,12 @@ import '../widgets/requests_labels.dart';
 import '../widgets/status_chip.dart';
 
 /// Feature 02 §5's "Request detail" screen: the six-step progress bar,
-/// the intake email, the equipment, and — only while the request is
-/// still New/a draft — Feature 03's reply panel. Once a quote has gone
-/// out (any [JobStatus] beyond `requestReceived`/`quoteDraft`), the
-/// request's story continues in Quotations (see `requests_tab.dart`),
-/// so this screen shows a read-only status instead of repeating the
-/// same reply picker.
+/// the intake email and the equipment. While the request is still New/a
+/// draft it offers "Reply to request", which opens the quotation details,
+/// where Feature 03's reply panel lives. Once a quote has gone out (any
+/// [JobStatus] beyond `requestReceived`/`quoteDraft`), the request's story
+/// continues in Quotations (see `requests_tab.dart`), so this screen shows
+/// a read-only status instead.
 class RequestDetailPage extends StatelessWidget {
   final InspectionRequest request;
 
@@ -45,31 +41,20 @@ class RequestDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => getIt<QuotationFormCubit>(param1: request),
-      child: Scaffold(
-        backgroundColor: AppColours.background,
-        body: SafeArea(
-          child: Column(
-            children: [
-              _Header(request: request),
-              Expanded(
-                child: _Body(request: request, quotable: _quotable),
-              ),
-              if (_quotable)
-                QuotationFooter(
-                  unitsLabel: AppLocalizations.of(context)!
-                      .unitsCount(request.totalUnits),
-                  // The request has left New/Negotiating for the coordinator
-                  // once sent or rejected — back to the inbox.
-                  onSent: () => Navigator.of(context).pop(),
-                )
-              else if (request.isNew)
-                _NotReadyNotice(request: request)
-              else
-                _MovedOnNotice(request: request),
-            ],
-          ),
+    return Scaffold(
+      backgroundColor: AppColours.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _Header(request: request),
+            Expanded(child: _Body(request: request)),
+            if (_quotable)
+              _ReplyAction(request: request)
+            else if (request.isNew)
+              _NotReadyNotice(request: request)
+            else
+              _MovedOnNotice(request: request),
+          ],
         ),
       ),
     );
@@ -78,9 +63,8 @@ class RequestDetailPage extends StatelessWidget {
 
 class _Body extends StatelessWidget {
   final InspectionRequest request;
-  final bool quotable;
 
-  const _Body({required this.request, required this.quotable});
+  const _Body({required this.request});
 
   @override
   Widget build(BuildContext context) {
@@ -95,17 +79,59 @@ class _Body extends StatelessWidget {
           items: request.items,
           preferredDate: request.preferredDate,
           location: request.location,
-          clientId: request.clientId,
         ),
         if (request.accessNotes != null && request.accessNotes!.isNotEmpty) ...[
           const SizedBox(height: 12),
           _NotesCard(notes: request.accessNotes!),
         ],
-        if (quotable) ...[
-          const SizedBox(height: 12),
-          const QuotationReplyCard(),
-        ],
       ],
+    );
+  }
+}
+
+/// Shown while the request can be replied to. The reply itself — Accept,
+/// Send price offer or Reject — is chosen on the quotation details screen.
+class _ReplyAction extends StatelessWidget {
+  final InspectionRequest request;
+
+  const _ReplyAction({required this.request});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColours.border)),
+      ),
+      child: SizedBox(
+        height: 54,
+        child: ElevatedButton(
+          onPressed: () async {
+            final sent = await Navigator.of(context).push<bool>(
+              MaterialPageRoute<bool>(
+                builder: (_) => QuotationDetailPage(
+                  requestId: request.id,
+                  request: request,
+                ),
+              ),
+            );
+            // The reply moved the request on: back to the inbox, which
+            // reloads on `true`.
+            if (sent == true && context.mounted) Navigator.of(context).pop(true);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColours.primaryColor,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            textStyle: AppTextStyles.buttonLabel,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          child: Text(t.replyToRequestAction),
+        ),
+      ),
     );
   }
 }

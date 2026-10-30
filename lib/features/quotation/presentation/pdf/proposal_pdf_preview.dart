@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/widgets/pdf_preview_page.dart';
-import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/bloc/auth_cubit.dart';
-import '../../../clients/domain/usecases/get_client_detail.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../domain/entities/quote_line_item.dart';
 import 'proposal_pdf_builder.dart';
@@ -41,8 +39,7 @@ String _jobTitle(UserRole role) => switch (role) {
 /// isn't built yet (it needs a backend job), so for now it is view-only.
 ///
 /// The offer is valid until [validUntil], or [validityDays] after it is
-/// issued; it is prepared by whoever is signed in and addressed to the
-/// client's main contact.
+/// issued; it is prepared by whoever is signed in.
 Future<void> previewProposalPdf(
   BuildContext context, {
   required InspectionRequest request,
@@ -66,15 +63,6 @@ Future<void> previewProposalPdf(
     fileName: '${number.replaceAll('/', '-').replaceAll(' ', '-')}.pdf',
     allowDownload: false,
     build: () async {
-      String? attention;
-      final clientId = request.clientId;
-      if (clientId != null) {
-        try {
-          attention = (await getIt<GetClientDetail>()(clientId))?.mainContact?.name;
-        } catch (_) {
-          // Not worth failing the preview over: it prints "—" instead.
-        }
-      }
       return buildProposalPdf(
         request: request,
         lines: lines,
@@ -85,7 +73,6 @@ Future<void> previewProposalPdf(
           quotationNumber: quotationNumberFor(request, date: issued),
           date: issued,
           validUntil: validUntil ?? issued.add(Duration(days: validityDays)),
-          attention: attention,
           preparedByName: user?.name ?? 'Integrity International for Inspection',
           preparedByTitle: user == null ? '' : _jobTitle(user.role),
         ),

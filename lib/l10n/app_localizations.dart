@@ -1358,11 +1358,11 @@ abstract class AppLocalizations {
   /// **'Accepted'**
   String get tabAccepted;
 
-  /// No description provided for @tabLost.
+  /// No description provided for @tabRejected.
   ///
   /// In en, this message translates to:
-  /// **'Lost'**
-  String get tabLost;
+  /// **'Rejected'**
+  String get tabRejected;
 
   /// No description provided for @tileAwaitingClient.
   ///
@@ -1496,11 +1496,11 @@ abstract class AppLocalizations {
   /// **'Nothing accepted yet.'**
   String get boardEmptyAccepted;
 
-  /// No description provided for @boardEmptyLost.
+  /// No description provided for @boardEmptyRejected.
   ///
   /// In en, this message translates to:
-  /// **'Nothing lost — good sign.'**
-  String get boardEmptyLost;
+  /// **'Nothing rejected — good sign.'**
+  String get boardEmptyRejected;
 
   /// No description provided for @boardEmptySearch.
   ///
@@ -3367,6 +3367,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset to standard'**
   String get resetNotes;
+
+  /// No description provided for @newTotalPriceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New total price'**
+  String get newTotalPriceLabel;
+
+  /// No description provided for @errorTotalPriceRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the new total price.'**
+  String get errorTotalPriceRequired;
+
+  /// No description provided for @newPriceSent.
+  ///
+  /// In en, this message translates to:
+  /// **'New price sent.'**
+  String get newPriceSent;
+
+  /// No description provided for @replyToRequestAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply to request'**
+  String get replyToRequestAction;
 }
 
 class _AppLocalizationsDelegate

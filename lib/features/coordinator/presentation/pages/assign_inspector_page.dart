@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/enums/job_status.dart';
 import '../../../../core/framework/mtoast.dart';
-import '../../../../core/shared/loading.dart';
 import '../../../../core/shared/m_back_button.dart';
 import '../../../../core/shared/m_card.dart';
 import '../../../../core/shared/m_notice.dart';
@@ -15,6 +15,9 @@ import '../../../../core/widgets/app_date_picker.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../auth/domain/entities/qualification.dart';
+import '../../../auth/domain/entities/user.dart';
+import '../../../auth/domain/entities/user_role.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/presentation/widgets/job_stepper.dart';
 import '../bloc/assign_inspector_cubit.dart';
@@ -265,7 +268,7 @@ class _Body extends StatelessWidget {
                 builder: (context, state) {
                   final cubit = context.read<AssignInspectorCubit>();
                   if (state.inspectorsStatus == InspectorsStatus.loading) {
-                    return Loading.loader(context);
+                    return const _InspectorsSkeleton();
                   }
                   if (state.inspectorsStatus == InspectorsStatus.error) {
                     return MNotice(type: MNoticeType.error, message: state.inspectorsFailure!.message(t));
@@ -447,6 +450,40 @@ class _Footer extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// What the skeleton rows are drawn from; only its shape matters.
+const _placeholderInspector = AppUser(
+  id: 'placeholder',
+  name: 'Inspector name',
+  email: '',
+  role: UserRole.inspector,
+  qualifications: [Qualification(name: 'Cranes'), Qualification(name: 'Lifts')],
+);
+
+/// The inspector list's loading state: option rows drawn from
+/// [_placeholderInspector], shimmering.
+class _InspectorsSkeleton extends StatelessWidget {
+  const _InspectorsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Skeletonizer(
+      child: Column(
+        children: [
+          for (var i = 0; i < 3; i++) ...[
+            InspectorOptionTile(
+              inspector: _placeholderInspector,
+              selected: false,
+              isBestMatch: false,
+              onTap: () {},
+            ),
+            if (i < 2) const SizedBox(height: 10),
+          ],
+        ],
       ),
     );
   }

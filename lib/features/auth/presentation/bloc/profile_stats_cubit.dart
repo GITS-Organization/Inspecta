@@ -7,8 +7,6 @@ import '../../../../core/enums/job_status.dart';
 import '../../../certificate/domain/entities/certificate.dart';
 import '../../../certificate/domain/usecases/watch_inspector_certificates.dart';
 import '../../../certificate/domain/usecases/watch_reviewed_certificates.dart';
-import '../../../clients/domain/entities/client.dart';
-import '../../../clients/domain/usecases/get_clients.dart';
 import '../../../quotation/domain/entities/quotation.dart';
 import '../../../quotation/domain/entities/quotation_status.dart';
 import '../../../quotation/domain/usecases/get_quotations.dart';
@@ -27,7 +25,6 @@ part 'profile_stats_state.dart';
 /// are the whole team's; an inspector's are their own.
 class ProfileStatsCubit extends Cubit<ProfileStatsState> {
   final GetQuotations _getQuotations;
-  final GetClients _getClients;
   final GetRequests _getRequests;
   final WatchReviewedCertificates _watchReviewedCertificates;
   final GetMyTasks _getMyTasks;
@@ -41,7 +38,6 @@ class ProfileStatsCubit extends Cubit<ProfileStatsState> {
 
   ProfileStatsCubit(
     this._getQuotations,
-    this._getClients,
     this._getRequests,
     this._watchReviewedCertificates,
     this._getMyTasks,
@@ -79,10 +75,6 @@ class ProfileStatsCubit extends Cubit<ProfileStatsState> {
           ),
         );
       }, onError: (_) {}),
-    );
-
-    _subscriptions.add(
-      _getClients().listen((clients) => emit(state.copyWith(clientsCount: clients.length)), onError: (_) {}),
     );
   }
 

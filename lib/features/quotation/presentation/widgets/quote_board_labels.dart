@@ -5,6 +5,6 @@ extension QuoteBoardTabLabel on QuoteBoardTab {
   String label(AppLocalizations t) => switch (this) {
     QuoteBoardTab.open => t.tabOpen,
     QuoteBoardTab.accepted => t.tabAccepted,
-    QuoteBoardTab.lost => t.tabLost,
+    QuoteBoardTab.rejected => t.tabRejected,
   };
 }

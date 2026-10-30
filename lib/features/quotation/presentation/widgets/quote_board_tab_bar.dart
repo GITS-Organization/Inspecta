@@ -5,8 +5,8 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/quote_board_tab.dart';
 import 'quote_board_labels.dart';
 
-/// The Quotations board's one filter row: Open / Expiring soon / Accepted /
-/// Lost, as scrollable chips with a live count on each.
+/// The Quotations board's one filter row: Open / Accepted / Rejected /
+/// Expiring soon, as scrollable chips with a live count on each.
 ///
 /// "Expiring soon" cuts across the tabs rather than being one, so it's a
 /// chip of its own; picking it (or any tab) clears the other.
@@ -47,6 +47,10 @@ class QuoteBoardTabBar extends StatelessWidget {
         children: [
           tabChip(QuoteBoardTab.open),
           const SizedBox(width: 8),
+          tabChip(QuoteBoardTab.accepted),
+          const SizedBox(width: 8),
+          tabChip(QuoteBoardTab.rejected),
+          const SizedBox(width: 8),
           AppFilterChip(
             label: t.tileExpiringSoon,
             count: expiringSoonCount,
@@ -54,10 +58,6 @@ class QuoteBoardTabBar extends StatelessWidget {
             selected: expiringSoonSelected,
             onTap: onExpiringSoon,
           ),
-          const SizedBox(width: 8),
-          tabChip(QuoteBoardTab.accepted),
-          const SizedBox(width: 8),
-          tabChip(QuoteBoardTab.lost),
         ],
       ),
     );

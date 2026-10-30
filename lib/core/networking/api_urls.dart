@@ -9,6 +9,8 @@ class ApiUrls {
   static const String refresh = "auth/refresh";
   static const String requests = "requests";
   static const String quotations = "quotations";
+  static const String quotationQueue = "quotation-queue";
+  static const String inspectors = "inspectors";
   static const String updateMyProfile = "dashboard/users/update-my-profile";
 
 }

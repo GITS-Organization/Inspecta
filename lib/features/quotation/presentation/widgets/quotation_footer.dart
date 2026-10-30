@@ -55,9 +55,7 @@ class QuotationFooter extends StatelessWidget {
           final cubit = context.read<QuotationFormCubit>();
 
           final String totalText;
-          if (state.replyType == ReplyType.accept) {
-            totalText = t.standardRateApplies;
-          } else if (state.replyType == ReplyType.offer && !state.priceInvalid) {
+          if (state.isPriced && !state.priceInvalid) {
             totalText = Currency.formatEgp(cubit.totalPiastres!);
           } else {
             totalText = '—';

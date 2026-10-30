@@ -80,15 +80,18 @@ class _QuotationsBoardViewState extends State<_QuotationsBoardView> {
     super.dispose();
   }
 
-  void _openDetail(Quotation quotation) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
+  /// The board reloads on return: a draft opened here may have been sent.
+  Future<void> _openDetail(Quotation quotation) async {
+    final cubit = context.read<QuotationsListCubit>();
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
         builder: (_) => QuotationDetailPage(
           requestId: quotation.requestId,
           quotation: quotation,
         ),
       ),
     );
+    if (changed == true) cubit.refresh();
   }
 
   @override
@@ -225,7 +228,7 @@ class _QuotationsBoardViewState extends State<_QuotationsBoardView> {
     return switch (state.tab) {
       QuoteBoardTab.open => t.boardEmptyOpen,
       QuoteBoardTab.accepted => t.boardEmptyAccepted,
-      QuoteBoardTab.lost => t.boardEmptyLost,
+      QuoteBoardTab.rejected => t.boardEmptyRejected,
     };
   }
 }

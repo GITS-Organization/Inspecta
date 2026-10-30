@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -8,7 +6,7 @@ import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/domain/usecases/assign_inspector.dart';
 import '../../domain/entities/coordinator_failure.dart';
-import '../../domain/usecases/get_inspectors.dart';
+import '../../domain/usecases/list_inspectors.dart';
 
 part 'assign_inspector_state.dart';
 
@@ -22,17 +20,17 @@ class AssignInspectorCubit extends Cubit<AssignInspectorState> {
   /// match.
   final String? preselectedInspectorId;
 
-  final GetInspectors _getInspectors;
+  final ListInspectors _listInspectors;
   final AssignInspector _assignInspector;
 
-  StreamSubscription<List<AppUser>>? _subscription;
+  bool _started = false;
 
   AssignInspectorCubit({
     required this.request,
     this.preselectedInspectorId,
-    required GetInspectors getInspectors,
+    required ListInspectors listInspectors,
     required AssignInspector assignInspector,
-  }) : _getInspectors = getInspectors,
+  }) : _listInspectors = listInspectors,
        _assignInspector = assignInspector,
        super(AssignInspectorState(scheduledAt: _defaultScheduledAt(request)));
 
@@ -43,35 +41,38 @@ class AssignInspectorCubit extends Cubit<AssignInspectorState> {
 
   bool get canSubmit => state.selectedInspectorId != null && !state.isSubmitting;
 
-  void start() {
-    if (_subscription != null) return;
-    _subscription = _getInspectors().listen(
-      (inspectors) {
-        final sorted = _sortedByMatch(inspectors);
-        // Pre-select the best match, like the mockup's radio default — an
-        // inspector on leave can't be assigned, so they're never the
-        // default even if they'd otherwise sort first.
-        final available = sorted.where((i) => !i.isOnLeave());
-        final preselected = preselectedInspectorId;
-        final defaultId = (preselected != null && available.any((i) => i.id == preselected))
-            ? preselected
-            : (available.isNotEmpty ? available.first.id : (sorted.isEmpty ? null : sorted.first.id));
-        emit(
-          state.copyWith(
-            inspectorsStatus: InspectorsStatus.ready,
-            inspectors: sorted,
-            matchedInspectorIds: _matchedIds(inspectors),
-            selectedInspectorId: state.selectedInspectorId ?? defaultId,
-          ),
-        );
-      },
-      onError: (Object error) => emit(
+  Future<void> start() async {
+    if (_started) return;
+    _started = true;
+    try {
+      final inspectors = await _listInspectors();
+      if (isClosed) return;
+      final sorted = _sortedByMatch(inspectors);
+      // Pre-select the best match, like the mockup's radio default — an
+      // inspector on leave can't be assigned, so they're never the
+      // default even if they'd otherwise sort first.
+      final available = sorted.where((i) => !i.isOnLeave());
+      final preselected = preselectedInspectorId;
+      final defaultId = (preselected != null && available.any((i) => i.id == preselected))
+          ? preselected
+          : (available.isNotEmpty ? available.first.id : (sorted.isEmpty ? null : sorted.first.id));
+      emit(
+        state.copyWith(
+          inspectorsStatus: InspectorsStatus.ready,
+          inspectors: sorted,
+          matchedInspectorIds: _matchedIds(inspectors),
+          selectedInspectorId: state.selectedInspectorId ?? defaultId,
+        ),
+      );
+    } catch (error) {
+      if (isClosed) return;
+      emit(
         state.copyWith(
           inspectorsStatus: InspectorsStatus.error,
           inspectorsFailure: _mapFailure(error),
         ),
-      ),
-    );
+      );
+    }
   }
 
   void selectInspector(String inspectorId) =>
@@ -167,11 +168,5 @@ class AssignInspectorCubit extends Cubit<AssignInspectorState> {
         clearFailure: failure == null,
       ),
     );
-  }
-
-  @override
-  Future<void> close() async {
-    await _subscription?.cancel();
-    return super.close();
   }
 }

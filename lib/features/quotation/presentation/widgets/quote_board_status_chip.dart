@@ -21,7 +21,7 @@ class QuoteBoardStatusChip extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     final tab = QuoteBoardTabX.of(quotation) ?? QuoteBoardTab.open;
     final expiringSoon = quotation.isExpiringSoon();
-    final expired = tab == QuoteBoardTab.lost && quotation.isExpired();
+    final expired = tab == QuoteBoardTab.rejected && quotation.isExpired();
 
     final Color background;
     final Color text;
@@ -42,7 +42,7 @@ class QuoteBoardStatusChip extends StatelessWidget {
       (background, text) = switch (tab) {
         QuoteBoardTab.open => (AppColours.chipBlueBackground, AppColours.chipBlueText),
         QuoteBoardTab.accepted => (AppColours.chipGreenBackground, AppColours.chipGreenText),
-        QuoteBoardTab.lost => (AppColours.chipRedBackground, AppColours.chipRedText),
+        QuoteBoardTab.rejected => (AppColours.chipRedBackground, AppColours.chipRedText),
       };
       label = tab.label(t);
     }

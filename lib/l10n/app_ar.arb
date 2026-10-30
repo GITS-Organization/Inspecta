@@ -231,7 +231,7 @@
   "quoteNumberVersion": "{quoteNumber} · {version}",
   "tabOpen": "مفتوح",
   "tabAccepted": "مقبول",
-  "tabLost": "خسارة",
+  "tabRejected": "مرفوض",
 
   "tileAwaitingClient": "بانتظار العميل",
   "tileClientReplied": "رد العميل",
@@ -259,7 +259,7 @@
 
   "boardEmptyOpen": "لا يوجد شيء بانتظار العميل الآن.",
   "boardEmptyAccepted": "لا شيء مقبول بعد.",
-  "boardEmptyLost": "لا شيء مفقود — علامة جيدة.",
+  "boardEmptyRejected": "لا شيء مرفوض — علامة جيدة.",
   "boardEmptySearch": "لا توجد نتائج لـ \"{query}\".",
   "searchQuotesHint": "ابحث بالعميل أو رقم الطلب أو رقم العرض",
 
@@ -592,5 +592,9 @@
   "removeNote": "حذف النقطة",
   "proposalNotesCount": "{count} نقاط",
   "proposalNotesStandard": "الملاحظات القياسية · {count} نقاط",
-  "resetNotes": "استعادة القياسية"
+  "resetNotes": "استعادة القياسية",
+  "newTotalPriceLabel": "السعر الإجمالي الجديد",
+  "errorTotalPriceRequired": "أدخل السعر الإجمالي الجديد.",
+  "newPriceSent": "تم إرسال السعر الجديد.",
+  "replyToRequestAction": "الرد على الطلب"
 }

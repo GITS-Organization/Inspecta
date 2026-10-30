@@ -87,7 +87,6 @@ class _ProfileView extends StatelessWidget {
     UserRole.coordinator => [
       (stats.quotesSentThisMonth, t.profileStatQuotesSent),
       (stats.acceptedThisMonth, t.profileStatAccepted),
-      (stats.clientsCount, t.profileStatClients),
     ],
     UserRole.inspector => [
       (stats.inspectionsThisMonth, t.profileStatInspections),

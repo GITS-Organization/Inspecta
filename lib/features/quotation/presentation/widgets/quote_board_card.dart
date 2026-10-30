@@ -81,7 +81,9 @@ class QuoteBoardCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  quotation.equipmentSummary,
+                  quotation.equipmentSummary.isNotEmpty
+                      ? quotation.equipmentSummary
+                      : quotation.location,
                   style: AppTextStyles.caption.copyWith(height: 18 / 13),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -108,14 +110,14 @@ class QuoteBoardCard extends StatelessWidget {
   }
 
   String? _actionLabel(AppLocalizations t, QuoteBoardTab tab, bool expired) {
-    if (tab == QuoteBoardTab.lost) {
+    if (tab == QuoteBoardTab.rejected) {
       return expired ? t.actionRequote : null;
     }
     return switch (tab) {
       QuoteBoardTab.open when quotation.status == QuotationStatus.countered => t.actionRespond,
       QuoteBoardTab.open => quotation.isExpiringSoon() ? t.actionExtendOrResend : null,
       QuoteBoardTab.accepted => t.actionViewJob,
-      QuoteBoardTab.lost => null,
+      QuoteBoardTab.rejected => null,
     };
   }
 }

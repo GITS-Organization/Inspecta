@@ -4,9 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/shared/m_card.dart';
-import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../clients/domain/usecases/get_client_detail.dart';
 import '../../domain/entities/request_item.dart';
 
 /// The equipment on a request (BR-02.6: each item is quoted and certified
@@ -22,16 +20,11 @@ class EquipmentGrid extends StatelessWidget {
   /// The request's site-wide location — an item's own when it has none.
   final String location;
 
-  /// Looked up for the "Client location" strip; null while the sender is
-  /// still unmatched.
-  final String? clientId;
-
   const EquipmentGrid({
     super.key,
     required this.items,
     this.preferredDate,
     this.location = '',
-    this.clientId,
   });
 
   @override
@@ -89,7 +82,6 @@ class EquipmentGrid extends StatelessWidget {
               ],
             ),
           ],
-          if (clientId != null) _ClientLocation(clientId: clientId!),
         ],
       ),
     );
@@ -309,62 +301,6 @@ class _LocationStrip extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// The client's own address, read from their record. Renders nothing while
-/// loading, or if the client has none on file or can't be fetched.
-class _ClientLocation extends StatefulWidget {
-  final String clientId;
-
-  const _ClientLocation({required this.clientId});
-
-  @override
-  State<_ClientLocation> createState() => _ClientLocationState();
-}
-
-class _ClientLocationState extends State<_ClientLocation> {
-  late Future<String?> _location;
-
-  @override
-  void initState() {
-    super.initState();
-    _location = _load();
-  }
-
-  @override
-  void didUpdateWidget(_ClientLocation old) {
-    super.didUpdateWidget(old);
-    if (old.clientId != widget.clientId) _location = _load();
-  }
-
-  Future<String?> _load() async {
-    try {
-      return (await getIt<GetClientDetail>()(widget.clientId))?.location;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    return FutureBuilder<String?>(
-      future: _location,
-      builder: (context, snapshot) {
-        final value = snapshot.data?.trim() ?? '';
-        if (value.isEmpty) return const SizedBox.shrink();
-        return Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: _LocationStrip(
-            label: t.clientLocationLabel,
-            value: value,
-            icon: Icons.business_outlined,
-            tint: AppColours.surfaceMuted,
-          ),
-        );
-      },
     );
   }
 }

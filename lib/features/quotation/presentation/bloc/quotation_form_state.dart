@@ -58,13 +58,17 @@ class QuotationFormState extends Equatable {
     return price == null || price <= 0;
   }
 
-  /// An offer needs every line priced (the budget table prints them all).
-  bool get priceInvalid =>
-      replyType == ReplyType.offer && itemIds.any(linePriceInvalid);
+  /// Whether the reply carries a price: an offer, and an accept too — it
+  /// sends the price it is accepted at.
+  bool get isPriced => replyType == ReplyType.offer || replyType == ReplyType.accept;
 
-  /// An offer needs at least one point of scope (blank points do not count).
+  /// A priced reply needs every line priced (the budget table prints them all).
+  bool get priceInvalid => isPriced && itemIds.any(linePriceInvalid);
+
+  /// A priced reply needs at least one point of scope (blank points do not
+  /// count).
   bool get scopeInvalid =>
-      replyType == ReplyType.offer && scopeOfWork.every((point) => point.trim().isEmpty);
+      isPriced && scopeOfWork.every((point) => point.trim().isEmpty);
 
   bool get reasonInvalid => replyType == ReplyType.reject && message.trim().isEmpty;
 

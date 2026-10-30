@@ -36,6 +36,10 @@ class InspectionRequest extends Equatable {
   /// The inspector assigned to carry out the job, set together with
   /// [scheduledAt] when a coordinator assigns it (Feature 04).
   final String? inspectorId;
+
+  /// The assigned inspector's name when the API reports it (the coordinator
+  /// queue's rows do); null otherwise.
+  final String? inspectorName;
   final DateTime? scheduledAt;
   final String? assignmentNote;
 
@@ -68,6 +72,7 @@ class InspectionRequest extends Equatable {
     this.coordinatorId,
     this.rejectReason,
     this.inspectorId,
+    this.inspectorName,
     this.scheduledAt,
     this.assignmentNote,
     this.certificateSubmittedAt,
@@ -142,6 +147,7 @@ class InspectionRequest extends Equatable {
     items,
     rejectReason,
     inspectorId,
+    inspectorName,
     scheduledAt,
     assignmentNote,
     certificateSubmittedAt,

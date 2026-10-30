@@ -88,24 +88,6 @@ class RequestsRemoteDataSource {
     await batch.commit();
   }
 
-  /// Assigning an inspector moves the job to [JobStatus.assigned], so it
-  /// goes through [updateStatus] to log the event alongside the write.
-  Future<void> assignInspector(
-    String requestId, {
-    required String inspectorId,
-    required DateTime scheduledAt,
-    String? note,
-  }) => updateStatus(
-    requestId,
-    JobStatus.assigned,
-    note: note,
-    extra: {
-      'inspectorId': inspectorId,
-      'scheduledAt': Timestamp.fromDate(scheduledAt),
-      'assignmentNote': note,
-    },
-  );
-
   /// Feature 05: turning down a job hands it back to the coordinator's
   /// queue — status reverts to [JobStatus.quoteAccepted] and the
   /// assignment fields clear, matching the paired firestore.rules check.

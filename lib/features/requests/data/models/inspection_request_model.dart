@@ -89,7 +89,10 @@ class InspectionRequestModel {
     );
   }
 
-  factory InspectionRequestModel.fromJson(String id, Map<String, dynamic> json) {
+  factory InspectionRequestModel.fromJson(
+    String id,
+    Map<String, dynamic> json,
+  ) {
     return InspectionRequestModel(
       id: id,
       source: RequestSource.fromValue(json['source']),
@@ -115,7 +118,8 @@ class InspectionRequestModel {
       inspectorId: json['inspectorId'] as String?,
       scheduledAt: (json['scheduledAt'] as Timestamp?)?.toDate(),
       assignmentNote: json['assignmentNote'] as String?,
-      certificateSubmittedAt: (json['certificateSubmittedAt'] as Timestamp?)?.toDate(),
+      certificateSubmittedAt: (json['certificateSubmittedAt'] as Timestamp?)
+          ?.toDate(),
     );
   }
 

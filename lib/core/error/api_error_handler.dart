@@ -1,8 +1,49 @@
 import 'package:dio/dio.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 
 import 'api_error_model.dart';
+import 'api_failure.dart';
+
+/// What an error means to a feature, whichever source it came from (the API
+/// or Firebase). Each feature maps these onto its own failure codes.
+enum ApiErrorKind { permissionDenied, conflict, network, unknown }
 
 class ApiErrorHandler {
+  /// Classifies [error]: an [ApiFailure] (or its error model) by HTTP status
+  /// or, when the server never answered, by how the request failed; a
+  /// [FirebaseException] by its code. Anything else is [ApiErrorKind.unknown].
+  static ApiErrorKind classify(Object error) {
+    if (error is ApiFailure) error = error.error;
+    if (error is ApiErrorModel) {
+      final status = error.code;
+      if (status == null) {
+        return switch (error.dioException?.type) {
+          DioExceptionType.connectionError ||
+          DioExceptionType.connectionTimeout ||
+          DioExceptionType.sendTimeout ||
+          DioExceptionType.receiveTimeout ||
+          DioExceptionType.unknown => ApiErrorKind.network,
+          _ => ApiErrorKind.unknown,
+        };
+      }
+      return switch (status) {
+        401 || 403 => ApiErrorKind.permissionDenied,
+        409 || 412 => ApiErrorKind.conflict,
+        _ => ApiErrorKind.unknown,
+      };
+    }
+    if (error is FirebaseException) {
+      return switch (error.code) {
+        'permission-denied' => ApiErrorKind.permissionDenied,
+        'unavailable' => ApiErrorKind.network,
+        _ => ApiErrorKind.unknown,
+      };
+    }
+    debugPrint('Unexpected error: $error');
+    return ApiErrorKind.unknown;
+  }
+
   static BaseErrorModel handle(dynamic error, {StackTrace? trace}) {
     if (error is DioException) {
       switch (error.type) {

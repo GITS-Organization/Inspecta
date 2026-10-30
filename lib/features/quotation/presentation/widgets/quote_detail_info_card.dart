@@ -37,7 +37,15 @@ class QuoteDetailInfoCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
-                  child: _Field(label: t.equipmentLabel, value: current.equipmentSummary),
+                  child: _Field(
+                    label: t.equipmentLabel,
+                    // List rows have no equipment names, only how many units.
+                    value: current.equipmentSummary.isNotEmpty
+                        ? current.equipmentSummary
+                        : current.totalUnits > 0
+                        ? t.unitsCount(current.totalUnits)
+                        : '—',
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -66,6 +74,13 @@ class QuoteDetailInfoCard extends StatelessWidget {
               ],
             ),
           ),
+          if (current.location.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: _Field(label: t.locationLabel, value: current.location),
+            ),
+          ],
         ],
       ),
     );

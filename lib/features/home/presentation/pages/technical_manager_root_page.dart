@@ -11,7 +11,8 @@ class TechnicalManagerRootPage extends StatefulWidget {
   const TechnicalManagerRootPage({super.key});
 
   @override
-  State<TechnicalManagerRootPage> createState() => _TechnicalManagerRootPageState();
+  State<TechnicalManagerRootPage> createState() =>
+      _TechnicalManagerRootPageState();
 }
 
 class _TechnicalManagerRootPageState extends State<TechnicalManagerRootPage> {
@@ -31,7 +32,9 @@ class _TechnicalManagerRootPageState extends State<TechnicalManagerRootPage> {
 
   Widget _page(TechnicalManagerTab tab) => switch (tab) {
     TechnicalManagerTab.review => ReviewQueuePage(onOpenProfile: _openProfile),
-    TechnicalManagerTab.sent => SentCertificatesPage(onOpenProfile: _openProfile),
+    TechnicalManagerTab.sent => SentCertificatesPage(
+      onOpenProfile: _openProfile,
+    ),
     TechnicalManagerTab.profile => const ProfilePage(),
   };
 
@@ -45,7 +48,10 @@ class _TechnicalManagerRootPageState extends State<TechnicalManagerRootPage> {
             _opened.contains(tab) ? _page(tab) : const SizedBox.shrink(),
         ],
       ),
-      bottomNavigationBar: ReviewBottomNav(selected: _tab, onSelectTab: _select),
+      bottomNavigationBar: ReviewBottomNav(
+        selected: _tab,
+        onSelectTab: _select,
+      ),
     );
   }
 }

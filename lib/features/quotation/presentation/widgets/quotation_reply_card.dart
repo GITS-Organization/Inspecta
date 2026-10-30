@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/shared/m_card.dart';
+import '../../../../core/widgets/pdf_preview_page.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/reply_type.dart';
 import '../../domain/proposal_terms.dart';
@@ -70,7 +71,7 @@ class _QuotationReplyCardState extends State<QuotationReplyCard> {
             selected: state.replyType == ReplyType.reject,
             onTap: () => cubit.selectReplyType(ReplyType.reject),
           ),
-          if (state.replyType == ReplyType.offer) ...[
+          if (state.isPriced) ...[
             for (final item in cubit.request.items) ...[
               const SizedBox(height: 14),
               _LinePricing(
@@ -108,7 +109,7 @@ class _QuotationReplyCardState extends State<QuotationReplyCard> {
                   isStandard ? t.proposalNotesStandard(count) : t.proposalNotesCount(count),
             ),
           ],
-          if (state.replyType == ReplyType.offer || state.replyType == ReplyType.reject) ...[
+          if (state.isPriced || state.replyType == ReplyType.reject) ...[
             const SizedBox(height: 14),
             _MessageField(
               controller: _messageController,
@@ -117,20 +118,33 @@ class _QuotationReplyCardState extends State<QuotationReplyCard> {
               onChanged: cubit.changeMessage,
             ),
           ],
-          if (state.replyType == ReplyType.offer && !state.priceInvalid) ...[
+          if (state.isPriced && !state.priceInvalid) ...[
             const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
               height: 48,
               child: OutlinedButton.icon(
-                onPressed: () => previewProposalPdf(
-                  context,
-                  request: cubit.request,
-                  lines: cubit.offerLines(),
-                  scopeOfWork: cubit.scopeOfWork,
-                  notes: cubit.notes,
-                  validityDays: state.validityDays,
-                ),
+                onPressed: () => cubit.hasQuote
+                    // The API generates the PDF from the saved quote, so the
+                    // offer is saved first.
+                    ? PdfPreviewPage.open(
+                        context,
+                        title: t.proposalTitle,
+                        fileName: 'proposal.pdf',
+                        allowDownload: false,
+                        build: () async {
+                          await cubit.saveOffer();
+                          return cubit.fetchPdf();
+                        },
+                      )
+                    : previewProposalPdf(
+                        context,
+                        request: cubit.request,
+                        lines: cubit.offerLines(),
+                        scopeOfWork: cubit.scopeOfWork,
+                        notes: cubit.notes,
+                        validityDays: state.validityDays,
+                      ),
                 icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
                 label: Text(t.previewProposal),
                 style: OutlinedButton.styleFrom(

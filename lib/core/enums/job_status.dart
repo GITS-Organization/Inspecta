@@ -23,6 +23,9 @@ enum JobStatus {
   const JobStatus(this.value);
 
   static JobStatus? fromValue(Object? value) {
+    // The API calls an accepted quote still waiting on an inspector
+    // `unassigned`.
+    if (value == 'unassigned') return JobStatus.quoteAccepted;
     for (final status in values) {
       if (status.value == value) return status;
     }

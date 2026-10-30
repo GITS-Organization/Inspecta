@@ -258,7 +258,7 @@
   },
   "tabOpen": "Open",
   "tabAccepted": "Accepted",
-  "tabLost": "Lost",
+  "tabRejected": "Rejected",
 
   "tileAwaitingClient": "Awaiting client",
   "tileClientReplied": "Client replied",
@@ -290,7 +290,7 @@
 
   "boardEmptyOpen": "Nothing awaiting a client right now.",
   "boardEmptyAccepted": "Nothing accepted yet.",
-  "boardEmptyLost": "Nothing lost — good sign.",
+  "boardEmptyRejected": "Nothing rejected — good sign.",
   "boardEmptySearch": "Nothing matches \"{query}\".",
   "@boardEmptySearch": { "placeholders": { "query": { "type": "String" } } },
   "searchQuotesHint": "Search client, request ID or quote number",
@@ -668,5 +668,9 @@
   "@proposalNotesCount": { "placeholders": { "count": { "type": "int" } } },
   "proposalNotesStandard": "Standard notes · {count} points",
   "@proposalNotesStandard": { "placeholders": { "count": { "type": "int" } } },
-  "resetNotes": "Reset to standard"
+  "resetNotes": "Reset to standard",
+  "newTotalPriceLabel": "New total price",
+  "errorTotalPriceRequired": "Enter the new total price.",
+  "newPriceSent": "New price sent.",
+  "replyToRequestAction": "Reply to request"
 }
