@@ -295,9 +295,9 @@ public sealed class MachineInspectionTests : IDisposable
         Assert.Contains("34 checklist row(s)", incomplete.Message);
         Assert.Contains("a note for 1 checklist row(s) answered No", incomplete.Message);
         Assert.Contains("the description of the defect", incomplete.Message);
-        Assert.Contains("the conclusion", incomplete.Message);
+        Assert.Contains("the result (satisfactory or unsatisfactory)", incomplete.Problems!);
         Assert.Contains("the examination date", incomplete.Problems!);
-        Assert.Contains("the conclusion", incomplete.Problems!);
+        Assert.DoesNotContain("the conclusion", incomplete.Problems!);
 
         var nothing = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.SubmitAsync(requestId, chainItemId, inspector.Id, "inspector")));
         Assert.Equal("nothing_to_submit", nothing.Code);
@@ -326,7 +326,8 @@ public sealed class MachineInspectionTests : IDisposable
         var preparedBy = (await Run(service => service.GetFormAsync(requestId, forkliftItemId, manager.Id, "technical_manager"))).Texts;
         Assert.Equal("Eng. Karim", preparedBy["preparedByName"]);
         Assert.Equal("FOU, LAC", preparedBy["preparedByQualifications"]);
-        Assert.Equal("Satisfactory", preparedBy["conclusion"]);
+        // The verdict is the result now; a blank conclusion stays blank instead of becoming "Satisfactory".
+        Assert.False(preparedBy.ContainsKey("conclusion"));
         Assert.Equal("NONE", preparedBy["defectDescription"]);
 
         // The manager sends one machine back and approves the other.
@@ -480,25 +481,94 @@ public sealed class MachineInspectionTests : IDisposable
     }
 
     [Fact]
-    public async Task OnlyMachinesWaitingForReviewCanBeSentBack()
+    public async Task TheJobIsReviewedAsAWholeWithCommentsPerMachineAndKeepsItsQr()
     {
         await Start();
-        foreach (var (item, key) in new[] { (forkliftItemId, "forklift"), (chainItemId, "basic") })
+        await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", CompleteForm("forklift")));
+        await Run(service => service.SubmitAsync(requestId, forkliftItemId, inspector.Id, "inspector"));
+
+        // Half a job cannot be decided on.
+        Assert.Equal("not_under_review", (await Assert.ThrowsAsync<AuthException>(() => Run(service => service.ApproveAllAsync(requestId, manager.Id, "technical_manager")))).Code);
+        Assert.Equal("not_under_review", (await Assert.ThrowsAsync<AuthException>(() => Run(service => service.ReturnToInspectorAsync(
+            requestId, manager.Id, "technical_manager", new ReturnJobRequest { Note = "Fix" })))).Code);
+
+        await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", CompleteForm("basic")));
+        await Run(service => service.SubmitAsync(requestId, chainItemId, inspector.Id, "inspector"));
+        string reserved;
+        await using (var db = CreateContext())
         {
-            await Run(service => service.SaveFormAsync(requestId, item, inspector.Id, "inspector", CompleteForm(key)));
+            // The QR is made on submit, so the preview carries it; the number waits for approval.
+            var submitted = db.Certificates.AsNoTracking().Single(value => value.RequestItemId == forkliftItemId);
+            reserved = submitted.VerificationCode!;
+            Assert.Equal($"https://api.gitsplatform.com/verify/{reserved}", submitted.QrData);
+            Assert.Null(submitted.CertificateNumber);
+        }
+
+        var listed = await Run(service => service.ListMachinesAsync(requestId, manager.Id, "technical_manager"));
+        Assert.True(listed.CanReview);
+        Assert.All(listed.Machines, machine => Assert.Equal(InspectionResult.Satisfactory, machine.Result));
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Run(service => service.ReturnToInspectorAsync(requestId, manager.Id, "technical_manager",
+            new ReturnJobRequest { Note = "Fix", Machines = [new MachineReviewComment { RequestItemId = Guid.NewGuid(), Comment = "x" }] })));
+        var returned = await Run(service => service.ReturnToInspectorAsync(requestId, manager.Id, "technical_manager", new ReturnJobRequest
+        {
+            Note = "Please fix and resubmit",
+            Machines = [new MachineReviewComment { RequestItemId = chainItemId, Comment = "Serial number spelled wrong" }]
+        }));
+        Assert.Equal(JobStatus.CertificateReturned, returned.RequestStatus);
+        Assert.False(returned.CanReview);
+        Assert.All(returned.Machines, machine => Assert.Equal(MachineStatus.Returned, machine.Status));
+        Assert.Equal("Please fix and resubmit", returned.Machines.Single(machine => machine.RequestItemId == forkliftItemId).ReviewNote);
+        Assert.Equal("Serial number spelled wrong\nPlease fix and resubmit", returned.Machines.Single(machine => machine.RequestItemId == chainItemId).ReviewNote);
+        Assert.Equal(2, returned.ReviewHistory!.Count);
+        Assert.Contains(returned.ReviewHistory, comment => comment.RequestItemId == chainItemId && comment.MachineName == "Chain Block" && comment.By == "Manager Mona");
+        Assert.Contains(returned.ReviewHistory, comment => comment.RequestItemId is null && comment.Text == "Please fix and resubmit");
+
+        foreach (var item in new[] { forkliftItemId, chainItemId })
+        {
+            await Run(service => service.SaveFormAsync(requestId, item, inspector.Id, "inspector", new SaveMachineFormRequest { Texts = new Dictionary<string, string> { ["note"] = "Fixed" } }));
             await Run(service => service.SubmitAsync(requestId, item, inspector.Id, "inspector"));
         }
 
-        await Run(service => service.ApproveAsync(requestId, forkliftItemId, manager.Id, "technical_manager"));
-        var refused = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.ReturnToInspectorAsync(
-            requestId, manager.Id, "technical_manager", new ReturnJobRequest { Note = "Fix", RequestItemIds = [forkliftItemId] })));
-        Assert.Equal("not_submitted", refused.Code);
+        var approved = await Run(service => service.ApproveAllAsync(requestId, manager.Id, "technical_manager"));
+        Assert.Equal(JobStatus.CertificateApproved, approved.RequestStatus);
+        Assert.Equal(2, approved.ReviewHistory!.Count);
+        await using var check = CreateContext();
+        Assert.Equal(reserved, check.Certificates.AsNoTracking().Single(value => value.RequestItemId == forkliftItemId).VerificationCode);
+    }
 
-        var list = await Run(service => service.ReturnToInspectorAsync(
-            requestId, manager.Id, "technical_manager", new ReturnJobRequest { Note = "Fix the SWL", RequestItemIds = [chainItemId] }));
-        Assert.Equal(MachineStatus.Approved, list.Machines.Single(machine => machine.RequestItemId == forkliftItemId).Status);
-        Assert.Equal(MachineStatus.Returned, list.Machines.Single(machine => machine.RequestItemId == chainItemId).Status);
-        Assert.Equal(JobStatus.CertificateReturned, list.RequestStatus);
+    [Fact]
+    public async Task TheResultIsRequiredAndAnUnsatisfactoryMachineIsStillCertified()
+    {
+        await Start();
+        var withoutResult = CompleteForm("basic") with { Result = null };
+        await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", withoutResult));
+        var missing = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.SubmitAsync(requestId, chainItemId, inspector.Id, "inspector")));
+        Assert.Equal(["the result (satisfactory or unsatisfactory)"], missing.Problems!);
+
+        var form = await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector",
+            new SaveMachineFormRequest { Result = InspectionResult.Unsatisfactory }));
+        Assert.Equal(InspectionResult.Unsatisfactory, form.Result);
+        Assert.Equal(["the description of the defect"], form.Missing);
+        await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", new SaveMachineFormRequest
+        {
+            Texts = new Dictionary<string, string> { ["defectDescription"] = "Worn load chain", ["conclusion"] = "Not to be used until the chain is replaced" }
+        }));
+        await Run(service => service.SubmitAsync(requestId, chainItemId, inspector.Id, "inspector"));
+        await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", CompleteForm("forklift")));
+        await Run(service => service.SubmitAsync(requestId, forkliftItemId, inspector.Id, "inspector"));
+
+        var approved = await Run(service => service.ApproveAllAsync(requestId, manager.Id, "technical_manager"));
+        Assert.All(approved.Machines, machine => Assert.Equal(MachineStatus.Approved, machine.Status));
+        Assert.Equal(InspectionResult.Unsatisfactory, approved.Machines.Single(machine => machine.RequestItemId == chainItemId).Result);
+
+        await using var db = CreateContext();
+        var files = db.IssuedCertificateFiles.AsNoTracking().ToList();
+        Assert.Equal(CertificateResult.NotSafe, files.Single(file => file.ItemName == "Chain Block").Result);
+        Assert.Equal(CertificateResult.SafeToOperate, files.Single(file => file.ItemName == "Forklift Truck").Result);
+        Assert.Equal(CertificateResult.SafeToOperate, db.Items.AsNoTracking().Single(item => item.Id == forkliftEquipmentId).LastInspectionResult);
+        var archive = await new ClientCertificateService(new EfClientRepository(db), new EfCertificateFileRepository(db)).ListAsync(clientId);
+        Assert.Contains(archive, row => row.ItemName == "Chain Block" && row.Result == InspectionResult.Unsatisfactory);
     }
 
     [Fact]
@@ -652,7 +722,8 @@ public sealed class MachineInspectionTests : IDisposable
             {
                 ["examination"] = new(2026, 11, 5),
                 ["nextExamination"] = new(2027, 11, 5)
-            }
+            },
+            Result = InspectionResult.Satisfactory
         };
     }
 

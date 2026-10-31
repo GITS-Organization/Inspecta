@@ -25,6 +25,29 @@ public enum MachineStatus
     Delivered
 }
 
+/// <summary>The inspector's verdict on a machine, printed in the certificate's Conclusion/Remarks.</summary>
+public enum InspectionResult
+{
+    Satisfactory,
+    Unsatisfactory
+}
+
+public static class InspectionResults
+{
+    public static CertificateResult ToCertificateResult(this InspectionResult result) =>
+        result == InspectionResult.Satisfactory ? CertificateResult.SafeToOperate : CertificateResult.NotSafe;
+
+    public static InspectionResult? ToInspectionResult(this CertificateResult? result) => result switch
+    {
+        CertificateResult.SafeToOperate or CertificateResult.SafeWithConditions => InspectionResult.Satisfactory,
+        CertificateResult.NotSafe => InspectionResult.Unsatisfactory,
+        _ => null
+    };
+
+    /// <summary>The word printed on the certificate.</summary>
+    public static string Label(this InspectionResult result) => result == InspectionResult.Satisfactory ? "Satisfactory" : "Unsatisfactory";
+}
+
 /// <summary>
 /// One machine of an assigned job, with the state of its certificate. <c>canEdit</c> and <c>canReview</c> tell the current
 /// user what they can do with it now. <c>requestItemId</c> is the <c>id</c> of the item in <c>GET /requests/{requestId}</c>.
@@ -41,13 +64,15 @@ public sealed record MachineSummaryResponse(
     string? ReviewNote,
     string? CertificateNumber,
     bool CanEdit,
-    bool CanReview);
+    bool CanReview,
+    InspectionResult? Result = null);
 
 public sealed record MachineProgress(int Total, int Submitted, int Approved, int Delivered);
 
 /// <summary>
-/// The machines of one job and how far their certificates are. <c>canStartInspection</c> and <c>canDeliver</c> tell the
-/// current user whether those buttons apply to the job now.
+/// The machines of one job and how far their certificates are. <c>canStartInspection</c>, <c>canReview</c> (approve or send
+/// back the whole job) and <c>canDeliver</c> tell the current user whether those buttons apply to the job now.
+/// <c>reviewHistory</c> lists the technical manager's comments each time the job was sent back, newest first.
 /// </summary>
 public sealed record MachineListResponse(
     Guid RequestId,
@@ -59,7 +84,12 @@ public sealed record MachineListResponse(
     bool CanStartInspection,
     bool CanDeliver,
     IReadOnlyList<MachineSummaryResponse> Machines,
-    MachineDelivery? Delivery = null);
+    MachineDelivery? Delivery = null,
+    bool CanReview = false,
+    IReadOnlyList<ReviewCommentResponse>? ReviewHistory = null);
+
+/// <summary>One comment of the technical manager: on the whole job (<c>requestItemId</c> empty) or on one machine.</summary>
+public sealed record ReviewCommentResponse(DateTimeOffset At, string? By, Guid? RequestItemId, string? MachineName, string Text);
 
 /// <summary>What happened when the certificates were handed over: whether an email went out, to whom, and a note when it did not.</summary>
 public sealed record MachineDelivery(bool EmailSent, string? SentTo, string? Notice);
@@ -119,7 +149,8 @@ public sealed record MachineFormResponse(
     IReadOnlyDictionary<string, string> Texts,
     IReadOnlyDictionary<string, DateOnly> Dates,
     string? ReviewNote,
-    string? CertificateNumber);
+    string? CertificateNumber,
+    InspectionResult? Result = null);
 
 public sealed record ChecklistAnswerRequest
 {
@@ -155,6 +186,9 @@ public sealed record SaveMachineFormRequest
 
     /// <summary><c>examination</c>, <c>nextExamination</c>, <c>futureDangerBy</c>, as <c>yyyy-MM-dd</c>.</summary>
     public IReadOnlyDictionary<string, DateOnly>? Dates { get; init; }
+
+    /// <summary><c>satisfactory</c> or <c>unsatisfactory</c>: the one word printed in Conclusion/Remarks. Required before submitting.</summary>
+    public InspectionResult? Result { get; init; }
 }
 
 /// <summary>Optional details when the technical manager approves a machine.</summary>
@@ -174,15 +208,25 @@ public sealed record ReturnMachineRequest
     public string Note { get; init; } = string.Empty;
 }
 
-/// <summary>The technical manager sends a job back to the inspector.</summary>
+/// <summary>The technical manager sends the whole job back to the inspector.</summary>
 public sealed record ReturnJobRequest
 {
-    /// <summary>What to fix; shown to the inspector on every machine sent back.</summary>
+    /// <summary>What to fix in general; shown on every machine and kept in the job's review history.</summary>
     [Required, MaxLength(4000)]
     public string Note { get; init; } = string.Empty;
 
-    /// <summary>Only these machines (<c>requestItemId</c>); leave out to send back every machine waiting for review.</summary>
-    public IReadOnlyList<Guid>? RequestItemIds { get; init; }
+    /// <summary>Optional comments on single machines (a wrong serial number, a spelling mistake...).</summary>
+    public IReadOnlyList<MachineReviewComment>? Machines { get; init; }
+}
+
+/// <summary>A comment on one machine when the job is sent back.</summary>
+public sealed record MachineReviewComment
+{
+    [Required]
+    public Guid RequestItemId { get; init; }
+
+    [Required, MaxLength(4000)]
+    public string Comment { get; init; } = string.Empty;
 }
 
 /// <summary>Optional details when the coordinator hands the certificates to the client.</summary>

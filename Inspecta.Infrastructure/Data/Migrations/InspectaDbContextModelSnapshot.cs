@@ -642,6 +642,10 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<Guid>("RequestId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Result")
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
                     b.Property<string>("Sha256")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -1283,6 +1287,39 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.ToTable("RequestItems");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.ReviewComment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RequestItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReviewerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReviewerName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestId", "CreatedAt");
+
+                    b.ToTable("ReviewComments");
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.AppUser", b =>
                 {
                     b.HasOne("Inspecta.Domain.Entities.AppUser", null)
@@ -1492,6 +1529,17 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Navigation("Request");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.ReviewComment", b =>
+                {
+                    b.HasOne("Inspecta.Domain.Entities.InspectionRequest", "Request")
+                        .WithMany("ReviewComments")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Request");
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.AppUser", b =>
                 {
                     b.Navigation("RefreshTokens");
@@ -1513,6 +1561,8 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Navigation("History");
 
                     b.Navigation("Items");
+
+                    b.Navigation("ReviewComments");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.RequestItem", b =>

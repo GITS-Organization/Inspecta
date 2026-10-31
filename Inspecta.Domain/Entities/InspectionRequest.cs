@@ -56,6 +56,9 @@ public sealed class InspectionRequest
     public List<InspectionCertificate> Certificates { get; private set; } = [];
     public List<RequestItem> Items { get; private set; } = [];
     public List<JobStatusHistory> History { get; private set; } = [];
+
+    /// <summary>The technical manager's comments each time the job was sent back to the inspector.</summary>
+    public List<ReviewComment> ReviewComments { get; private set; } = [];
     public RequestEmail? Email { get; private set; }
 
     public static InspectionRequest Create(

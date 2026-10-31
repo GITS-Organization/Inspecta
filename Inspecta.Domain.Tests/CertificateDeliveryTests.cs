@@ -266,7 +266,8 @@ public sealed class CertificateDeliveryTests : IDisposable
                 ["firstExamination"] = false, ["within12Months"] = true, ["examinationScheme"] = true,
                 ["exceptionalCircumstances"] = false, ["existingDanger"] = false, ["futureDanger"] = false
             },
-            Dates = new Dictionary<string, DateOnly> { ["examination"] = new(2026, 11, 5), ["nextExamination"] = new(2027, 11, 5) }
+            Dates = new Dictionary<string, DateOnly> { ["examination"] = new(2026, 11, 5), ["nextExamination"] = new(2027, 11, 5) },
+            Result = InspectionResult.Satisfactory
         };
     }
 

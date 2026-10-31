@@ -59,7 +59,7 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
         files.Select(file => new IssuedCertificateSummary(
             file.Id, file.CertificateId, file.RequestId, file.ClientId, file.ClientName, file.ItemName,
             file.CertificateNumber, file.VerificationCode, file.ExaminationDate, file.NextExaminationDate,
-            file.FileName, file.Sha256, file.IssuedAt, file.EquipmentId, file.QrData, file.PreparedBy));
+            file.FileName, file.Sha256, file.IssuedAt, file.EquipmentId, file.QrData, file.PreparedBy, file.Result));
 
     public async Task<string> NextCertificateNumberAsync(Guid managerId, int year, CancellationToken cancellationToken = default)
     {

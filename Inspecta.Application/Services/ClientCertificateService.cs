@@ -19,7 +19,7 @@ public sealed class ClientCertificateService(
         return (await certificateFiles.ListForClientAsync(clientId, cancellationToken))
             .Select(file => new ClientCertificateResponse(
                 file.Id, file.RequestId, file.CertificateNumber, file.ItemName, file.ExaminationDate, file.NextExaminationDate,
-                file.IssuedAt, file.FileName, file.Sha256, file.VerificationCode, file.QrData))
+                file.IssuedAt, file.FileName, file.Sha256, file.VerificationCode, file.QrData, file.Result.ToInspectionResult()))
             .ToArray();
     }
 
@@ -62,7 +62,8 @@ public sealed class ClientCertificateService(
             file.NextExaminationDate,
             file.IssuedAt,
             Issuer,
-            PdfPath(normalized));
+            PdfPath(normalized),
+            file.Result.ToInspectionResult());
     }
 
     /// <summary>

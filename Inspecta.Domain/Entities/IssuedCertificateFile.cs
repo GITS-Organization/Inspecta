@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Inspecta.Domain.Enums;
 
 namespace Inspecta.Domain.Entities;
 
@@ -23,6 +24,9 @@ public sealed class IssuedCertificateFile
     public string VerificationCode { get; private set; } = string.Empty;
     public string? QrData { get; private set; }
     public string? PreparedBy { get; private set; }
+
+    /// <summary>The inspector's verdict printed on it: <c>SafeToOperate</c> (Satisfactory) or <c>NotSafe</c> (Unsatisfactory).</summary>
+    public CertificateResult? Result { get; private set; }
     public DateOnly? ExaminationDate { get; private set; }
     public DateOnly? NextExaminationDate { get; private set; }
     public string FileName { get; private set; } = string.Empty;
@@ -46,7 +50,8 @@ public sealed class IssuedCertificateFile
         DateTimeOffset? issuedAt = null,
         Guid? equipmentId = null,
         string? qrData = null,
-        string? preparedBy = null)
+        string? preparedBy = null,
+        CertificateResult? result = null)
     {
         if (certificateId == Guid.Empty || requestId == Guid.Empty)
             throw new ArgumentException("Certificate and request are required.");
@@ -68,6 +73,7 @@ public sealed class IssuedCertificateFile
             VerificationCode = verificationCode.Trim(),
             QrData = string.IsNullOrWhiteSpace(qrData) ? null : qrData.Trim(),
             PreparedBy = string.IsNullOrWhiteSpace(preparedBy) ? null : preparedBy.Trim(),
+            Result = result,
             ExaminationDate = examinationDate,
             NextExaminationDate = nextExaminationDate,
             FileName = fileName,

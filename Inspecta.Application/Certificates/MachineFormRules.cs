@@ -1,4 +1,5 @@
 using Inspecta.Domain.Entities;
+using Inspecta.Domain.Enums;
 
 namespace Inspecta.Application.Certificates;
 
@@ -32,9 +33,12 @@ public static class MachineFormRules
         IReadOnlyDictionary<string, CertificateChecklistEntry> checklist,
         IReadOnlyDictionary<string, string> texts,
         IReadOnlyDictionary<string, DateTimeOffset> dates,
-        IReadOnlyDictionary<string, bool> answers)
+        IReadOnlyDictionary<string, bool> answers,
+        CertificateResult? result)
     {
         var problems = new List<string>();
+
+        if (result is null) problems.Add("the result (satisfactory or unsatisfactory)");
 
         if (!dates.TryGetValue("examination", out var examination)) problems.Add("the examination date");
         if (!dates.TryGetValue("nextExamination", out var next)) problems.Add("the next examination date");
@@ -62,16 +66,13 @@ public static class MachineFormRules
         var withoutNote = checklist.Count(pair => pair.Value.Value == ChecklistValues.No && string.IsNullOrWhiteSpace(pair.Value.Note));
         if (withoutNote > 0) problems.Add($"a note for {withoutNote} checklist row(s) answered No");
 
-        if (NeedsExplanation(checklist, answers))
-        {
-            if (!HasText(texts, "defectDescription")) problems.Add("the description of the defect");
-            if (!HasText(texts, "conclusion")) problems.Add("the conclusion");
-        }
+        if ((NeedsExplanation(checklist, answers) || result == CertificateResult.NotSafe) && !HasText(texts, "defectDescription"))
+            problems.Add("the description of the defect");
 
         return problems;
     }
 
-    /// <summary>A "No" in the checklist or a danger answer means the inspector must describe the defect and state the conclusion.</summary>
+    /// <summary>A "No" in the checklist or a danger answer means the inspector must describe the defect.</summary>
     public static bool NeedsExplanation(
         IReadOnlyDictionary<string, CertificateChecklistEntry> checklist,
         IReadOnlyDictionary<string, bool> answers) =>
@@ -79,7 +80,10 @@ public static class MachineFormRules
         answers.GetValueOrDefault("existingDanger") ||
         answers.GetValueOrDefault("futureDanger");
 
-    /// <summary>The texts as they are printed: blanks become the usual wording ("Satisfactory", "NONE", "N/A").</summary>
+    /// <summary>
+    /// The texts as they are printed: blanks become the usual wording ("NONE", "N/A"). The conclusion is left alone: the
+    /// result is printed there, as one word: Satisfactory or Unsatisfactory.
+    /// </summary>
     public static Dictionary<string, string> WithDefaults(IReadOnlyDictionary<string, string> texts)
     {
         var result = new Dictionary<string, string>(texts);
@@ -88,7 +92,6 @@ public static class MachineFormRules
             if (!HasText(result, key)) result[key] = value;
         }
 
-        Default("conclusion", DefaultConclusion);
         Default("defectDescription", DefaultDefects);
         Default("repairsRequired", DefaultRepairs);
         Default("testsCarriedOut", DefaultTests);

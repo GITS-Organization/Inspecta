@@ -19,7 +19,8 @@ public sealed record IssuedCertificateSummary(
     DateTimeOffset IssuedAt,
     Guid? EquipmentId = null,
     string? QrData = null,
-    string? PreparedBy = null);
+    string? PreparedBy = null,
+    Inspecta.Domain.Enums.CertificateResult? Result = null);
 
 /// <summary>The issued PDFs filed under each client, and the numbering of certificates.</summary>
 public interface ICertificateFileRepository

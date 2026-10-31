@@ -2,7 +2,8 @@ namespace Inspecta.Application.Pdf.Models;
 
 /// <summary>
 /// Everything printed on one machine's Report of Thorough Examination. <c>QrData</c> is what the QR code opens; it is
-/// empty until the certificate is approved, and the QR box stays blank until then.
+/// given when the inspector first submits, so the preview carries it, and empty before. <c>Conclusion</c> is the verdict,
+/// one word: Satisfactory or Unsatisfactory.
 /// </summary>
 public sealed record CertificatePdfModel(
     string? CertificateNumber,

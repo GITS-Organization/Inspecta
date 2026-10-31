@@ -442,7 +442,8 @@ Content-Type: application/json
     "tires_and_wheels.sidewalls_cracks": { "value": "no", "note": "Cut on the rear-left tyre" }
   },
   "answers": { "firstExamination": false, "within12Months": true, "examinationScheme": true, "exceptionalCircumstances": false, "existingDanger": false, "futureDanger": false },
-  "texts": { "testType": "Visual and function", "defectDescription": "Cut tyre", "conclusion": "Not satisfactory until the tyre is replaced" },
+  "result": "unsatisfactory",
+  "texts": { "testType": "Visual and function", "defectDescription": "Cut tyre", "repairsRequired": "Replace the tyre" },
   "dates": { "examination": "2026-11-05", "nextExamination": "2027-11-05" }
 }
 
@@ -450,11 +451,11 @@ Content-Type: application/json
 POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/submit
 Authorization: Bearer {{accessToken}}
 
-### Inspector or technical manager: see the certificate as it will look (DRAFT until approved)
+### Inspector or technical manager: see the certificate as it will look (DRAFT, with its QR, until approved)
 GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/pdf
 Authorization: Bearer {{accessToken}}
 
-### Technical manager: preview every certificate of the job in one ZIP before approving (drafts marked DRAFT)
+### Technical manager: preview every certificate of the job, with their QR codes, in one ZIP before deciding
 GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/certificates/preview.zip
 Authorization: Bearer {{accessToken}}
 
@@ -470,9 +471,16 @@ Authorization: Bearer {{accessToken}}
 GET {{baseUrl}}/api/v1/quotation-queue?status=approved
 Authorization: Bearer {{accessToken}}
 
-### Technical manager: approve the whole job (every machine waiting for review)
+### Technical manager: approve the whole job (only once every machine is submitted)
 POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/approve-all
 Authorization: Bearer {{accessToken}}
+
+### Technical manager: approve the whole job with a drawn signature (kept for the next approvals)
+POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/approve-all
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "signature": "[[0.05,0.7,0.12,0.3,0.2,0.75,0.3,0.25,0.38,0.8]]", "rememberSignature": true }
 
 ### Technical manager: send the whole job back to the inspector
 POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/return-to-inspector
@@ -481,30 +489,12 @@ Content-Type: application/json
 
 { "note": "Check the examination dates on every machine" }
 
-### Technical manager: send only some machines back
+### Technical manager: send the job back with comments on single machines
 POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/return-to-inspector
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
-{ "note": "Add the serial number", "requestItemIds": ["{{machineId}}"] }
-
-### Technical manager: approve the machine
-POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/approve
-Authorization: Bearer {{accessToken}}
-
-### Technical manager: approve the machine with a drawn signature (kept for the next approvals)
-POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/approve
-Authorization: Bearer {{accessToken}}
-Content-Type: application/json
-
-{ "signature": "[[0.05,0.7,0.12,0.3,0.2,0.75,0.3,0.25,0.38,0.8]]", "rememberSignature": true }
-
-### Technical manager: send the machine back with a note
-POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/return
-Authorization: Bearer {{accessToken}}
-Content-Type: application/json
-
-{ "note": "Please add the serial numbers" }
+{ "note": "Please fix and resubmit", "machines": [ { "requestItemId": "{{machineId}}", "comment": "Serial number spelled wrong" } ] }
 
 ### Download the certificate PDF (DRAFT until approved)
 GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/pdf

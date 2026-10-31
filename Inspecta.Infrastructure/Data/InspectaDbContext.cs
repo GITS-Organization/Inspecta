@@ -29,6 +29,7 @@ public sealed class InspectaDbContext(
     public DbSet<QuotationDraft> QuotationDrafts => Set<QuotationDraft>();
     public DbSet<CertificateCounter> CertificateCounters => Set<CertificateCounter>();
     public DbSet<IssuedCertificateFile> IssuedCertificateFiles => Set<IssuedCertificateFile>();
+    public DbSet<ReviewComment> ReviewComments => Set<ReviewComment>();
     public DbSet<CertificateDelivery> CertificateDeliveries => Set<CertificateDelivery>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -157,6 +158,16 @@ public sealed class InspectaDbContext(
         history.HasOne(value => value.Request).WithMany(value => value.History)
             .HasForeignKey(value => value.RequestId).OnDelete(DeleteBehavior.Cascade);
 
+        var reviewComment = modelBuilder.Entity<ReviewComment>();
+        reviewComment.HasKey(item => item.Id);
+        reviewComment.HasQueryFilter(value => IsTenantAdmin ||
+            TenantId != null && value.Request != null && value.Request.ManagerId == TenantId);
+        reviewComment.Property(item => item.Text).HasMaxLength(4000);
+        reviewComment.Property(item => item.ReviewerName).HasMaxLength(200);
+        reviewComment.HasIndex(item => new { item.RequestId, item.CreatedAt });
+        reviewComment.HasOne(value => value.Request).WithMany(value => value.ReviewComments)
+            .HasForeignKey(value => value.RequestId).OnDelete(DeleteBehavior.Cascade);
+
         var quote = modelBuilder.Entity<Quote>();
         quote.HasKey(item => item.Id);
         quote.HasQueryFilter(item => IsTenantAdmin ||
@@ -197,6 +208,7 @@ public sealed class InspectaDbContext(
         issued.Property(item => item.VerificationCode).HasMaxLength(64);
         issued.Property(item => item.QrData).HasMaxLength(512);
         issued.Property(item => item.PreparedBy).HasMaxLength(200);
+        issued.Property(item => item.Result).HasConversion<string>().HasMaxLength(24);
         issued.Property(item => item.FileName).HasMaxLength(260);
         issued.Property(item => item.Sha256).HasMaxLength(64);
 

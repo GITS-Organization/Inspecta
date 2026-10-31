@@ -59,6 +59,7 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
             .Include(item => item.Items)
             .Include(item => item.Certificates)
             .Include(item => item.History)
+            .Include(item => item.ReviewComments)
             .AsSplitQuery();
         if (!tracking) query = query.AsNoTracking();
         return query.SingleOrDefaultAsync(item => item.Id == requestId, cancellationToken);

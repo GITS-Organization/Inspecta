@@ -100,6 +100,7 @@ public sealed class MachineInspectionService(
         if (!answers.GetValueOrDefault("futureDanger")) dates.Remove("futureDangerBy");
 
         certificate.SaveForm(technical, checklist, texts, dates, answers);
+        if (form.Result is { } result) certificate.SetFinalResult(result.ToCertificateResult());
         if (isNew) await certificateRepository.AddAsync(certificate, cancellationToken);
         else await certificateRepository.SaveAsync(cancellationToken);
 
@@ -122,7 +123,7 @@ public sealed class MachineInspectionService(
         var template = CertificateTemplateCatalog.Find(certificate.TemplateId) ?? CertificateTemplateCatalog.Basic;
 
         var texts = certificate.TextsOf();
-        var problems = MachineFormRules.Problems(template, certificate.Checklist, texts, certificate.DatesOf(), certificate.AnswersOf());
+        var problems = MachineFormRules.Problems(template, certificate.Checklist, texts, certificate.DatesOf(), certificate.AnswersOf(), certificate.FinalResult);
         if (problems.Count > 0)
             throw new AuthException("certificate_incomplete", $"Complete the certificate first. Missing: {string.Join("; ", problems)}.", 409) { Problems = problems };
 
@@ -136,6 +137,12 @@ public sealed class MachineInspectionService(
         var preparedBy = inspector?.FullName ?? "Inspector";
         var qualifications = inspector is null ? null : string.Join(", ", inspector.Qualifications.Select(value => value.Name));
         certificate.SubmitForm(preparedBy, qualifications);
+        // The QR is made on the first submit and kept, so the technical manager previews the certificate with it.
+        if (certificate.VerificationCode is null)
+        {
+            var reserved = NewVerificationCode();
+            certificate.ReserveVerification(reserved, (options ?? new CertificateOptions()).VerifyUrl(reserved));
+        }
 
         if (request.Items.Count > 0 && request.Items.All(value => request.Certificates.Any(existing =>
                 existing.RequestItemId == value.Id &&
@@ -170,9 +177,10 @@ public sealed class MachineInspectionService(
         var reviewer = await userRepository.GetByIdAsync(actorId, cancellationToken);
         var signature = !string.IsNullOrWhiteSpace(approval?.Signature) ? approval.Signature : reviewer?.SignatureStrokesJson;
         var number = await certificateFiles.NextCertificateNumberAsync(request.ManagerId ?? Guid.Empty, DateTimeOffset.UtcNow.Year, cancellationToken);
-        var code = NewVerificationCode();
+        // The code and QR were reserved on submit and are kept; older submissions get them now.
+        var code = certificate.VerificationCode ?? NewVerificationCode();
         certificate.ApproveForm(
-            actorId, reviewer?.FullName ?? string.Empty, number, code, (options ?? new CertificateOptions()).VerifyUrl(code), signature);
+            actorId, reviewer?.FullName ?? string.Empty, number, code, certificate.QrData ?? (options ?? new CertificateOptions()).VerifyUrl(code), signature);
         if (approval is { RememberSignature: true } && !string.IsNullOrWhiteSpace(approval.Signature))
             reviewer?.SetSignature(approval.Signature);
 
@@ -184,7 +192,12 @@ public sealed class MachineInspectionService(
             var registered = await equipmentRepository.GetByIdAsync(equipmentId, tracking: true, cancellationToken);
             if (registered is { IsArchived: false } && next > examination)
             {
-                try { registered.RecordInspection(examination, next); }
+                try
+                {
+                    if (certificate.FinalResult is { } verdict)
+                        registered.RecordInspection(DateOnly.FromDateTime(examination.UtcDateTime), DateOnly.FromDateTime(next.UtcDateTime), verdict);
+                    else registered.RecordInspection(examination, next);
+                }
                 catch (InvalidOperationException) { /* a retired machine keeps its old dates */ }
             }
         }
@@ -217,7 +230,8 @@ public sealed class MachineInspectionService(
                 pdf.Content,
                 equipmentId: certificate.EquipmentId,
                 qrData: certificate.QrData,
-                preparedBy: certificate.TextsOf().GetValueOrDefault("preparedByName")),
+                preparedBy: certificate.TextsOf().GetValueOrDefault("preparedByName"),
+                result: certificate.FinalResult),
             cancellationToken);
 
         await requestRepository.SaveAsync(request, cancellationToken);
@@ -247,45 +261,68 @@ public sealed class MachineInspectionService(
         return await BuildFormAsync(request, item, certificate, actorId, role, cancellationToken);
     }
 
-    /// <summary>Approves every machine of the job that is waiting for review, one after the other.</summary>
+    /// <summary>
+    /// Approves the whole job: every machine, once all of them are submitted. A job is reviewed as a whole, because its
+    /// certificates are handed to the client together.
+    /// </summary>
     public async Task<MachineListResponse> ApproveAllAsync(
         Guid requestId, Guid actorId, string role, ApproveMachineRequest? approval = null, CancellationToken cancellationToken = default)
     {
         EnsureReviewer(role);
         var request = await LoadAsync(requestId, actorId, role, tracking: false, cancellationToken);
-        EnsureUnderReview(request);
-        var waiting = WaitingForReview(request);
-        if (waiting.Count == 0)
-            throw new AuthException("nothing_to_review", "No certificate of this job is waiting for review.", 409);
+        EnsureWholeJobSubmitted(request);
 
         // Each machine gets its own number, PDF and save: if one fails the others stay approved and calling again finishes the rest.
-        foreach (var requestItemId in waiting)
+        foreach (var requestItemId in WaitingForReview(request))
             await ApproveAsync(requestId, requestItemId, actorId, role, approval, cancellationToken);
         return await ListMachinesAsync(requestId, actorId, role, cancellationToken);
     }
 
-    /// <summary>Sends the job back to the inspector: every machine waiting for review, or only the ones named, with the same note.</summary>
+    /// <summary>
+    /// Sends the whole job back to the inspector: every machine waiting for review is reopened with the general note and,
+    /// where given, its own comment. All comments are kept in the job's review history.
+    /// </summary>
     public async Task<MachineListResponse> ReturnToInspectorAsync(
         Guid requestId, Guid actorId, string role, ReturnJobRequest returned, CancellationToken cancellationToken = default)
     {
         EnsureReviewer(role);
         if (string.IsNullOrWhiteSpace(returned.Note)) throw new ArgumentException("A note explaining what to fix is required.", nameof(returned));
-        var request = await LoadAsync(requestId, actorId, role, tracking: false, cancellationToken);
-        EnsureUnderReview(request);
-        var waiting = WaitingForReview(request);
-        var chosen = returned.RequestItemIds is { Count: > 0 } ids ? ids.Distinct().ToArray() : waiting.ToArray();
-        foreach (var requestItemId in chosen)
+        var request = await LoadAsync(requestId, actorId, role, tracking: true, cancellationToken);
+        EnsureWholeJobSubmitted(request);
+
+        var comments = new Dictionary<Guid, string>();
+        foreach (var machine in returned.Machines ?? [])
         {
-            FindItem(request, requestItemId);
-            if (!waiting.Contains(requestItemId))
-                throw new AuthException("not_submitted", "Only machines waiting for review can be sent back.", 409);
+            FindItem(request, machine.RequestItemId);
+            if (string.IsNullOrWhiteSpace(machine.Comment)) continue;
+            comments[machine.RequestItemId] = comments.TryGetValue(machine.RequestItemId, out var earlier)
+                ? $"{earlier}\n{machine.Comment.Trim()}"
+                : machine.Comment.Trim();
         }
 
-        if (chosen.Length == 0)
-            throw new AuthException("nothing_to_review", "No certificate of this job is waiting for review.", 409);
-        foreach (var requestItemId in chosen)
-            await ReturnAsync(requestId, requestItemId, actorId, role, returned.Note, cancellationToken);
-        return await ListMachinesAsync(requestId, actorId, role, cancellationToken);
+        var reviewer = await userRepository.GetByIdAsync(actorId, cancellationToken);
+        var note = returned.Note.Trim();
+        var now = DateTimeOffset.UtcNow;
+        request.ReviewComments.Add(ReviewComment.Create(request.Id, null, actorId, reviewer?.FullName, note, now));
+        foreach (var requestItemId in WaitingForReview(request))
+        {
+            var certificate = request.Certificates.Single(value => value.RequestItemId == requestItemId);
+            // The inspector sees the machine's own comment first, then the general note.
+            var shown = comments.TryGetValue(requestItemId, out var comment) ? $"{comment}\n{note}" : note;
+            certificate.ReturnForChanges(actorId, shown, reviewer?.FullName);
+            if (comment is not null)
+                request.ReviewComments.Add(ReviewComment.Create(request.Id, requestItemId, actorId, reviewer?.FullName, comment, now));
+        }
+
+        request.TransitionTo(JobStatus.CertificateReturned, actorId, note);
+        await requestRepository.SaveAsync(request, cancellationToken);
+        return await BuildListAsync(request, actorId, role, cancellationToken);
+    }
+
+    private static void EnsureWholeJobSubmitted(InspectionRequest request)
+    {
+        if (request.Status != JobStatus.CertificateSubmitted)
+            throw new AuthException("not_under_review", "The job is reviewed once the inspector has submitted every machine.", 409);
     }
 
     private static IReadOnlyList<Guid> WaitingForReview(InspectionRequest request) =>
@@ -464,7 +501,8 @@ public sealed class MachineInspectionService(
                 certificate?.ReviewNote,
                 certificate?.CertificateNumber,
                 CanEditMachine(request, StatusOf(certificate), actorId, role),
-                CanReviewMachine(request, StatusOf(certificate), role)));
+                CanReviewMachine(request, StatusOf(certificate), role),
+                certificate?.FinalResult.ToInspectionResult()));
         }
 
         var progress = new MachineProgress(
@@ -476,7 +514,17 @@ public sealed class MachineInspectionService(
             request.Id, request.Status, request.ClientName, request.Location, request.ScheduledAt, progress,
             CanStartInspection: request.Status is JobStatus.Assigned or JobStatus.TaskAccepted && CanEdit(request, actorId, role),
             CanDeliver: request.Status == JobStatus.CertificateApproved && CanDeliverJob(request, actorId, role),
-            machines);
+            machines,
+            CanReview: role is "admin" or "technical_manager" && request.Status == JobStatus.CertificateSubmitted,
+            ReviewHistory: request.ReviewComments
+                .OrderByDescending(comment => comment.CreatedAt.UtcDateTime)
+                .Select(comment => new ReviewCommentResponse(
+                    comment.CreatedAt,
+                    comment.ReviewerName,
+                    comment.RequestItemId,
+                    request.Items.SingleOrDefault(value => value.Id == comment.RequestItemId)?.Name,
+                    comment.Text))
+                .ToArray());
     }
 
     private async Task<MachineFormResponse> BuildFormAsync(
@@ -537,7 +585,7 @@ public sealed class MachineInspectionService(
 
         var editable = CanEditMachine(request, status, actorId, role);
         IReadOnlyList<string> missing = editable
-            ? MachineFormRules.Problems(template, checklist, texts, certificate?.DatesOf() ?? new Dictionary<string, DateTimeOffset>(), certificate?.AnswersOf() ?? new Dictionary<string, bool>())
+            ? MachineFormRules.Problems(template, checklist, texts, certificate?.DatesOf() ?? new Dictionary<string, DateTimeOffset>(), certificate?.AnswersOf() ?? new Dictionary<string, bool>(), certificate?.FinalResult)
             : [];
 
         return new MachineFormResponse(
@@ -559,7 +607,8 @@ public sealed class MachineInspectionService(
             texts,
             ToDateOnly(certificate?.DatesOf() ?? new Dictionary<string, DateTimeOffset>()),
             certificate?.ReviewNote,
-            certificate?.CertificateNumber);
+            certificate?.CertificateNumber,
+            certificate?.FinalResult.ToInspectionResult());
     }
 
     private static CertificatePdfModel BuildPdfModel(
@@ -582,6 +631,8 @@ public sealed class MachineInspectionService(
         DateOnly? Date(string key) => dates.TryGetValue(key, out var value) ? DateOnly.FromDateTime(value.UtcDateTime) : null;
         bool? Answer(string key) => answers.TryGetValue(key, out var value) ? value : null;
         string? Text(string key) => texts.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value : null;
+        // Conclusion/Remarks holds one word: Satisfactory or Unsatisfactory. Older drafts without a result keep their text.
+        var result = certificate.FinalResult.ToInspectionResult();
 
         var standards = Text("standardOfInspection") is { } saved
             ? saved.Split('\n', StringSplitOptions.RemoveEmptyEntries)
@@ -607,7 +658,7 @@ public sealed class MachineInspectionService(
             match.Item?.Name ?? item.Name,
             standards,
             Text("testType") ?? equipment?.TestType,
-            Text("conclusion") ?? MachineFormRules.DefaultConclusion,
+            result?.Label() ?? Text("conclusion") ?? MachineFormRules.DefaultConclusion,
             template.Fields
                 .Select(field => new CertificatePdfField(field.Label, technical.TryGetValue(field.Key, out var value) ? value : Prefill(field, item, equipment)))
                 .ToArray(),
@@ -640,7 +691,7 @@ public sealed class MachineInspectionService(
             string.IsNullOrWhiteSpace(qualifications) ? null : qualifications,
             certificate.ReviewerName,
             certificate.SignatureStrokesJson,
-            certificate.IsApproved ? certificate.QrData : null);
+            certificate.QrData);
     }
 
     // ---- Helpers ------------------------------------------------------------------------------------------------
@@ -800,9 +851,10 @@ public sealed class MachineInspectionService(
         request.Status is JobStatus.InProgress or JobStatus.CertificateReturned &&
         CanEdit(request, actorId, role);
 
+    // The technical manager reviews the job as a whole, once every machine is submitted.
     private static bool CanReviewMachine(InspectionRequest request, MachineStatus status, string role) =>
         role is "admin" or "technical_manager" && status == MachineStatus.Submitted &&
-        request.Status is JobStatus.CertificateSubmitted or JobStatus.CertificateReturned;
+        request.Status == JobStatus.CertificateSubmitted;
 
     private static bool CanDeliverJob(InspectionRequest request, Guid actorId, string role) =>
         role is "admin" or "technical_manager" || (role == "coordinator" && RequestAccess.CanManageQuotes(request, actorId, role));

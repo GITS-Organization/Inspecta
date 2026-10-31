@@ -248,6 +248,29 @@ public sealed class InspectionCertificate
         AnswersJson = JsonSerializer.Serialize(answers);
     }
 
+    /// <summary>The inspector's verdict on a template certificate: satisfactory (safe to operate) or unsatisfactory.</summary>
+    public void SetFinalResult(CertificateResult? result)
+    {
+        EnsureTemplateForm();
+        EnsureEditable();
+        if (result is { } value && !Enum.IsDefined(value)) throw new ArgumentOutOfRangeException(nameof(result));
+        FinalResult = result;
+    }
+
+    /// <summary>
+    /// Gives a template certificate its verification code and QR link the first time it is submitted, so the technical
+    /// manager previews it with its QR; they never change afterwards. The number is only given on approval.
+    /// </summary>
+    public void ReserveVerification(string verificationCode, string qrData)
+    {
+        EnsureTemplateForm();
+        if (VerificationCode is not null) return;
+        if (string.IsNullOrWhiteSpace(verificationCode) || string.IsNullOrWhiteSpace(qrData))
+            throw new ArgumentException("Verification code and QR data are required.");
+        VerificationCode = verificationCode.Trim();
+        QrData = qrData.Trim();
+    }
+
     /// <summary>Sends a template certificate to the technical manager, recording who prepared it.</summary>
     public void SubmitForm(string preparedByName, string? preparedByQualifications)
     {

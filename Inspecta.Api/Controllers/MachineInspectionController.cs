@@ -79,40 +79,12 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
         return Ok(await inspectionService.SubmitAsync(requestId, requestItemId, actorId, role, cancellationToken));
     }
 
-    /// <summary>Approve a submitted machine certificate (technical manager).</summary>
-    /// <remarks>Optional body: <c>signature</c> (the drawn strokes) and <c>rememberSignature</c>. Without a signature the one saved earlier is used.</remarks>
-    [HttpPost("machines/{requestItemId:guid}/approve")]
-    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
-    [ProducesResponseType<MachineFormResponse>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<MachineFormResponse>> ApproveMachine(
-        Guid requestId, Guid requestItemId, ApproveMachineRequest? request, CancellationToken cancellationToken)
-    {
-        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
-        return Ok(await inspectionService.ApproveAsync(requestId, requestItemId, actorId, role, request, cancellationToken));
-    }
-
-    /// <summary>Send a submitted machine certificate back to the inspector with a note (technical manager).</summary>
-    [HttpPost("machines/{requestItemId:guid}/return")]
-    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
-    [ProducesResponseType<MachineFormResponse>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<MachineFormResponse>> ReturnMachine(
-        Guid requestId, Guid requestItemId, ReturnMachineRequest request, CancellationToken cancellationToken)
-    {
-        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
-        return Ok(await inspectionService.ReturnAsync(requestId, requestItemId, actorId, role, request.Note, cancellationToken));
-    }
-
-    /// <summary>Approve every machine of the job that is waiting for review (technical manager).</summary>
+    /// <summary>Approve the whole job (technical manager).</summary>
     /// <remarks>
-    /// Same as approving each machine: every certificate gets its number, QR code and final PDF, filed under the client. Optional body:
-    /// <c>signature</c> and <c>rememberSignature</c>. When every machine is approved the job is <c>certificate_approved</c> and reaches the coordinator.
+    /// Possible once every machine is submitted (<c>certificate_submitted</c>); a job is never approved in part. Every certificate gets
+    /// its number and its final PDF (with the QR made on submit), filed under the client, whether it says Satisfactory or
+    /// Unsatisfactory. Optional body: <c>signature</c> and <c>rememberSignature</c>. The job becomes <c>certificate_approved</c> and
+    /// reaches the coordinator that owns it.
     /// </remarks>
     [HttpPost("approve-all")]
     [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
@@ -127,10 +99,11 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
         return Ok(await inspectionService.ApproveAllAsync(requestId, actorId, role, request, cancellationToken));
     }
 
-    /// <summary>Send the job back to the inspector with a note (technical manager).</summary>
+    /// <summary>Send the whole job back to the inspector with comments (technical manager).</summary>
     /// <remarks>
-    /// Every machine waiting for review is sent back, or only those in <c>requestItemIds</c>; machines already approved stay approved.
-    /// The job becomes <c>certificate_returned</c>, the inspector fixes the machines and submits them again.
+    /// Every machine is reopened with the general <c>note</c>; <c>machines</c> adds a comment on single machines (a wrong serial,
+    /// a spelling mistake...). Every comment is kept in the job's <c>reviewHistory</c>. The job becomes <c>certificate_returned</c>;
+    /// the inspector fixes the machines and submits them all again.
     /// </remarks>
     [HttpPost("return-to-inspector")]
     [Authorize(Policy = AuthorizationPolicies.TenantManagement)]

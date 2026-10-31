@@ -15,7 +15,8 @@ public sealed record ClientCertificateResponse(
     string FileName,
     string Sha256,
     string VerificationCode,
-    string? QrUrl = null);
+    string? QrUrl = null,
+    InspectionResult? Result = null);
 
 /// <summary>What the public page shows when someone scans a certificate's QR code.</summary>
 public sealed record CertificateVerificationResponse(
@@ -28,4 +29,5 @@ public sealed record CertificateVerificationResponse(
     DateOnly? NextExaminationDate,
     DateTimeOffset? IssuedAt,
     string? IssuedBy,
-    string? PdfUrl = null);
+    string? PdfUrl = null,
+    InspectionResult? Result = null);

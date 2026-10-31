@@ -12,7 +12,8 @@ namespace Inspecta.Infrastructure.Pdf.Templates;
 /// <summary>
 /// The Report of Thorough Examination of one machine, laid out like the company's Word forms. One layout serves every
 /// machine: the technical fields and the checklist come from the machine's template, the rest (client, dates,
-/// questionnaire, notes, signatures and QR code) is the same for all. The QR box stays blank until the certificate is approved.
+/// questionnaire, notes, signatures and QR code) is the same for all. The QR is printed from the inspector's first submit,
+/// so the technical manager previews it too; the DRAFT mark stays until the certificate is approved.
 /// </summary>
 public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfModel>
 {
@@ -210,6 +211,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
                 foreach (var standard in model.Standards) lines.Item().AlignCenter().Text(standard);
             });
             Value(table, model.TestType);
+            // One word only: Satisfactory or Unsatisfactory.
             Value(table, model.Conclusion, bold: true);
         });
 
@@ -305,7 +307,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
                 column.Item().AlignCenter().Text(model.SignedBy ?? "—").Bold();
             });
             table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Text(CompanySigner).Bold();
-            // Filled when the technical manager approves; scanning it opens the public check page with the PDF.
+            // Filled from the first submit; once approved, scanning it opens the public check page with the PDF.
             table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Element(qr =>
             {
                 if (string.IsNullOrWhiteSpace(model.QrData)) return;

@@ -77,6 +77,7 @@ public sealed class VerificationController(ClientCertificateService certificates
             body.Append("<table>");
             body.Append(Row("Certificate number", result.CertificateNumber));
             body.Append(Row("Inspected item", result.ItemName));
+            if (result.Result is { } verdict) body.Append(Row("Result", verdict.Label()));
             body.Append(Row("Client", result.ClientName));
             body.Append(Row("Examination date", result.ExaminationDate?.ToString("dd/MM/yyyy")));
             body.Append(Row("Next examination date", result.NextExaminationDate?.ToString("dd/MM/yyyy")));
