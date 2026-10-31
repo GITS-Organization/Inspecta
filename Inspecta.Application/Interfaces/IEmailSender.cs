@@ -19,7 +19,9 @@ public sealed record OutgoingEmail(
     string? References,
     string AttachmentFileName,
     byte[] AttachmentContent,
-    IReadOnlyList<EmailAttachment>? MoreAttachments = null);
+    IReadOnlyList<EmailAttachment>? MoreAttachments = null,
+    IReadOnlyList<string>? Cc = null,
+    string? BodyHtml = null);
 
 public interface IEmailSender
 {

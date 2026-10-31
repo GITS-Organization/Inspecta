@@ -110,9 +110,32 @@ public sealed record MachineListResponse(
 public sealed record ReviewCommentResponse(DateTimeOffset At, string? By, Guid? RequestItemId, string? MachineName, string Text);
 
 /// <summary>What happened when the certificates were handed over: whether an email went out, to whom, and a note when it did not.</summary>
-public sealed record MachineDelivery(bool EmailSent, string? SentTo, string? Notice);
+public sealed record MachineDelivery(
+    bool EmailSent,
+    string? SentTo,
+    string? Notice,
+    DateTimeOffset? SentAt = null,
+    IReadOnlyList<string>? Cc = null,
+    string? Subject = null);
 
-/// <summary>The email that would carry the certificates to the client, for the coordinator to check and edit.</summary>
+/// <summary>One certificate that goes in the email: what the coordinator sees in the list and can open before sending.</summary>
+public sealed record DeliveryCertificate(
+    Guid? RequestItemId,
+    string ItemName,
+    string CertificateNumber,
+    InspectionResult? Result,
+    DateOnly? ExaminationDate,
+    DateOnly? NextExaminationDate,
+    string FileName,
+    long SizeBytes,
+    string PdfUrl,
+    string? VerifyUrl);
+
+/// <summary>
+/// The email that would carry the certificates to the client, ready to send. <c>to</c>, <c>cc</c>, <c>subject</c> and <c>body</c> are
+/// the suggestion; the coordinator may change them and send them back to <c>POST deliver-to-client</c>. <c>canSend</c> says whether the
+/// Send button works and <c>blockers</c> why not; <c>testEmailTo</c> is where the test copy goes (the signed-in user).
+/// </summary>
 public sealed record DeliveryPreviewResponse(
     bool EmailEnabled,
     string? To,
@@ -121,7 +144,17 @@ public sealed record DeliveryPreviewResponse(
     string Body,
     IReadOnlyList<string> Attachments,
     bool RepliesToOriginalEmail,
-    string? Notice);
+    string? Notice,
+    IReadOnlyList<string>? Cc = null,
+    string? From = null,
+    bool CanSend = false,
+    IReadOnlyList<string>? Blockers = null,
+    bool AlreadyDelivered = false,
+    string? TestEmailTo = null,
+    IReadOnlyList<DeliveryCertificate>? Certificates = null);
+
+/// <summary>The test copy of the email went to this address.</summary>
+public sealed record TestEmailResponse(string SentTo, string Subject);
 
 /// <summary>A file to download.</summary>
 public sealed record DownloadFile(byte[] Content, string FileName, string ContentType);
@@ -257,4 +290,23 @@ public sealed record DeliverCertificatesRequest
     /// <summary>The text of the email to the client; leave out to use the suggested text from the preview.</summary>
     [MaxLength(8000)]
     public string? Message { get; init; }
+
+    /// <summary>Other addresses to copy (at most 10).</summary>
+    public IReadOnlyList<string>? Cc { get; init; }
+
+    /// <summary>The subject; leave out to use the suggested one (a reply in the original thread).</summary>
+    [MaxLength(300)]
+    public string? Subject { get; init; }
+}
+
+/// <summary>Hand the certificates over without sending an email (given on paper, by chat, picked up...).</summary>
+public sealed record ManualDeliveryRequest
+{
+    /// <summary>Who received them, if known.</summary>
+    [MaxLength(320)]
+    public string? DeliveredTo { get; init; }
+
+    /// <summary>How they were handed over; kept in the job's history.</summary>
+    [MaxLength(1000)]
+    public string? Note { get; init; }
 }

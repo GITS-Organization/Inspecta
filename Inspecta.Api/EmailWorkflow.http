@@ -507,9 +507,23 @@ Content-Type: application/json
 
 { "sentTo": "certificates@client.com" }
 
-### Coordinator: see the email that would carry the certificates to the client
+### Coordinator: the Deliver button opens the ready email (to, cc, subject, text, certificates to open, canSend)
 GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/deliver-to-client/preview
 Authorization: Bearer {{accessToken}}
+
+### Coordinator: send a test copy of the email to myself only ([TEST] in the subject, nothing recorded)
+POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/deliver-to-client/test-email
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "cc": ["boss@client.com"], "subject": "Certificates for the October inspection", "message": "Dear team, the certificates are attached." }
+
+### Coordinator: the certificates were handed over another way (no email)
+POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/deliver-to-client/manual
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "deliveredTo": "Mr Hassan at reception", "note": "Printed and handed over" }
 
 ### The QR code of an approved certificate as an image (the one printed on it; send it to the client)
 GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/qr.png
@@ -519,12 +533,12 @@ Authorization: Bearer {{accessToken}}
 GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/certificates.zip
 Authorization: Bearer {{accessToken}}
 
-### Coordinator: hand over, choosing the recipient and the text (both optional)
+### Coordinator: Send, changing the recipient, copies, subject and text (all optional)
 POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/deliver-to-client
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
-{ "sentTo": "quality@client.com", "message": "Dear team, the certificates are attached." }
+{ "sentTo": "quality@client.com", "cc": ["boss@client.com"], "subject": "Certificates for the October inspection", "message": "Dear team, the certificates are attached." }
 
 ### The certificates issued for a client
 GET {{baseUrl}}/api/v1/clients/{{clientId}}/certificates

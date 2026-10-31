@@ -225,19 +225,31 @@ public static class WorkflowDocs
             **When:** the machine is approved. **How:** `GET /quotation-queue/{requestId}/machines/{requestItemId}/qr.png`. The same QR that is printed on the approved certificate, as an image to send to the client. Scanning it opens the **public check page** (no sign-in): it confirms the certificate is genuine (valid, or expired after its next examination date) and has a **Download certificate (PDF)** button that gives the certificate exactly as it was issued (`GET /verify/{code}/pdf`).
             The same QR stays with the certificate in the client's archive (`GET /clients/{clientId}/certificates`, field `qrUrl`, and `.../{id}/qr.png`), so it can be sent again at any time.
             """),
-        [Key<MachineInspectionController>(nameof(MachineInspectionController.PreviewDelivery))] = new(16, "Queue 16 · Coordinator: preview the email to the client",
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.PreviewDelivery))] = new(16, "Queue 16 · Coordinator: the Deliver button opens this email",
             """
-            **When:** the job is `certificate_approved` (`status=approved`). **How:** `GET /quotation-queue/{requestId}/deliver-to-client/preview`. It returns who the email would go to (**the sender of the original request first**, then the client's certificates email), the subject (`Re: ...`, so it stays in the same thread), the suggested text, the attachment names, and `emailEnabled`. When email delivery is switched off `notice` says so and nothing is sent later.
+            **When:** the job is `certificate_approved` (`status=approved`). **How:** `GET /quotation-queue/{requestId}/deliver-to-client/preview`. The email comes **ready to send**:
+            - `to` (**the sender of the original request first**, then the client's certificates email), `cc`, `subject` (`Re: ...`, so it stays in the same thread) and `body`: a greeting, one block per certificate (machine, certificate number, **Satisfactory/Unsatisfactory**, examination dates and its check link) and the sign-off. `from` is the coordinator's mailbox.
+            - `certificates[]`: every certificate that goes in it, with `pdfUrl` to **open it before sending**, `result`, dates and `verifyUrl`; `attachments` are the file names (one ZIP above about 18 MB).
+            - `canSend` and `blockers[]`: whether the Send button works and why not (email switched off, no address, mailbox not set up, already delivered). `testEmailTo`: where the test copy goes. `alreadyDelivered`.
+            The coordinator may change `to`, `cc`, `subject` and `body` and send them back in queue 18.
             """),
         [Key<MachineInspectionController>(nameof(MachineInspectionController.DownloadCertificatesZip))] = new(17, "Queue 17 · Coordinator: download all certificates and QR codes (ZIP)",
             "**How:** `GET /quotation-queue/{requestId}/certificates.zip` returns every certificate PDF of the job and, under `qr/`, the QR code of each one, for the coordinator, technical manager and Admin once the job is approved."),
-        [Key<MachineInspectionController>(nameof(MachineInspectionController.DeliverToClient))] = new(18, "Queue 18 · Coordinator: hand the certificates to the client",
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.SendTestEmail))] = new(17.5, "Queue 17b · Coordinator: send a test copy to myself",
             """
-            **When:** the job is `certificate_approved` (every machine approved).
-            **How:** `POST /quotation-queue/{requestId}/deliver-to-client`, optional body `{ "sentTo": "someone@client.com", "message": "text of the email" }`. `sentTo` overrides the recipient from the preview and `message` replaces the suggested text.
-            - **Email delivery on:** the certificates are emailed as a reply to the original request, from the coordinator's mailbox, with every PDF attached. If the mail server refuses, the answer is `502` and nothing changes, so it can be repeated (never two emails).
-            - **Email delivery off (the default for now):** nothing is emailed and nothing fails; the certificates are just marked as handed over.
-            Either way the certificates become `delivered` and the job `sent_to_client` (`status=delivered`). The answer has `delivery: { emailSent, sentTo, notice }`. **Who:** the owning coordinator, the technical manager or Admin.
+            **When:** before Send, to see exactly what the client will get in a mail program. **How:** `POST /quotation-queue/{requestId}/deliver-to-client/test-email` with the same optional body as queue 18 (the coordinator's edits). The email goes **only to the signed-in user's own address**, with `[TEST]` in the subject, with every PDF attached. Nothing is recorded and the job does not change. Answers `409 email_disabled` while email delivery is off.
+            """),
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.DeliverToClient))] = new(18, "Queue 18 · Coordinator: Send to the client",
+            """
+            **When:** the job is `certificate_approved` (every machine approved), after the preview. **The Send button is one click: the app may wait a few seconds with an Undo before calling it.**
+            **How:** `POST /quotation-queue/{requestId}/deliver-to-client`, optional body `{ "sentTo": "someone@client.com", "cc": ["boss@client.com"], "subject": "...", "message": "text of the email" }`. Each field replaces the suggestion of queue 16; leave it out to keep it. Wrong addresses answer `400` (nothing is sent), at most 10 `cc`.
+            - **Email delivery on:** the email goes first (a reply to the original request, from the coordinator's mailbox, every PDF attached). Only when it was accepted are the certificates marked `delivered` and the job `sent_to_client`. If the mail server refuses, the answer is `502` and **nothing changes**, so Send can be pressed again (never two emails; the retry sends what was edited last). No address to send to: `409 no_recipient`.
+            - **Email delivery off:** nothing is emailed and nothing fails; the certificates are just marked as handed over.
+            The answer has `delivery: { emailSent, sentTo, cc, subject, sentAt, notice }`, and the same `delivery` stays on `GET .../machines` afterwards. **Who:** the owning coordinator, the technical manager or Admin.
+            """),
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.DeliverManually))] = new(18.5, "Queue 18b · Coordinator: delivered another way (no email)",
+            """
+            **When:** the certificates were given on paper, by chat or picked up, or there is no address. **How:** `POST /quotation-queue/{requestId}/deliver-to-client/manual`, optional body `{ "deliveredTo": "Mr Hassan at reception", "note": "Printed and handed over" }`. The certificates become `delivered` and the job `sent_to_client` **without any email**, whatever the email setting; the note is kept in the job's history.
             """),
     };
 
@@ -262,7 +274,7 @@ public static class WorkflowDocs
 
         **Technical manager (steps 10-14), always on the whole job:** 11. list the jobs **to review** (`GET /quotation-queue/to-review`); 10b. **preview all its certificates** with their QR codes in one ZIP (or 10. one at a time); then either 12. **approve the job**: every certificate, Satisfactory or Unsatisfactory, gets its number and final PDF, filed under the client, and the job goes to the coordinator (`status=approved`); or 14. **send the job back** to the inspector with a note and comments per machine: it shows for the inspector in `status=returned`, who fixes and submits everything again. Every comment stays in the job's `reviewHistory`.
 
-        **Coordinator (steps 15-18):** 15. the **QR code** of each certificate (printed on it once approved; scanning it opens the public check page with the certificate's PDF); 16. **preview** the email, 17. download the **ZIP** (certificates and QR codes) and 18. **hand the certificates to the client**. Every certificate stays in the client's archive with its QR code (Configurations: the client's certificates).
+        **Coordinator (steps 15-18):** 15. the **QR code** of each certificate (printed on it once approved; scanning it opens the public check page with the certificate's PDF); 16. the **Deliver button** opens the **ready email** (to, cc, subject, text, the certificates to open, `canSend`); 17. download the **ZIP**, 17b. send a **test copy to myself**; 18. **Send to the client** (one click, an Undo in the app is a good idea), or 18b. mark it **delivered another way** with no email. Every certificate stays in the client's archive with its QR code (Configurations: the client's certificates).
 
         Each machine's certificate status is `not_started`, `draft`, `submitted`, `returned`, `approved` or `delivered`.
         """;

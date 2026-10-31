@@ -9,6 +9,9 @@ public sealed class CertificateDelivery
     public Guid ManagerId { get; private set; }
     public Guid RequestId { get; private set; }
     public string ToAddress { get; private set; } = string.Empty;
+
+    /// <summary>The copies, separated by "; " (empty when there are none).</summary>
+    public string CcAddresses { get; private set; } = string.Empty;
     public string Subject { get; private set; } = string.Empty;
     public string BodyText { get; private set; } = string.Empty;
     public string MessageId { get; private set; } = string.Empty;
@@ -20,7 +23,8 @@ public sealed class CertificateDelivery
     public DateTimeOffset? SentAt { get; private set; }
 
     public static CertificateDelivery Create(
-        Guid managerId, Guid requestId, string toAddress, string subject, string bodyText, string messageId, IEnumerable<string> attachmentNames)
+        Guid managerId, Guid requestId, string toAddress, string subject, string bodyText, string messageId, IEnumerable<string> attachmentNames,
+        IEnumerable<string>? cc = null)
     {
         if (requestId == Guid.Empty) throw new ArgumentException("Request is required.", nameof(requestId));
         if (string.IsNullOrWhiteSpace(toAddress)) throw new ArgumentException("Recipient is required.", nameof(toAddress));
@@ -30,6 +34,7 @@ public sealed class CertificateDelivery
             ManagerId = managerId,
             RequestId = requestId,
             ToAddress = toAddress.Trim(),
+            CcAddresses = string.Join("; ", cc ?? []),
             Subject = subject,
             BodyText = bodyText,
             MessageId = messageId,
@@ -37,6 +42,20 @@ public sealed class CertificateDelivery
             CreatedAt = DateTimeOffset.UtcNow
         };
     }
+
+    /// <summary>A retry after a failed attempt may send different text or go to other addresses: the record follows what is sent.</summary>
+    public void Revise(string toAddress, IEnumerable<string> cc, string subject, string bodyText, IEnumerable<string> attachmentNames)
+    {
+        if (Sent) throw new InvalidOperationException("The email was already sent.");
+        if (string.IsNullOrWhiteSpace(toAddress)) throw new ArgumentException("Recipient is required.", nameof(toAddress));
+        ToAddress = toAddress.Trim();
+        CcAddresses = string.Join("; ", cc);
+        Subject = subject;
+        BodyText = bodyText;
+        AttachmentNames = string.Join("; ", attachmentNames);
+    }
+
+    public IReadOnlyList<string> Cc => CcAddresses.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     public void MarkAttempt() => Attempts++;
 

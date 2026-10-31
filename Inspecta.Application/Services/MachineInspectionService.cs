@@ -1,3 +1,4 @@
+using System.Text;
 using Inspecta.Application.Certificates;
 using Inspecta.Application.Contracts.Certificates;
 using Inspecta.Application.Exceptions;
@@ -437,29 +438,56 @@ public sealed class MachineInspectionService(
         Guid requestId, Guid actorId, string role, DeliverCertificatesRequest delivery, CancellationToken cancellationToken = default)
     {
         var request = await LoadAsync(requestId, actorId, role, tracking: true, cancellationToken);
-        if (role == "inspector")
-            throw new AuthException("forbidden", "Inspectors cannot deliver certificates.", 403);
-        if (role == "coordinator" && !RequestAccess.CanManageQuotes(request, actorId, role))
-            throw new AuthException("forbidden", "Only the coordinator that owns the request can deliver its certificates.", 403);
-        if (request.Status != JobStatus.CertificateApproved)
-            throw new AuthException("not_approved", "Every certificate of the job must be approved before it is delivered.", 409);
+        EnsureCanDeliver(request, actorId, role);
 
         var client = await FindClientAsync(request, cancellationToken);
         var files = await certificateFiles.ListForRequestAsync(request.Id, cancellationToken);
         // The email goes first: if the mail server refuses it nothing below changes and the call can be repeated.
         var sent = deliveryService is null
             ? new CertificateDeliveryResult(false, null, "Email delivery is not available, so no email was sent. The certificates are marked as handed over.")
-            : await deliveryService.DeliverAsync(request, files, delivery.SentTo, delivery.Message, cancellationToken);
+            : await deliveryService.DeliverAsync(request, files, new CertificateEmailDraft(delivery.SentTo, delivery.Cc, delivery.Subject, delivery.Message), cancellationToken);
         var sentTo = sent.SentTo ?? (string.IsNullOrWhiteSpace(delivery.SentTo) ? client?.CertificatesEmail : delivery.SentTo);
-        foreach (var certificate in request.Certificates.Where(value => value.IsApproved && !value.IsDelivered))
-            certificate.MarkDelivered(sentTo);
-        request.TransitionTo(JobStatus.SentToClient, actorId, string.IsNullOrWhiteSpace(sentTo) ? null : $"Delivered to {sentTo}");
-
-        await requestRepository.SaveAsync(request, cancellationToken);
+        await MarkDeliveredAsync(request, actorId, sentTo, string.IsNullOrWhiteSpace(sentTo) ? null : $"Delivered to {sentTo}", cancellationToken);
         return (await BuildListAsync(request, actorId, role, cancellationToken)) with
         {
-            Delivery = new MachineDelivery(sent.EmailSent, sentTo, sent.Notice)
+            Delivery = new MachineDelivery(sent.EmailSent, sentTo, sent.Notice, sent.SentAt ?? DateTimeOffset.UtcNow, sent.Cc, sent.Subject)
         };
+    }
+
+    /// <summary>Hands the certificates over without an email: they were given on paper, by chat, or picked up.</summary>
+    public async Task<MachineListResponse> DeliverManuallyAsync(
+        Guid requestId, Guid actorId, string role, ManualDeliveryRequest manual, CancellationToken cancellationToken = default)
+    {
+        var request = await LoadAsync(requestId, actorId, role, tracking: true, cancellationToken);
+        EnsureCanDeliver(request, actorId, role);
+
+        var deliveredTo = string.IsNullOrWhiteSpace(manual.DeliveredTo) ? null : manual.DeliveredTo.Trim();
+        var note = new StringBuilder("Handed over without an email");
+        if (deliveredTo is not null) note.Append($" to {deliveredTo}");
+        if (!string.IsNullOrWhiteSpace(manual.Note)) note.Append($": {manual.Note.Trim()}");
+        await MarkDeliveredAsync(request, actorId, deliveredTo, note.ToString(), cancellationToken);
+        return (await BuildListAsync(request, actorId, role, cancellationToken)) with
+        {
+            Delivery = new MachineDelivery(false, deliveredTo, "The certificates were marked as handed over without an email.", DateTimeOffset.UtcNow)
+        };
+    }
+
+    private void EnsureCanDeliver(InspectionRequest request, Guid actorId, string role)
+    {
+        if (role == "inspector")
+            throw new AuthException("forbidden", "Inspectors cannot deliver certificates.", 403);
+        if (role == "coordinator" && !RequestAccess.CanManageQuotes(request, actorId, role))
+            throw new AuthException("forbidden", "Only the coordinator that owns the request can deliver its certificates.", 403);
+        if (request.Status != JobStatus.CertificateApproved)
+            throw new AuthException("not_approved", "Every certificate of the job must be approved before it is delivered.", 409);
+    }
+
+    private async Task MarkDeliveredAsync(InspectionRequest request, Guid actorId, string? sentTo, string? note, CancellationToken cancellationToken)
+    {
+        foreach (var certificate in request.Certificates.Where(value => value.IsApproved && !value.IsDelivered))
+            certificate.MarkDelivered(sentTo);
+        request.TransitionTo(JobStatus.SentToClient, actorId, note);
+        await requestRepository.SaveAsync(request, cancellationToken);
     }
 
     public async Task<DeliveryPreviewResponse> PreviewDeliveryAsync(
@@ -467,14 +495,53 @@ public sealed class MachineInspectionService(
     {
         var request = await LoadDeliverableAsync(requestId, actorId, role, cancellationToken);
         var files = await certificateFiles.ListForRequestAsync(request.Id, cancellationToken);
+        var certificates = files.Select(file =>
+        {
+            var requestItemId = request.Certificates.SingleOrDefault(value => value.Id == file.CertificateId)?.RequestItemId;
+            return new DeliveryCertificate(
+                requestItemId, file.ItemName, file.CertificateNumber, file.Result.ToInspectionResult(), file.ExaminationDate, file.NextExaminationDate,
+                file.FileName, file.Content.Length,
+                requestItemId is Guid itemId ? $"/api/v1/quotation-queue/{request.Id}/machines/{itemId}/pdf" : $"/api/v1/clients/{file.ClientId}/certificates/{file.Id}/pdf",
+                file.QrData);
+        }).ToArray();
+        var alreadyDelivered = request.Status == JobStatus.SentToClient;
         if (deliveryService is null)
-            return new DeliveryPreviewResponse(false, null, null, string.Empty, string.Empty, files.Select(file => file.FileName).ToArray(), false, "Email delivery is not available.");
-        var plan = await deliveryService.PlanAsync(request, files, null, null, cancellationToken);
-        var notice = !deliveryService.Enabled
-            ? "Email delivery is switched off: handing the certificates over will not send this email."
-            : plan.ToAddress is null ? "There is no address to email: the request has no source email and the client has no certificates email." : null;
+            return new DeliveryPreviewResponse(
+                false, null, null, string.Empty, string.Empty, files.Select(file => file.FileName).ToArray(), false, "Email delivery is not available.",
+                Cc: [], CanSend: false, Blockers: ["Email delivery is not available."], AlreadyDelivered: alreadyDelivered, Certificates: certificates);
+
+        var plan = await deliveryService.PlanAsync(request, files, null, cancellationToken);
+        var blockers = new List<string>();
+        if (alreadyDelivered) blockers.Add("The certificates were already delivered.");
+        if (!deliveryService.Enabled) blockers.Add("Email delivery is switched off: handing the certificates over will not send this email.");
+        if (plan.ToAddress is null) blockers.Add("There is no address to email: the request has no source email and the client has no certificates email. Type one.");
+        if (!plan.MailboxConfigured) blockers.Add("The coordinator's mailbox is not set up, so nothing can be sent from it.");
+        var tester = await userRepository.GetByIdAsync(actorId, cancellationToken);
         return new DeliveryPreviewResponse(
-            deliveryService.Enabled, plan.ToAddress, plan.ToName, plan.Subject, plan.Body, plan.AttachmentNames, plan.RepliesToOriginalEmail, notice);
+            deliveryService.Enabled, plan.ToAddress, plan.ToName, plan.Subject, plan.Body, plan.AttachmentNames, plan.RepliesToOriginalEmail,
+            blockers.Count > 0 ? blockers[0] : null,
+            plan.Cc,
+            plan.FromAddress,
+            CanSend: blockers.Count == 0,
+            Blockers: blockers,
+            AlreadyDelivered: alreadyDelivered,
+            TestEmailTo: deliveryService.Enabled && plan.MailboxConfigured ? tester?.Email : null,
+            Certificates: certificates);
+    }
+
+    /// <summary>Sends the email exactly as it would go out, marked [TEST], to the signed-in user only. Nothing changes.</summary>
+    public async Task<TestEmailResponse> SendTestDeliveryAsync(
+        Guid requestId, Guid actorId, string role, DeliverCertificatesRequest draft, CancellationToken cancellationToken = default)
+    {
+        var request = await LoadDeliverableAsync(requestId, actorId, role, cancellationToken);
+        if (deliveryService is null || !deliveryService.Enabled)
+            throw new AuthException("email_disabled", "Email delivery is switched off, so no test email can be sent.", 409);
+        var files = await certificateFiles.ListForRequestAsync(request.Id, cancellationToken);
+        var tester = await userRepository.GetByIdAsync(actorId, cancellationToken)
+            ?? throw new KeyNotFoundException("User was not found.");
+        var result = await deliveryService.SendTestAsync(
+            request, files, new CertificateEmailDraft(draft.SentTo, draft.Cc, draft.Subject, draft.Message), tester.Email, tester.FullName, cancellationToken);
+        return new TestEmailResponse(result.SentTo, result.Subject);
     }
 
     public async Task<DownloadFile> GetCertificatesZipAsync(
@@ -563,6 +630,7 @@ public sealed class MachineInspectionService(
                 certificate is { UsesTemplate: true } ? certificate.QrData : null));
         }
 
+        var delivered = await DeliveryInfoAsync(request, cancellationToken);
         var isReviewer = role is "admin" or "technical_manager";
         var waitingForDecision = isReviewer && request.Status == JobStatus.CertificateSubmitted;
         var blockers = waitingForDecision ? ReviewBlockers(request) : [];
@@ -577,6 +645,7 @@ public sealed class MachineInspectionService(
             CanStartInspection: request.Status is JobStatus.Assigned or JobStatus.TaskAccepted && CanEdit(request, actorId, role),
             CanDeliver: request.Status == JobStatus.CertificateApproved && CanDeliverJob(request, actorId, role),
             machines,
+            Delivery: delivered,
             CanReview: waitingForDecision,
             ReviewHistory: request.ReviewComments
                 .OrderByDescending(comment => comment.CreatedAt.UtcDateTime)
@@ -822,6 +891,16 @@ public sealed class MachineInspectionService(
         !string.IsNullOrWhiteSpace(equipment?.InspectionStandard)
             ? equipment.InspectionStandard.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             : match.Item?.Standards ?? [];
+
+    // What happened at delivery, shown on the job afterwards: the email that went out, or that it was handed over without one.
+    private async Task<MachineDelivery?> DeliveryInfoAsync(InspectionRequest request, CancellationToken cancellationToken)
+    {
+        if (request.Status != JobStatus.SentToClient) return null;
+        if (deliveryService is not null && await deliveryService.GetSentAsync(request.Id, cancellationToken) is { } sent)
+            return new MachineDelivery(true, sent.ToAddress, null, sent.SentAt, sent.Cc, sent.Subject);
+        var certificate = request.Certificates.Where(value => value.IsDelivered).OrderByDescending(value => value.SentAt).FirstOrDefault();
+        return new MachineDelivery(false, certificate?.SentTo, "Handed over without an email.", certificate?.SentAt);
+    }
 
     private static string? Prefill(TemplateField field, RequestItem item, Item? equipment) => PrefillValue(field.Prefill, item, equipment);
 

@@ -43,6 +43,8 @@ public sealed class MailKitSmtpEmailSender(ILogger<MailKitSmtpEmailSender> logge
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress(email.FromName, email.FromAddress));
         message.To.Add(new MailboxAddress(email.ToName, email.ToAddress));
+        foreach (var copy in email.Cc ?? [])
+            message.Cc.Add(MailboxAddress.Parse(copy));
         message.Subject = email.Subject;
         message.MessageId = email.MessageId;
         if (!string.IsNullOrWhiteSpace(email.InReplyTo))
@@ -50,7 +52,8 @@ public sealed class MailKitSmtpEmailSender(ILogger<MailKitSmtpEmailSender> logge
         foreach (var reference in (email.References ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries))
             message.References.Add(reference);
 
-        var body = new BodyBuilder { TextBody = email.BodyText };
+        // Plain text always; the HTML version (when given) makes the links clickable in mail clients that prefer HTML.
+        var body = new BodyBuilder { TextBody = email.BodyText, HtmlBody = email.BodyHtml };
         body.Attachments.Add(email.AttachmentFileName, email.AttachmentContent, ContentType.Parse(email.AttachmentFileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ? "application/zip" : "application/pdf"));
         foreach (var more in email.MoreAttachments ?? [])
             body.Attachments.Add(more.FileName, more.Content, ContentType.Parse(more.ContentType));

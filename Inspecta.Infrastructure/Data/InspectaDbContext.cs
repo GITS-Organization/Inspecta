@@ -217,6 +217,8 @@ public sealed class InspectaDbContext(
         delivery.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
         delivery.HasIndex(item => item.RequestId);
         delivery.Property(item => item.ToAddress).HasMaxLength(320);
+        delivery.Property(item => item.CcAddresses).HasMaxLength(2000);
+        delivery.Ignore(item => item.Cc);
         delivery.Property(item => item.Subject).HasMaxLength(500);
         delivery.Property(item => item.MessageId).HasMaxLength(255);
         delivery.Property(item => item.AttachmentNames).HasMaxLength(2000);

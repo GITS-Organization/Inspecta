@@ -36,6 +36,12 @@ public interface IMachineInspectionService
 
     Task<MachineListResponse> DeliverAsync(Guid requestId, Guid actorId, string role, DeliverCertificatesRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>Hands the certificates over without sending an email.</summary>
+    Task<MachineListResponse> DeliverManuallyAsync(Guid requestId, Guid actorId, string role, ManualDeliveryRequest manual, CancellationToken cancellationToken = default);
+
+    /// <summary>Sends the email as it would go out, marked [TEST], to the signed-in user only.</summary>
+    Task<TestEmailResponse> SendTestDeliveryAsync(Guid requestId, Guid actorId, string role, DeliverCertificatesRequest draft, CancellationToken cancellationToken = default);
+
     Task<DeliveryPreviewResponse> PreviewDeliveryAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default);
 
     Task<DownloadFile> GetCertificatesZipAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default);
