@@ -400,6 +400,7 @@ public sealed class QuoteService(
         Guid quoteId,
         Guid actorId,
         string role,
+        SendQuoteEmailRequest? email = null,
         CancellationToken cancellationToken = default)
     {
         var request = await LoadRequestAsync(requestId, actorId, role, tracking: true, manage: true, cancellationToken);
@@ -411,12 +412,74 @@ public sealed class QuoteService(
         EnsureAllItemsPriced(quote);
 
         // Delivery comes first: if it fails nothing about the quote or the request has changed yet.
-        await deliveryService.DeliverAsync(request, quote, OutboundEmailKind.Offer, cancellationToken);
+        await deliveryService.DeliverAsync(request, quote, OutboundEmailKind.Offer, ToDraft(email), cancellationToken);
 
         quote.Send();
         request.TransitionTo(JobStatus.QuoteSent, actorId);
         await quoteRepository.SaveAsync(cancellationToken);
         return await MapAsync(quote, canManage: true, cancellationToken);
+    }
+
+    /// <summary>
+    /// The email that would carry the quotation PDF (the same one SendAsync or AcceptAsync sends), with the coordinator's edits
+    /// applied. Sends nothing; says whether the Send button works and why not.
+    /// </summary>
+    public async Task<QuoteEmailPreviewResponse> PreviewEmailAsync(
+        Guid requestId,
+        Guid quoteId,
+        string action,
+        Guid actorId,
+        string role,
+        SendQuoteEmailRequest? email = null,
+        CancellationToken cancellationToken = default)
+    {
+        var accepting = string.Equals(action, "accept", StringComparison.OrdinalIgnoreCase);
+        if (!accepting && !string.Equals(action, "send", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Action must be 'send' or 'accept'.", nameof(action));
+        var request = await LoadRequestAsync(requestId, actorId, role, tracking: false, manage: true, cancellationToken);
+        var quote = await LoadQuoteAsync(requestId, quoteId, cancellationToken);
+
+        var blockers = new List<string>();
+        if (accepting)
+        {
+            if (quote.Status != QuoteStatus.Open || !quote.IsCurrent) blockers.Add("Only the current open quote can be accepted.");
+            else if (request.Status != (quote.IsSent ? JobStatus.QuoteSent : JobStatus.QuoteDraft)) blockers.Add("The request is not in the right stage to accept this quote.");
+            else if (!quote.IsSent) AddUnpriced(quote, blockers);
+        }
+        else
+        {
+            if (!quote.IsEditable) blockers.Add("Only an open quote that was not sent can be sent.");
+            else if (request.Status != JobStatus.QuoteDraft) blockers.Add("The request is not in the quote drafting stage.");
+            else AddUnpriced(quote, blockers);
+        }
+
+        var plan = await deliveryService.PlanAsync(request, quote, accepting ? OutboundEmailKind.Accept : OutboundEmailKind.Offer, ToDraft(email), cancellationToken);
+        blockers.AddRange(plan.Blockers);
+        return new QuoteEmailPreviewResponse(
+            accepting ? "accept" : "send",
+            plan.EmailEnabled,
+            plan.ToAddress,
+            plan.ToName,
+            plan.Cc,
+            plan.Subject,
+            plan.Body,
+            plan.FromAddress,
+            plan.AttachmentName,
+            $"/api/v1/requests/{requestId}/quotes/{quoteId}/pdf",
+            plan.RepliesToOriginalEmail,
+            plan.EmailEnabled ? null : "Email delivery is switched off: sending only changes the quotation, no email goes out.",
+            blockers.Count == 0,
+            blockers);
+    }
+
+    private static QuoteEmailDraft? ToDraft(SendQuoteEmailRequest? email) =>
+        email is null ? null : new QuoteEmailDraft(email.SentTo, email.Cc, email.Subject, email.Message);
+
+    private static void AddUnpriced(Quote quote, List<string> blockers)
+    {
+        var unpriced = quote.GetUnpricedItems();
+        if (unpriced.Count > 0)
+            blockers.Add("Set a price for every item first: " + string.Join(", ", unpriced.Select(item => item.Description ?? item.Type)) + ".");
     }
 
     /// <summary>
@@ -454,6 +517,7 @@ public sealed class QuoteService(
         Guid quoteId,
         Guid actorId,
         string role,
+        SendQuoteEmailRequest? email = null,
         CancellationToken cancellationToken = default)
     {
         var request = await LoadRequestAsync(requestId, actorId, role, tracking: true, manage: true, cancellationToken);
@@ -465,7 +529,7 @@ public sealed class QuoteService(
             throw new InvalidOperationException("The request is not in the right stage to accept this quote.");
         if (!quote.IsSent) EnsureAllItemsPriced(quote);
 
-        await deliveryService.DeliverAsync(request, quote, OutboundEmailKind.Accept, cancellationToken);
+        await deliveryService.DeliverAsync(request, quote, OutboundEmailKind.Accept, ToDraft(email), cancellationToken);
 
         if (!quote.IsSent)
         {
@@ -611,7 +675,8 @@ public sealed class QuoteService(
             emails.Where(email => email.QuoteId == quote.Id)
                 .OrderBy(email => email.CreatedAt)
                 .Select(email => new QuoteEmailResponse(
-                    email.Kind, email.Status, email.ToAddress, email.Attempts, email.SentAt, email.LastError))
+                    email.Kind, email.Status, email.ToAddress, email.Attempts, email.SentAt, email.LastError,
+                    email.Cc?.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [], email.Subject))
                 .ToArray(),
             quote.ContactName,
             quote.QuotationNumber);

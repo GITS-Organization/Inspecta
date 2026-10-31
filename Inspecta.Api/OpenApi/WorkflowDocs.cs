@@ -69,16 +69,22 @@ public static class WorkflowDocs
             """),
         [Key<QuotesController>(nameof(QuotesController.Pdf))] = new(8, "Step 8 · Preview the PDF",
             "**How:** `GET /requests/{requestId}/quotes/{quoteId}/pdf` returns the PDF the client would receive. Works on drafts too; nothing is sent."),
+        [Key<QuotesController>(nameof(QuotesController.PreviewEmail))] = new(8.5, "Step 8b · Preview the email (and edit it)",
+            """
+            **When:** before Send (step 9) or Accept (step 10), to show the coordinator the email that carries the PDF. **How:** `GET /requests/{requestId}/quotes/{quoteId}/email?action=send` (offer or counter offer, the default) or `?action=accept`. Sends nothing.
+            The email comes **ready to send**: `to` (the sender of the original request), `cc`, `subject` (`Re: ...`), `body` (greeting, the machines, the total, the validity, the sign-off), `from` (the coordinator's mailbox), `attachmentName` and `pdfUrl` to open the attached quotation. `canSend` and `blockers[]` say whether Send works and why not (a price missing, no mailbox, no address to send to). `emailEnabled` is false while emailing is switched off: Send then only changes the quotation.
+            **Edit:** the coordinator changes `to`, `cc` (up to 10), `subject` and `body` on screen (nothing is saved) and sends them back in step 9 or 10. **The PDF cannot be edited here.**
+            """),
         [Key<QuotesController>(nameof(QuotesController.Send))] = new(9, "Step 9 · Send the offer",
             """
             **When:** every machine is priced and the preview looks right. Use it for the first offer and for a counter offer.
-            **How:** no body. The PDF is emailed as a reply to the sender of the original email. The quotation becomes sent and the request `quote_sent` only after the mail server accepted the message; on `502` nothing changed and you can retry.
+            **How:** the body is **optional** (without one it sends the suggestion of step 8b): `{ "sentTo": "client@mail.com", "cc": ["boss@mail.com"], "subject": "...", "message": "the whole text" }`, each field replaces the suggestion. The PDF is emailed as a reply to the sender of the original email (to `sentTo` when it is given; a request that did not come from an email is only marked sent unless `sentTo` is given). Wrong addresses answer `400` and nothing is sent. The quotation becomes sent and the request `quote_sent` only after the mail server accepted the message; on `502` nothing changed and you can retry.
             **Then the client answers:** accept (step 10), ask for different prices (step 11) or refuse (step 12).
             """),
         [Key<QuotesController>(nameof(QuotesController.Accept))] = new(10, "Step 10 · Accept",
             """
             **When:** the offer is agreed. Works on a draft (it is sent at the same time, so every machine needs a price) and on a sent quotation.
-            **How:** no body. The quotation is closed as `accepted`, the request becomes `unassigned` and the PDF is emailed to the client.
+            **How:** the same optional body as step 9 (`sentTo`, `cc`, `subject`, `message`; preview it with `?action=accept` in step 8b). The quotation is closed as `accepted`, the request becomes `unassigned` and the PDF is emailed to the client.
             **Next:** the quotation appears in the **Quotation queue** section, where it is given to an inspector.
             """),
         [Key<QuotesController>(nameof(QuotesController.Create))] = new(11, "Step 11 · Counter offer",

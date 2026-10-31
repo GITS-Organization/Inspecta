@@ -85,18 +85,43 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     /// Reply with the offer (a first offer or a counter offer). The quotation PDF is generated and emailed, as a reply,
     /// to the sender of the original request using the coordinator mailbox. Only after the mail server accepted it
     /// is the quotation marked as sent and the request moved to <c>quote_sent</c>; if sending fails (<c>502</c>)
-    /// nothing changes and it can be retried. Every item needs a price. Requests without a source email are only marked.
+    /// nothing changes and it can be retried. Every item needs a price. Requests without a source email are only marked, unless a
+    /// <c>sentTo</c> is given.
     /// </summary>
+    /// <remarks>
+    /// The body is optional. To let the coordinator edit the email, call <c>GET {quoteId}/email?action=send</c> first and send back
+    /// <c>sentTo</c>, <c>cc</c>, <c>subject</c> and <c>message</c>; a field that is left out keeps the suggestion. The PDF is never changed.
+    /// </remarks>
     [HttpPost("{quoteId:guid}/send")]
     [ProducesResponseType<QuoteResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<QuoteResponse>> Send(Guid requestId, Guid quoteId, CancellationToken cancellationToken)
+    public async Task<ActionResult<QuoteResponse>> Send(
+        Guid requestId, Guid quoteId, [FromBody] SendQuoteEmailRequest? email, CancellationToken cancellationToken)
     {
         if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
-        return Ok(await quoteService.SendAsync(requestId, quoteId, actorId, role, cancellationToken));
+        return Ok(await quoteService.SendAsync(requestId, quoteId, actorId, role, email, cancellationToken));
+    }
+
+    /// <summary>The email that would carry the quotation PDF, ready to be edited: to, cc, subject and text.</summary>
+    /// <remarks>
+    /// <c>action</c> is <c>send</c> (an offer or a counter offer, the default) or <c>accept</c>; the text differs. Nothing is sent. The
+    /// answer has <c>canSend</c> and <c>blockers</c> (why Send would fail: a price missing, no mailbox, no address) and <c>pdfUrl</c> to open
+    /// the attached quotation. The coordinator edits <c>to</c>, <c>cc</c>, <c>subject</c> and <c>body</c> on screen and sends them back in
+    /// <c>send</c> or <c>accept</c>.
+    /// </remarks>
+    [HttpGet("{quoteId:guid}/email")]
+    [ProducesResponseType<QuoteEmailPreviewResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<QuoteEmailPreviewResponse>> PreviewEmail(
+        Guid requestId, Guid quoteId, [FromQuery] string action = "send", CancellationToken cancellationToken = default)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await quoteService.PreviewEmailAsync(requestId, quoteId, action, actorId, role, null, cancellationToken));
     }
 
     /// <summary>
@@ -111,10 +136,11 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status502BadGateway)]
-    public async Task<ActionResult<QuoteResponse>> Accept(Guid requestId, Guid quoteId, CancellationToken cancellationToken)
+    public async Task<ActionResult<QuoteResponse>> Accept(
+        Guid requestId, Guid quoteId, [FromBody] SendQuoteEmailRequest? email, CancellationToken cancellationToken)
     {
         if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
-        return Ok(await quoteService.AcceptAsync(requestId, quoteId, actorId, role, cancellationToken));
+        return Ok(await quoteService.AcceptAsync(requestId, quoteId, actorId, role, email, cancellationToken));
     }
 
     /// <summary>

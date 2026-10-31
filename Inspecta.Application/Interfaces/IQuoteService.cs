@@ -14,7 +14,8 @@ public interface IQuoteService
     Task<PdfFile> GetPdfAsync(Guid requestId, Guid quoteId, Guid actorId, string role, CancellationToken cancellationToken = default);
     Task<Contracts.Requests.RequestResponse> SaveRequestAndPrepareQuotationAsync(Guid requestId, Guid actorId, string role, Contracts.Requests.UpdateRequestDetailsRequest details, CancellationToken cancellationToken = default);
     Task<Contracts.Requests.RequestResponse> RejectRequestAsync(Guid requestId, Guid actorId, string role, Contracts.Requests.RejectRequestRequest request, CancellationToken cancellationToken = default);
-    Task<QuoteResponse> AcceptAsync(Guid requestId, Guid quoteId, Guid actorId, string role, CancellationToken cancellationToken = default);
-    Task<QuoteResponse> SendAsync(Guid requestId, Guid quoteId, Guid actorId, string role, CancellationToken cancellationToken = default);
+    Task<QuoteResponse> AcceptAsync(Guid requestId, Guid quoteId, Guid actorId, string role, SendQuoteEmailRequest? email = null, CancellationToken cancellationToken = default);
+    Task<QuoteResponse> SendAsync(Guid requestId, Guid quoteId, Guid actorId, string role, SendQuoteEmailRequest? email = null, CancellationToken cancellationToken = default);
+    Task<QuoteEmailPreviewResponse> PreviewEmailAsync(Guid requestId, Guid quoteId, string action, Guid actorId, string role, SendQuoteEmailRequest? email = null, CancellationToken cancellationToken = default);
     Task<QuoteResponse> RecordDecisionAsync(Guid requestId, Guid quoteId, Guid actorId, string role, QuoteDecisionRequest request, CancellationToken cancellationToken = default);
 }

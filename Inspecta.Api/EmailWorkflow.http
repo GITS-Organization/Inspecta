@@ -325,9 +325,20 @@ Authorization: Bearer {{accessToken}}
 GET {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/pdf
 Authorization: Bearer {{accessToken}}
 
-### Send the offer: emails the PDF as a reply to the original sender, then marks the quotation as sent
+### Preview the email that carries the PDF (to, cc, subject, text, canSend, blockers). Use ?action=accept for the Accept email
+GET {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/email?action=send
+Authorization: Bearer {{accessToken}}
+
+### Send the offer: emails the PDF as a reply to the original sender, then marks the quotation as sent (no body = send the suggestion)
 POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/send
 Authorization: Bearer {{accessToken}}
+
+### Send the offer with the coordinator's edits (every field optional; the PDF is never changed)
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/send
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "sentTo": "quality@client.com", "cc": ["boss@client.com"], "subject": "Our offer", "message": "Dear team, our offer is attached." }
 
 ### Accept the request: closes the quotation as accepted and emails the PDF to the original sender
 POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/accept

@@ -3,6 +3,27 @@ using Inspecta.Domain.Enums;
 
 namespace Inspecta.Application.Interfaces;
 
+/// <summary>What the coordinator may change before the quotation email goes out; anything left out keeps the suggested value.</summary>
+public sealed record QuoteEmailDraft(
+    string? To = null,
+    IReadOnlyList<string>? Cc = null,
+    string? Subject = null,
+    string? Body = null);
+
+/// <summary>The quotation email as it would go out, and what stops it.</summary>
+public sealed record QuoteEmailPlan(
+    bool EmailEnabled,
+    string? ToAddress,
+    string? ToName,
+    IReadOnlyList<string> Cc,
+    string Subject,
+    string Body,
+    string AttachmentName,
+    string? FromAddress,
+    string? FromName,
+    bool RepliesToOriginalEmail,
+    IReadOnlyList<string> Blockers);
+
 /// <summary>Generates the quotation PDF and emails it to whoever sent the original request.</summary>
 public interface IQuoteDeliveryService
 {
@@ -16,5 +37,14 @@ public interface IQuoteDeliveryService
         InspectionRequest request,
         Quote quote,
         OutboundEmailKind kind,
+        QuoteEmailDraft? draft = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>The email that would go out, with the coordinator's edits applied. Sends nothing and changes nothing.</summary>
+    Task<QuoteEmailPlan> PlanAsync(
+        InspectionRequest request,
+        Quote quote,
+        OutboundEmailKind kind,
+        QuoteEmailDraft? draft,
         CancellationToken cancellationToken = default);
 }

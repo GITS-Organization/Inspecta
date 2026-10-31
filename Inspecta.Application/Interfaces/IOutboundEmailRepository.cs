@@ -12,7 +12,9 @@ public sealed record OutboundEmailSummary(
     int Attempts,
     DateTimeOffset? SentAt,
     string? LastError,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? Cc = null,
+    string? Subject = null);
 
 public interface IOutboundEmailRepository
 {

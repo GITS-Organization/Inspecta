@@ -64,7 +64,7 @@ public sealed class CertificateDeliveryService(
     private const int MaxAttachedBytes = 18 * 1024 * 1024;
     private const int MaxCopies = 10;
     private const int MaxSubjectLength = 300;
-    private const int MaxBodyLength = 20000;
+    internal const int MaxBodyLength = 20000;
 
     public bool Enabled => options is { Enabled: true };
 
@@ -290,7 +290,7 @@ public sealed class CertificateDeliveryService(
         return parsed.Address;
     }
 
-    private static IReadOnlyList<string> NormalizeCopies(IReadOnlyList<string>? cc, string? toAddress)
+    internal static IReadOnlyList<string> NormalizeCopies(IReadOnlyList<string>? cc, string? toAddress)
     {
         var copies = (cc ?? [])
             .Where(value => !string.IsNullOrWhiteSpace(value))
@@ -302,7 +302,7 @@ public sealed class CertificateDeliveryService(
         return copies;
     }
 
-    private static string CleanSubject(string subject)
+    internal static string CleanSubject(string subject)
     {
         var cleaned = string.Concat(subject.Where(character => !char.IsControl(character))).Trim();
         return cleaned.Length > MaxSubjectLength ? cleaned[..MaxSubjectLength] : cleaned;
@@ -346,7 +346,7 @@ public sealed class CertificateDeliveryService(
     }
 
     // The HTML version of the plain text: the same words and line breaks, with the links made clickable.
-    private static string PlainTextToHtml(string text)
+    internal static string PlainTextToHtml(string text)
     {
         var encoded = WebUtility.HtmlEncode(text);
         var linked = Regex.Replace(encoded, @"https?://[^\s<]+", match => $"<a href=\"{match.Value}\">{match.Value}</a>");

@@ -23,6 +23,8 @@ public sealed class OutboundEmail
     public string? ToName { get; private set; }
     public string FromAddress { get; private set; } = string.Empty;
     public string? FromName { get; private set; }
+    /// <summary>The copies, separated by "; " (empty when there are none).</summary>
+    public string CcAddresses { get; private set; } = string.Empty;
     public string Subject { get; private set; } = string.Empty;
     public string BodyText { get; private set; } = string.Empty;
     public string MessageId { get; private set; } = string.Empty;
@@ -35,6 +37,8 @@ public sealed class OutboundEmail
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public DateTimeOffset? SentAt { get; private set; }
+
+    public IReadOnlyList<string> Cc => CcAddresses.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     public bool IsStalePending => Status == OutboundEmailStatus.Pending && UpdatedAt < DateTimeOffset.UtcNow - PendingTimeout;
 
@@ -77,7 +81,8 @@ public sealed class OutboundEmail
         string? inReplyTo,
         string? references,
         string attachmentFileName,
-        byte[] attachmentContent)
+        byte[] attachmentContent,
+        IEnumerable<string>? cc = null)
     {
         if (Status == OutboundEmailStatus.Sent)
             throw new InvalidOperationException("This email was already sent.");
@@ -90,6 +95,7 @@ public sealed class OutboundEmail
         ToName = string.IsNullOrWhiteSpace(toName) ? null : toName.Trim();
         FromAddress = fromAddress.Trim();
         FromName = string.IsNullOrWhiteSpace(fromName) ? null : fromName.Trim();
+        CcAddresses = string.Join("; ", cc ?? []);
         Subject = subject.Trim();
         BodyText = bodyText ?? string.Empty;
         InReplyTo = string.IsNullOrWhiteSpace(inReplyTo) ? null : inReplyTo.Trim();

@@ -20,7 +20,7 @@ public sealed class EfOutboundEmailRepository(InspectaDbContext dbContext) : IOu
             .Where(email => email.RequestId == requestId)
             .OrderBy(email => email.CreatedAt)
             .Select(email => new OutboundEmailSummary(
-                email.QuoteId, email.Kind, email.Status, email.ToAddress, email.Attempts, email.SentAt, email.LastError, email.CreatedAt))
+                email.QuoteId, email.Kind, email.Status, email.ToAddress, email.Attempts, email.SentAt, email.LastError, email.CreatedAt, email.CcAddresses, email.Subject))
             .ToListAsync(cancellationToken);
 
     public async Task AddAsync(OutboundEmail email, CancellationToken cancellationToken = default)

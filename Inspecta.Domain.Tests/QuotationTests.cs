@@ -669,6 +669,140 @@ public sealed class QuotationTests
     }
 
     [Fact]
+    public async Task ThePreviewShowsTheReadyEmailAndSendsNothing()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, null));
+
+        var unpriced = await fixture.Service.PreviewEmailAsync(fixture.Request.Id, quote.Id, "send", CoordinatorId, "coordinator");
+        Assert.False(unpriced.CanSend);
+        Assert.Contains("Air receiver", Assert.Single(unpriced.Blockers), StringComparison.Ordinal);
+
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+        var offer = await fixture.Service.PreviewEmailAsync(fixture.Request.Id, quote.Id, "send", CoordinatorId, "coordinator");
+
+        Assert.True(offer.CanSend);
+        Assert.Empty(offer.Blockers);
+        Assert.Equal("buyer@alnoor.com", offer.To);
+        Assert.Equal("coordinator@example.com", offer.From);
+        Assert.Equal("Re: Quote request", offer.Subject);
+        Assert.Equal("quotation.pdf", offer.AttachmentName);
+        Assert.Equal($"/api/v1/requests/{fixture.Request.Id}/quotes/{quote.Id}/pdf", offer.PdfUrl);
+        Assert.True(offer.RepliesToOriginalEmail);
+        Assert.Contains("Dear Al Noor", offer.Body, StringComparison.Ordinal);
+        Assert.Contains("technical and commercial offer", offer.Body, StringComparison.Ordinal);
+
+        var accept = await fixture.Service.PreviewEmailAsync(fixture.Request.Id, quote.Id, "accept", CoordinatorId, "coordinator");
+        Assert.Contains("we accept your request", accept.Body, StringComparison.Ordinal);
+        await Assert.ThrowsAsync<ArgumentException>(() => fixture.Service.PreviewEmailAsync(fixture.Request.Id, quote.Id, "other", CoordinatorId, "coordinator"));
+
+        // Nothing was sent and nothing changed.
+        Assert.Empty(fixture.Sender.Sent);
+        Assert.Empty(fixture.Outbox.Rows);
+        Assert.Equal(JobStatus.QuoteDraft, fixture.Request.Status);
+        Assert.True((await fixture.Service.GetAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator")).CanEdit);
+    }
+
+    [Fact]
+    public async Task TheCoordinatorCanEditTheEmailButTheAttachedPdfStaysTheSame()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+
+        var sent = await fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", new SendQuoteEmailRequest
+        {
+            SentTo = "quality@alnoor.com",
+            Cc = ["boss@alnoor.com", "QUALITY@alnoor.com"],
+            Subject = "Our offer for the crane",
+            Message = "Dear team, our offer is attached."
+        });
+
+        var email = Assert.Single(fixture.Sender.Sent);
+        Assert.Equal("quality@alnoor.com", email.ToAddress);
+        Assert.Equal(["boss@alnoor.com"], email.Cc);
+        Assert.Equal("Our offer for the crane", email.Subject);
+        Assert.Equal("Dear team, our offer is attached.", email.BodyText);
+        Assert.Contains("Dear team", email.BodyHtml, StringComparison.Ordinal);
+        Assert.Equal("quotation.pdf", email.AttachmentFileName);
+        Assert.Equal([1, 2, 3], email.AttachmentContent);
+        Assert.Equal("<id@alnoor.com>", email.InReplyTo);
+        var recorded = Assert.Single(sent.Emails!);
+        Assert.Equal(["boss@alnoor.com"], recorded.Cc);
+        Assert.Equal("Our offer for the crane", recorded.Subject);
+        Assert.Equal("quality@alnoor.com", recorded.ToAddress);
+        Assert.Equal(JobStatus.QuoteSent, fixture.Request.Status);
+    }
+
+    [Fact]
+    public async Task WrongAddressesAreRefusedBeforeAnythingIsSentOrChanged()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+
+        foreach (var request in new[]
+                 {
+                     new SendQuoteEmailRequest { SentTo = "not an email" },
+                     new SendQuoteEmailRequest { SentTo = "a@b.com, c@d.com" },
+                     new SendQuoteEmailRequest { Cc = ["nobody@localhost"] },
+                     new SendQuoteEmailRequest { Cc = Enumerable.Range(1, 11).Select(index => $"person{index}@alnoor.com").ToArray() }
+                 })
+        {
+            await Assert.ThrowsAsync<ArgumentException>(() => fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", request));
+        }
+
+        Assert.Empty(fixture.Sender.Sent);
+        Assert.Equal(JobStatus.QuoteDraft, fixture.Request.Status);
+    }
+
+    [Fact]
+    public async Task AfterAFailureTheRetrySendsTheLastEdit()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+        fixture.Sender.Failure = new EmailDeliveryException("The mail server could not be reached.");
+        await Assert.ThrowsAsync<EmailDeliveryException>(() => fixture.Service.SendAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", new SendQuoteEmailRequest { Message = "First text" }));
+
+        fixture.Sender.Failure = null;
+        await fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator",
+            new SendQuoteEmailRequest { SentTo = "right@alnoor.com", Cc = ["copy@alnoor.com"], Message = "Second text" });
+
+        var email = Assert.Single(fixture.Sender.Sent);
+        Assert.Equal(("right@alnoor.com", "Second text"), (email.ToAddress, email.BodyText));
+        var row = Assert.Single(fixture.Outbox.Rows);
+        Assert.Equal(("copy@alnoor.com", 2), (row.CcAddresses, row.Attempts));
+    }
+
+    [Fact]
+    public async Task ARequestWithoutAnEmailIsOnlyMarkedUnlessTheCoordinatorTypesAnAddress()
+    {
+        IEnumerable<RequestItem> Items() => [RequestItem.Create("Mobile crane - Liebherr LTM 1100", 1, type: "Mobile crane"), RequestItem.Create("Air receiver - 3000 L", 4, type: "Air receiver")];
+
+        var plain = new Fixture(InspectionRequest.Create("Al Noor", "Cairo", null, Items(), CoordinatorId, managerId: ManagerId));
+        var plainQuote = await plain.Service.CreateAsync(plain.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await plain.Service.UpdateAsync(plain.Request.Id, plainQuote.Id, CoordinatorId, "coordinator", Update(plain, 100, 200));
+        var preview = await plain.Service.PreviewEmailAsync(plain.Request.Id, plainQuote.Id, "send", CoordinatorId, "coordinator");
+        Assert.False(preview.CanSend);
+        Assert.Contains("no address", Assert.Single(preview.Blockers), StringComparison.Ordinal);
+        await plain.Service.SendAsync(plain.Request.Id, plainQuote.Id, CoordinatorId, "coordinator");
+        Assert.Empty(plain.Sender.Sent);
+        Assert.Equal(JobStatus.QuoteSent, plain.Request.Status);
+
+        var typed = new Fixture(InspectionRequest.Create("Al Noor", "Cairo", null, Items(), CoordinatorId, managerId: ManagerId));
+        var typedQuote = await typed.Service.CreateAsync(typed.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await typed.Service.UpdateAsync(typed.Request.Id, typedQuote.Id, CoordinatorId, "coordinator", Update(typed, 100, 200));
+        await typed.Service.SendAsync(typed.Request.Id, typedQuote.Id, CoordinatorId, "coordinator", new SendQuoteEmailRequest { SentTo = "client@alnoor.com" });
+        var email = Assert.Single(typed.Sender.Sent);
+        Assert.Equal("client@alnoor.com", email.ToAddress);
+        Assert.Null(email.InReplyTo);
+        Assert.Equal(JobStatus.QuoteSent, typed.Request.Status);
+    }
+
+    [Fact]
     public async Task TheReplyToAddressOfTheOriginalEmailWinsOverTheFromAddress()
     {
         var request = CompleteRequest(out _, out _, Guid.NewGuid(), Email() with
@@ -1079,7 +1213,7 @@ public sealed class QuotationTests
             Task.FromResult<IReadOnlyList<OutboundEmailSummary>>(Rows
                 .Where(row => row.RequestId == requestId)
                 .Select(row => new OutboundEmailSummary(
-                    row.QuoteId, row.Kind, row.Status, row.ToAddress, row.Attempts, row.SentAt, row.LastError, row.CreatedAt))
+                    row.QuoteId, row.Kind, row.Status, row.ToAddress, row.Attempts, row.SentAt, row.LastError, row.CreatedAt, row.CcAddresses, row.Subject))
                 .ToArray());
 
         public Task AddAsync(OutboundEmail email, CancellationToken cancellationToken = default)

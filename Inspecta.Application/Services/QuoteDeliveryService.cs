@@ -18,22 +18,55 @@ public sealed class QuoteDeliveryService(
     IEmailSender emailSender,
     QuoteDeliveryOptions? options = null) : IQuoteDeliveryService
 {
+    public async Task<QuoteEmailPlan> PlanAsync(
+        InspectionRequest request,
+        Quote quote,
+        OutboundEmailKind kind,
+        QuoteEmailDraft? draft,
+        CancellationToken cancellationToken = default)
+    {
+        var source = await requestRepository.GetEmailAsync(request.Id, cancellationToken);
+        var (toAddress, toName, replies) = ResolveTarget(source, draft);
+        var copies = CertificateDeliveryService.NormalizeCopies(draft?.Cc, toAddress);
+        var coordinator = request.CoordinatorId is Guid coordinatorId ? await userRepository.GetByIdAsync(coordinatorId, cancellationToken) : null;
+        var config = request.CoordinatorId is Guid configOwner ? await configRepository.GetByCoordinatorAsync(configOwner, cancellationToken) : null;
+
+        var subject = string.IsNullOrWhiteSpace(draft?.Subject)
+            ? ComposeSubject(source?.Subject, quote)
+            : CertificateDeliveryService.CleanSubject(draft.Subject);
+        var body = string.IsNullOrWhiteSpace(draft?.Body)
+            ? ComposeBody(kind, quote, toName, coordinator?.FullName ?? string.Empty, source?.Subject)
+            : draft.Body.Trim();
+        if (body.Length > CertificateDeliveryService.MaxBodyLength)
+            throw new ArgumentException($"The email text is longer than {CertificateDeliveryService.MaxBodyLength} characters.");
+        var fromAddress = config is null || coordinator is null ? null : ResolveFromAddress(config, coordinator);
+        var pdfName = pdfGenerator.Generate(QuotationPdfModelFactory.Create(quote, request, coordinator?.FullName ?? string.Empty, DateTimeOffset.UtcNow)).FileName;
+
+        // While emailing is off nothing is sent, so nothing about the address or the mailbox can stop the Send button.
+        var blockers = new List<string>();
+        if (options is not { Enabled: false })
+        {
+            if (toAddress is null) blockers.Add("There is no address to send to: the request did not come from an email. Type one in the To field.");
+            if (config is null) blockers.Add("The coordinator mailbox is not configured.");
+        }
+
+        return new QuoteEmailPlan(
+            options is not { Enabled: false }, toAddress, toName, copies, subject, body, pdfName, fromAddress, coordinator?.FullName, replies, blockers);
+    }
+
     public async Task<OutboundEmail?> DeliverAsync(
         InspectionRequest request,
         Quote quote,
         OutboundEmailKind kind,
+        QuoteEmailDraft? draft = null,
         CancellationToken cancellationToken = default)
     {
         // Temporarily switched off (QuoteDelivery:Enabled=false): nothing is emailed, the quotation and request still change state.
         if (options is { Enabled: false }) return null;
 
         var source = await requestRepository.GetEmailAsync(request.Id, cancellationToken);
-        if (source is null) return null;
-
-        var recipient = ResolveRecipient(source)
-            ?? throw new ArgumentException("The original email has no address to reply to.");
-        if (request.CoordinatorId is not Guid coordinatorId || request.ManagerId is not Guid managerId)
-            throw new InvalidOperationException("The request has no coordinator to send the email from.");
+        // A request that did not come from an email is only marked, unless the coordinator typed an address to send to.
+        if (source is null && string.IsNullOrWhiteSpace(draft?.To)) return null;
 
         var existing = await outboundEmailRepository.GetAsync(quote.Id, kind, cancellationToken);
         // Already delivered (a previous call sent it but did not finish saving the quote): never send twice.
@@ -41,28 +74,35 @@ public sealed class QuoteDeliveryService(
         if (existing is { Status: OutboundEmailStatus.Pending, IsStalePending: false })
             throw new InvalidOperationException("This email is already being sent.");
 
+        var (toAddress, toName, _) = ResolveTarget(source, draft);
+        if (toAddress is null) throw new ArgumentException("The original email has no address to reply to.");
+        if (request.CoordinatorId is not Guid coordinatorId || request.ManagerId is not Guid managerId)
+            throw new InvalidOperationException("The request has no coordinator to send the email from.");
+
         var config = await configRepository.GetByCoordinatorAsync(coordinatorId, cancellationToken)
             ?? throw new ArgumentException(
                 "The coordinator mailbox is not configured, so the quotation cannot be emailed. Configure the mailbox first.");
         var coordinator = await userRepository.GetByIdAsync(coordinatorId, cancellationToken)
             ?? throw new KeyNotFoundException("Coordinator was not found.");
         var fromAddress = ResolveFromAddress(config, coordinator);
+        var plan = await PlanAsync(request, quote, kind, draft, cancellationToken);
 
         var pdf = pdfGenerator.Generate(QuotationPdfModelFactory.Create(quote, request, coordinator.FullName, DateTimeOffset.UtcNow));
         var row = existing;
         if (row is null)
             row = OutboundEmail.Create(managerId, request.Id, quote.Id, kind, DomainOf(fromAddress));
         row.BeginAttempt(
-            recipient.Address,
-            recipient.Name,
+            toAddress,
+            toName,
             fromAddress,
             coordinator.FullName,
-            ComposeSubject(source.Subject, quote),
-            ComposeBody(kind, quote, recipient.Name, coordinator.FullName, source.Subject),
-            source.MessageId,
-            string.Join(' ', new[] { source.References, source.MessageId }.Where(value => !string.IsNullOrWhiteSpace(value))),
+            plan.Subject,
+            plan.Body,
+            source?.MessageId,
+            source is null ? null : string.Join(' ', new[] { source.References, source.MessageId }.Where(value => !string.IsNullOrWhiteSpace(value))),
             pdf.FileName,
-            pdf.Content);
+            pdf.Content,
+            plan.Cc);
 
         if (existing is null) await outboundEmailRepository.AddAsync(row, cancellationToken);
         else await outboundEmailRepository.SaveAsync(cancellationToken);
@@ -74,7 +114,9 @@ public sealed class QuoteDeliveryService(
                 new SmtpSettings(smtp.Server, smtp.Port, smtp.UseSsl, config.EmailUsername, secretProtector.Unprotect(config.EncryptedPassword)),
                 new OutgoingEmail(
                     row.FromAddress, row.FromName, row.ToAddress, row.ToName, row.Subject, row.BodyText, row.MessageId,
-                    row.InReplyTo, row.References, row.AttachmentFileName, row.AttachmentContent),
+                    row.InReplyTo, row.References, row.AttachmentFileName, row.AttachmentContent,
+                    Cc: row.Cc.Count == 0 ? null : row.Cc,
+                    BodyHtml: CertificateDeliveryService.PlainTextToHtml(row.BodyText)),
                 cancellationToken);
         }
         catch (Exception exception)
@@ -88,6 +130,20 @@ public sealed class QuoteDeliveryService(
         row.MarkSent();
         await outboundEmailRepository.SaveAsync(CancellationToken.None);
         return row;
+    }
+
+    // The address typed by the coordinator wins; otherwise the sender of the original email (and the mail stays in its thread).
+    private static (string? Address, string? Name, bool RepliesToOriginal) ResolveTarget(RequestEmail? source, QuoteEmailDraft? draft)
+    {
+        var original = source is null ? null : ResolveRecipient(source);
+        if (!string.IsNullOrWhiteSpace(draft?.To))
+        {
+            var typed = CertificateDeliveryService.NormalizeAddress(draft.To, "To");
+            var sameAsOriginal = original is not null && string.Equals(original.Address, typed, StringComparison.OrdinalIgnoreCase);
+            return (typed, sameAsOriginal ? original!.Name : null, source is not null);
+        }
+
+        return original is null ? (null, null, false) : (original.Address, original.Name, true);
     }
 
     // The sender asked to be answered at Reply-To when they set one; otherwise the From address.

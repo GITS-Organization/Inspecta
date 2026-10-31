@@ -261,6 +261,7 @@ public sealed class InspectaDbContext(
         outboundEmail.Property(item => item.ToName).HasMaxLength(500);
         outboundEmail.Property(item => item.FromAddress).HasMaxLength(320).IsRequired();
         outboundEmail.Property(item => item.FromName).HasMaxLength(500);
+        outboundEmail.Property(item => item.CcAddresses).HasMaxLength(2000);
         outboundEmail.Property(item => item.Subject).HasMaxLength(998).IsRequired();
         outboundEmail.Property(item => item.MessageId).HasMaxLength(998).IsRequired();
         outboundEmail.Property(item => item.InReplyTo).HasMaxLength(998);

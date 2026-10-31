@@ -56,4 +56,6 @@ public sealed record QuoteEmailResponse(
     string ToAddress,
     int Attempts,
     DateTimeOffset? SentAt,
-    string? LastError);
+    string? LastError,
+    IReadOnlyList<string>? Cc = null,
+    string? Subject = null);
