@@ -273,6 +273,12 @@ public sealed class CertificateDeliveryTests : IDisposable
     public async Task TheClientArchiveAndHistoryShowWhenAndToWhomTheCertificatesWereSent()
     {
         await ApprovedJobAsync(fromEmail: true);
+        // The job's own answer carries the request, so the coordinator's screen needs one call; the inspector gets none.
+        var machines = await Run(true, service => service.ListMachinesAsync(requestId, coordinator.Id, "coordinator"));
+        Assert.Equal("Al Noor Industries", machines.Request!.ClientName);
+        Assert.Equal(2, machines.Request.Items.Count);
+        Assert.Null((await Run(true, service => service.ListMachinesAsync(requestId, inspector.Id, "inspector"))).Request);
+
         // Filed at approval, before anything is sent: no delivery yet.
         var before = await ArchiveAsync();
         Assert.Equal(2, before.Count);

@@ -104,7 +104,8 @@ public sealed record MachineListResponse(
     IReadOnlyList<ReviewCommentResponse>? ReviewHistory = null,
     bool CanApprove = false,
     IReadOnlyList<string>? ReviewBlockers = null,
-    string? PreviewZipUrl = null);
+    string? PreviewZipUrl = null,
+    Requests.RequestResponse? Request = null);
 
 /// <summary>One comment of the technical manager: on the whole job (<c>requestItemId</c> empty) or on one machine.</summary>
 public sealed record ReviewCommentResponse(DateTimeOffset At, string? By, Guid? RequestItemId, string? MachineName, string Text);

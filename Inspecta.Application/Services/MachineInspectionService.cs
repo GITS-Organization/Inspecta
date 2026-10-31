@@ -660,7 +660,9 @@ public sealed class MachineInspectionService(
             ReviewBlockers: blockers,
             PreviewZipUrl: isReviewer && request.Certificates.Any(value => value.UsesTemplate)
                 ? $"/api/v1/quotation-queue/{request.Id}/certificates/preview.zip"
-                : null);
+                : null,
+            // The request itself (client, contact, items, original email, history), so a screen needs no second call. Not for inspectors.
+            Request: role == "inspector" ? null : RequestResponseMapper.Map(request));
     }
 
     private async Task<MachineFormResponse> BuildFormAsync(
