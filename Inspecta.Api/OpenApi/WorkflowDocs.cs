@@ -191,6 +191,11 @@ public static class WorkflowDocs
             **When:** any time after the machine was saved, to see exactly how the certificate will look. **Who:** the inspector of the job, the technical manager and Admin; the coordinator once the machine is approved (`409` before).
             **How:** `GET /quotation-queue/{requestId}/machines/{requestItemId}/pdf`. Marked **DRAFT** until approved; after approval it is the **stored final file**, byte for byte as issued, with the **QR code** in the last box of the signature row (blank before approval).
             """),
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.PreviewCertificatesZip))] = new(10.5, "Queue 10b · Technical manager: preview all the job's certificates (ZIP)",
+            """
+            **When:** before approving, to look at every certificate of the job at once instead of one machine at a time (queue 10). **Who:** the technical manager, Admin and the job's inspector; the coordinator gets `403` and uses queue 17 after approval.
+            **How:** `GET /quotation-queue/{requestId}/certificates/preview.zip`. One PDF per machine that has been saved (`01-forklift-truck.pdf`, ...), exactly as it will be printed: marked **DRAFT** with the QR box empty until approved, the stored final file after. Machines not saved yet are left out; `404` when none is saved.
+            """),
         [Key<QuotationQueueController>(nameof(QuotationQueueController.ListToReview))] = new(11, "Queue 11 · Technical manager: the jobs to review",
             """
             **Who:** the technical manager or Admin. **How:** `GET /quotation-queue/to-review` (the same as `GET /quotation-queue?status=review`) lists the jobs whose machines are all submitted (request status `certificate_submitted`), with `certificates` counting the machines. Open one with queue 6 (`canReview` marks the machines to look at) and the PDFs with queue 10.
@@ -252,7 +257,7 @@ public static class WorkflowDocs
 
         **Inspector (steps 5-10):** 5. **start** the inspection; 6. see the **machines**; 7. **open** one (the form of that kind of machine); 8. **save** it as often as needed; 9. **submit** it; 10. see the **certificate PDF** (marked DRAFT) at any time. When every machine is submitted the job goes to the technical manager (`status=review`).
 
-        **Technical manager (steps 10-14):** 11. list the jobs **to review** (`GET /quotation-queue/to-review`); 10. look at the certificates; then either 12. **approve the job** (or 13. one machine): numbers, QR codes and final PDFs are made and filed under the client, and the job goes to the coordinator (`status=approved`); or 14. **send the job back** to the inspector with a note (or 14b. one machine): it shows for the inspector in `status=returned`, who fixes and submits again.
+        **Technical manager (steps 10-14):** 11. list the jobs **to review** (`GET /quotation-queue/to-review`); 10. look at the certificates, one machine at a time or 10b. **all of them in one ZIP** (`GET /quotation-queue/{requestId}/certificates/preview.zip`), **before approving**; then either 12. **approve the job** (or 13. one machine): numbers, QR codes and final PDFs are made and filed under the client, and the job goes to the coordinator (`status=approved`); or 14. **send the job back** to the inspector with a note (or 14b. one machine): it shows for the inspector in `status=returned`, who fixes and submits again.
 
         **Coordinator (steps 15-18):** 15. the **QR code** of each certificate (printed on it once approved; scanning it opens the public check page with the certificate's PDF); 16. **preview** the email, 17. download the **ZIP** (certificates and QR codes) and 18. **hand the certificates to the client**. Every certificate stays in the client's archive with its QR code (Configurations: the client's certificates).
 

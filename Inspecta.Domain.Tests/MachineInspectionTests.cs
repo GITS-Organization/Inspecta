@@ -439,6 +439,12 @@ public sealed class MachineInspectionTests : IDisposable
             await Run(service => service.SubmitAsync(requestId, item, inspector.Id, "inspector"));
         }
 
+        // Before approving, the technical manager can look at every certificate of the job in one ZIP; the coordinator cannot.
+        var preview = await Run(service => service.GetPreviewZipAsync(requestId, manager.Id, "technical_manager"));
+        using (var drafts = new System.IO.Compression.ZipArchive(new MemoryStream(preview.Content)))
+            Assert.Equal(["01-Chain-Block.pdf", "02-Forklift-Truck.pdf"], drafts.Entries.Select(entry => entry.FullName).Order().ToArray());
+        Assert.Equal(403, (await Assert.ThrowsAsync<AuthException>(() => Run(service => service.GetPreviewZipAsync(requestId, coordinator.Id, "coordinator")))).StatusCode);
+
         // The inspector sees the certificate as it will look, and cannot review it.
         Assert.Equal("%PDF-", Encoding.ASCII.GetString((await Run(service => service.GetPdfAsync(requestId, forkliftItemId, inspector.Id, "inspector"))).Content, 0, 5));
         Assert.Equal(403, (await Assert.ThrowsAsync<AuthException>(() => Run(service => service.ApproveAllAsync(requestId, inspector.Id, "inspector")))).StatusCode);

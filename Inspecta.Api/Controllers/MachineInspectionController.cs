@@ -177,6 +177,24 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
         return File(file.Content, PdfFile.ContentType, file.FileName);
     }
 
+    /// <summary>Preview every certificate of the job in one ZIP, before approving (technical manager, inspector).</summary>
+    /// <remarks>
+    /// One PDF per machine that has been saved, exactly as it will be printed: marked DRAFT with the QR box empty until it is
+    /// approved, the stored final file after. The technical manager, Admin and the job's inspector can download it; the coordinator
+    /// uses <c>certificates.zip</c> once the job is approved (<c>403</c> here).
+    /// </remarks>
+    [HttpGet("certificates/preview.zip")]
+    [Produces("application/zip")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> PreviewCertificatesZip(Guid requestId, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        var file = await inspectionService.GetPreviewZipAsync(requestId, actorId, role, cancellationToken);
+        return File(file.Content, file.ContentType, file.FileName);
+    }
+
     /// <summary>See the email that would carry the certificates to the client.</summary>
     /// <remarks>
     /// Returns the recipient (the sender of the original request first, then the client's certificates email), the subject, the suggested

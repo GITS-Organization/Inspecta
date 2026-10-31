@@ -454,6 +454,10 @@ Authorization: Bearer {{accessToken}}
 GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{machineId}}/pdf
 Authorization: Bearer {{accessToken}}
 
+### Technical manager: preview every certificate of the job in one ZIP before approving (drafts marked DRAFT)
+GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/certificates/preview.zip
+Authorization: Bearer {{accessToken}}
+
 ### Technical manager: the jobs waiting for review (same as ?status=review)
 GET {{baseUrl}}/api/v1/quotation-queue/to-review
 Authorization: Bearer {{accessToken}}

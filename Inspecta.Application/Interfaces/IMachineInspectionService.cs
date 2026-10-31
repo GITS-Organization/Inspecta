@@ -30,6 +30,9 @@ public interface IMachineInspectionService
     /// <summary>Sends the machines waiting for review (all, or the ones named) back to the inspector with a note.</summary>
     Task<MachineListResponse> ReturnToInspectorAsync(Guid requestId, Guid actorId, string role, ReturnJobRequest returned, CancellationToken cancellationToken = default);
 
+    /// <summary>Every saved certificate of the job in one ZIP as it will be printed (drafts marked DRAFT), for review before approval.</summary>
+    Task<DownloadFile> GetPreviewZipAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default);
+
     /// <summary>The QR code of an approved certificate as a PNG.</summary>
     Task<DownloadFile> GetQrCodeAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, CancellationToken cancellationToken = default);
 

@@ -296,6 +296,30 @@ public sealed class MachineInspectionService(
 
     // ---- PDF, QR and delivery -----------------------------------------------------------------------------------
 
+    /// <summary>
+    /// Every certificate of the job in one ZIP, as it will be printed, so the technical manager can look at them all before
+    /// approving: drafts carry the DRAFT mark, approved ones are the stored final files. Machines not saved yet are left out.
+    /// </summary>
+    public async Task<DownloadFile> GetPreviewZipAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
+    {
+        var request = await LoadAsync(requestId, actorId, role, tracking: false, cancellationToken);
+        if (role == "coordinator")
+            throw new AuthException("forbidden", "The coordinator gets the certificates once they are approved (certificates.zip).", 403);
+
+        var entries = new List<(string Name, byte[] Content)>();
+        var number = 0;
+        foreach (var item in request.Items.OrderBy(value => value.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            number++;
+            if (request.Certificates.SingleOrDefault(value => value.RequestItemId == item.Id) is not { UsesTemplate: true }) continue;
+            var pdf = await GetPdfAsync(requestId, item.Id, actorId, role, cancellationToken);
+            entries.Add(($"{number:00}-{SafeName(item.Name)}.pdf", pdf.Content));
+        }
+
+        if (entries.Count == 0) throw new KeyNotFoundException("No certificate of this job has been saved yet.");
+        return new DownloadFile(CertificateDeliveryService.Zip([], entries), $"preview-{SafeName(request.ClientName)}.zip", "application/zip");
+    }
+
     /// <summary>The QR code of an approved certificate (the one printed on it) as a PNG, to send to the client.</summary>
     public async Task<DownloadFile> GetQrCodeAsync(
         Guid requestId, Guid requestItemId, Guid actorId, string role, CancellationToken cancellationToken = default)
