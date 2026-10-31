@@ -4,6 +4,7 @@ using Inspecta.Application.Certificates;
 using Inspecta.Application.Contracts.Certificates;
 using Inspecta.Application.Contracts.Clients;
 using Inspecta.Application.Exceptions;
+using Inspecta.Application.Interfaces;
 using Inspecta.Application.Pdf;
 using Inspecta.Application.Services;
 using Inspecta.Domain.Entities;
@@ -30,6 +31,7 @@ public sealed class CertificateDeliveryTests : IDisposable
     private readonly AppUser coordinator;
     private readonly AppUser inspector;
     private Guid requestId;
+    private Guid clientId;
     private Guid[] itemIds = [];
 
     public CertificateDeliveryTests()
@@ -268,6 +270,71 @@ public sealed class CertificateDeliveryTests : IDisposable
     }
 
     [Fact]
+    public async Task TheClientArchiveAndHistoryShowWhenAndToWhomTheCertificatesWereSent()
+    {
+        await ApprovedJobAsync(fromEmail: true);
+        // Filed at approval, before anything is sent: no delivery yet.
+        var before = await ArchiveAsync();
+        Assert.Equal(2, before.Count);
+        Assert.All(before, row => Assert.Null(row.Delivery));
+
+        await Run(true, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator",
+            new DeliverCertificatesRequest { SentTo = "quality@alnoor.com", Cc = ["boss@alnoor.com"], Subject = "Our certificates" }));
+
+        var after = await ArchiveAsync();
+        Assert.All(after, row =>
+        {
+            Assert.True(row.Delivery!.EmailSent);
+            Assert.Equal("quality@alnoor.com", row.Delivery.SentTo);
+            Assert.Equal(["boss@alnoor.com"], row.Delivery.Cc);
+            Assert.Equal("Our certificates", row.Delivery.Subject);
+        });
+
+        // The client's history carries the same issued certificates under their request.
+        await using var db = CreateContext();
+        var history = (await new ClientService(new HistoryClients(db), new EfUserRepository(db), new EfCertificateFileRepository(db)).GetHistoryAsync(clientId))!;
+        var issued = Assert.Single(history.Requests, value => value.Request.Id == requestId).IssuedCertificates!;
+        Assert.Equal(2, issued.Count);
+        Assert.All(issued, row => Assert.Equal("quality@alnoor.com", row.Delivery!.SentTo));
+        Assert.All(issued, row => Assert.StartsWith("CERT-", row.CertificateNumber));
+    }
+
+    [Fact]
+    public async Task ACertificateHandedOverWithoutAnEmailShowsThatInTheArchive()
+    {
+        await ApprovedJobAsync(fromEmail: false);
+        await Run(true, service => service.DeliverManuallyAsync(requestId, coordinator.Id, "coordinator",
+            new ManualDeliveryRequest { DeliveredTo = "Mr Hassan at reception" }));
+
+        Assert.All(await ArchiveAsync(), row =>
+        {
+            Assert.False(row.Delivery!.EmailSent);
+            Assert.Equal("Mr Hassan at reception", row.Delivery.SentTo);
+            Assert.Empty(row.Delivery.Cc);
+        });
+    }
+
+    /// <summary>The client's history without the newest-first ordering of the real query, which SQLite cannot do on dates.</summary>
+    private sealed class HistoryClients(InspectaDbContext db) : IClientRepository
+    {
+        private readonly EfClientRepository inner = new(db);
+        public Task AddAsync(Client client, CancellationToken cancellationToken = default) => inner.AddAsync(client, cancellationToken);
+        public Task<Client?> GetByIdAsync(Guid clientId, bool tracking, CancellationToken cancellationToken = default) => inner.GetByIdAsync(clientId, tracking, cancellationToken);
+        public Task<IReadOnlyList<Client>> ListAsync(bool includeArchived, CancellationToken cancellationToken = default) => inner.ListAsync(includeArchived, cancellationToken);
+        public async Task<IReadOnlyList<InspectionRequest>> GetRequestHistoryAsync(Guid clientId, CancellationToken cancellationToken = default) =>
+            await db.Requests.Include(value => value.Items).Include(value => value.Certificates).Where(value => value.ClientId == clientId).ToListAsync(cancellationToken);
+        public Task<(int Requests, int Items)> CountDependenciesAsync(Guid clientId, CancellationToken cancellationToken = default) => inner.CountDependenciesAsync(clientId, cancellationToken);
+        public Task RemoveAsync(Client client, CancellationToken cancellationToken = default) => inner.RemoveAsync(client, cancellationToken);
+        public Task SaveAsync(CancellationToken cancellationToken = default) => inner.SaveAsync(cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<ClientCertificateResponse>> ArchiveAsync()
+    {
+        await using var db = CreateContext();
+        return await new ClientCertificateService(new EfClientRepository(db), new EfCertificateFileRepository(db)).ListAsync(clientId);
+    }
+
+    [Fact]
     public async Task ATestCopyGoesOnlyToTheSignedInUserAndChangesNothing()
     {
         await ApprovedJobAsync(fromEmail: true);
@@ -394,7 +461,6 @@ public sealed class CertificateDeliveryTests : IDisposable
 
     private async Task StartJobAsync(bool fromEmail, bool configureMailbox)
     {
-        Guid clientId;
         await using (var db = CreateContext())
         {
             clientId = (await new ClientService(new EfClientRepository(db), new EfUserRepository(db)).CreateAsync(new CreateClientRequest

@@ -16,7 +16,8 @@ public sealed class ClientCertificatesController(ClientCertificateService certif
     /// <summary>List the certificates issued for a client, newest first.</summary>
     /// <remarks>
     /// A certificate is filed here when the technical manager approves it. Each row has the certificate number, the item,
-    /// the examination and next examination dates and a SHA-256 of the PDF. Open one with <c>/{id}/pdf</c>.
+    /// the examination and next examination dates and a SHA-256 of the PDF. Open one with <c>/{id}/pdf</c>. Once the coordinator has sent the job to the client,
+    /// each row also has <c>delivery</c>: <c>emailSent</c>, <c>sentTo</c>, <c>cc</c>, <c>subject</c> and <c>sentAt</c> (<c>emailSent</c> is false when it was handed over without an email); it is null until then.
     /// </remarks>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<ClientCertificateResponse>>(StatusCodes.Status200OK)]

@@ -29,6 +29,7 @@ public sealed class ClientsController(IClientService clientService) : Controller
     }
 
     /// <summary>Get a client's previous inspection requests and certificates.</summary>
+    /// <remarks>Each request has <c>issuedCertificates</c>: its approved certificates as issued (number, result, QR) with <c>delivery</c> (when, to whom and with which copies they were sent).</remarks>
     [HttpGet("{clientId:guid}/history")]
     [ProducesResponseType<ClientHistoryResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

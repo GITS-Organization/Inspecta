@@ -32,6 +32,25 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
         return rows.OrderByDescending(row => row.IssuedAt).ToArray();
     }
 
+    public async Task<IReadOnlyList<CertificateHandover>> ListHandoversAsync(IReadOnlyCollection<Guid> certificateIds, CancellationToken cancellationToken = default)
+    {
+        if (certificateIds.Count == 0) return [];
+        var delivered = await dbContext.Certificates.AsNoTracking()
+            .Where(value => certificateIds.Contains(value.Id) && value.SentAt != null)
+            .Select(value => new { value.Id, value.RequestId, value.SentTo, SentAt = value.SentAt!.Value })
+            .ToListAsync(cancellationToken);
+        var requestIds = delivered.Select(value => value.RequestId).Distinct().ToArray();
+        var emails = (await dbContext.CertificateDeliveries.AsNoTracking()
+                .Where(value => requestIds.Contains(value.RequestId) && value.Sent)
+                .ToListAsync(cancellationToken))
+            .GroupBy(value => value.RequestId)
+            .ToDictionary(group => group.Key, group => group.First());
+        return delivered.Select(value => emails.TryGetValue(value.RequestId, out var email)
+                ? new CertificateHandover(value.Id, email.SentAt ?? value.SentAt, email.ToAddress, true, email.Cc, email.Subject)
+                : new CertificateHandover(value.Id, value.SentAt, value.SentTo, false, [], null))
+            .ToArray();
+    }
+
     public Task<IssuedCertificateFile?> GetForClientAsync(Guid clientId, Guid fileId, CancellationToken cancellationToken = default) =>
         dbContext.IssuedCertificateFiles.AsNoTracking()
             .SingleOrDefaultAsync(file => file.ClientId == clientId && file.Id == fileId, cancellationToken);

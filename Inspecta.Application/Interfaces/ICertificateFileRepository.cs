@@ -22,6 +22,9 @@ public sealed record IssuedCertificateSummary(
     string? PreparedBy = null,
     Inspecta.Domain.Enums.CertificateResult? Result = null);
 
+/// <summary>When a certificate was handed to the client, to whom, and (when it went by email) the copies and subject.</summary>
+public sealed record CertificateHandover(Guid CertificateId, DateTimeOffset SentAt, string? SentTo, bool EmailSent, IReadOnlyList<string> Cc, string? Subject);
+
 /// <summary>The issued PDFs filed under each client, and the numbering of certificates.</summary>
 public interface ICertificateFileRepository
 {
@@ -34,6 +37,9 @@ public interface ICertificateFileRepository
 
     /// <summary>The certificates filed under a client, newest first (without the PDF itself).</summary>
     Task<IReadOnlyList<IssuedCertificateSummary>> ListForClientAsync(Guid clientId, CancellationToken cancellationToken = default);
+
+    /// <summary>The certificates among <paramref name="certificateIds"/> that were already handed to the client.</summary>
+    Task<IReadOnlyList<CertificateHandover>> ListHandoversAsync(IReadOnlyCollection<Guid> certificateIds, CancellationToken cancellationToken = default);
 
     Task<IssuedCertificateFile?> GetForClientAsync(Guid clientId, Guid fileId, CancellationToken cancellationToken = default);
 

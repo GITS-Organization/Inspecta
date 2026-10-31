@@ -16,10 +16,21 @@ public sealed class ClientCertificateService(
     {
         if (await clientRepository.GetByIdAsync(clientId, tracking: false, cancellationToken) is null)
             throw new KeyNotFoundException("Client was not found.");
-        return (await certificateFiles.ListForClientAsync(clientId, cancellationToken))
-            .Select(file => new ClientCertificateResponse(
+        return await MapAsync(certificateFiles, await certificateFiles.ListForClientAsync(clientId, cancellationToken), cancellationToken);
+    }
+
+    /// <summary>The rows of the archive, each with how and when it reached the client (empty until it is handed over).</summary>
+    public static async Task<IReadOnlyList<ClientCertificateResponse>> MapAsync(
+        ICertificateFileRepository certificateFiles, IReadOnlyList<IssuedCertificateSummary> files, CancellationToken cancellationToken = default)
+    {
+        var handovers = (await certificateFiles.ListHandoversAsync(files.Select(file => file.CertificateId).ToArray(), cancellationToken))
+            .ToDictionary(value => value.CertificateId);
+        return files.Select(file => new ClientCertificateResponse(
                 file.Id, file.RequestId, file.CertificateNumber, file.ItemName, file.ExaminationDate, file.NextExaminationDate,
-                file.IssuedAt, file.FileName, file.Sha256, file.VerificationCode, file.QrData, file.Result.ToInspectionResult()))
+                file.IssuedAt, file.FileName, file.Sha256, file.VerificationCode, file.QrData, file.Result.ToInspectionResult(),
+                handovers.TryGetValue(file.CertificateId, out var handover)
+                    ? new ClientCertificateDelivery(handover.EmailSent, handover.SentTo, handover.Cc, handover.Subject, handover.SentAt)
+                    : null))
             .ToArray();
     }
 

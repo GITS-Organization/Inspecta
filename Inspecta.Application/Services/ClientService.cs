@@ -8,7 +8,8 @@ namespace Inspecta.Application.Services;
 
 public sealed class ClientService(
     IClientRepository clientRepository,
-    IUserRepository userRepository) : IClientService
+    IUserRepository userRepository,
+    ICertificateFileRepository? certificateFiles = null) : IClientService
 {
     public async Task<ClientResponse> CreateAsync(CreateClientRequest request, Guid? managerId, CancellationToken cancellationToken = default)
     {
@@ -54,11 +55,17 @@ public sealed class ClientService(
         if (client is null) return null;
 
         var requests = await clientRepository.GetRequestHistoryAsync(clientId, cancellationToken);
+        var issued = certificateFiles is null
+            ? new Dictionary<Guid, IReadOnlyList<ClientCertificateResponse>>()
+            : (await ClientCertificateService.MapAsync(certificateFiles, await certificateFiles.ListForClientAsync(clientId, cancellationToken), cancellationToken))
+                .GroupBy(file => file.RequestId)
+                .ToDictionary(group => group.Key, group => (IReadOnlyList<ClientCertificateResponse>)group.ToArray());
         return new ClientHistoryResponse(
             clientId,
             requests.Select(request => new ClientRequestHistoryResponse(
                 RequestResponseMapper.Map(request),
-                request.Certificates.Select(CertificateResponseMapper.Map).ToArray()))
+                request.Certificates.Select(CertificateResponseMapper.Map).ToArray(),
+                issued.GetValueOrDefault(request.Id, [])))
                 .ToArray());
     }
 
