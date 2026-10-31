@@ -62,27 +62,30 @@ class QuoteWaitingLabel extends StatelessWidget {
 
   const QuoteWaitingLabel({super.key, required this.quotation});
 
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    final now = DateTime.now();
-
-    final String text;
+  /// The timing sentence itself, empty when there's nothing to say — the
+  /// board card sets it beside its status.
+  static String textFor(AppLocalizations t, Quotation quotation, {DateTime? now}) {
+    final at = now ?? DateTime.now();
     if (quotation.status == QuotationStatus.countered &&
         quotation.clientRespondedAt != null) {
-      text = t.repliedAgo(RelativeDuration.since(quotation.clientRespondedAt!, now: now).label(t));
-    } else if (quotation.isExpired(now: now)) {
-      text = t.expiredLabel(RelativeDuration.since(quotation.validUntil!, now: now).label(t));
+      return t.repliedAgo(RelativeDuration.since(quotation.clientRespondedAt!, now: at).label(t));
+    } else if (quotation.isExpired(now: at)) {
+      return t.expiredLabel(RelativeDuration.since(quotation.validUntil!, now: at).label(t));
     } else if (quotation.validUntil != null &&
         (quotation.status == QuotationStatus.sent ||
             quotation.status == QuotationStatus.countered)) {
-      final days = quotation.validUntil!.difference(now).inDays;
-      text = t.expiresIn(days.clamp(0, 1 << 30));
+      final days = quotation.validUntil!.difference(at).inDays;
+      return t.expiresIn(days.clamp(0, 1 << 30));
     } else if (quotation.sentAt != null) {
-      text = t.sentAgo(RelativeDuration.since(quotation.sentAt!, now: now).label(t));
-    } else {
-      text = '';
+      return t.sentAgo(RelativeDuration.since(quotation.sentAt!, now: at).label(t));
     }
+    return '';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final text = textFor(t, quotation);
 
     if (text.isEmpty) return const SizedBox.shrink();
     return Text(

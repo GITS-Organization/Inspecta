@@ -7,26 +7,22 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_layout.dart';
 import '../../../../core/consts/app_text_styles.dart';
-import '../../../../core/enums/job_status.dart';
-import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/loading.dart';
 import '../../../../core/shared/m_notice.dart';
+import '../../../../core/widgets/empty_widget.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/presentation/widgets/user_app_header.dart';
-import '../../../certificate/presentation/pages/certificate_page.dart';
+import '../../../machines/presentation/pages/job_machines_page.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
 import '../bloc/inspector_tasks_cubit.dart';
-import '../widgets/decline_task_dialog.dart';
 import '../widgets/inspector_task_card.dart';
 import '../widgets/inspector_tasks_filters.dart';
-import '../widgets/new_task_banner.dart';
 
 /// Feature 05's Tasks tab: Today, Upcoming and Overdue lists (chosen from the
-/// header's tiles), a nudge toward any job the inspector hasn't responded to
-/// yet, and the task cards.
+/// header's tiles) and the task cards.
 class InspectorTasksPage extends StatelessWidget {
   final VoidCallback? onOpenProfile;
 
@@ -76,53 +72,26 @@ class _BodyState extends State<_Body> {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  Future<void> _decline(InspectionRequest task) async {
+  // The machines screen may start the inspection, which moves the job on, so
+  // the list reloads once the user is back.
+  Future<void> _continueCertificate(InspectionRequest task) async {
     final cubit = context.read<InspectorTasksCubit>();
-    final reason = await showDeclineTaskDialog(context);
-    if (reason == null) return;
-    await cubit.decline(task.id, reason: reason.isEmpty ? null : reason);
-  }
-
-  void _continueCertificate(InspectionRequest task) {
-    if (task.status == JobStatus.taskAccepted) {
-      context.read<InspectorTasksCubit>().startInspection(task.id);
-    }
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => CertificatePage(request: task)),
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => JobMachinesPage(request: task)),
     );
+    cubit.start();
   }
 
-  /// Takes the inspector to the job that needs a response: switching to the
-  /// list it's in first, if it isn't the one showing, then scrolling to it.
-  void _openFirstNeedsResponse(InspectorTasksState state) {
-    final task = state.firstNeedsResponse;
-    if (task == null) return;
-    final filter = InspectorTasksState.filterOf(task);
-    if (filter != null && filter != state.filter) context.read<InspectorTasksCubit>().selectFilter(filter);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final targetContext = _cardKeys[task.id]?.currentContext;
-      if (targetContext == null || !targetContext.mounted) return;
-      Scrollable.ensureVisible(targetContext, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-    });
-  }
+  Widget _empty(AppLocalizations t, TasksFilter filter) => switch (filter) {
+    TasksFilter.today => EmptyState(icon: Icons.event_available_rounded, title: t.emptyTasksToday),
+    TasksFilter.upcoming => EmptyState(icon: Icons.event_note_rounded, title: t.emptyTasksUpcoming),
+    TasksFilter.overdue => EmptyState(kind: EmptyKind.done, title: t.emptyTasksOverdue),
+  };
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    return BlocConsumer<InspectorTasksCubit, InspectorTasksState>(
-      listenWhen: (previous, current) => current.actionSeq != previous.actionSeq,
-      listener: (context, state) {
-        if (state.lastActionSuccess) {
-          final message = switch (state.lastAction) {
-            InspectorTaskAction.accept => t.taskAcceptedMessage,
-            InspectorTaskAction.decline => t.taskDeclinedMessage,
-            _ => null,
-          };
-          if (message != null) MToast.showSuccess(message: message);
-        } else if (state.lastActionFailure != null) {
-          MToast.showError(message: state.lastActionFailure!.message(t));
-        }
-      },
+    return BlocBuilder<InspectorTasksCubit, InspectorTasksState>(
       builder: (context, state) {
         if (state.status == InspectorTasksStatus.loading) {
           return Loading.loader(context);
@@ -132,7 +101,6 @@ class _BodyState extends State<_Body> {
         }
 
         final tasks = state.visibleTasks;
-        final banner = state.firstNeedsResponse;
         final cubit = context.read<InspectorTasksCubit>();
         final locale = Localizations.localeOf(context).languageCode;
         final tomorrow = DateTime.now().add(const Duration(days: 1));
@@ -141,15 +109,15 @@ class _BodyState extends State<_Body> {
             ? t.tomorrowLabel
             : DateFormat('EEEE, d MMM', locale).format(day);
 
-        return ListView(
+        return RefreshIndicator(
+          color: AppColours.primaryColor,
+          onRefresh: cubit.start,
+          child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 16, 16, AppLayout.bottomNavClearance),
           children: [
-            if (banner != null) ...[
-              NewTaskBanner(onOpen: () => _openFirstNeedsResponse(state)),
-              const SizedBox(height: 12),
-            ],
             if (tasks.isEmpty)
-              _EmptyState(filter: state.filter)
+              _empty(t, state.filter)
             else
               for (var i = 0; i < tasks.length; i++) ...[
                 // Upcoming jobs are grouped under the day they're due.
@@ -169,43 +137,15 @@ class _BodyState extends State<_Body> {
                     task: tasks[i],
                     showDate: state.filter == TasksFilter.overdue,
                     overdueDays: InspectorTasksState.daysOverdue(tasks[i]),
-                    submitting: state.isSubmitting,
-                    onAccept: () => cubit.accept(tasks[i].id),
-                    onDecline: () => _decline(tasks[i]),
                     onContinueCertificate: () => _continueCertificate(tasks[i]),
                     onNavigate: () => _openInMaps(tasks[i]),
                   ),
                 ),
               ],
           ],
+          ),
         );
       },
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final TasksFilter filter;
-
-  const _EmptyState({required this.filter});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    final (icon, message) = switch (filter) {
-      TasksFilter.today => (Icons.event_available_outlined, t.emptyTasksToday),
-      TasksFilter.upcoming => (Icons.event_note_outlined, t.emptyTasksUpcoming),
-      TasksFilter.overdue => (Icons.check_circle_outline_rounded, t.emptyTasksOverdue),
-    };
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 16),
-      child: Column(
-        children: [
-          Icon(icon, size: 40, color: AppColours.inkMuted),
-          const SizedBox(height: 12),
-          Text(message, textAlign: TextAlign.center, style: AppTextStyles.subtitle),
-        ],
-      ),
     );
   }
 }

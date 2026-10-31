@@ -3,42 +3,52 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/consts/app_colors.dart';
-import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/loading.dart';
 import '../../../../core/shared/m_notice.dart';
+import '../../../../core/widgets/pdf_preview_page.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../auth/presentation/bloc/auth_cubit.dart';
-import '../../../certificate/domain/entities/certificate.dart';
-import '../../../certificate/presentation/pdf/certificate_pdf_preview.dart';
+import '../../../certificate/domain/certificate_number.dart';
 import '../../../certificate/presentation/widgets/certificate_labels.dart';
+import '../../../machines/domain/usecases/get_machine_pdf.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../bloc/review_detail_cubit.dart';
-import '../widgets/review_comments_field.dart';
 import '../widgets/review_detail_header.dart';
 import '../widgets/review_footer.dart';
 import '../widgets/review_summary_card.dart';
-import '../widgets/signature_card.dart';
 
-/// Feature 06's review screen: the reviewer reads the summary, adds
-/// comments, signs, and either approves (which issues the certificate's QR
+/// Feature 06's review screen for one machine of a job: the reviewer reads
+/// the summary and either approves (which issues the certificate's QR
 /// code and hands it to the coordinator to send to the client) or returns the
 /// certificate to its inspector.
 class CertificateReviewPage extends StatelessWidget {
   final InspectionRequest request;
+
+  /// The machine of the job being reviewed.
+  final String requestItemId;
   final String? inspectorName;
 
-  const CertificateReviewPage({super.key, required this.request, this.inspectorName});
+  const CertificateReviewPage({
+    super.key,
+    required this.request,
+    required this.requestItemId,
+    this.inspectorName,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final reviewer = context.read<AuthCubit>().user;
     return BlocProvider(
-      create: (_) => getIt<ReviewDetailCubit>(param1: request, param2: reviewer?.name ?? '')..start(),
+      create: (_) =>
+          getIt<ReviewDetailCubit>(param1: request, param2: requestItemId)
+            ..start(),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark,
-        child: _ReviewView(request: request, inspectorName: inspectorName),
+        child: _ReviewView(
+          request: request,
+          requestItemId: requestItemId,
+          inspectorName: inspectorName,
+        ),
       ),
     );
   }
@@ -46,25 +56,32 @@ class CertificateReviewPage extends StatelessWidget {
 
 class _ReviewView extends StatefulWidget {
   final InspectionRequest request;
+  final String requestItemId;
   final String? inspectorName;
 
-  const _ReviewView({required this.request, this.inspectorName});
+  const _ReviewView({
+    required this.request,
+    required this.requestItemId,
+    this.inspectorName,
+  });
 
   @override
   State<_ReviewView> createState() => _ReviewViewState();
 }
 
 class _ReviewViewState extends State<_ReviewView> {
-  final _comments = TextEditingController();
-
-  @override
-  void dispose() {
-    _comments.dispose();
-    super.dispose();
-  }
-
-  Future<void> _viewPdf(Certificate certificate) {
-    return previewCertificatePdf(context, request: widget.request, certificate: certificate);
+  /// The certificate as the API renders it — marked DRAFT until approved.
+  Future<void> _viewPdf() {
+    final t = AppLocalizations.of(context)!;
+    final number = certNumberFor(widget.request);
+    return PdfPreviewPage.open(
+      context,
+      title: t.certificateTitle,
+      subtitle: number,
+      fileName: '$number.pdf',
+      build: () =>
+          getIt<GetMachinePdf>()(widget.request.id, widget.requestItemId),
+    );
   }
 
   @override
@@ -74,11 +91,14 @@ class _ReviewViewState extends State<_ReviewView> {
     return MultiBlocListener(
       listeners: [
         BlocListener<ReviewDetailCubit, ReviewDetailState>(
-          listenWhen: (previous, current) => previous.actionSeq != current.actionSeq,
+          listenWhen: (previous, current) =>
+              previous.actionSeq != current.actionSeq,
           listener: (context, state) {
             if (state.lastActionSuccess) {
               MToast.showSuccess(
-                message: state.lastActionApproved ? t.certificateApprovedMessage : t.certificateReturnedMessage,
+                message: state.lastActionApproved
+                    ? t.certificateApprovedMessage
+                    : t.certificateReturnedMessage,
               );
               Navigator.of(context).pop();
             } else if (state.lastActionFailure != null) {
@@ -104,9 +124,6 @@ class _ReviewViewState extends State<_ReviewView> {
                 buildWhen: (previous, current) =>
                     previous.status != current.status ||
                     previous.certificate != current.certificate ||
-                    previous.strokes != current.strokes ||
-                    previous.savedStrokes != current.savedStrokes ||
-                    previous.rememberSignature != current.rememberSignature ||
                     previous.isBusy != current.isBusy ||
                     previous.canApprove != current.canApprove,
                 builder: (context, state) {
@@ -115,11 +132,23 @@ class _ReviewViewState extends State<_ReviewView> {
                     case ReviewDetailStatus.loading:
                       return Loading.loader(context);
                     case ReviewDetailStatus.error:
-                    case ReviewDetailStatus.notFound:
                       return Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
-                          child: MNotice(type: MNoticeType.error, message: t.certificateNotFound),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              MNotice(
+                                type: MNoticeType.error,
+                                message: t.certificateNotFound,
+                              ),
+                              const SizedBox(height: 16),
+                              OutlinedButton(
+                                onPressed: cubit.retry,
+                                child: Text(t.retry),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     case ReviewDetailStatus.ready:
@@ -132,28 +161,8 @@ class _ReviewViewState extends State<_ReviewView> {
                       ReviewSummaryCard(
                         request: widget.request,
                         certificate: certificate,
-                        onViewPdf: () => _viewPdf(certificate),
+                        onViewPdf: _viewPdf,
                       ),
-                      const SizedBox(height: 12),
-                      ReviewCommentsField(
-                        controller: _comments,
-                        onChanged: cubit.setComments,
-                        enabled: !state.isBusy,
-                      ),
-                      const SizedBox(height: 12),
-                      SignatureCard(
-                        savedStrokes: state.savedStrokes,
-                        strokes: state.strokes,
-                        onStrokesChanged: cubit.setStrokes,
-                        onClear: cubit.clearSignature,
-                        rememberSignature: state.rememberSignature,
-                        onRememberChanged: cubit.setRememberSignature,
-                        enabled: !state.isBusy,
-                      ),
-                      if (!state.canApprove) ...[
-                        const SizedBox(height: 12),
-                        Text(t.approveRequirementsHint, style: AppTextStyles.caption),
-                      ],
                     ],
                   );
                 },

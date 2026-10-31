@@ -22,12 +22,16 @@ class _QueueApiClientServices implements QueueApiClientServices {
   @override
   Future<dynamic> getQueue(
     String? managerId,
+    String? status,
+    String? q,
     int page,
     int pageSize,
   ) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'managerId': managerId,
+      r'status': status,
+      r'q': q,
       r'page': page,
       r'pageSize': pageSize,
     };
@@ -39,6 +43,38 @@ class _QueueApiClientServices implements QueueApiClientServices {
           .compose(
             _dio.options,
             'quotation-queue',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
+    return _value;
+  }
+
+  @override
+  Future<dynamic> getToReview(
+    String? managerId,
+    String? inspectorId,
+    int page,
+    int pageSize,
+  ) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'managerId': managerId,
+      r'inspectorId': inspectorId,
+      r'page': page,
+      r'pageSize': pageSize,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<dynamic>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            'quotation-queue/to-review',
             queryParameters: queryParameters,
             data: _data,
           )

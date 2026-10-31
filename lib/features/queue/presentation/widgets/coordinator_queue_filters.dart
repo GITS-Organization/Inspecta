@@ -41,6 +41,8 @@ class CoordinatorQueueFilters extends StatelessWidget {
               chip(QueueFilter.inProgress, t.statInProgress),
               const SizedBox(width: 8),
               chip(QueueFilter.toSend, t.statToSend),
+              const SizedBox(width: 8),
+              chip(QueueFilter.delivered, t.statDelivered),
             ],
           ),
         );

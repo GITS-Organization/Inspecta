@@ -53,8 +53,35 @@ class CertificateFooter extends StatelessWidget {
           }
         },
         builder: (context, state) {
-          final canSubmit = (state.certificate?.isReadyToSubmit ?? false) && !state.isSubmitting;
-          return Row(
+          final canSubmit = state.canSubmit;
+          final blockers = state.machineMode && !state.apiReady ? state.missing : const <String>[];
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (blockers.isNotEmpty) ...[
+                Text(
+                  '${t.machineMissingLabel}:',
+                  style: AppTextStyles.caption.copyWith(color: AppColours.dangerText, fontWeight: FontWeight.w700),
+                ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 120),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final problem in blockers)
+                          Text(
+                            '• $problem',
+                            style: AppTextStyles.caption.copyWith(color: AppColours.dangerText),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+              Row(
             children: [
               Expanded(
                 child: SizedBox(
@@ -89,6 +116,8 @@ class CertificateFooter extends StatelessWidget {
                     onPressed: canSubmit ? () => _confirmSubmit(context) : null,
                   ),
                 ),
+              ),
+            ],
               ),
             ],
           );

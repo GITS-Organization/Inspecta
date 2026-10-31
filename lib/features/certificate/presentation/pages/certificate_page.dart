@@ -18,6 +18,7 @@ import '../widgets/defects_section.dart';
 import '../widgets/examination_details_section.dart';
 import '../widgets/examination_questions_section.dart';
 import '../widgets/item_information_section.dart';
+import '../widgets/machine_checklist_section.dart';
 
 /// Feature 05's inspection certificate screen: TÜV's report of thorough
 /// examination, filled in section by section — examination details, item
@@ -26,12 +27,15 @@ import '../widgets/item_information_section.dart';
 class CertificatePage extends StatelessWidget {
   final InspectionRequest request;
 
-  const CertificatePage({super.key, required this.request});
+  /// The machine of the job this form is open on.
+  final String requestItemId;
+
+  const CertificatePage({super.key, required this.request, required this.requestItemId});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => getIt<CertificateCubit>(param1: request)..start(),
+      create: (_) => getIt<CertificateCubit>(param1: request, param2: requestItemId)..start(),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark,
         child: Scaffold(
@@ -84,6 +88,8 @@ class _Body extends StatelessWidget {
             const SizedBox(height: 14),
             const ExaminationQuestionsSection(),
             const SizedBox(height: 14),
+            const MachineChecklistSection(),
+            const MachineChecklistGap(),
             const DefectsSection(),
             const SizedBox(height: 14),
             const ConclusionSection(),

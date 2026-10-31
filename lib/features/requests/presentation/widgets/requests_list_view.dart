@@ -8,6 +8,7 @@ import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/enums/job_status.dart';
 import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/m_notice.dart';
+import '../../../../core/widgets/empty_widget.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/inspection_request.dart';
 import '../../domain/entities/request_source.dart';
@@ -81,7 +82,7 @@ class RequestsListView extends StatelessWidget {
                 if (requests.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
-                    child: _EmptyState(tab: state.tab, query: state.query),
+                    child: _empty(t, state.tab, state.query),
                   )
                 else
                   SliverPadding(
@@ -154,6 +155,18 @@ class RequestsListView extends StatelessWidget {
     if (!await cubit.delete(request.id)) MToast.showError(message: t.deleteRequestError);
   }
 
+  Widget _empty(AppLocalizations t, RequestsTab tab, String query) {
+    if (query.isNotEmpty) {
+      return EmptyState(kind: EmptyKind.search, title: t.emptySearch(query));
+    }
+    return EmptyState(
+      title: switch (tab) {
+        RequestsTab.newTab => t.emptyNewRequests,
+        RequestsTab.maybe => t.emptyMaybeRequests,
+      },
+    );
+  }
+
   /// "Needs your reply · 20+": the count of what is loaded, with a plus when
   /// more pages remain.
   String _heading(AppLocalizations t, RequestsTab tab, int count, bool hasMore) {
@@ -178,46 +191,6 @@ class _Skeleton extends StatelessWidget {
         itemCount: 4,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (_, _) => RequestCard(request: _placeholder, onTap: () {}),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final RequestsTab tab;
-  final String query;
-
-  const _EmptyState({required this.tab, required this.query});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    final message = query.isNotEmpty
-        ? t.emptySearch(query)
-        : switch (tab) {
-            RequestsTab.newTab => t.emptyNewRequests,
-            RequestsTab.maybe => t.emptyMaybeRequests,
-          };
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.inbox_outlined,
-              size: 40,
-              color: AppColours.inkMuted,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.subtitle,
-            ),
-          ],
-        ),
       ),
     );
   }

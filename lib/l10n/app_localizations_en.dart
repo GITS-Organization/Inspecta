@@ -222,6 +222,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateAction => 'Update';
 
   @override
+  String get addSignatureAction => 'Add';
+
+  @override
   String get signatureOnFileLabel => 'Signature on file';
 
   @override
@@ -282,6 +285,30 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get homeComingSoon =>
       'You\'re signed in and on the right screen. This list is built in a later feature.';
+
+  @override
+  String get roleFinance => 'Finance';
+
+  @override
+  String get roleManagingDirector => 'Managing director';
+
+  @override
+  String get roleMerchandiser => 'Merchandiser';
+
+  @override
+  String get homeWms => 'WMS modules';
+
+  @override
+  String get wmsModuleInventory => 'Inventory';
+
+  @override
+  String get wmsModuleReceiving => 'Receiving';
+
+  @override
+  String get wmsModulePicking => 'Picking';
+
+  @override
+  String get wmsModuleShipping => 'Shipping';
 
   @override
   String get justNow => 'Just now';
@@ -791,6 +818,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get actionRequote => 'Re-quote';
+
+  @override
+  String get actionContinueDraft => 'Continue';
+
+  @override
+  String quoteMissingPrices(int count) {
+    return 'Missing prices: $count';
+  }
 
   @override
   String get reminderSent => 'Reminder logged.';
@@ -1408,6 +1443,38 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get reviewJobSummaryTitle => 'Review summary';
+
+  @override
+  String get equipmentToReviewTitle => 'Equipment to review';
+
+  @override
+  String get reviewBlockersTitle => 'Can\'t approve yet';
+
+  @override
+  String get reviewHistoryTitle => 'Earlier comments';
+
+  @override
+  String get resultSatisfactory => 'Satisfactory';
+
+  @override
+  String get resultUnsatisfactory => 'Unsatisfactory';
+
+  @override
+  String get approveAllAction => 'Approve all';
+
+  @override
+  String get rejectWithNotesAction => 'Reject with notes';
+
+  @override
+  String get confirmApproveAllTitle => 'Approve all certificates?';
+
+  @override
+  String certificatesSubmittedProgress(int submitted, int total) {
+    return '$submitted of $total certificates submitted';
+  }
+
+  @override
   String todayAtTime(String time) {
     return 'today $time';
   }
@@ -1512,7 +1579,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get approveAndSendAction => 'Approve certificate';
 
   @override
-  String get approveRequirementsHint => 'Add your signature to approve.';
+  String get approveRequirementsHint =>
+      'Add your signature in your Profile to approve certificates.';
 
   @override
   String get confirmApproveTitle => 'Approve this certificate?';
@@ -1548,6 +1616,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statToSend => 'To send';
+
+  @override
+  String get statDelivered => 'Delivered';
+
+  @override
+  String get deliverCertificatesTitle => 'Certificates to hand over';
+
+  @override
+  String get emailPreviewTitle => 'Email to the client';
+
+  @override
+  String get deliverMessageHint => 'Add a message to the client (optional)';
+
+  @override
+  String get deliverNoEmailHint =>
+      'The email isn\'t sent from the app yet: delivering marks the job as handed over.';
+
+  @override
+  String get certificateDeliveredNoEmailMessage =>
+      'Job marked as delivered. The client email isn\'t sent automatically yet.';
 
   @override
   String get sendToClientAction => 'Send to client';
@@ -1860,4 +1948,102 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get replyToRequestAction => 'Reply to request';
+
+  @override
+  String get machinesTitle => 'Machines';
+
+  @override
+  String machinesProgress(int submitted, int total) {
+    return '$submitted of $total submitted';
+  }
+
+  @override
+  String get machinesEmpty => 'No machines on this job.';
+
+  @override
+  String get startInspectionAction => 'Start inspection';
+
+  @override
+  String get machineStatusNotStarted => 'Not started';
+
+  @override
+  String get machineStatusDraft => 'Draft';
+
+  @override
+  String get machineStatusSubmitted => 'Submitted';
+
+  @override
+  String get machineStatusReturned => 'Returned';
+
+  @override
+  String get machineStatusApproved => 'Approved';
+
+  @override
+  String get machineStatusDelivered => 'Delivered';
+
+  @override
+  String machineChecklistProgress(int answered, int total) {
+    return '$answered of $total checklist rows';
+  }
+
+  @override
+  String machineQuantityLabel(int count) {
+    return '× $count';
+  }
+
+  @override
+  String machineCertificateNumber(String number) {
+    return 'Certificate no. $number';
+  }
+
+  @override
+  String get machineReviewNoteLabel => 'Reviewer\'s note';
+
+  @override
+  String get machineMissingLabel => 'Still missing before submitting';
+
+  @override
+  String get machineHeaderSection => 'Examination details';
+
+  @override
+  String get machineFieldsSection => 'Machine information';
+
+  @override
+  String get machineNotesSection => 'Notes';
+
+  @override
+  String get machineHeaderClient => 'Client';
+
+  @override
+  String get machineHeaderAddress => 'Address';
+
+  @override
+  String get machineHeaderRepresentative => 'Representative';
+
+  @override
+  String get machineHeaderInspectedItem => 'Inspected item';
+
+  @override
+  String get machineHeaderStandards => 'Standards';
+
+  @override
+  String get machineHeaderLastExamination => 'Last examination';
+
+  @override
+  String get machineHeaderNextExamination => 'Next examination due';
+
+  @override
+  String get machineHeaderInspector => 'Inspector';
+
+  @override
+  String get machineChecklistYes => 'Yes';
+
+  @override
+  String get machineChecklistNo => 'No';
+
+  @override
+  String get machineChecklistNa => 'N/A';
+
+  @override
+  String get machineChecklistTitle => 'Checklist';
 }

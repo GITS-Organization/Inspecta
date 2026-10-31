@@ -59,7 +59,9 @@ class ReviewFooter extends StatelessWidget {
                   child: SizedBox(
                     height: 54,
                     child: OutlinedButton(
-                      onPressed: state.certificate == null || state.isBusy ? null : () => _return(context),
+                      onPressed: state.certificate == null || !state.canReview || state.isBusy
+                          ? null
+                          : () => _return(context),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColours.dangerText,
                         side: const BorderSide(color: AppColours.dangerBorder),

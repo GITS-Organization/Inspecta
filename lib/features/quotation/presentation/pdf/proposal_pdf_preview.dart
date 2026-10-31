@@ -33,6 +33,9 @@ String _jobTitle(UserRole role) => switch (role) {
   UserRole.technicalManager => 'Technical Manager',
   UserRole.inspector => 'Inspector',
   UserRole.admin => 'Administrator',
+  UserRole.finance => 'Finance',
+  UserRole.managingDirector => 'Managing Director',
+  UserRole.merchandiser => 'Merchandiser',
 };
 
 /// Opens the proposal in the full-screen preview. Emailing it to the client

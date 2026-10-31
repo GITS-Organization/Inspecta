@@ -4,9 +4,8 @@ import '../../../auth/presentation/pages/profile_page.dart';
 import '../../../inspector/presentation/pages/inspector_certificates_page.dart';
 import '../../../inspector/presentation/pages/inspector_tasks_page.dart';
 import '../../../inspector/presentation/widgets/inspector_bottom_nav.dart';
-import '../../../timesheet/presentation/pages/inspector_timesheet_page.dart';
 
-/// The inspector's shell: Tasks, Certificates and Timesheet are real tabs —
+/// The inspector's shell: Tasks and Certificates are real tabs —
 /// same in-place-swap shape as `CoordinatorRootPage`.
 class InspectorRootPage extends StatefulWidget {
   const InspectorRootPage({super.key});
@@ -33,7 +32,6 @@ class _InspectorRootPageState extends State<InspectorRootPage> {
   Widget _page(InspectorTab tab) => switch (tab) {
     InspectorTab.tasks => InspectorTasksPage(onOpenProfile: _openProfile),
     InspectorTab.certificates => InspectorCertificatesPage(onOpenProfile: _openProfile),
-    InspectorTab.timesheet => InspectorTimesheetPage(onOpenProfile: _openProfile),
     InspectorTab.profile => const ProfilePage(),
   };
 

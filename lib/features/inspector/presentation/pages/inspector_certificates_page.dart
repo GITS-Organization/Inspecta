@@ -11,6 +11,8 @@ import '../../../../core/shared/m_search_field.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/presentation/widgets/user_app_header.dart';
+import '../../../machines/presentation/pages/job_machines_page.dart';
+import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
 import '../bloc/certificates_list_cubit.dart';
@@ -74,6 +76,16 @@ class _InspectorCertificatesPageState extends State<InspectorCertificatesPage> {
 class _Body extends StatelessWidget {
   const _Body();
 
+  // Submitting a machine moves the job on, so the list reloads once the user
+  // is back from it.
+  Future<void> _open(BuildContext context, InspectionRequest request) async {
+    final cubit = context.read<CertificatesListCubit>();
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => JobMachinesPage(request: request)),
+    );
+    cubit.start();
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
@@ -91,14 +103,23 @@ class _Body extends StatelessWidget {
           return Center(child: Text(t.emptyCertificatesList, style: AppTextStyles.subtitle));
         }
 
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, AppLayout.bottomNavClearance),
-          itemCount: visible.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final request = visible[index];
-            return CertificateListCard(key: ValueKey(request.id), request: request);
-          },
+        return RefreshIndicator(
+          color: AppColours.primaryColor,
+          onRefresh: context.read<CertificatesListCubit>().start,
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, AppLayout.bottomNavClearance),
+            itemCount: visible.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final request = visible[index];
+              return CertificateListCard(
+                key: ValueKey(request.id),
+                request: request,
+                onOpen: () => _open(context, request),
+              );
+            },
+          ),
         );
       },
     );

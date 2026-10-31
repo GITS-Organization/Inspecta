@@ -500,6 +500,12 @@ abstract class AppLocalizations {
   /// **'Update'**
   String get updateAction;
 
+  /// No description provided for @addSignatureAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get addSignatureAction;
+
   /// No description provided for @signatureOnFileLabel.
   ///
   /// In en, this message translates to:
@@ -613,6 +619,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You\'re signed in and on the right screen. This list is built in a later feature.'**
   String get homeComingSoon;
+
+  /// No description provided for @roleFinance.
+  ///
+  /// In en, this message translates to:
+  /// **'Finance'**
+  String get roleFinance;
+
+  /// No description provided for @roleManagingDirector.
+  ///
+  /// In en, this message translates to:
+  /// **'Managing director'**
+  String get roleManagingDirector;
+
+  /// No description provided for @roleMerchandiser.
+  ///
+  /// In en, this message translates to:
+  /// **'Merchandiser'**
+  String get roleMerchandiser;
+
+  /// No description provided for @homeWms.
+  ///
+  /// In en, this message translates to:
+  /// **'WMS modules'**
+  String get homeWms;
+
+  /// No description provided for @wmsModuleInventory.
+  ///
+  /// In en, this message translates to:
+  /// **'Inventory'**
+  String get wmsModuleInventory;
+
+  /// No description provided for @wmsModuleReceiving.
+  ///
+  /// In en, this message translates to:
+  /// **'Receiving'**
+  String get wmsModuleReceiving;
+
+  /// No description provided for @wmsModulePicking.
+  ///
+  /// In en, this message translates to:
+  /// **'Picking'**
+  String get wmsModulePicking;
+
+  /// No description provided for @wmsModuleShipping.
+  ///
+  /// In en, this message translates to:
+  /// **'Shipping'**
+  String get wmsModuleShipping;
 
   /// No description provided for @justNow.
   ///
@@ -1477,6 +1531,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Re-quote'**
   String get actionRequote;
+
+  /// No description provided for @actionContinueDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get actionContinueDraft;
+
+  /// No description provided for @quoteMissingPrices.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing prices: {count}'**
+  String quoteMissingPrices(int count);
 
   /// No description provided for @reminderSent.
   ///
@@ -2588,6 +2654,66 @@ abstract class AppLocalizations {
   /// **'By {name} · {when}'**
   String byInspectorWhenLabel(String name, String when);
 
+  /// No description provided for @reviewJobSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review summary'**
+  String get reviewJobSummaryTitle;
+
+  /// No description provided for @equipmentToReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment to review'**
+  String get equipmentToReviewTitle;
+
+  /// No description provided for @reviewBlockersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t approve yet'**
+  String get reviewBlockersTitle;
+
+  /// No description provided for @reviewHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Earlier comments'**
+  String get reviewHistoryTitle;
+
+  /// No description provided for @resultSatisfactory.
+  ///
+  /// In en, this message translates to:
+  /// **'Satisfactory'**
+  String get resultSatisfactory;
+
+  /// No description provided for @resultUnsatisfactory.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsatisfactory'**
+  String get resultUnsatisfactory;
+
+  /// No description provided for @approveAllAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve all'**
+  String get approveAllAction;
+
+  /// No description provided for @rejectWithNotesAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject with notes'**
+  String get rejectWithNotesAction;
+
+  /// No description provided for @confirmApproveAllTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve all certificates?'**
+  String get confirmApproveAllTitle;
+
+  /// No description provided for @certificatesSubmittedProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{submitted} of {total} certificates submitted'**
+  String certificatesSubmittedProgress(int submitted, int total);
+
   /// No description provided for @todayAtTime.
   ///
   /// In en, this message translates to:
@@ -2783,7 +2909,7 @@ abstract class AppLocalizations {
   /// No description provided for @approveRequirementsHint.
   ///
   /// In en, this message translates to:
-  /// **'Add your signature to approve.'**
+  /// **'Add your signature in your Profile to approve certificates.'**
   String get approveRequirementsHint;
 
   /// No description provided for @confirmApproveTitle.
@@ -2845,6 +2971,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'To send'**
   String get statToSend;
+
+  /// No description provided for @statDelivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get statDelivered;
+
+  /// No description provided for @deliverCertificatesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificates to hand over'**
+  String get deliverCertificatesTitle;
+
+  /// No description provided for @emailPreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Email to the client'**
+  String get emailPreviewTitle;
+
+  /// No description provided for @deliverMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a message to the client (optional)'**
+  String get deliverMessageHint;
+
+  /// No description provided for @deliverNoEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The email isn\'t sent from the app yet: delivering marks the job as handed over.'**
+  String get deliverNoEmailHint;
+
+  /// No description provided for @certificateDeliveredNoEmailMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Job marked as delivered. The client email isn\'t sent automatically yet.'**
+  String get certificateDeliveredNoEmailMessage;
 
   /// No description provided for @sendToClientAction.
   ///
@@ -3391,6 +3553,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reply to request'**
   String get replyToRequestAction;
+
+  /// No description provided for @machinesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Machines'**
+  String get machinesTitle;
+
+  /// No description provided for @machinesProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{submitted} of {total} submitted'**
+  String machinesProgress(int submitted, int total);
+
+  /// No description provided for @machinesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No machines on this job.'**
+  String get machinesEmpty;
+
+  /// No description provided for @startInspectionAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Start inspection'**
+  String get startInspectionAction;
+
+  /// No description provided for @machineStatusNotStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Not started'**
+  String get machineStatusNotStarted;
+
+  /// No description provided for @machineStatusDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get machineStatusDraft;
+
+  /// No description provided for @machineStatusSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted'**
+  String get machineStatusSubmitted;
+
+  /// No description provided for @machineStatusReturned.
+  ///
+  /// In en, this message translates to:
+  /// **'Returned'**
+  String get machineStatusReturned;
+
+  /// No description provided for @machineStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get machineStatusApproved;
+
+  /// No description provided for @machineStatusDelivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get machineStatusDelivered;
+
+  /// No description provided for @machineChecklistProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{answered} of {total} checklist rows'**
+  String machineChecklistProgress(int answered, int total);
+
+  /// No description provided for @machineQuantityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'× {count}'**
+  String machineQuantityLabel(int count);
+
+  /// No description provided for @machineCertificateNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate no. {number}'**
+  String machineCertificateNumber(String number);
+
+  /// No description provided for @machineReviewNoteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewer\'s note'**
+  String get machineReviewNoteLabel;
+
+  /// No description provided for @machineMissingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Still missing before submitting'**
+  String get machineMissingLabel;
+
+  /// No description provided for @machineHeaderSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Examination details'**
+  String get machineHeaderSection;
+
+  /// No description provided for @machineFieldsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Machine information'**
+  String get machineFieldsSection;
+
+  /// No description provided for @machineNotesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get machineNotesSection;
+
+  /// No description provided for @machineHeaderClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get machineHeaderClient;
+
+  /// No description provided for @machineHeaderAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get machineHeaderAddress;
+
+  /// No description provided for @machineHeaderRepresentative.
+  ///
+  /// In en, this message translates to:
+  /// **'Representative'**
+  String get machineHeaderRepresentative;
+
+  /// No description provided for @machineHeaderInspectedItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspected item'**
+  String get machineHeaderInspectedItem;
+
+  /// No description provided for @machineHeaderStandards.
+  ///
+  /// In en, this message translates to:
+  /// **'Standards'**
+  String get machineHeaderStandards;
+
+  /// No description provided for @machineHeaderLastExamination.
+  ///
+  /// In en, this message translates to:
+  /// **'Last examination'**
+  String get machineHeaderLastExamination;
+
+  /// No description provided for @machineHeaderNextExamination.
+  ///
+  /// In en, this message translates to:
+  /// **'Next examination due'**
+  String get machineHeaderNextExamination;
+
+  /// No description provided for @machineHeaderInspector.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspector'**
+  String get machineHeaderInspector;
+
+  /// No description provided for @machineChecklistYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get machineChecklistYes;
+
+  /// No description provided for @machineChecklistNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get machineChecklistNo;
+
+  /// No description provided for @machineChecklistNa.
+  ///
+  /// In en, this message translates to:
+  /// **'N/A'**
+  String get machineChecklistNa;
+
+  /// No description provided for @machineChecklistTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Checklist'**
+  String get machineChecklistTitle;
 }
 
 class _AppLocalizationsDelegate

@@ -1,59 +1,58 @@
-import 'dart:async';
-
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/enums/job_status.dart';
+import '../../../certificate/domain/certificate_number.dart';
+import '../../../queue/domain/usecases/get_queue.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
-import '../../../certificate/domain/certificate_number.dart';
-import '../../../requests/domain/usecases/get_my_tasks.dart';
 
 part 'certificates_list_state.dart';
 
 /// Backs the inspector's Certificates tab (Feature 05): every job past
 /// intake that has (or needs) a certificate, bucketed into Action /
 /// Submitted / Sent / All, with a search box over client, equipment and
-/// the display cert number.
+/// the display cert number. The jobs come from the API's queue, which gives
+/// an inspector only their own.
 class CertificatesListCubit extends Cubit<CertificatesListState> {
   final String inspectorId;
-  final GetMyTasks _getMyTasks;
+  final GetQueue _getQueue;
 
-  StreamSubscription<List<InspectionRequest>>? _subscription;
+  /// Bumped per fetch so a slow, superseded response can't overwrite a newer
+  /// one.
+  int _fetch = 0;
 
-  CertificatesListCubit({required this.inspectorId, required GetMyTasks getMyTasks})
-    : _getMyTasks = getMyTasks,
+  CertificatesListCubit({required this.inspectorId, required GetQueue getQueue})
+    : _getQueue = getQueue,
       super(const CertificatesListState());
 
-  void start() {
-    if (_subscription != null) return;
-    _subscription = _getMyTasks(inspectorId).listen(
-      (requests) => emit(
-        state.copyWith(status: CertificatesListStatus.ready, requests: requests, clearFailure: true),
-      ),
-      onError: (Object error) => emit(
+  /// Loads the jobs — also the pull-to-refresh and the reload on return from
+  /// a job. A failed reload keeps the list already on screen; only a first
+  /// load shows the error.
+  Future<void> start() async {
+    final fetch = ++_fetch;
+    try {
+      final requests = await _getQueue();
+      if (isClosed || fetch != _fetch) return;
+      emit(state.copyWith(status: CertificatesListStatus.ready, requests: requests, clearFailure: true));
+    } catch (error) {
+      if (isClosed || fetch != _fetch) return;
+      if (state.status == CertificatesListStatus.ready) return;
+      emit(
         state.copyWith(
           status: CertificatesListStatus.error,
           failure: error is RequestsFailure ? error.code : RequestsFailureCode.unknown,
         ),
-      ),
-    );
+      );
+    }
   }
 
-  Future<void> retry() async {
-    await _subscription?.cancel();
-    _subscription = null;
+  Future<void> retry() {
     emit(state.copyWith(status: CertificatesListStatus.loading, clearFailure: true));
-    start();
+    return start();
   }
 
   void setQuery(String query) => emit(state.copyWith(query: query));
 
   void setFilter(CertificatesFilter filter) => emit(state.copyWith(filter: filter));
-
-  @override
-  Future<void> close() async {
-    await _subscription?.cancel();
-    return super.close();
-  }
 }

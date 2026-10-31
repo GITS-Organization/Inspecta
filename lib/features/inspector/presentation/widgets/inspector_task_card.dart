@@ -7,10 +7,9 @@ import '../../../../core/enums/job_status.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 
-/// One task card on the inspector's Tasks tab (Feature 05): a job that's
-/// [JobStatus.assigned] still needs an Accept/Decline response; one
-/// that's been accepted or started offers "Continue certificate" and a
-/// way to navigate to the site instead.
+/// One task card on the inspector's Tasks tab (Feature 05): the job's time,
+/// equipment and site, with "Continue certificate" and a way to navigate to
+/// the site.
 ///
 /// Today's tasks show just their time; [showDate] adds the day (upcoming and
 /// overdue ones), and a positive [overdueDays] flags how late it is.
@@ -18,20 +17,14 @@ class InspectorTaskCard extends StatelessWidget {
   final InspectionRequest task;
   final bool showDate;
   final int overdueDays;
-  final bool submitting;
-  final VoidCallback onAccept;
-  final VoidCallback onDecline;
   final VoidCallback onContinueCertificate;
   final VoidCallback onNavigate;
 
   const InspectorTaskCard({
     super.key,
     required this.task,
-    required this.submitting,
     this.showDate = false,
     this.overdueDays = 0,
-    required this.onAccept,
-    required this.onDecline,
     required this.onContinueCertificate,
     required this.onNavigate,
   });
@@ -41,7 +34,6 @@ class InspectorTaskCard extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).languageCode;
     final scheduledAt = task.scheduledAt;
-    final needsResponse = task.status == JobStatus.assigned;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -123,42 +115,7 @@ class InspectorTaskCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          if (needsResponse)
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 48,
-                    child: OutlinedButton(
-                      onPressed: submitting ? null : onDecline,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColours.dangerText,
-                        side: const BorderSide(color: AppColours.dangerBorder),
-                        textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 14, color: AppColours.dangerText),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      child: Text(t.declineAction),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: SizedBox(
-                    height: 48,
-                    child: FilledButton(
-                      onPressed: submitting ? null : onAccept,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColours.primaryColor,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      child: Text(t.acceptAction, style: AppTextStyles.buttonLabel.copyWith(fontSize: 14)),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          else
-            Row(
+          Row(
               children: [
                 SizedBox(
                   width: 48,
@@ -179,7 +136,7 @@ class InspectorTaskCard extends StatelessWidget {
                   child: SizedBox(
                     height: 48,
                     child: FilledButton(
-                      onPressed: submitting ? null : onContinueCertificate,
+                      onPressed: onContinueCertificate,
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColours.primaryColor,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -208,7 +165,7 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final (background, textColor, label) = switch (status) {
-      JobStatus.assigned => (AppColours.chipAmberBackground, AppColours.chipAmberText, t.needsResponseBadge),
+      JobStatus.assigned => (AppColours.chipAmberBackground, AppColours.chipAmberText, t.statusAssigned),
       JobStatus.taskAccepted => (AppColours.chipGreenBackground, AppColours.chipGreenText, t.taskAcceptedBadge),
       _ => (AppColours.chipBlueBackground, AppColours.chipBlueText, t.taskInProgressBadge),
     };

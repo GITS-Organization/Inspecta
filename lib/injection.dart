@@ -7,6 +7,7 @@ import 'core/networking/dio_factory.dart';
 import 'features/auth/data/datasources/auth_api_client_services.dart';
 import 'features/auth/data/datasources/auth_local_datasource.dart';
 import 'features/auth/data/datasources/auth_remote_datasource.dart';
+import 'features/auth/data/datasources/signature_local_datasource.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/repositories/auth_repository.dart';
 import 'features/auth/domain/usecases/get_current_user.dart';
@@ -16,19 +17,15 @@ import 'features/auth/domain/usecases/refresh_session.dart';
 import 'features/auth/domain/usecases/sign_out.dart';
 import 'features/auth/presentation/bloc/auth_cubit.dart';
 import 'features/auth/presentation/bloc/forgot_password_cubit.dart';
+import 'features/auth/presentation/bloc/my_signature_cubit.dart';
 import 'features/auth/presentation/bloc/profile_stats_cubit.dart';
 import 'features/auth/presentation/bloc/sign_in_cubit.dart';
 import 'features/certificate/data/datasources/certificate_remote_datasource.dart';
 import 'features/certificate/data/repositories/certificate_repository_impl.dart';
 import 'features/certificate/domain/repositories/certificate_repository.dart';
-import 'features/certificate/domain/usecases/approve_certificate.dart';
+import 'features/certificate/domain/machine_certificate_source.dart';
 import 'features/certificate/domain/usecases/send_certificate_to_client.dart';
-import 'features/certificate/domain/usecases/return_certificate.dart';
-import 'features/certificate/domain/usecases/save_certificate_draft.dart';
-import 'features/certificate/domain/usecases/submit_certificate.dart';
 import 'features/certificate/domain/usecases/watch_certificate.dart';
-import 'features/certificate/domain/usecases/watch_inspector_certificates.dart';
-import 'features/certificate/domain/usecases/watch_reviewed_certificates.dart';
 import 'features/certificate/presentation/bloc/certificate_cubit.dart';
 import 'features/coordinator/data/datasources/coordinator_api_client_services.dart';
 import 'features/coordinator/data/datasources/inspectors_remote_datasource.dart';
@@ -37,10 +34,27 @@ import 'features/coordinator/domain/repositories/coordinator_repository.dart';
 import 'features/coordinator/domain/usecases/get_inspectors.dart';
 import 'features/coordinator/domain/usecases/list_inspectors.dart';
 import 'features/coordinator/presentation/bloc/assign_inspector_cubit.dart';
+import 'features/machines/data/datasources/machines_api_client_services.dart';
+import 'features/machines/data/repositories/machines_repository_impl.dart';
+import 'features/machines/domain/repositories/machines_repository.dart';
+import 'features/machines/domain/usecases/approve_all_machines.dart';
+import 'features/machines/domain/usecases/deliver_to_client.dart';
+import 'features/machines/domain/usecases/get_delivery_preview.dart';
+import 'features/machines/domain/usecases/approve_machine.dart';
+import 'features/machines/domain/usecases/return_job_to_inspector.dart';
+import 'features/machines/domain/usecases/get_job_machines.dart';
+import 'features/machines/domain/usecases/get_machine_form.dart';
+import 'features/machines/domain/usecases/get_machine_pdf.dart';
+import 'features/machines/domain/usecases/return_machine.dart';
+import 'features/machines/domain/usecases/save_machine_form.dart';
+import 'features/machines/domain/usecases/submit_machine.dart';
+import 'features/machines/domain/usecases/start_job_inspection.dart';
+import 'features/machines/presentation/bloc/job_machines_cubit.dart';
 import 'features/queue/data/datasources/queue_api_client_services.dart';
 import 'features/queue/data/repositories/queue_repository_impl.dart';
 import 'features/queue/domain/repositories/queue_repository.dart';
-import 'features/queue/domain/usecases/get_coordinator_queue.dart';
+import 'features/queue/domain/usecases/get_queue.dart';
+import 'features/queue/domain/usecases/get_to_review.dart';
 import 'features/queue/presentation/bloc/coordinator_queue_cubit.dart';
 import 'features/coordinator/presentation/bloc/send_certificate_cubit.dart';
 import 'features/inspector/presentation/bloc/certificates_list_cubit.dart';
@@ -66,34 +80,17 @@ import 'features/requests/data/datasources/requests_remote_datasource.dart';
 import 'features/requests/data/repositories/requests_repository_impl.dart';
 import 'features/requests/domain/entities/inspection_request.dart';
 import 'features/requests/domain/repositories/requests_repository.dart';
-import 'features/requests/domain/usecases/accept_task.dart';
 import 'features/requests/domain/usecases/assign_inspector.dart';
 import 'features/requests/domain/usecases/complete_intake.dart';
-import 'features/requests/domain/usecases/decline_task.dart';
 import 'features/requests/domain/usecases/confirm_request.dart';
 import 'features/requests/domain/usecases/delete_request.dart';
 import 'features/requests/domain/usecases/get_triaged_requests.dart';
-import 'features/requests/domain/usecases/get_my_tasks.dart';
 import 'features/requests/domain/usecases/get_request_detail.dart';
 import 'features/requests/domain/usecases/get_requests.dart';
-import 'features/requests/domain/usecases/start_inspection.dart';
 import 'features/requests/presentation/bloc/requests_list_cubit.dart';
-import 'features/technical_manager/data/datasources/signature_remote_datasource.dart';
-import 'features/technical_manager/data/repositories/signature_repository_impl.dart';
-import 'features/technical_manager/domain/repositories/signature_repository.dart';
-import 'features/technical_manager/domain/usecases/save_signature.dart';
-import 'features/technical_manager/domain/usecases/watch_signature.dart';
-import 'features/technical_manager/presentation/bloc/my_signature_cubit.dart';
 import 'features/technical_manager/presentation/bloc/review_detail_cubit.dart';
 import 'features/technical_manager/presentation/bloc/review_queue_cubit.dart';
-import 'features/timesheet/data/datasources/timesheet_remote_datasource.dart';
-import 'features/timesheet/data/repositories/timesheet_repository_impl.dart';
-import 'features/timesheet/domain/repositories/timesheet_repository.dart';
-import 'features/timesheet/domain/usecases/save_hourly_rate.dart';
-import 'features/timesheet/domain/usecases/save_timesheet_entry.dart';
-import 'features/timesheet/domain/usecases/watch_hourly_rate.dart';
-import 'features/timesheet/domain/usecases/watch_timesheet.dart';
-import 'features/timesheet/presentation/bloc/timesheet_cubit.dart';
+import 'features/technical_manager/presentation/bloc/review_summary_cubit.dart';
 
 final getIt = GetIt.instance;
 
@@ -112,11 +109,11 @@ Future<void> setupDependencies() async {
   _registerQuotation();
   _registerCoordinator();
   _registerQueue();
-  _registerProfile();
+  _registerMachines();
+  _registerProfile(storage);
   _registerInspector();
   _registerCertificate();
   _registerTechnicalManager();
-  _registerTimesheet();
 }
 
 void _registerAuth(FlutterSecureStorage storage) {
@@ -153,10 +150,6 @@ void _registerRequests() {
     ..registerLazySingleton(() => GetRequestDetail(getIt()))
     ..registerLazySingleton(() => AssignInspector(getIt()))
     ..registerLazySingleton(() => CompleteIntake(getIt()))
-    ..registerLazySingleton(() => GetMyTasks(getIt()))
-    ..registerLazySingleton(() => AcceptTask(getIt()))
-    ..registerLazySingleton(() => DeclineTask(getIt()))
-    ..registerLazySingleton(() => StartInspection(getIt()))
     ..registerFactory(() => RequestsListCubit(getIt(), getIt(), getIt()));
 }
 
@@ -204,11 +197,37 @@ void _registerQuotation() {
     );
 }
 
+void _registerMachines() {
+  getIt
+    ..registerLazySingleton(() => MachinesApiClientServices(DioFactory.getDio()))
+    ..registerLazySingleton<MachinesRepository>(() => MachinesRepositoryImpl(getIt()))
+    ..registerLazySingleton(() => GetJobMachines(getIt()))
+    ..registerLazySingleton(() => GetMachineForm(getIt()))
+    ..registerLazySingleton(() => GetMachinePdf(getIt()))
+    ..registerLazySingleton(() => StartJobInspection(getIt()))
+    ..registerLazySingleton(() => SaveMachineForm(getIt()))
+    ..registerLazySingleton(() => SubmitMachine(getIt()))
+    ..registerLazySingleton(() => ApproveMachine(getIt()))
+    ..registerLazySingleton(() => ReturnMachine(getIt()))
+    ..registerLazySingleton(() => GetDeliveryPreview(getIt()))
+    ..registerLazySingleton(() => DeliverToClient(getIt()))
+    ..registerLazySingleton(() => ApproveAllMachines(getIt()))
+    ..registerLazySingleton(() => ReturnJobToInspector(getIt()))
+    ..registerFactoryParam<JobMachinesCubit, String, void>(
+      (requestId, _) => JobMachinesCubit(
+        requestId: requestId,
+        getMachines: getIt(),
+        startInspection: getIt(),
+      ),
+    );
+}
+
 void _registerQueue() {
   getIt
     ..registerLazySingleton(() => QueueApiClientServices(DioFactory.getDio()))
     ..registerLazySingleton<QueueRepository>(() => QueueRepositoryImpl(getIt()))
-    ..registerLazySingleton(() => GetCoordinatorQueue(getIt()))
+    ..registerLazySingleton(() => GetQueue(getIt()))
+    ..registerLazySingleton(() => GetToReview(getIt()))
     ..registerFactory(() => CoordinatorQueueCubit(getIt()));
 }
 
@@ -224,8 +243,9 @@ void _registerCoordinator() {
     ..registerFactoryParam<SendCertificateCubit, InspectionRequest, void>(
       (request, _) => SendCertificateCubit(
         request: request,
-        watchCertificate: getIt(),
-        sendCertificateToClient: getIt(),
+        getJobMachines: getIt(),
+        getDeliveryPreview: getIt(),
+        deliverToClient: getIt(),
       ),
     )
     ..registerFactoryParam<AssignInspectorCubit, InspectionRequest, String?>(
@@ -238,8 +258,13 @@ void _registerCoordinator() {
     );
 }
 
-void _registerProfile() {
-  getIt.registerFactory(() => ProfileStatsCubit(getIt(), getIt(), getIt(), getIt(), getIt()));
+void _registerProfile(FlutterSecureStorage storage) {
+  getIt
+    ..registerLazySingleton(() => SignatureLocalDataSource(storage))
+    ..registerFactory(() => ProfileStatsCubit(getIt(), getIt()))
+    ..registerFactoryParam<MySignatureCubit, String, void>(
+      (userId, _) => MySignatureCubit(getIt(), userId),
+    );
 }
 
 void _registerInspector() {
@@ -247,14 +272,11 @@ void _registerInspector() {
     ..registerFactory(
       () => InspectorTasksCubit(
         inspectorId: getIt<AuthCubit>().user!.id,
-        getMyTasks: getIt(),
-        acceptTask: getIt(),
-        declineTask: getIt(),
-        startInspection: getIt(),
+        getQueue: getIt(),
       ),
     )
     ..registerFactory(
-      () => CertificatesListCubit(inspectorId: getIt<AuthCubit>().user!.id, getMyTasks: getIt()),
+      () => CertificatesListCubit(inspectorId: getIt<AuthCubit>().user!.id, getQueue: getIt()),
     );
 }
 
@@ -265,62 +287,42 @@ void _registerCertificate() {
       () => CertificateRepositoryImpl(getIt(), getIt()),
     )
     ..registerLazySingleton(() => WatchCertificate(getIt()))
-    ..registerLazySingleton(() => WatchReviewedCertificates(getIt()))
-    ..registerLazySingleton(() => WatchInspectorCertificates(getIt()))
-    ..registerLazySingleton(() => SaveCertificateDraft(getIt()))
-    ..registerLazySingleton(() => SubmitCertificate(getIt()))
-    ..registerLazySingleton(() => ApproveCertificate(getIt()))
     ..registerLazySingleton(() => SendCertificateToClient(getIt()))
-    ..registerLazySingleton(() => ReturnCertificate(getIt()))
-    ..registerFactoryParam<CertificateCubit, InspectionRequest, void>(
-      (request, _) => CertificateCubit(
+    ..registerFactoryParam<CertificateCubit, InspectionRequest, String>(
+      (request, requestItemId) => CertificateCubit(
         request: request,
-        inspector: getIt<AuthCubit>().user,
-        watchCertificate: getIt(),
-        saveDraft: getIt(),
-        submitCertificate: getIt(),
+        machine: MachineCertificateSource(
+          requestItemId: requestItemId,
+          getForm: getIt(),
+          saveForm: getIt(),
+          submit: getIt(),
+        ),
       ),
     );
 }
 
 void _registerTechnicalManager() {
   getIt
-    ..registerLazySingleton(SignatureRemoteDataSource.new)
-    ..registerLazySingleton<SignatureRepository>(() => SignatureRepositoryImpl(getIt()))
-    ..registerLazySingleton(() => WatchSignature(getIt()))
-    ..registerLazySingleton(() => SaveSignature(getIt()))
-    ..registerFactory(() => MySignatureCubit(getIt(), getIt()))
-    ..registerFactory(() => ReviewQueueCubit(getIt(), getIt(), getIt()))
-    ..registerFactoryParam<ReviewDetailCubit, InspectionRequest, String>(
-      (request, reviewerName) => ReviewDetailCubit(
+    ..registerFactory(() => ReviewQueueCubit(getIt(), getIt()))
+    ..registerFactoryParam<ReviewSummaryCubit, InspectionRequest, void>(
+      (request, _) => ReviewSummaryCubit(
         request: request,
-        reviewerName: reviewerName,
-        managerId: getIt<AuthCubit>().user?.id ?? '',
-        watchCertificate: getIt(),
-        approveCertificate: getIt(),
-        returnCertificate: getIt(),
-        watchSignature: getIt(),
-        saveSignature: getIt(),
+        userId: getIt<AuthCubit>().user?.id ?? '',
+        getToReview: getIt(),
+        getJobMachines: getIt(),
+        approveAllMachines: getIt(),
+        returnJobToInspector: getIt(),
+        signatures: getIt(),
       ),
-    );
-}
-
-void _registerTimesheet() {
-  getIt
-    ..registerLazySingleton(TimesheetRemoteDataSource.new)
-    ..registerLazySingleton<TimesheetRepository>(() => TimesheetRepositoryImpl(getIt()))
-    ..registerLazySingleton(() => WatchTimesheet(getIt()))
-    ..registerLazySingleton(() => SaveTimesheetEntry(getIt()))
-    ..registerLazySingleton(() => WatchHourlyRate(getIt()))
-    ..registerLazySingleton(() => SaveHourlyRate(getIt()))
-    ..registerFactory(
-      () => TimesheetCubit(
-        inspectorId: getIt<AuthCubit>().user!.id,
-        getMyTasks: getIt(),
-        watchTimesheet: getIt(),
-        watchHourlyRate: getIt(),
-        saveEntry: getIt(),
-        saveHourlyRate: getIt(),
+    )
+    ..registerFactoryParam<ReviewDetailCubit, InspectionRequest, String>(
+      (request, requestItemId) => ReviewDetailCubit(
+        request: request,
+        requestItemId: requestItemId,
+        reviewerName: getIt<AuthCubit>().user?.name ?? '',
+        getMachineForm: getIt(),
+        approveMachine: getIt(),
+        returnMachine: getIt(),
       ),
     );
 }

@@ -7,9 +7,9 @@ import '../../../../core/consts/app_layout.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/shared/loading.dart';
 import '../../../../core/shared/m_notice.dart';
-import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../certificate/presentation/pages/certificate_view_page.dart';
+import '../../../machines/presentation/pages/job_machines_page.dart';
+import 'review_summary_page.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
@@ -18,10 +18,11 @@ import '../widgets/returned_certificate_row.dart';
 import '../widgets/review_certificate_card.dart';
 import '../widgets/review_header.dart';
 import '../widgets/review_stat_tiles.dart';
-import 'certificate_review_page.dart';
 
 /// Feature 06's Review tab: certificates waiting for the technical
-/// manager's signature, followed by the ones they sent back.
+/// manager's signature, followed by the ones they sent back. Reads the
+/// [ReviewQueueCubit] the technical manager's shell provides, shared with the
+/// Sent tab so the queue is fetched once.
 class ReviewQueuePage extends StatelessWidget {
   final VoidCallback onOpenProfile;
 
@@ -30,28 +31,25 @@ class ReviewQueuePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    return BlocProvider(
-      create: (_) => getIt<ReviewQueueCubit>()..start(),
-      child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark,
-        child: Scaffold(
-          backgroundColor: AppColours.background,
-          body: Column(
-            children: [
-              ReviewHeader(
-                title: t.reviewQueueTitle,
-                onOpenProfile: onOpenProfile,
-                child: BlocBuilder<ReviewQueueCubit, ReviewQueueState>(
-                  builder: (context, state) => ReviewStatTiles(
-                    toReview: state.toReview.length,
-                    returned: state.returned.length,
-                    sent: state.sent.length,
-                  ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColours.background,
+        body: Column(
+          children: [
+            ReviewHeader(
+              title: t.reviewQueueTitle,
+              onOpenProfile: onOpenProfile,
+              child: BlocBuilder<ReviewQueueCubit, ReviewQueueState>(
+                builder: (context, state) => ReviewStatTiles(
+                  toReview: state.toReview.length,
+                  returned: state.returned.length,
+                  sent: state.sent.length,
                 ),
               ),
-              const Expanded(child: _Body()),
-            ],
-          ),
+            ),
+            const Expanded(child: _Body()),
+          ],
         ),
       ),
     );
@@ -61,18 +59,21 @@ class ReviewQueuePage extends StatelessWidget {
 class _Body extends StatelessWidget {
   const _Body();
 
-  void _review(BuildContext context, InspectionRequest request, String? inspectorName) {
-    Navigator.of(context).push(
+  // Opens the job's machines, where each one is reviewed. The queue is
+  // fetched, not streamed, so it reloads once the user is back from a review
+  // that may have approved or returned a certificate.
+  //
+  // A job waiting on a signature opens its review summary (every machine, with
+  // approve-all / reject-all); a returned one still goes through the machines
+  // list.
+  Future<void> _open(BuildContext context, InspectionRequest request, {bool summary = false}) async {
+    final cubit = context.read<ReviewQueueCubit>();
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => CertificateReviewPage(request: request, inspectorName: inspectorName),
+        builder: (_) => summary ? ReviewSummaryPage(request: request) : JobMachinesPage(request: request),
       ),
     );
-  }
-
-  void _view(BuildContext context, InspectionRequest request) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => CertificateViewPage(request: request)),
-    );
+    cubit.start();
   }
 
   @override
@@ -107,7 +108,7 @@ class _Body extends StatelessWidget {
                 key: ValueKey(request.id),
                 request: request,
                 inspectorName: state.inspectorName(request),
-                onOpen: () => _review(context, request, state.inspectorName(request)),
+                onOpen: () => _open(context, request, summary: true),
               ),
               const SizedBox(height: 12),
             ],
@@ -115,7 +116,7 @@ class _Body extends StatelessWidget {
               ReturnedCertificateRow(
                 key: ValueKey('returned-${request.id}'),
                 request: request,
-                onOpen: () => _view(context, request),
+                onOpen: () => _open(context, request),
               ),
               const SizedBox(height: 12),
             ],

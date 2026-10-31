@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../../core/widgets/app_bottom_nav.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// The four tabs on the inspector's shell.
-enum InspectorTab { tasks, certificates, timesheet, profile }
+/// The three tabs on the inspector's shell.
+enum InspectorTab { tasks, certificates, profile }
 
-/// Tasks / Certificates / Timesheet / Profile.
+/// Tasks / Certificates / Profile.
 class InspectorBottomNav extends StatelessWidget {
   final InspectorTab selected;
   final ValueChanged<InspectorTab> onSelectTab;
@@ -22,7 +22,6 @@ class InspectorBottomNav extends StatelessWidget {
       items: [
         AppNavItem(icon: Icons.task_alt_rounded, label: t.navTasks),
         AppNavItem(icon: Icons.workspace_premium_rounded, label: t.navCertificates),
-        AppNavItem(icon: Icons.timer_rounded, label: t.navTimesheet),
         AppNavItem(icon: Icons.person_rounded, label: t.profile),
       ],
     );

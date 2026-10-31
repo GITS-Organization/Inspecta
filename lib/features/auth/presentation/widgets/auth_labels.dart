@@ -21,6 +21,9 @@ extension UserRoleLabels on UserRole {
     UserRole.inspector => t.roleInspector,
     UserRole.technicalManager => t.roleTechnicalManager,
     UserRole.admin => t.roleAdmin,
+    UserRole.finance => t.roleFinance,
+    UserRole.managingDirector => t.roleManagingDirector,
+    UserRole.merchandiser => t.roleMerchandiser,
   };
 
   /// Title of the role's home screen (BR-01.2).
@@ -29,5 +32,8 @@ extension UserRoleLabels on UserRole {
     UserRole.inspector => t.homeInspector,
     UserRole.technicalManager => t.homeTechnicalManager,
     UserRole.admin => t.homeAdmin,
+    UserRole.finance ||
+    UserRole.managingDirector ||
+    UserRole.merchandiser => t.homeWms,
   };
 }

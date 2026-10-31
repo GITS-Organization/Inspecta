@@ -28,6 +28,7 @@ class QuotationModel {
   final String createdBy;
   final DateTime createdAt;
   final int totalUnits;
+  final int missingPrices;
   final String? clientResponseOutcome;
   final int? clientCounterPricePiastres;
   final String? clientResponseNote;
@@ -46,6 +47,7 @@ class QuotationModel {
     this.version,
     this.location = '',
     this.totalUnits = 0,
+    this.missingPrices = 0,
     this.type,
     this.subtotalPiastres,
     this.totalPiastres,
@@ -162,6 +164,7 @@ class QuotationModel {
       location: json['location'] as String? ?? '',
       version: (json['version'] as num?)?.toInt(),
       totalUnits: (json['totalUnits'] as num?)?.toInt() ?? 0,
+      missingPrices: (json['missingPrices'] as num?)?.toInt() ?? 0,
       type: ReplyType.offer.value,
       items: const [],
       subtotalPiastres: amount,
@@ -203,6 +206,7 @@ class QuotationModel {
       location: location,
       version: version,
       totalUnits: totalUnits,
+      missingPrices: missingPrices,
       type: replyType,
       items: items.map((item) => item.toEntity()).toList(),
       subtotalPiastres: subtotalPiastres,

@@ -218,6 +218,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get updateAction => 'تحديث';
 
   @override
+  String get addSignatureAction => 'إضافة';
+
+  @override
   String get signatureOnFileLabel => 'التوقيع مسجّل';
 
   @override
@@ -278,6 +281,30 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get homeComingSoon =>
       'لقد سجلت الدخول وأنت في الشاشة الصحيحة. سيتم بناء هذه القائمة في ميزة لاحقة.';
+
+  @override
+  String get roleFinance => 'المالية';
+
+  @override
+  String get roleManagingDirector => 'المدير العام';
+
+  @override
+  String get roleMerchandiser => 'منسق البضائع';
+
+  @override
+  String get homeWms => 'وحدات إدارة المستودعات';
+
+  @override
+  String get wmsModuleInventory => 'المخزون';
+
+  @override
+  String get wmsModuleReceiving => 'الاستلام';
+
+  @override
+  String get wmsModulePicking => 'التجهيز';
+
+  @override
+  String get wmsModuleShipping => 'الشحن';
 
   @override
   String get justNow => 'الآن';
@@ -798,6 +825,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get actionRequote => 'إعادة التسعير';
+
+  @override
+  String get actionContinueDraft => 'متابعة';
+
+  @override
+  String quoteMissingPrices(int count) {
+    return 'أسعار ناقصة: $count';
+  }
 
   @override
   String get reminderSent => 'تم تسجيل التذكير.';
@@ -1409,6 +1444,38 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get reviewJobSummaryTitle => 'ملخص المراجعة';
+
+  @override
+  String get equipmentToReviewTitle => 'المعدات المطلوب مراجعتها';
+
+  @override
+  String get reviewBlockersTitle => 'لا يمكن الاعتماد بعد';
+
+  @override
+  String get reviewHistoryTitle => 'ملاحظات سابقة';
+
+  @override
+  String get resultSatisfactory => 'مرضٍ';
+
+  @override
+  String get resultUnsatisfactory => 'غير مرضٍ';
+
+  @override
+  String get approveAllAction => 'اعتماد الكل';
+
+  @override
+  String get rejectWithNotesAction => 'رفض مع ملاحظات';
+
+  @override
+  String get confirmApproveAllTitle => 'اعتماد جميع الشهادات؟';
+
+  @override
+  String certificatesSubmittedProgress(int submitted, int total) {
+    return 'تم تقديم $submitted من $total شهادات';
+  }
+
+  @override
   String todayAtTime(String time) {
     return 'اليوم $time';
   }
@@ -1513,7 +1580,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get approveAndSendAction => 'اعتماد الشهادة';
 
   @override
-  String get approveRequirementsHint => 'أضف توقيعك للاعتماد.';
+  String get approveRequirementsHint =>
+      'أضف توقيعك من ملفك الشخصي لاعتماد الشهادات.';
 
   @override
   String get confirmApproveTitle => 'اعتماد هذه الشهادة؟';
@@ -1547,6 +1615,26 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get statToSend => 'للإرسال';
+
+  @override
+  String get statDelivered => 'تم التسليم';
+
+  @override
+  String get deliverCertificatesTitle => 'الشهادات المطلوب تسليمها';
+
+  @override
+  String get emailPreviewTitle => 'البريد المرسل إلى العميل';
+
+  @override
+  String get deliverMessageHint => 'أضف رسالة إلى العميل (اختياري)';
+
+  @override
+  String get deliverNoEmailHint =>
+      'لا يُرسل البريد من التطبيق بعد: التسليم يسجّل المهمة كمُسلَّمة.';
+
+  @override
+  String get certificateDeliveredNoEmailMessage =>
+      'تم تسجيل المهمة كمُسلَّمة. لا يُرسل البريد إلى العميل تلقائيًا بعد.';
 
   @override
   String get sendToClientAction => 'إرسال للعميل';
@@ -1855,4 +1943,102 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get replyToRequestAction => 'الرد على الطلب';
+
+  @override
+  String get machinesTitle => 'الماكينات';
+
+  @override
+  String machinesProgress(int submitted, int total) {
+    return 'تم تسليم $submitted من $total';
+  }
+
+  @override
+  String get machinesEmpty => 'لا توجد ماكينات في هذه المهمة.';
+
+  @override
+  String get startInspectionAction => 'بدء الفحص';
+
+  @override
+  String get machineStatusNotStarted => 'لم يبدأ';
+
+  @override
+  String get machineStatusDraft => 'مسودة';
+
+  @override
+  String get machineStatusSubmitted => 'قيد المراجعة';
+
+  @override
+  String get machineStatusReturned => 'معادة للتعديل';
+
+  @override
+  String get machineStatusApproved => 'معتمدة';
+
+  @override
+  String get machineStatusDelivered => 'تم التسليم';
+
+  @override
+  String machineChecklistProgress(int answered, int total) {
+    return '$answered من $total بنود';
+  }
+
+  @override
+  String machineQuantityLabel(int count) {
+    return '× $count';
+  }
+
+  @override
+  String machineCertificateNumber(String number) {
+    return 'رقم الشهادة $number';
+  }
+
+  @override
+  String get machineReviewNoteLabel => 'ملاحظة المراجع';
+
+  @override
+  String get machineMissingLabel => 'مطلوب قبل التسليم';
+
+  @override
+  String get machineHeaderSection => 'تفاصيل الفحص';
+
+  @override
+  String get machineFieldsSection => 'بيانات الماكينة';
+
+  @override
+  String get machineNotesSection => 'ملاحظات';
+
+  @override
+  String get machineHeaderClient => 'العميل';
+
+  @override
+  String get machineHeaderAddress => 'العنوان';
+
+  @override
+  String get machineHeaderRepresentative => 'ممثل العميل';
+
+  @override
+  String get machineHeaderInspectedItem => 'الصنف المفحوص';
+
+  @override
+  String get machineHeaderStandards => 'المعايير';
+
+  @override
+  String get machineHeaderLastExamination => 'آخر فحص';
+
+  @override
+  String get machineHeaderNextExamination => 'موعد الفحص القادم';
+
+  @override
+  String get machineHeaderInspector => 'المفتش';
+
+  @override
+  String get machineChecklistYes => 'نعم';
+
+  @override
+  String get machineChecklistNo => 'لا';
+
+  @override
+  String get machineChecklistNa => 'لا ينطبق';
+
+  @override
+  String get machineChecklistTitle => 'قائمة الفحص';
 }

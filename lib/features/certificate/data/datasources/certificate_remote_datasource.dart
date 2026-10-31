@@ -23,46 +23,6 @@ class CertificateRemoteDataSource {
     });
   }
 
-  /// One inspector's certificates — matches firestore.rules' read condition
-  /// `resource.data.inspectorId == request.auth.uid`, which only a query with
-  /// this filter satisfies.
-  Stream<List<CertificateModel>> watchInspectorCertificates(String inspectorId) {
-    return _firestore
-        .collection(collection)
-        .where('inspectorId', isEqualTo: inspectorId)
-        .snapshots()
-        .map((snapshot) => [for (final doc in snapshot.docs) CertificateModel.fromJson(doc.id, doc.data())]);
-  }
-
-  /// Certificates whose latest review (`reviewedAt`, server-stamped on both
-  /// an approval and a send-back) is at or after [since].
-  Stream<List<CertificateModel>> watchReviewedSince(DateTime since) {
-    return _firestore
-        .collection(collection)
-        .where('reviewedAt', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
-        .snapshots()
-        .map((snapshot) => [for (final doc in snapshot.docs) CertificateModel.fromJson(doc.id, doc.data())]);
-  }
-
-  Future<void> save(CertificateModel model) =>
-      _doc(model.requestId).set(model.toJson(), SetOptions(merge: true));
-
-  /// Same fields as [save], plus a server-stamped `submittedAt` — used
-  /// only when the inspector actually submits (or resubmits), never on a
-  /// regular autosave.
-  Future<void> submit(CertificateModel model) => _doc(model.requestId).set({
-    ...model.toJson(),
-    'submittedAt': FieldValue.serverTimestamp(),
-  }, SetOptions(merge: true));
-
-  /// Feature 06: a technical manager's review — only the review fields,
-  /// plus a server-stamped `reviewedAt`, matching the paired
-  /// firestore.rules check.
-  Future<void> saveReview(CertificateModel model) => _doc(model.requestId).set({
-    ...model.toReviewJson(),
-    'reviewedAt': FieldValue.serverTimestamp(),
-  }, SetOptions(merge: true));
-
   /// The coordinator sending an approved certificate on: just who it went to.
   Future<void> saveSentTo(String requestId, String email) =>
       _doc(requestId).set({'sentTo': email}, SetOptions(merge: true));

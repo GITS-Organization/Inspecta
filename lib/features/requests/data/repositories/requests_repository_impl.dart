@@ -77,14 +77,6 @@ class RequestsRepositoryImpl implements RequestsRepository {
   }
 
   @override
-  Stream<List<InspectionRequest>> watchAssignedRequests(String inspectorId) {
-    return _remote
-        .watchAssignedRequests(inspectorId)
-        .map(_entities)
-        .handleError((Object error) => throw _mapError(error));
-  }
-
-  @override
   Future<InspectionRequest?> getById(String id) async {
     final result = await _safeApi(
       () async => InspectionRequestModel.fromApiJson(
@@ -106,15 +98,6 @@ class RequestsRepositoryImpl implements RequestsRepository {
   }) async {
     try {
       await _remote.updateStatus(requestId, status, note: note);
-    } catch (e) {
-      throw _mapError(e);
-    }
-  }
-
-  @override
-  Future<void> markCertificateSubmitted(String requestId) async {
-    try {
-      await _remote.markCertificateSubmitted(requestId);
     } catch (e) {
       throw _mapError(e);
     }
@@ -149,18 +132,6 @@ class RequestsRepositoryImpl implements RequestsRepository {
       ),
     );
     result.fold((_) {}, (f) => throw _mapError(f));
-  }
-
-  @override
-  Future<void> declineAssignment({
-    required String requestId,
-    String? reason,
-  }) async {
-    try {
-      await _remote.declineAssignment(requestId, reason: reason);
-    } catch (e) {
-      throw _mapError(e);
-    }
   }
 
   @override

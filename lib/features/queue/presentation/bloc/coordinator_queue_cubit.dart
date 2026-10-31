@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
-import '../../domain/usecases/get_coordinator_queue.dart';
+import '../../domain/usecases/get_queue.dart';
 import '../../domain/entities/queue_filter.dart';
 
 part 'coordinator_queue_state.dart';
@@ -12,7 +12,7 @@ part 'coordinator_queue_state.dart';
 /// accepted — waiting on an inspector, scheduled/running, or approved and
 /// waiting to be sent to the client.
 class CoordinatorQueueCubit extends Cubit<CoordinatorQueueState> {
-  final GetCoordinatorQueue _getQueue;
+  final GetQueue _getQueue;
 
   /// Bumped per fetch so a slow, superseded response can't overwrite a newer
   /// one.
@@ -26,12 +26,23 @@ class CoordinatorQueueCubit extends Cubit<CoordinatorQueueState> {
   Future<void> start() async {
     final fetch = ++_fetch;
     try {
-      final requests = await _getQueue();
+      // The whole queue, plus the two hand-over lists by name: the approved
+      // jobs waiting to be delivered and the ones already delivered. The
+      // delivered list is a courtesy, so its failure doesn't fail the queue.
+      final lists = await Future.wait([
+        _getQueue(),
+        _getQueue(status: 'approved'),
+        _getQueue(status: 'delivered').catchError((_) => <InspectionRequest>[]),
+      ]);
       if (isClosed || fetch != _fetch) return;
+
+      final approvedIds = {for (final r in lists[1]) r.id};
       emit(
         state.copyWith(
           status: CoordinatorQueueStatus.ready,
-          requests: requests,
+          // The approved list is authoritative for the jobs in it.
+          requests: [...lists[0].where((r) => !approvedIds.contains(r.id)), ...lists[1]],
+          delivered: lists[2],
           clearFailure: true,
         ),
       );

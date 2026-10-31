@@ -7,6 +7,7 @@ extension CertificateFailureMessage on CertificateFailureCode {
   String message(AppLocalizations t) => switch (this) {
     CertificateFailureCode.permissionDenied => t.actionPermissionDenied,
     CertificateFailureCode.network => t.errorNetwork,
+    CertificateFailureCode.incomplete => t.machineMissingLabel,
     CertificateFailureCode.unknown => t.actionFailed,
   };
 }

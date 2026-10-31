@@ -35,10 +35,9 @@ class RequestsListCubit extends Cubit<RequestsListState> {
   RequestsListCubit(this._getTriagedRequests,
       this._confirmRequest,
       this._deleteRequest, {
-        Duration searchDelay = const Duration(milliseconds: 400),
+        this._searchDelay = const Duration(milliseconds: 400),
       })
-      : _searchDelay = searchDelay,
-        super(const RequestsListState());
+      : super(const RequestsListState());
 
   /// Loads the tab being shown. Safe to call more than once.
   Future<void> start() async {

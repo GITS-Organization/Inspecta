@@ -5,6 +5,25 @@ import 'request_item.dart';
 import 'request_source.dart';
 import 'requests_tab.dart';
 
+/// How many of a job's machine certificates are at each stage, as the
+/// queue rows report them.
+class CertificateCounts extends Equatable {
+  final int total;
+  final int submitted;
+  final int approved;
+  final int delivered;
+
+  const CertificateCounts({
+    this.total = 0,
+    this.submitted = 0,
+    this.approved = 0,
+    this.delivered = 0,
+  });
+
+  @override
+  List<Object?> get props => [total, submitted, approved, delivered];
+}
+
 /// The `Job` at its request/quotation stage (00-overview.md §7). One record
 /// per client email thread (BR-02.1, BR-02.2), or logged manually
 /// (US-02.5).
@@ -54,6 +73,10 @@ class InspectionRequest extends Equatable {
   /// that didn't come from the API.
   final DateTime? updatedAt;
 
+  /// Per-stage counts of the job's machine certificates; only the queue rows
+  /// carry them.
+  final CertificateCounts? certificates;
+
   const InspectionRequest({
     required this.id,
     required this.source,
@@ -77,6 +100,7 @@ class InspectionRequest extends Equatable {
     this.assignmentNote,
     this.certificateSubmittedAt,
     this.updatedAt,
+    this.certificates,
   });
 
   bool get isNew => RequestsTabX.isNew(status);
@@ -105,6 +129,9 @@ class InspectionRequest extends Equatable {
   /// The technical manager has approved and signed the certificate and it is
   /// back with the coordinator to send to the client.
   bool get isAwaitingSend => status == JobStatus.certificateApproved;
+
+  /// The coordinator has handed the certificates to the client.
+  bool get isDelivered => status == JobStatus.sentToClient;
 
   /// Card title: the first item's equipment, e.g. "Overhead crane — 10 t".
   /// A request always has at least one item once past intake, but a
@@ -152,5 +179,6 @@ class InspectionRequest extends Equatable {
     assignmentNote,
     certificateSubmittedAt,
     updatedAt,
+    certificates,
   ];
 }

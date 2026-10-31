@@ -8,6 +8,7 @@ import '../../features/home/presentation/pages/coordinator_root_page.dart';
 import '../../features/home/presentation/pages/inspector_root_page.dart';
 import '../../features/home/presentation/pages/role_home_page.dart';
 import '../../features/home/presentation/pages/technical_manager_root_page.dart';
+import '../../features/home/presentation/pages/wms_root_page.dart';
 import '../../features/splash/presentation/views/splash_screen.dart';
 
 /// Root route: splash (with a "Start" button once the session is known)
@@ -62,6 +63,9 @@ class _AuthGateState extends State<AuthGate> {
               UserRole.coordinator => const CoordinatorRootPage(),
               UserRole.inspector => const InspectorRootPage(),
               UserRole.technicalManager => const TechnicalManagerRootPage(),
+              UserRole.finance ||
+              UserRole.managingDirector ||
+              UserRole.merchandiser => const WmsRootPage(),
               _ => const RoleHomePage(),
             },
           ),

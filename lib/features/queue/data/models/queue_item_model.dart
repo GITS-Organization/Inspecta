@@ -16,6 +16,7 @@ class QueueItemModel {
   final DateTime? scheduledAt;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final CertificateCounts? certificates;
 
   const QueueItemModel({
     required this.requestId,
@@ -28,6 +29,7 @@ class QueueItemModel {
     this.scheduledAt,
     this.createdAt,
     this.updatedAt,
+    this.certificates,
   });
 
   factory QueueItemModel.fromApiJson(Map<String, dynamic> json) {
@@ -36,6 +38,9 @@ class QueueItemModel {
       return value is String ? DateTime.tryParse(value) : null;
     }
 
+    int count(Map<String, dynamic> map, String key) => (map[key] as num?)?.toInt() ?? 0;
+
+    final certs = json['certificates'];
     return QueueItemModel(
       requestId: json['requestId'] as String,
       clientName: json['clientName'] as String? ?? '',
@@ -47,6 +52,14 @@ class QueueItemModel {
       scheduledAt: date('scheduledAt'),
       createdAt: date('createdAt'),
       updatedAt: date('updatedAt'),
+      certificates: certs is Map<String, dynamic>
+          ? CertificateCounts(
+              total: count(certs, 'total'),
+              submitted: count(certs, 'submitted'),
+              approved: count(certs, 'approved'),
+              delivered: count(certs, 'delivered'),
+            )
+          : null,
     );
   }
 
@@ -67,6 +80,7 @@ class QueueItemModel {
       inspectorName: inspectorName,
       scheduledAt: scheduledAt,
       updatedAt: updatedAt,
+      certificates: certificates,
     );
   }
 }

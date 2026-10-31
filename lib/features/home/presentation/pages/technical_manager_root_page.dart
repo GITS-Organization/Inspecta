@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../injection.dart';
 import '../../../auth/presentation/pages/profile_page.dart';
+import '../../../requests/domain/entities/inspection_request.dart';
+import '../../../technical_manager/presentation/bloc/review_queue_cubit.dart';
 import '../../../technical_manager/presentation/pages/review_queue_page.dart';
 import '../../../technical_manager/presentation/pages/sent_certificates_page.dart';
 import '../../../technical_manager/presentation/widgets/review_bottom_nav.dart';
@@ -35,22 +39,36 @@ class _TechnicalManagerRootPageState extends State<TechnicalManagerRootPage> {
     TechnicalManagerTab.sent => SentCertificatesPage(
       onOpenProfile: _openProfile,
     ),
-    TechnicalManagerTab.profile => const ProfilePage(),
+    TechnicalManagerTab.profile => Builder(
+      builder: (context) => ProfilePage(certifyQueue: _certifyQueue(context.read<ReviewQueueCubit>())),
+    ),
   };
+
+  /// The shell's queue as the Profile's stats read it: what is loaded now,
+  /// then every change.
+  Stream<List<InspectionRequest>> _certifyQueue(ReviewQueueCubit queue) async* {
+    yield queue.state.requests;
+    yield* queue.stream.map((state) => state.requests);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _tab.index,
-        children: [
-          for (final tab in TechnicalManagerTab.values)
-            _opened.contains(tab) ? _page(tab) : const SizedBox.shrink(),
-        ],
-      ),
-      bottomNavigationBar: ReviewBottomNav(
-        selected: _tab,
-        onSelectTab: _select,
+    // One queue for the shell: the Review and Sent tabs (and the Profile's
+    // counts) read the same `status=certify` list instead of each fetching it.
+    return BlocProvider(
+      create: (_) => getIt<ReviewQueueCubit>()..start(),
+      child: Scaffold(
+        body: IndexedStack(
+          index: _tab.index,
+          children: [
+            for (final tab in TechnicalManagerTab.values)
+              _opened.contains(tab) ? _page(tab) : const SizedBox.shrink(),
+          ],
+        ),
+        bottomNavigationBar: ReviewBottomNav(
+          selected: _tab,
+          onSelectTab: _select,
+        ),
       ),
     );
   }

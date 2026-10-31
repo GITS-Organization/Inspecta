@@ -16,9 +16,29 @@ class QueueRepositoryImpl implements QueueRepository {
   const QueueRepositoryImpl(this._api);
 
   @override
-  Future<List<InspectionRequest>> list({String? managerId, int page = 1, int pageSize = 50}) async {
+  Future<List<InspectionRequest>> list({
+    String? managerId,
+    String? status,
+    String? query,
+    int page = 1,
+    int pageSize = 50,
+  }) async {
+    return _load(() => _api.getQueue(managerId, status, query, page, pageSize));
+  }
+
+  @override
+  Future<List<InspectionRequest>> toReview({
+    String? managerId,
+    String? inspectorId,
+    int page = 1,
+    int pageSize = 50,
+  }) {
+    return _load(() => _api.getToReview(managerId, inspectorId, page, pageSize));
+  }
+
+  Future<List<InspectionRequest>> _load(Future<dynamic> Function() fetch) async {
     final result = await _safeApi(() async {
-      final rows = await _api.getQueue(managerId, page, pageSize);
+      final rows = await fetch();
       return [
         for (final json in (rows as List).whereType<Map<String, dynamic>>())
           QueueItemModel.fromApiJson(json),

@@ -34,7 +34,8 @@ class AssignmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tappable = request.isReadyToAssign || request.isAwaitingSend;
+    // A delivered job opens the same screen as one to send, read-only.
+    final tappable = request.isReadyToAssign || request.isAwaitingSend || request.isDelivered;
     final content = Padding(
       padding: const EdgeInsets.all(20),
       child: request.isReadyToAssign

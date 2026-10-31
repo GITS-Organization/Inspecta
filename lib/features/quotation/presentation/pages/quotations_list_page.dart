@@ -6,6 +6,7 @@ import 'package:skeletonizer/skeletonizer.dart';
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_layout.dart';
 import '../../../../core/consts/app_text_styles.dart';
+import '../../../../core/widgets/empty_widget.dart';
 import '../../../../core/shared/m_notice.dart';
 import '../../../../core/shared/m_search_field.dart';
 import '../../../../injection.dart';
@@ -123,9 +124,20 @@ class _QuotationsBoardViewState extends State<_QuotationsBoardView> {
               builder: (context, state) => QuoteBoardTabBar(
                 selected: state.tab,
                 expiringSoonSelected: state.onlyExpiringSoon,
-                expiringSoonCount: state.expiringSoonCount,
                 countOf: state.countOf,
                 onChanged: cubit.setTab,
+              ),
+            ),
+            // Pinned under the tabs, so the Expiring soon toggle stays in
+            // reach (and can be switched off) whatever the list is doing.
+            BlocBuilder<QuotationsListCubit, QuotationsListState>(
+              buildWhen: (previous, current) =>
+                  previous.board != current.board ||
+                  previous.onlyExpiringSoon != current.onlyExpiringSoon,
+              builder: (context, state) => QuoteValueSummary(
+                openTotalPiastres: state.openTotalPiastres,
+                expiringSoonCount: state.expiringSoonCount,
+                expiringSoonSelected: state.onlyExpiringSoon,
                 onExpiringSoon: cubit.showExpiringSoon,
               ),
             ),
@@ -168,48 +180,52 @@ class _QuotationsBoardViewState extends State<_QuotationsBoardView> {
                         }
                         return false;
                       },
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(
-                          16,
-                          16,
-                          16,
-                          AppLayout.bottomNavClearance,
-                        ),
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: QuoteValueSummary(
-                              openTotalPiastres: state.openTotalPiastres,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          if (visible.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 32),
-                              child: Center(
-                                child: Text(
-                                  _emptyMessage(t, state),
-                                  textAlign: TextAlign.center,
-                                  style: AppTextStyles.subtitle,
+                      // Nothing to list: the empty state alone, centred in the
+                      // space left (still pull-to-refresh-able), without the
+                      // open value and sort label.
+                      child: visible.isEmpty
+                          ? CustomScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              slivers: [
+                                SliverFillRemaining(
+                                  hasScrollBody: false,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                      bottom: AppLayout.bottomNavClearance,
+                                    ),
+                                    child: EmptyState(
+                                      kind: state.query.trim().isNotEmpty
+                                          ? EmptyKind.search
+                                          : EmptyKind.nodata,
+                                      title: _emptyMessage(t, state),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              ],
                             )
-                          else
-                            for (final quotation in visible) ...[
-                              QuoteBoardCard(
-                                key: ValueKey(quotation.id),
-                                quotation: quotation,
-                                onTap: () => _openDetail(quotation),
+                          : ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                12,
+                                16,
+                                AppLayout.bottomNavClearance,
                               ),
-                              const SizedBox(height: 12),
-                            ],
-                          if (state.loadingMore)
-                            Skeletonizer(
-                              child: QuoteBoardCard(quotation: _placeholder, onTap: () {}),
+                              children: [
+                                for (final quotation in visible) ...[
+                                  QuoteBoardCard(
+                                    key: ValueKey(quotation.id),
+                                    quotation: quotation,
+                                    onTap: () => _openDetail(quotation),
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+                                if (state.loadingMore)
+                                  Skeletonizer(
+                                    child: QuoteBoardCard(quotation: _placeholder, onTap: () {}),
+                                  ),
+                              ],
                             ),
-                        ],
-                      ),
                     ),
                   );
                 },

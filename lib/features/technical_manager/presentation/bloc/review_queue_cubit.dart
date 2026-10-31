@@ -1,102 +1,62 @@
-import 'dart:async';
-
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/enums/job_status.dart';
-import '../../../auth/domain/entities/user.dart';
-import '../../../certificate/domain/entities/certificate.dart';
-import '../../../certificate/domain/usecases/watch_certificate.dart';
-import '../../../coordinator/domain/usecases/get_inspectors.dart';
+import '../../../queue/domain/usecases/get_queue.dart';
+import '../../../queue/domain/usecases/get_to_review.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
-import '../../../requests/domain/usecases/get_requests.dart';
 
 part 'review_queue_state.dart';
 
-/// Backs the technical manager's Review and Sent tabs (Feature 06): every
-/// job whose certificate is waiting for a signature, was sent back, or has
-/// gone out to the client.
+/// Backs the technical manager's Review and Sent tabs (Feature 06): the jobs
+/// the API lists under `GET /quotation-queue?status=certify` — certificates
+/// sent back or gone out to the client — and, for what waits on a signature,
+/// `GET /quotation-queue/to-review`, whose rows carry certificate counts.
 class ReviewQueueCubit extends Cubit<ReviewQueueState> {
-  final GetRequests _getRequests;
-  final GetInspectors _getInspectors;
-  final WatchCertificate _watchCertificate;
+  /// The queue list a technical manager works from.
+  static const queueStatus = 'certify';
 
-  StreamSubscription<List<InspectionRequest>>? _requestsSubscription;
-  StreamSubscription<List<AppUser>>? _inspectorsSubscription;
+  final GetQueue _getQueue;
+  final GetToReview _getToReview;
 
-  /// One per job in the queue whose request doesn't carry its own
-  /// submission time, by job id.
-  final _certificateSubscriptions = <String, StreamSubscription<Certificate?>>{};
+  /// Bumped per fetch so a slow, superseded response can't overwrite a newer
+  /// one.
+  int _fetch = 0;
 
-  ReviewQueueCubit(this._getRequests, this._getInspectors, this._watchCertificate)
-    : super(const ReviewQueueState());
+  ReviewQueueCubit(this._getQueue, this._getToReview) : super(const ReviewQueueState());
 
-  void start() {
-    if (_requestsSubscription != null) return;
-    _requestsSubscription = _getRequests().listen(
-      (requests) {
-        emit(state.copyWith(status: ReviewQueueStatus.ready, requests: requests, clearFailure: true));
-        _trackLegacySubmissions(requests);
-      },
-      onError: (Object error) => emit(
+  /// Loads the queue — also the reload after returning from a screen that may
+  /// have moved a job on. A failed reload keeps the list already on screen;
+  /// only a first load shows the error.
+  Future<void> start() async {
+    final fetch = ++_fetch;
+    try {
+      final requests = await _getQueue(status: queueStatus);
+      final toReview = await _getToReview();
+      if (isClosed || fetch != _fetch) return;
+      emit(
+        state.copyWith(
+          status: ReviewQueueStatus.ready,
+          requests: requests,
+          toReviewRequests: toReview,
+          clearFailure: true,
+        ),
+      );
+    } catch (error) {
+      if (isClosed || fetch != _fetch) return;
+      if (state.status == ReviewQueueStatus.ready) return;
+      emit(
         state.copyWith(
           status: ReviewQueueStatus.error,
           failure: error is RequestsFailure ? error.code : RequestsFailureCode.unknown,
         ),
-      ),
-    );
-    // Names are a nicety for the cards — if this read is refused the
-    // queue still works, it just can't say who the inspector was.
-    _inspectorsSubscription = _getInspectors().listen(
-      (inspectors) => emit(state.copyWith(inspectorNames: {for (final i in inspectors) i.id: i.name})),
-      onError: (_) {},
-    );
-  }
-
-  /// Jobs submitted before the request recorded when (`certificateSubmittedAt`)
-  /// are ordered by their certificate's own submission time instead — read
-  /// here, only for the ones waiting on the technical manager or sent back,
-  /// and dropped again once they leave the queue. A certificate that can't
-  /// be read just keeps the scheduled-time order.
-  void _trackLegacySubmissions(List<InspectionRequest> requests) {
-    final needed = {
-      for (final request in requests)
-        if ((request.status == JobStatus.certificateSubmitted || request.status == JobStatus.certificateReturned) &&
-            request.certificateSubmittedAt == null)
-          request.id,
-    };
-    for (final id in _certificateSubscriptions.keys.toList()) {
-      if (!needed.contains(id)) _certificateSubscriptions.remove(id)?.cancel();
-    }
-    for (final id in needed) {
-      _certificateSubscriptions.putIfAbsent(
-        id,
-        () => _watchCertificate(id).listen((certificate) {
-          final submittedAt = certificate?.submittedAt;
-          if (submittedAt == null || state.legacySubmittedAt[id] == submittedAt) return;
-          emit(state.copyWith(legacySubmittedAt: {...state.legacySubmittedAt, id: submittedAt}));
-        }, onError: (_) {}),
       );
     }
   }
 
-  Future<void> retry() async {
-    await _requestsSubscription?.cancel();
-    await _inspectorsSubscription?.cancel();
-    _requestsSubscription = null;
-    _inspectorsSubscription = null;
+  Future<void> retry() {
     emit(state.copyWith(status: ReviewQueueStatus.loading, clearFailure: true));
-    start();
-  }
-
-  @override
-  Future<void> close() async {
-    await _requestsSubscription?.cancel();
-    await _inspectorsSubscription?.cancel();
-    for (final subscription in _certificateSubscriptions.values) {
-      await subscription.cancel();
-    }
-    return super.close();
+    return start();
   }
 }

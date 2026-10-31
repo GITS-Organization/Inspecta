@@ -54,6 +54,10 @@ class Quotation extends Equatable {
   /// unknown (rows that carry [items] don't need it).
   final int totalUnits;
 
+  /// How many of the quote's units still have no price, as the list rows
+  /// report it — what a draft has left to fill in.
+  final int missingPrices;
+
   // BR-03.6: the client's answer, logged by the coordinator.
   final ClientResponseOutcome? clientResponseOutcome;
   final int? clientCounterPricePiastres;
@@ -78,6 +82,7 @@ class Quotation extends Equatable {
     this.version,
     this.location = '',
     this.totalUnits = 0,
+    this.missingPrices = 0,
     this.subtotalPiastres,
     this.totalPiastres,
     this.validUntil,
@@ -136,6 +141,7 @@ class Quotation extends Equatable {
     createdBy,
     createdAt,
     totalUnits,
+    missingPrices,
     clientResponseOutcome,
     clientCounterPricePiastres,
     clientResponseNote,

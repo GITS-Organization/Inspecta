@@ -5,19 +5,15 @@ enum ReviewQueueStatus { loading, ready, error }
 class ReviewQueueState extends Equatable {
   final ReviewQueueStatus status;
   final List<InspectionRequest> requests;
-  final Map<String, String> inspectorNames;
 
-  /// When each certificate was submitted, read from the certificate itself —
-  /// only for jobs submitted before the request carried that time (see
-  /// [InspectionRequest.certificateSubmittedAt]), keyed by job id.
-  final Map<String, DateTime> legacySubmittedAt;
+  /// The `to-review` list: jobs with certificates waiting on a signature.
+  final List<InspectionRequest> toReviewRequests;
   final RequestsFailureCode? failure;
 
   const ReviewQueueState({
     this.status = ReviewQueueStatus.loading,
     this.requests = const [],
-    this.inspectorNames = const {},
-    this.legacySubmittedAt = const {},
+    this.toReviewRequests = const [],
     this.failure,
   });
 
@@ -28,13 +24,12 @@ class ReviewQueueState extends Equatable {
 
   static DateTime _scheduledOrReceived(InspectionRequest r) => r.scheduledAt ?? r.receivedAt;
 
-  /// The most recently submitted certificate first. A job submitted before
-  /// its request recorded the time uses the certificate's own, and until
-  /// that has loaded, when it was scheduled.
-  DateTime _submittedAt(InspectionRequest r) =>
-      r.certificateSubmittedAt ?? legacySubmittedAt[r.id] ?? _scheduledOrReceived(r);
+  /// The most recently submitted certificate first: the queue row carries no
+  /// submission time of its own, so the job's last update stands in.
+  DateTime _submittedAt(InspectionRequest r) => r.certificateSubmittedAt ?? r.updatedAt ?? _scheduledOrReceived(r);
 
-  List<InspectionRequest> get toReview => _with(JobStatus.certificateSubmitted, _submittedAt);
+  List<InspectionRequest> get toReview =>
+      [...toReviewRequests]..sort((a, b) => _submittedAt(b).compareTo(_submittedAt(a)));
 
   List<InspectionRequest> get returned => _with(JobStatus.certificateReturned, _submittedAt);
 
@@ -48,25 +43,24 @@ class ReviewQueueState extends Equatable {
     return list;
   }
 
-  String? inspectorName(InspectionRequest request) => inspectorNames[request.inspectorId];
+  /// The inspector's name as the queue row names them.
+  String? inspectorName(InspectionRequest request) => request.inspectorName;
 
   ReviewQueueState copyWith({
     ReviewQueueStatus? status,
     List<InspectionRequest>? requests,
-    Map<String, String>? inspectorNames,
-    Map<String, DateTime>? legacySubmittedAt,
+    List<InspectionRequest>? toReviewRequests,
     RequestsFailureCode? failure,
     bool clearFailure = false,
   }) {
     return ReviewQueueState(
       status: status ?? this.status,
       requests: requests ?? this.requests,
-      inspectorNames: inspectorNames ?? this.inspectorNames,
-      legacySubmittedAt: legacySubmittedAt ?? this.legacySubmittedAt,
+      toReviewRequests: toReviewRequests ?? this.toReviewRequests,
       failure: clearFailure ? null : (failure ?? this.failure),
     );
   }
 
   @override
-  List<Object?> get props => [status, requests, inspectorNames, legacySubmittedAt, failure];
+  List<Object?> get props => [status, requests, toReviewRequests, failure];
 }

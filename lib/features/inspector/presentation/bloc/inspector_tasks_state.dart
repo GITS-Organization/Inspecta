@@ -2,8 +2,6 @@ part of 'inspector_tasks_cubit.dart';
 
 enum InspectorTasksStatus { loading, ready, error }
 
-enum InspectorTaskAction { accept, decline, start }
-
 /// The Tasks tab's three lists: what's due today, what's coming up, and what
 /// was due on an earlier day and still isn't done.
 enum TasksFilter { today, upcoming, overdue }
@@ -13,23 +11,11 @@ class InspectorTasksState extends Equatable {
   final List<InspectionRequest> requests;
   final TasksFilter filter;
   final RequestsFailureCode? failure;
-
-  final bool isSubmitting;
-  final int actionSeq;
-  final InspectorTaskAction? lastAction;
-  final bool lastActionSuccess;
-  final RequestsFailureCode? lastActionFailure;
-
   const InspectorTasksState({
     this.status = InspectorTasksStatus.loading,
     this.requests = const [],
     this.filter = TasksFilter.today,
     this.failure,
-    this.isSubmitting = false,
-    this.actionSeq = 0,
-    this.lastAction,
-    this.lastActionSuccess = false,
-    this.lastActionFailure,
   });
 
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
@@ -73,38 +59,18 @@ class InspectorTasksState extends Equatable {
   /// The jobs in the list the inspector is looking at.
   List<InspectionRequest> get visibleTasks => tasksFor(filter);
 
-  /// The coordinator assigned something the inspector hasn't responded to
-  /// yet — the "New task" banner's trigger — whichever list it's in. The
-  /// earliest one.
-  InspectionRequest? get firstNeedsResponse {
-    final waiting = requests.where((r) => r.status == JobStatus.assigned && r.scheduledAt != null).toList()
-      ..sort((a, b) => a.scheduledAt!.compareTo(b.scheduledAt!));
-    return waiting.isEmpty ? null : waiting.first;
-  }
-
   InspectorTasksState copyWith({
     InspectorTasksStatus? status,
     List<InspectionRequest>? requests,
     TasksFilter? filter,
     RequestsFailureCode? failure,
     bool clearFailure = false,
-    bool? isSubmitting,
-    int? actionSeq,
-    InspectorTaskAction? lastAction,
-    bool? lastActionSuccess,
-    RequestsFailureCode? lastActionFailure,
-    bool clearActionFailure = false,
   }) {
     return InspectorTasksState(
       status: status ?? this.status,
       requests: requests ?? this.requests,
       filter: filter ?? this.filter,
       failure: clearFailure ? null : (failure ?? this.failure),
-      isSubmitting: isSubmitting ?? this.isSubmitting,
-      actionSeq: actionSeq ?? this.actionSeq,
-      lastAction: lastAction ?? this.lastAction,
-      lastActionSuccess: lastActionSuccess ?? this.lastActionSuccess,
-      lastActionFailure: clearActionFailure ? null : (lastActionFailure ?? this.lastActionFailure),
     );
   }
 
@@ -114,10 +80,5 @@ class InspectorTasksState extends Equatable {
     requests,
     filter,
     failure,
-    isSubmitting,
-    actionSeq,
-    lastAction,
-    lastActionSuccess,
-    lastActionFailure,
   ];
 }

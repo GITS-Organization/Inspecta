@@ -11,6 +11,7 @@ import '../../../../core/shared/m_back_button.dart';
 import '../../../../core/shared/m_card.dart';
 import '../../../../core/shared/m_notice.dart';
 import '../../../../core/shared/m_primary_button.dart';
+import '../../../../core/widgets/empty_widget.dart';
 import '../../../../core/widgets/app_date_picker.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../injection.dart';
@@ -274,7 +275,7 @@ class _Body extends StatelessWidget {
                     return MNotice(type: MNoticeType.error, message: state.inspectorsFailure!.message(t));
                   }
                   if (state.inspectors.isEmpty) {
-                    return MNotice(type: MNoticeType.info, message: t.emptyInspectors);
+                    return EmptyState(title: t.emptyInspectors, compact: true);
                   }
                   return Column(
                     children: [

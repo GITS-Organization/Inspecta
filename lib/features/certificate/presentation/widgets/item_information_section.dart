@@ -39,22 +39,33 @@ class ItemInformationSection extends StatelessWidget {
             children: [
               CertificateReadOnlyField(
                 label: t.inspectedItemLabel,
-                value: request.items.isEmpty ? request.equipmentTitle : request.items.first.type,
+                value: state.machineMode
+                    ? state.inspectedItem
+                    : (request.items.isEmpty ? request.equipmentTitle : request.items.first.type),
               ),
-              certificateFieldGap,
-              CertificateTextInput(textKey: CertText.manufacturer, label: t.manufacturerLabel),
-              certificateFieldGap,
-              CertificateTextInput(textKey: CertText.modelYear, label: t.modelYearLabel),
-              certificateFieldGap,
-              CertificateTextInput(textKey: CertText.maxWorkingRate, label: t.maxWorkingRateLabel),
-              certificateFieldGap,
-              CertificateTextInput(textKey: CertText.serialNumber, label: t.serialNumberLabel),
-              certificateFieldGap,
-              CertificateTextInput(textKey: CertText.ownerId, label: t.ownerIdLabel),
-              certificateFieldGap,
-              const _FunctionCheck(),
-              certificateFieldGap,
-              CertificateTextInput(textKey: CertText.ndt, label: t.ndtLabel, hint: t.naOption),
+              // A machine of the API lists its own fields; the checklist
+              // replaces the function check.
+              if (state.machineMode) ...[
+                for (final field in state.machineFields) ...[
+                  certificateFieldGap,
+                  CertificateTextInput(textKey: field.key, label: field.label),
+                ],
+              ] else ...[
+                certificateFieldGap,
+                CertificateTextInput(textKey: CertText.manufacturer, label: t.manufacturerLabel),
+                certificateFieldGap,
+                CertificateTextInput(textKey: CertText.modelYear, label: t.modelYearLabel),
+                certificateFieldGap,
+                CertificateTextInput(textKey: CertText.maxWorkingRate, label: t.maxWorkingRateLabel),
+                certificateFieldGap,
+                CertificateTextInput(textKey: CertText.serialNumber, label: t.serialNumberLabel),
+                certificateFieldGap,
+                CertificateTextInput(textKey: CertText.ownerId, label: t.ownerIdLabel),
+                certificateFieldGap,
+                const _FunctionCheck(),
+                certificateFieldGap,
+                CertificateTextInput(textKey: CertText.ndt, label: t.ndtLabel, hint: t.naOption),
+              ],
             ],
           ),
         );

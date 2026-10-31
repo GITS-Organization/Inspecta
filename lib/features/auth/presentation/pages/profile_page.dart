@@ -10,12 +10,15 @@ import '../../../../core/shared/m_back_button.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../requests/domain/entities/inspection_request.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/entities/user_role.dart';
 import '../bloc/auth_cubit.dart';
+import '../bloc/my_signature_cubit.dart';
 import '../bloc/profile_stats_cubit.dart';
 import '../widgets/auth_labels.dart';
 import '../widgets/profile_menu_section.dart';
+import '../widgets/profile_signature_card.dart';
 import '../widgets/profile_role_card.dart';
 import '../widgets/profile_stat_tiles.dart';
 
@@ -23,13 +26,26 @@ class ProfilePage extends StatelessWidget {
   final VoidCallback? onClose;
   final Widget? navigationSection;
 
-  const ProfilePage({super.key, this.onClose, this.navigationSection});
+  /// A technical manager's queue of certificates, as their shell holds it —
+  /// what their "This month" tiles are counted from.
+  final Stream<List<InspectionRequest>>? certifyQueue;
+
+  const ProfilePage({super.key, this.onClose, this.navigationSection, this.certifyQueue});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) =>
-          getIt<ProfileStatsCubit>()..start(context.read<AuthCubit>().user),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => getIt<ProfileStatsCubit>()
+            ..start(context.read<AuthCubit>().user, certifyQueue: certifyQueue),
+        ),
+        // Only a technical manager signs certificates, so only they have a
+        // signature to keep here.
+        if (context.read<AuthCubit>().user case final user?
+            when user.role == UserRole.technicalManager)
+          BlocProvider(create: (_) => getIt<MySignatureCubit>(param1: user.id)..start()),
+      ],
       child: _ProfileView(
         onClose: onClose,
         navigationSection: navigationSection,
@@ -98,7 +114,10 @@ class _ProfileView extends StatelessWidget {
       (stats.returnedThisMonth, t.profileStatReturned),
       (stats.sentThisMonth, t.profileStatSent),
     ],
-    UserRole.admin => const [],
+    UserRole.admin ||
+    UserRole.finance ||
+    UserRole.managingDirector ||
+    UserRole.merchandiser => const [],
   };
 
   @override
@@ -137,12 +156,17 @@ class _ProfileView extends StatelessWidget {
                     },
                   ),
                   if (user.role != UserRole.admin &&
-                      user.role != UserRole.coordinator) ...[
+                      user.role != UserRole.coordinator &&
+                      !user.role.isWms) ...[
                     const SizedBox(height: 12),
                     ProfileRoleCard(
                       user: user,
                       onComingSoon: () => _comingSoon(context),
                     ),
+                  ],
+                  if (user.role == UserRole.technicalManager) ...[
+                    const SizedBox(height: 12),
+                    const ProfileSignatureCard(),
                   ],
                   if (navigationSection != null) ...[
                     const SizedBox(height: 12),

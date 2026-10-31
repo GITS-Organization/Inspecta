@@ -15,9 +15,13 @@ enum QueueFilter {
 
   /// The technical manager approved the certificate; the coordinator sends it
   /// to the client.
-  toSend;
+  toSend,
+
+  /// Handed over to the client (the API's `status=delivered` list).
+  delivered;
 
   bool matches(InspectionRequest request) => switch (this) {
+    delivered => request.isDelivered,
     unassigned => request.isReadyToAssign,
     scheduled => request.status == JobStatus.assigned,
     inProgress => request.status == JobStatus.taskAccepted || request.status == JobStatus.inProgress,

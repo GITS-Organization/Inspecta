@@ -4,15 +4,11 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/enums/job_status.dart';
-import '../../../certificate/domain/entities/certificate.dart';
-import '../../../certificate/domain/usecases/watch_inspector_certificates.dart';
-import '../../../certificate/domain/usecases/watch_reviewed_certificates.dart';
 import '../../../quotation/domain/entities/quotation.dart';
 import '../../../quotation/domain/entities/quotation_status.dart';
 import '../../../quotation/domain/usecases/get_quotations.dart';
+import '../../../queue/domain/usecases/get_queue.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
-import '../../../requests/domain/usecases/get_my_tasks.dart';
-import '../../../requests/domain/usecases/get_requests.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/entities/user_role.dart';
 
@@ -25,37 +21,30 @@ part 'profile_stats_state.dart';
 /// are the whole team's; an inspector's are their own.
 class ProfileStatsCubit extends Cubit<ProfileStatsState> {
   final GetQuotations _getQuotations;
-  final GetRequests _getRequests;
-  final WatchReviewedCertificates _watchReviewedCertificates;
-  final GetMyTasks _getMyTasks;
-  final WatchInspectorCertificates _watchInspectorCertificates;
+  final GetQueue _getQueue;
 
   final _subscriptions = <StreamSubscription<Object?>>[];
   bool _started = false;
 
-  List<InspectionRequest>? _requests;
-  List<Certificate>? _certificates;
+  ProfileStatsCubit(this._getQuotations, this._getQueue) : super(const ProfileStatsState());
 
-  ProfileStatsCubit(
-    this._getQuotations,
-    this._getRequests,
-    this._watchReviewedCertificates,
-    this._getMyTasks,
-    this._watchInspectorCertificates,
-  ) : super(const ProfileStatsState());
-
-  /// Subscribes to what [user]'s role's tiles are counted from.
-  void start(AppUser? user) {
+  /// Subscribes to what [user]'s role's tiles are counted from. A technical
+  /// manager's come from [certifyQueue], the shell's own list of the
+  /// `certify` queue.
+  void start(AppUser? user, {Stream<List<InspectionRequest>>? certifyQueue}) {
     if (_started || user == null) return;
     _started = true;
     switch (user.role) {
       case UserRole.coordinator:
         _startCoordinatorStats();
       case UserRole.technicalManager:
-        _startReviewStats();
+        if (certifyQueue != null) _watchReviewStats(certifyQueue);
       case UserRole.inspector:
-        _startInspectorStats(user.id);
+        _loadInspectorStats();
       case UserRole.admin:
+      case UserRole.finance:
+      case UserRole.managingDirector:
+      case UserRole.merchandiser:
         break;
     }
   }
@@ -78,75 +67,35 @@ class ProfileStatsCubit extends Cubit<ProfileStatsState> {
     );
   }
 
-  /// A certificate's review time is stamped both when it's approved and when
-  /// it's sent back, so those reviewed this month are told apart by where the
-  /// job is now: sent to the client, or back with the inspector (still
-  /// returned, or resubmitted since). One that was returned and has since
-  /// been approved counts as sent, since its review time is now the approval.
-  void _startReviewStats() {
-    final now = DateTime.now();
+  /// Counted from the technical manager's queue (`status=certify`): jobs
+  /// approved or sent to the client, and jobs sent back, that were last
+  /// changed this month. The shell already fetches that queue, so the counts
+  /// follow [certifyQueue] rather than asking the API again.
+  void _watchReviewStats(Stream<List<InspectionRequest>> certifyQueue) {
     _subscriptions.add(
-      _getRequests().listen((requests) {
-        _requests = requests;
-        _countReviews();
-      }, onError: (_) {}),
-    );
-    _subscriptions.add(
-      _watchReviewedCertificates(DateTime(now.year, now.month)).listen((certificates) {
-        _certificates = certificates;
-        _countReviews();
+      certifyQueue.listen((requests) {
+        final now = DateTime.now();
+        final inMonth = requests.where((r) => _inMonth(r.updatedAt, now));
+        final sent = inMonth
+            .where((r) => r.status == JobStatus.certificateApproved || r.status == JobStatus.sentToClient)
+            .length;
+        final returned = inMonth.where((r) => r.status == JobStatus.certificateReturned).length;
+        emit(state.copyWith(reviewedThisMonth: sent + returned, returnedThisMonth: returned, sentThisMonth: sent));
       }, onError: (_) {}),
     );
   }
 
-  void _countReviews() {
-    final requests = _requests;
-    final certificates = _certificates;
-    if (requests == null || certificates == null) return;
-
-    final statusOf = {for (final request in requests) request.id: request.status};
-    var sent = 0;
-    var returned = 0;
-    for (final certificate in certificates) {
-      switch (statusOf[certificate.requestId]) {
-        case JobStatus.certificateApproved || JobStatus.sentToClient:
-          sent++;
-        case JobStatus.certificateReturned || JobStatus.certificateSubmitted:
-          returned++;
-        default:
-          break;
-      }
-    }
-    emit(state.copyWith(reviewedThisMonth: sent + returned, returnedThisMonth: returned, sentThisMonth: sent));
-  }
-
-  void _startInspectorStats(String inspectorId) {
-    _subscriptions.add(
-      _getMyTasks(inspectorId).listen((requests) {
-        _requests = requests;
-        _countInspectorWork();
-      }, onError: (_) {}),
-    );
-    _subscriptions.add(
-      _watchInspectorCertificates(inspectorId).listen((certificates) {
-        _certificates = certificates;
-        _countInspectorWork();
-      }, onError: (_) {}),
-    );
-  }
-
+  /// Counted from the inspector's own jobs in the API's queue.
+  ///
   /// Inspections: jobs scheduled this month that have been started — under
-  /// way, or already certified. Certificates: those handed in this month.
-  /// Returned: those a technical manager sent back this month — a returned
-  /// certificate keeps its review time, so, as for the manager, it counts
-  /// while the job is still returned or has been resubmitted.
-  void _countInspectorWork() {
-    final now = DateTime.now();
-    final requests = _requests;
-    final certificates = _certificates;
-
-    var next = state;
-    if (requests != null) {
+  /// way, or already certified. Certificates: jobs handed in (or past that)
+  /// and last changed this month. Returned: jobs a technical manager sent
+  /// back and that were last changed this month.
+  Future<void> _loadInspectorStats() async {
+    try {
+      final requests = await _getQueue();
+      if (isClosed) return;
+      final now = DateTime.now();
       const started = {
         JobStatus.inProgress,
         JobStatus.certificateSubmitted,
@@ -154,27 +103,23 @@ class ProfileStatsCubit extends Cubit<ProfileStatsState> {
         JobStatus.certificateApproved,
         JobStatus.sentToClient,
       };
-      next = next.copyWith(
-        inspectionsThisMonth: requests.where((r) => started.contains(r.status) && _inMonth(r.scheduledAt, now)).length,
+      const handedIn = {
+        JobStatus.certificateSubmitted,
+        JobStatus.certificateApproved,
+        JobStatus.sentToClient,
+      };
+      emit(
+        state.copyWith(
+          inspectionsThisMonth: requests.where((r) => started.contains(r.status) && _inMonth(r.scheduledAt, now)).length,
+          certificatesThisMonth: requests.where((r) => handedIn.contains(r.status) && _inMonth(r.updatedAt, now)).length,
+          returnedThisMonth: requests
+              .where((r) => r.status == JobStatus.certificateReturned && _inMonth(r.updatedAt, now))
+              .length,
+        ),
       );
+    } catch (_) {
+      // The tiles just stay empty.
     }
-    if (certificates != null) {
-      next = next.copyWith(certificatesThisMonth: certificates.where((c) => _inMonth(c.submittedAt, now)).length);
-    }
-    if (requests != null && certificates != null) {
-      final statusOf = {for (final request in requests) request.id: request.status};
-      next = next.copyWith(
-        returnedThisMonth: certificates
-            .where(
-              (c) =>
-                  _inMonth(c.reviewedAt, now) &&
-                  (statusOf[c.requestId] == JobStatus.certificateReturned ||
-                      statusOf[c.requestId] == JobStatus.certificateSubmitted),
-            )
-            .length,
-      );
-    }
-    emit(next);
   }
 
   @override

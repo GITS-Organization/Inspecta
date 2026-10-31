@@ -8,6 +8,7 @@ import '../../../../core/consts/app_layout.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/enums/job_status.dart';
 import '../../../../core/shared/m_notice.dart';
+import '../../../../core/widgets/empty_widget.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/presentation/widgets/user_app_header.dart';
@@ -112,29 +113,41 @@ class _Body extends StatelessWidget {
             // Keeps pull-to-refresh working when the list is short or empty.
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                sliver: SliverToBoxAdapter(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        t.coordinatorQueueHeading,
-                        style: AppTextStyles.sectionTitle,
-                      ),
-                      Text(t.byDueDate, style: AppTextStyles.caption),
-                    ],
-                  ),
-                ),
-              ),
+              // Nothing to list: the empty state alone, centred in the space
+              // left, without the heading and sort label.
               if (jobs.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
-                  child: _EmptyState(filtered: state.filter != null),
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: AppLayout.bottomNavClearance,
+                    ),
+                    child: EmptyState(
+                      kind: state.filter != null ? EmptyKind.filter : EmptyKind.nodata,
+                      title: state.filter != null
+                          ? t.emptyCoordinatorQueueFiltered
+                          : t.emptyCoordinatorQueue,
+                    ),
+                  ),
                 )
-              else
+              else ...[
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                  sliver: SliverToBoxAdapter(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          t.coordinatorQueueHeading,
+                          style: AppTextStyles.sectionTitle,
+                        ),
+                        Text(t.byDueDate, style: AppTextStyles.caption),
+                      ],
+                    ),
+                  ),
+                ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(
                     16,
@@ -157,6 +170,7 @@ class _Body extends StatelessWidget {
                     },
                   ),
                 ),
+              ],
             ],
           ),
         );
@@ -179,42 +193,6 @@ class _Skeleton extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (_, _) =>
             AssignmentCard(request: _placeholder, onAssign: () {}, onSend: () {}),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  /// A header-tile filter is on, so the queue isn't necessarily empty —
-  /// just this group of it.
-  final bool filtered;
-
-  const _EmptyState({required this.filtered});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.fact_check_outlined,
-              size: 40,
-              color: AppColours.inkMuted,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              filtered
-                  ? t.emptyCoordinatorQueueFiltered
-                  : t.emptyCoordinatorQueue,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.subtitle,
-            ),
-          ],
-        ),
       ),
     );
   }
