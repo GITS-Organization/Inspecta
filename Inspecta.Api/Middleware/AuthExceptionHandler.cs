@@ -29,7 +29,8 @@ public sealed class AuthExceptionHandler(ILogger<AuthExceptionHandler> logger) :
         };
         if (statusCode == 0) return false;
 
-        logger.LogInformation("Request rejected with {Code}.", code);
+        // The reason goes to the log only: the answer keeps its short text, but a refused request can be traced from the server log.
+        logger.LogInformation("Request rejected with {Code} on {Path}: {Reason}", code, httpContext.Request.Path.Value, exception.GetBaseException().Message);
         httpContext.Response.StatusCode = statusCode;
         var problem = new ProblemDetails
         {

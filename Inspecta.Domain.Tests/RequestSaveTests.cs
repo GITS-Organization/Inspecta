@@ -242,13 +242,39 @@ public sealed class RequestSaveTests
             fixture.Request.Id, inspectorId, "inspector", new TransitionRequest { Status = JobStatus.TaskAccepted });
         await fixture.Service.TransitionAsync(
             fixture.Request.Id, inspectorId, "inspector", new TransitionRequest { Status = JobStatus.InProgress });
-        var submitted = await fixture.Service.TransitionAsync(
-            fixture.Request.Id, Guid.NewGuid(), "technical_manager", new TransitionRequest { Status = JobStatus.CertificateSubmitted });
 
         Assert.Equal(JobStatus.TaskAccepted, accepted.Status);
-        Assert.Equal(JobStatus.CertificateSubmitted, submitted.Status);
-        await Assert.ThrowsAsync<AuthException>(() => fixture.Service.TransitionAsync(
-            fixture.Request.Id, CoordinatorId, "coordinator", new TransitionRequest { Status = JobStatus.CertificateApproved }));
+        Assert.Equal(JobStatus.InProgress, fixture.Request.Status);
+    }
+
+    [Theory]
+    [InlineData(JobStatus.CertificateSubmitted)]
+    [InlineData(JobStatus.CertificateReturned)]
+    [InlineData(JobStatus.CertificateApproved)]
+    [InlineData(JobStatus.SentToClient)]
+    public async Task CertificateStatesCannotBeMovedThroughTheGenericTransitions(JobStatus target)
+    {
+        // A job moved to review by hand has no certificates, so the technical manager would find nothing to review.
+        var fixture = new Fixture();
+        var inspectorId = Guid.NewGuid();
+        fixture.Request.UpdateDetails("Al Noor", "Cairo", Guid.NewGuid(), null, null);
+        fixture.Request.TransitionTo(JobStatus.QuoteDraft, CoordinatorId);
+        fixture.Request.TransitionTo(JobStatus.QuoteSent, CoordinatorId);
+        fixture.Request.TransitionTo(JobStatus.Unassigned, CoordinatorId);
+        fixture.Request.AssignInspector(inspectorId, DateTimeOffset.UtcNow.AddDays(2), CoordinatorId);
+        await fixture.Service.TransitionAsync(fixture.Request.Id, inspectorId, "inspector", new TransitionRequest { Status = JobStatus.TaskAccepted });
+        await fixture.Service.TransitionAsync(fixture.Request.Id, inspectorId, "inspector", new TransitionRequest { Status = JobStatus.InProgress });
+
+        foreach (var role in new[] { "technical_manager", "admin", "coordinator", "inspector" })
+        {
+            var exception = await Assert.ThrowsAsync<AuthException>(() => fixture.Service.TransitionAsync(
+                fixture.Request.Id, role == "inspector" ? inspectorId : role == "coordinator" ? CoordinatorId : Guid.NewGuid(), role,
+                new TransitionRequest { Status = target }));
+            Assert.Equal("certificate_flow", exception.Code);
+            Assert.Equal(409, exception.StatusCode);
+        }
+
+        Assert.Equal(JobStatus.InProgress, fixture.Request.Status);
     }
 
     private sealed class Fixture

@@ -508,8 +508,9 @@ public sealed class MachineInspectionTests : IDisposable
         Assert.True(listed.CanReview);
         Assert.All(listed.Machines, machine => Assert.Equal(InspectionResult.Satisfactory, machine.Result));
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => Run(service => service.ReturnToInspectorAsync(requestId, manager.Id, "technical_manager",
+        var unknownMachine = await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.ReturnToInspectorAsync(requestId, manager.Id, "technical_manager",
             new ReturnJobRequest { Note = "Fix", Machines = [new MachineReviewComment { RequestItemId = Guid.NewGuid(), Comment = "x" }] })));
+        Assert.Contains("is not part of this job", unknownMachine.Message);
         var returned = await Run(service => service.ReturnToInspectorAsync(requestId, manager.Id, "technical_manager", new ReturnJobRequest
         {
             Note = "Please fix and resubmit",
@@ -535,6 +536,126 @@ public sealed class MachineInspectionTests : IDisposable
         Assert.Equal(2, approved.ReviewHistory!.Count);
         await using var check = CreateContext();
         Assert.Equal(reserved, check.Certificates.AsNoTracking().Single(value => value.RequestItemId == forkliftItemId).VerificationCode);
+    }
+
+    [Fact]
+    public async Task ApprovingAJobWithoutItsCertificatesIsRefusedWithTheReasonsAndChangesNothing()
+    {
+        await MoveToReviewWithoutCertificates();
+
+        var listed = await Run(service => service.ListMachinesAsync(requestId, manager.Id, "technical_manager"));
+        Assert.True(listed.CanReview);
+        Assert.False(listed.CanApprove);
+        Assert.Equal(
+            ["Chain Block: the inspector has not filled in its certificate", "Forklift Truck: the inspector has not filled in its certificate"],
+            listed.ReviewBlockers!);
+
+        var refused = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.ApproveAllAsync(requestId, manager.Id, "technical_manager")));
+        Assert.Equal("job_not_ready", refused.Code);
+        Assert.Equal(409, refused.StatusCode);
+        Assert.Equal(listed.ReviewBlockers, refused.Problems);
+        await using var db = CreateContext();
+        Assert.Equal(JobStatus.CertificateSubmitted, db.Requests.AsNoTracking().Single(value => value.Id == requestId).Status);
+        Assert.Empty(db.IssuedCertificateFiles.AsNoTracking().ToList());
+        Assert.Empty(db.CertificateCounters.AsNoTracking().ToList());
+    }
+
+    [Fact]
+    public async Task AJobThatReachedReviewWithoutCertificatesCanBeSentBackSoTheInspectorFinishesIt()
+    {
+        await MoveToReviewWithoutCertificates();
+
+        var returned = await Run(service => service.ReturnToInspectorAsync(requestId, manager.Id, "technical_manager", new ReturnJobRequest
+        {
+            Note = "Fill in both certificates",
+            Machines = [new MachineReviewComment { RequestItemId = forkliftItemId, Comment = "Add the load test" }]
+        }));
+
+        Assert.Equal(JobStatus.CertificateReturned, returned.RequestStatus);
+        Assert.False(returned.CanReview);
+        Assert.Equal(2, returned.ReviewHistory!.Count);
+        Assert.Contains(returned.ReviewHistory, comment => comment.MachineName == "Forklift Truck" && comment.Text == "Add the load test");
+
+        // The inspector fills the machines in and submits them; the job is back in review and can be approved.
+        foreach (var (item, key) in new[] { (forkliftItemId, "forklift"), (chainItemId, "basic") })
+        {
+            await Run(service => service.SaveFormAsync(requestId, item, inspector.Id, "inspector", CompleteForm(key)));
+            await Run(service => service.SubmitAsync(requestId, item, inspector.Id, "inspector"));
+        }
+
+        Assert.True((await Run(service => service.ListMachinesAsync(requestId, manager.Id, "technical_manager"))).CanApprove);
+        Assert.Equal(JobStatus.CertificateApproved, (await Run(service => service.ApproveAllAsync(requestId, manager.Id, "technical_manager"))).RequestStatus);
+    }
+
+    [Fact]
+    public async Task ApprovingIsAllOrNothingAndNoCertificateNumberIsUsedUp()
+    {
+        await SubmitBothMachines();
+
+        // The second PDF cannot be drawn: the first machine must not stay approved.
+        await Assert.ThrowsAsync<PdfGenerationException>(() => RunWith(
+            new FailingOnCall(pdfServices.GetRequiredService<IPdfGenerator>(), failOn: 2),
+            service => service.ApproveAllAsync(requestId, manager.Id, "technical_manager")));
+
+        await using (var db = CreateContext())
+        {
+            Assert.Equal(JobStatus.CertificateSubmitted, db.Requests.AsNoTracking().Single(value => value.Id == requestId).Status);
+            Assert.All(db.Certificates.AsNoTracking().ToList(), certificate => Assert.Null(certificate.CertificateNumber));
+            Assert.Empty(db.IssuedCertificateFiles.AsNoTracking().ToList());
+            Assert.All(db.CertificateCounters.AsNoTracking().ToList(), counter => Assert.Equal(0, counter.LastNumber));
+        }
+
+        // Trying again approves everything, and the numbering starts at 1: nothing was wasted.
+        var approved = await Run(service => service.ApproveAllAsync(requestId, manager.Id, "technical_manager"));
+        Assert.Equal(JobStatus.CertificateApproved, approved.RequestStatus);
+        Assert.Equal(["CERT-" + DateTimeOffset.UtcNow.Year + "-0001", "CERT-" + DateTimeOffset.UtcNow.Year + "-0002"],
+            approved.Machines.Select(machine => machine.CertificateNumber!).Order().ToArray());
+    }
+
+    [Fact]
+    public async Task ASignatureThatIsNotStrokesIsRefusedBeforeAnythingIsChanged()
+    {
+        await SubmitBothMachines();
+
+        var invalid = await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.ApproveAllAsync(
+            requestId, manager.Id, "technical_manager", new ApproveMachineRequest { Signature = "data:image/png;base64,iVBORw0KGgo=" })));
+        Assert.Contains("JSON array of strokes", invalid.Message);
+        await using var db = CreateContext();
+        Assert.Equal(JobStatus.CertificateSubmitted, db.Requests.AsNoTracking().Single(value => value.Id == requestId).Status);
+        Assert.Empty(db.CertificateCounters.AsNoTracking().ToList());
+    }
+
+    [Fact]
+    public async Task TheReviewScreenGetsWhatIsPrintedOnEachCertificateInOneCall()
+    {
+        await SubmitBothMachines();
+
+        var list = await Run(service => service.ListMachinesAsync(requestId, manager.Id, "technical_manager"));
+
+        Assert.True(list.CanReview);
+        Assert.True(list.CanApprove);
+        Assert.Empty(list.ReviewBlockers!);
+        Assert.Equal($"/api/v1/quotation-queue/{requestId}/certificates/preview.zip", list.PreviewZipUrl);
+        var forklift = list.Machines.Single(machine => machine.RequestItemId == forkliftItemId);
+        Assert.Equal("Forklift Truck", forklift.Type);
+        Assert.Equal("Forklift Truck", forklift.TemplateName);
+        Assert.Equal("Toyota", forklift.Manufacturer);
+        Assert.Equal("3 ton", forklift.Capacity);
+        Assert.Equal(["BS EN ISO 3691-1:2011", "BS ISO 2330:2002"], forklift.InspectionStandards!);
+        Assert.Equal(new DateOnly(2026, 11, 5), forklift.ExaminationDate);
+        Assert.Equal(new DateOnly(2027, 11, 5), forklift.NextExaminationDate);
+        Assert.Equal($"/api/v1/quotation-queue/{requestId}/machines/{forkliftItemId}/pdf", forklift.PdfUrl);
+        Assert.StartsWith("https://api.gitsplatform.com/verify/", forklift.QrUrl);
+        Assert.Equal(InspectionResult.Satisfactory, forklift.Result);
+        var chain = list.Machines.Single(machine => machine.RequestItemId == chainItemId);
+        Assert.Equal("Chain Block", chain.Type);
+        Assert.Equal("2 ton", chain.Capacity);
+
+        // The inspector gets the data too, but not the review buttons.
+        var forInspector = await Run(service => service.ListMachinesAsync(requestId, inspector.Id, "inspector"));
+        Assert.False(forInspector.CanReview);
+        Assert.False(forInspector.CanApprove);
+        Assert.Null(forInspector.PreviewZipUrl);
     }
 
     [Fact]
@@ -738,8 +859,49 @@ public sealed class MachineInspectionTests : IDisposable
             new EfClientRepository(db),
             pdfServices.GetRequiredService<IPdfGenerator>(),
             new EfCertificateFileRepository(db),
-            qrCodes: new Inspecta.Infrastructure.Services.QrCodeRenderer());
+            qrCodes: new Inspecta.Infrastructure.Services.QrCodeRenderer(),
+            transactions: new EfTransactionRunner(db));
         return await action(service);
+    }
+
+    /// <summary>The real generator, except that it fails on the given call: a PDF that cannot be drawn halfway through an approval.</summary>
+    private sealed class FailingOnCall(IPdfGenerator inner, int failOn) : IPdfGenerator
+    {
+        private int calls;
+
+        public PdfFile Generate<TModel>(TModel model) =>
+            ++calls == failOn ? throw new PdfGenerationException("The PDF could not be drawn.") : inner.Generate(model);
+    }
+
+    private async Task<T> RunWith<T>(IPdfGenerator generator, Func<MachineInspectionService, Task<T>> action)
+    {
+        await using var db = CreateContext();
+        var service = new MachineInspectionService(
+            new EfCertificateRepository(db), new EfRequestRepository(db), new EfUserRepository(db), new EfEquipmentRepository(db),
+            new EfClientRepository(db), generator, new EfCertificateFileRepository(db),
+            qrCodes: new Inspecta.Infrastructure.Services.QrCodeRenderer(), transactions: new EfTransactionRunner(db));
+        return await action(service);
+    }
+
+    private async Task SubmitBothMachines()
+    {
+        await Start();
+        foreach (var (item, key) in new[] { (forkliftItemId, "forklift"), (chainItemId, "basic") })
+        {
+            await Run(service => service.SaveFormAsync(requestId, item, inspector.Id, "inspector", CompleteForm(key)));
+            await Run(service => service.SubmitAsync(requestId, item, inspector.Id, "inspector"));
+        }
+    }
+
+    // A job that reached review without its machines being submitted (the old generic transition could do that).
+    private async Task MoveToReviewWithoutCertificates()
+    {
+        await using var db = CreateContext();
+        var request = db.Requests.Include(value => value.Items).Include(value => value.History).Single(value => value.Id == requestId);
+        request.TransitionTo(JobStatus.TaskAccepted, inspector.Id);
+        request.TransitionTo(JobStatus.InProgress, inspector.Id);
+        request.TransitionTo(JobStatus.CertificateSubmitted, inspector.Id);
+        await db.SaveChangesAsync();
     }
 
     private static int PageCount(byte[] pdf)

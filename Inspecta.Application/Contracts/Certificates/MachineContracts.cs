@@ -51,6 +51,9 @@ public static class InspectionResults
 /// <summary>
 /// One machine of an assigned job, with the state of its certificate. <c>canEdit</c> and <c>canReview</c> tell the current
 /// user what they can do with it now. <c>requestItemId</c> is the <c>id</c> of the item in <c>GET /requests/{requestId}</c>.
+/// For the review screen it also carries what is printed on the certificate: the machine's <c>type</c>, <c>manufacturer</c>,
+/// <c>capacity</c> (SWL), <c>model</c>, the inspection standards and both examination dates, with <c>pdfUrl</c> (the certificate as it
+/// will be printed) and <c>qrUrl</c> (what its QR code opens) once the certificate was saved or submitted.
 /// </summary>
 public sealed record MachineSummaryResponse(
     Guid RequestItemId,
@@ -65,14 +68,26 @@ public sealed record MachineSummaryResponse(
     string? CertificateNumber,
     bool CanEdit,
     bool CanReview,
-    InspectionResult? Result = null);
+    InspectionResult? Result = null,
+    string? Type = null,
+    string? TemplateName = null,
+    string? Manufacturer = null,
+    string? Capacity = null,
+    string? Model = null,
+    IReadOnlyList<string>? InspectionStandards = null,
+    DateOnly? ExaminationDate = null,
+    DateOnly? NextExaminationDate = null,
+    string? PdfUrl = null,
+    string? QrUrl = null);
 
 public sealed record MachineProgress(int Total, int Submitted, int Approved, int Delivered);
 
 /// <summary>
-/// The machines of one job and how far their certificates are. <c>canStartInspection</c>, <c>canReview</c> (approve or send
-/// back the whole job) and <c>canDeliver</c> tell the current user whether those buttons apply to the job now.
-/// <c>reviewHistory</c> lists the technical manager's comments each time the job was sent back, newest first.
+/// The machines of one job and how far their certificates are. <c>canStartInspection</c>, <c>canReview</c> (the job waits for the
+/// technical manager: show reject), <c>canApprove</c> (it can be approved now: show accept) and <c>canDeliver</c> tell the current
+/// user whether those buttons apply to the job now. When <c>canReview</c> is true but <c>canApprove</c> is not, <c>reviewBlockers</c>
+/// says why (a machine without a submitted certificate); the job can still be sent back. <c>previewZipUrl</c> downloads every
+/// certificate in one ZIP. <c>reviewHistory</c> lists the technical manager's comments each time the job was sent back, newest first.
 /// </summary>
 public sealed record MachineListResponse(
     Guid RequestId,
@@ -86,7 +101,10 @@ public sealed record MachineListResponse(
     IReadOnlyList<MachineSummaryResponse> Machines,
     MachineDelivery? Delivery = null,
     bool CanReview = false,
-    IReadOnlyList<ReviewCommentResponse>? ReviewHistory = null);
+    IReadOnlyList<ReviewCommentResponse>? ReviewHistory = null,
+    bool CanApprove = false,
+    IReadOnlyList<string>? ReviewBlockers = null,
+    string? PreviewZipUrl = null);
 
 /// <summary>One comment of the technical manager: on the whole job (<c>requestItemId</c> empty) or on one machine.</summary>
 public sealed record ReviewCommentResponse(DateTimeOffset At, string? By, Guid? RequestItemId, string? MachineName, string Text);

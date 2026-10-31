@@ -354,6 +354,13 @@ public sealed class InspectionRequestService(
                 409);
         if (target == JobStatus.Assigned)
             throw new AuthException("assignment_flow", "Assign an inspector through the assignment endpoint.", 409);
+        // The same for the certificates: moving the job to a review state by hand leaves it without certificates, so the
+        // technical manager would see a job with nothing to review. These states follow from the Quotation queue steps.
+        if (target is JobStatus.CertificateSubmitted or JobStatus.CertificateReturned or JobStatus.CertificateApproved or JobStatus.SentToClient)
+            throw new AuthException(
+                "certificate_flow",
+                "Certificate steps change through the Quotation queue: the inspector submits each machine, the technical manager uses approve-all or return-to-inspector, the coordinator uses deliver-to-client.",
+                409);
 
         // What is left is the work after acceptance: inspectors move their own jobs, managers and admins the rest.
         var allowed = role is "admin" or "technical_manager"

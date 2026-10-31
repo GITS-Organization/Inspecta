@@ -515,8 +515,10 @@ public sealed class InspectionCertificate
     private static bool? GetAnswer(IReadOnlyDictionary<string, bool> fields, string key) =>
         fields.TryGetValue(key, out var value) ? value : null;
 
-    private static void ValidateSignature(string signatureStrokesJson)
+    /// <summary>Throws an <see cref="ArgumentException"/> unless the text is a drawn signature: a JSON array of strokes of normalised x,y numbers.</summary>
+    public static void ValidateSignature(string signatureStrokesJson)
     {
+        const string Format = "The signature must be a JSON array of strokes, each a list of normalised x,y numbers, for example [[0.1,0.2,0.3,0.4]] (an image is not accepted).";
         try
         {
             using var document = JsonDocument.Parse(signatureStrokesJson);
@@ -525,12 +527,12 @@ public sealed class InspectionCertificate
                 : [];
             if (strokes.Length == 0 || strokes.Any(stroke => !IsValidStroke(stroke)))
             {
-                throw new ArgumentException("Reviewer signature must contain normalized x/y strokes.", nameof(signatureStrokesJson));
+                throw new ArgumentException(Format, nameof(signatureStrokesJson));
             }
         }
         catch (JsonException exception)
         {
-            throw new ArgumentException("Reviewer signature is not valid JSON.", nameof(signatureStrokesJson), exception);
+            throw new ArgumentException(Format, nameof(signatureStrokesJson), exception);
         }
     }
 

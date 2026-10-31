@@ -61,6 +61,22 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
             file.CertificateNumber, file.VerificationCode, file.ExaminationDate, file.NextExaminationDate,
             file.FileName, file.Sha256, file.IssuedAt, file.EquipmentId, file.QrData, file.PreparedBy, file.Result));
 
+    public async Task EnsureCounterAsync(Guid managerId, int year, CancellationToken cancellationToken = default)
+    {
+        if (await dbContext.CertificateCounters.AnyAsync(value => value.ManagerId == managerId && value.Year == year, cancellationToken)) return;
+        dbContext.CertificateCounters.Add(CertificateCounter.Create(managerId, year));
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // Another approval created it first: that is all that was wanted.
+            foreach (var entry in dbContext.ChangeTracker.Entries<CertificateCounter>().ToList())
+                entry.State = EntityState.Detached;
+        }
+    }
+
     public async Task<string> NextCertificateNumberAsync(Guid managerId, int year, CancellationToken cancellationToken = default)
     {
         for (var attempt = 1; ; attempt++)

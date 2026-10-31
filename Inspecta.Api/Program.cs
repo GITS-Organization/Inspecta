@@ -106,6 +106,7 @@ builder.Services.AddScoped<ICertificateDeliveryRepository, EfCertificateDelivery
 builder.Services.AddSingleton(new Inspecta.Application.Certificates.CertificateOptions(
     builder.Configuration["Certificates:PublicBaseUrl"] is { Length: > 0 } publicBaseUrl ? publicBaseUrl : "https://api.gitsplatform.com"));
 builder.Services.AddSingleton<IQrCodeRenderer, QrCodeRenderer>();
+builder.Services.AddScoped<ITransactionRunner, EfTransactionRunner>();
 builder.Services.AddScoped<IMachineInspectionService, MachineInspectionService>();
 builder.Services.AddScoped<Inspecta.Application.Services.ClientCertificateService>();
 builder.Services.AddSingleton(new Inspecta.Application.Services.CertificateDeliveryOptions(builder.Configuration.GetValue("CertificateDelivery:Enabled", false)));

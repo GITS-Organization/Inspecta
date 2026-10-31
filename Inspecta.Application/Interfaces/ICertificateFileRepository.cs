@@ -46,6 +46,12 @@ public interface ICertificateFileRepository
     /// <summary>The newest certificate issued for a registered machine, other than <paramref name="excludingCertificateId"/>.</summary>
     Task<IssuedCertificateSummary?> FindLatestForEquipmentAsync(Guid equipmentId, Guid excludingCertificateId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Makes sure the year's counter of a team exists. Done before a transaction that takes several numbers, so that creating
+    /// the counter (which two approvals could race for) never happens inside it.
+    /// </summary>
+    Task EnsureCounterAsync(Guid managerId, int year, CancellationToken cancellationToken = default);
+
     /// <summary>Takes the next certificate number of the year for a team, for example <c>CERT-2026-0042</c>.</summary>
     Task<string> NextCertificateNumberAsync(Guid managerId, int year, CancellationToken cancellationToken = default);
 }
