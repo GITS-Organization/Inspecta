@@ -89,6 +89,7 @@ builder.Services.AddScoped<IOutboundEmailRepository, EfOutboundEmailRepository>(
 builder.Services.AddSingleton(new QuoteDeliveryOptions(builder.Configuration.GetValue("QuoteDelivery:Enabled", true)));
 builder.Services.AddScoped<IQuoteDeliveryService, QuoteDeliveryService>();
 builder.Services.AddSingleton<IEmailSender, MailKitSmtpEmailSender>();
+builder.Services.AddSingleton<IEmailBranding, Inspecta.Infrastructure.Services.EmailBrandingProvider>();
 builder.Services.AddPdfGeneration(builder.Configuration);
 builder.Services.AddScoped<IInspectionRequestService, InspectionRequestService>();
 builder.Services.AddScoped<IClientRepository, EfClientRepository>();

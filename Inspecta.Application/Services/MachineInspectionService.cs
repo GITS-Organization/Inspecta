@@ -526,7 +526,8 @@ public sealed class MachineInspectionService(
             Blockers: blockers,
             AlreadyDelivered: alreadyDelivered,
             TestEmailTo: deliveryService.Enabled && plan.MailboxConfigured ? tester?.Email : null,
-            Certificates: certificates);
+            Certificates: certificates,
+            BodyHtml: plan.BodyHtml);
     }
 
     /// <summary>Sends the email exactly as it would go out, marked [TEST], to the signed-in user only. Nothing changes.</summary>

@@ -32,7 +32,8 @@ public sealed record CertificateDeliveryPlan(
     bool RepliesToOriginalEmail,
     string? FromAddress,
     string? FromName,
-    bool MailboxConfigured);
+    bool MailboxConfigured,
+    string? BodyHtml = null);
 
 public sealed record CertificateDeliveryResult(
     bool EmailSent,
@@ -58,7 +59,8 @@ public sealed class CertificateDeliveryService(
     ICertificateDeliveryRepository deliveryRepository,
     ISecretProtector secretProtector,
     IEmailSender emailSender,
-    CertificateDeliveryOptions? options = null)
+    CertificateDeliveryOptions? options = null,
+    IEmailBranding? branding = null)
 {
     // Above this many bytes the PDFs travel as one ZIP: mail servers refuse very large messages.
     private const int MaxAttachedBytes = 18 * 1024 * 1024;
@@ -109,7 +111,10 @@ public sealed class CertificateDeliveryService(
             replies && string.IsNullOrWhiteSpace(draft?.To),
             config is not null && coordinator is not null ? QuoteDeliveryService.ResolveFromAddress(config, coordinator) : null,
             coordinator?.FullName,
-            config is not null);
+            config is not null,
+            EmailLayout.ForCoordinator(
+                body, coordinator, config is not null && coordinator is not null ? QuoteDeliveryService.ResolveFromAddress(config, coordinator) : null,
+                source, branding, EmailLayout.PreviewLogoPath).Html);
     }
 
     public async Task<CertificateDeliveryResult> DeliverAsync(
@@ -231,6 +236,7 @@ public sealed class CertificateDeliveryService(
         IReadOnlyList<EmailAttachment> attachments,
         CancellationToken cancellationToken)
     {
+        var laidOut = EmailLayout.ForCoordinator(body, coordinator, fromAddress, source, branding);
         var smtp = config.ResolveSmtp();
         await emailSender.SendAsync(
             new SmtpSettings(smtp.Server, smtp.Port, smtp.UseSsl, config.EmailUsername, secretProtector.Unprotect(config.EncryptedPassword)),
@@ -240,7 +246,7 @@ public sealed class CertificateDeliveryService(
                 toAddress,
                 toName,
                 subject,
-                body,
+                laidOut.Text,
                 messageId,
                 source?.MessageId,
                 source is null ? null : string.Join(' ', new[] { source.References, source.MessageId }.Where(value => !string.IsNullOrWhiteSpace(value))),
@@ -248,7 +254,8 @@ public sealed class CertificateDeliveryService(
                 attachments[0].Content,
                 attachments.Skip(1).ToArray(),
                 cc,
-                PlainTextToHtml(body)),
+                laidOut.Html,
+                laidOut.InlineImages),
             cancellationToken);
     }
 
@@ -319,7 +326,8 @@ public sealed class CertificateDeliveryService(
     internal static string ComposeBody(string? recipientName, string clientName, IReadOnlyList<IssuedCertificateFile> files, string? coordinatorName)
     {
         var body = new StringBuilder();
-        body.AppendLine($"Dear {(string.IsNullOrWhiteSpace(recipientName) ? "Sir/Madam" : recipientName)},");
+        body.AppendLine("Dears,");
+        body.AppendLine("good day,");
         body.AppendLine();
         body.AppendLine($"Please find attached the Reports of Thorough Examination for {clientName}:");
         body.AppendLine();
@@ -339,9 +347,7 @@ public sealed class CertificateDeliveryService(
         body.AppendLine();
         body.AppendLine("Each certificate carries a QR code. Scan it, or open the link above, to confirm that the certificate is genuine and to download it again at any time.");
         body.AppendLine();
-        body.AppendLine("Kind regards,");
-        body.AppendLine(string.IsNullOrWhiteSpace(coordinatorName) ? "Integrity International Inspection" : coordinatorName);
-        if (!string.IsNullOrWhiteSpace(coordinatorName)) body.AppendLine("Integrity International Inspection");
+        body.AppendLine("Regards,");
         return body.ToString().TrimEnd() + Environment.NewLine;
     }
 

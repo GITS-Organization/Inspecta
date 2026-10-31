@@ -152,7 +152,8 @@ public sealed record DeliveryPreviewResponse(
     IReadOnlyList<string>? Blockers = null,
     bool AlreadyDelivered = false,
     string? TestEmailTo = null,
-    IReadOnlyList<DeliveryCertificate>? Certificates = null);
+    IReadOnlyList<DeliveryCertificate>? Certificates = null,
+    string? BodyHtml = null);
 
 /// <summary>The test copy of the email went to this address.</summary>
 public sealed record TestEmailResponse(string SentTo, string Subject);

@@ -28,6 +28,7 @@ public sealed record SendQuoteEmailRequest
 /// <param name="EmailEnabled">False while emailing is switched off: sending then only changes the quotation.</param>
 /// <param name="PdfUrl">The attached quotation, to open before sending.</param>
 /// <param name="CanSend">Whether the Send button works; <c>blockers</c> says why not.</param>
+/// <param name="BodyHtml">The email as the client sees it: the text, the signature with the logo, and the email being answered. Show it in a web view; edit only <c>body</c>.</param>
 public sealed record QuoteEmailPreviewResponse(
     string Action,
     bool EmailEnabled,
@@ -42,4 +43,5 @@ public sealed record QuoteEmailPreviewResponse(
     bool RepliesToOriginalEmail,
     string? Notice,
     bool CanSend,
-    IReadOnlyList<string> Blockers);
+    IReadOnlyList<string> Blockers,
+    string? BodyHtml = null);

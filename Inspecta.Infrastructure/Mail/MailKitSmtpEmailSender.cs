@@ -57,6 +57,12 @@ public sealed class MailKitSmtpEmailSender(ILogger<MailKitSmtpEmailSender> logge
         body.Attachments.Add(email.AttachmentFileName, email.AttachmentContent, ContentType.Parse(email.AttachmentFileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ? "application/zip" : "application/pdf"));
         foreach (var more in email.MoreAttachments ?? [])
             body.Attachments.Add(more.FileName, more.Content, ContentType.Parse(more.ContentType));
+        foreach (var image in email.InlineImages ?? [])
+        {
+            var resource = body.LinkedResources.Add(image.FileName, image.Content, ContentType.Parse(image.ContentType));
+            resource.ContentId = image.FileName;
+        }
+
         message.Body = body.ToMessageBody();
         return message;
     }

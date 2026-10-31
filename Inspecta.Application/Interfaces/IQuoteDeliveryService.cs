@@ -22,7 +22,8 @@ public sealed record QuoteEmailPlan(
     string? FromAddress,
     string? FromName,
     bool RepliesToOriginalEmail,
-    IReadOnlyList<string> Blockers);
+    IReadOnlyList<string> Blockers,
+    string? BodyHtml = null);
 
 /// <summary>Generates the quotation PDF and emails it to whoever sent the original request.</summary>
 public interface IQuoteDeliveryService

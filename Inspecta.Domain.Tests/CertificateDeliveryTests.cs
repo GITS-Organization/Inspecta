@@ -162,7 +162,7 @@ public sealed class CertificateDeliveryTests : IDisposable
         Assert.Equal("coordinator@example.com", preview.From);
         Assert.Equal("coordinator@example.com", preview.TestEmailTo);
         Assert.Empty(preview.Cc!);
-        Assert.StartsWith("Dear Al Noor,", preview.Body);
+        Assert.StartsWith("Dears,", preview.Body);
         Assert.Contains("1. ", preview.Body);
         Assert.Contains("Satisfactory", preview.Body);
         Assert.Contains("examined 05/11/2026, next examination 05/11/2027", preview.Body);

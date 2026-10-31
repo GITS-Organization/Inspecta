@@ -469,7 +469,8 @@ public sealed class QuoteService(
             plan.RepliesToOriginalEmail,
             plan.EmailEnabled ? null : "Email delivery is switched off: sending only changes the quotation, no email goes out.",
             blockers.Count == 0,
-            blockers);
+            blockers,
+            plan.BodyHtml);
     }
 
     private static QuoteEmailDraft? ToDraft(SendQuoteEmailRequest? email) =>

@@ -16,7 +16,8 @@ public sealed class QuoteDeliveryService(
     ISecretProtector secretProtector,
     IPdfGenerator pdfGenerator,
     IEmailSender emailSender,
-    QuoteDeliveryOptions? options = null) : IQuoteDeliveryService
+    QuoteDeliveryOptions? options = null,
+    IEmailBranding? branding = null) : IQuoteDeliveryService
 {
     public async Task<QuoteEmailPlan> PlanAsync(
         InspectionRequest request,
@@ -50,8 +51,9 @@ public sealed class QuoteDeliveryService(
             if (config is null) blockers.Add("The coordinator mailbox is not configured.");
         }
 
+        var preview = EmailLayout.ForCoordinator(body, coordinator, fromAddress, source, branding, EmailLayout.PreviewLogoPath);
         return new QuoteEmailPlan(
-            options is not { Enabled: false }, toAddress, toName, copies, subject, body, pdfName, fromAddress, coordinator?.FullName, replies, blockers);
+            options is not { Enabled: false }, toAddress, toName, copies, subject, body, pdfName, fromAddress, coordinator?.FullName, replies, blockers, preview.Html);
     }
 
     public async Task<OutboundEmail?> DeliverAsync(
@@ -107,16 +109,18 @@ public sealed class QuoteDeliveryService(
         if (existing is null) await outboundEmailRepository.AddAsync(row, cancellationToken);
         else await outboundEmailRepository.SaveAsync(cancellationToken);
 
+        var laidOut = EmailLayout.ForCoordinator(row.BodyText, coordinator, fromAddress, source, branding);
         var smtp = config.ResolveSmtp();
         try
         {
             await emailSender.SendAsync(
                 new SmtpSettings(smtp.Server, smtp.Port, smtp.UseSsl, config.EmailUsername, secretProtector.Unprotect(config.EncryptedPassword)),
                 new OutgoingEmail(
-                    row.FromAddress, row.FromName, row.ToAddress, row.ToName, row.Subject, row.BodyText, row.MessageId,
+                    row.FromAddress, row.FromName, row.ToAddress, row.ToName, row.Subject, laidOut.Text, row.MessageId,
                     row.InReplyTo, row.References, row.AttachmentFileName, row.AttachmentContent,
                     Cc: row.Cc.Count == 0 ? null : row.Cc,
-                    BodyHtml: CertificateDeliveryService.PlainTextToHtml(row.BodyText)),
+                    BodyHtml: laidOut.Html,
+                    InlineImages: laidOut.InlineImages),
                 cancellationToken);
         }
         catch (Exception exception)
@@ -178,7 +182,8 @@ public sealed class QuoteDeliveryService(
         string? originalSubject)
     {
         var body = new StringBuilder();
-        body.AppendLine($"Dear {(string.IsNullOrWhiteSpace(recipientName) ? "Sir/Madam" : recipientName)},");
+        body.AppendLine("Dears,");
+        body.AppendLine("good day,");
         body.AppendLine();
         var regarding = string.IsNullOrWhiteSpace(originalSubject) ? string.Empty : $" regarding \"{originalSubject.Trim()}\"";
         body.AppendLine(kind == OutboundEmailKind.Accept
@@ -197,8 +202,7 @@ public sealed class QuoteDeliveryService(
         }
 
         body.AppendLine();
-        body.AppendLine("Kind regards,");
-        body.AppendLine(coordinatorName);
+        body.AppendLine("Regards,");
         return body.ToString();
     }
 }

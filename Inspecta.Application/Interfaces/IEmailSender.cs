@@ -21,7 +21,9 @@ public sealed record OutgoingEmail(
     byte[] AttachmentContent,
     IReadOnlyList<EmailAttachment>? MoreAttachments = null,
     IReadOnlyList<string>? Cc = null,
-    string? BodyHtml = null);
+    string? BodyHtml = null,
+    /// <summary>Images the HTML shows with <c>src="cid:..."</c>; the file name is the content id.</summary>
+    IReadOnlyList<EmailAttachment>? InlineImages = null);
 
 public interface IEmailSender
 {

@@ -655,7 +655,7 @@ public sealed class QuotationTests
         Assert.Equal("quotation.pdf", email.AttachmentFileName);
         Assert.Equal([1, 2, 3], email.AttachmentContent);
         Assert.Contains(sent.ProposalNumber, email.BodyText, StringComparison.Ordinal);
-        Assert.Contains("Dear Al Noor", email.BodyText, StringComparison.Ordinal);
+        Assert.Contains("Dears,", email.BodyText, StringComparison.Ordinal);
         Assert.Contains("Mobile crane", email.BodyText, StringComparison.Ordinal);
         Assert.Equal("imap.example.com".Replace("imap", "smtp"), fixture.Sender.LastSmtp!.Server);
         Assert.Equal(587, fixture.Sender.LastSmtp.Port);
@@ -690,7 +690,7 @@ public sealed class QuotationTests
         Assert.Equal("quotation.pdf", offer.AttachmentName);
         Assert.Equal($"/api/v1/requests/{fixture.Request.Id}/quotes/{quote.Id}/pdf", offer.PdfUrl);
         Assert.True(offer.RepliesToOriginalEmail);
-        Assert.Contains("Dear Al Noor", offer.Body, StringComparison.Ordinal);
+        Assert.Contains("Dears,", offer.Body, StringComparison.Ordinal);
         Assert.Contains("technical and commercial offer", offer.Body, StringComparison.Ordinal);
 
         var accept = await fixture.Service.PreviewEmailAsync(fixture.Request.Id, quote.Id, "accept", CoordinatorId, "coordinator");
