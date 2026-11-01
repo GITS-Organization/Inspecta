@@ -128,7 +128,8 @@ public sealed class InspectionRequest
         DateTimeOffset? receivedAt = null,
         RequestTriage triage = RequestTriage.Request,
         Guid? clientId = null,
-        string? clientName = null)
+        string? clientName = null,
+        string? location = null)
     {
         if (!Enum.IsDefined(triage)) throw new ArgumentOutOfRangeException(nameof(triage));
         if (clientId == Guid.Empty) throw new ArgumentException("Client id cannot be empty.", nameof(clientId));
@@ -154,6 +155,7 @@ public sealed class InspectionRequest
             Triage = triage,
             ClientId = clientId,
             ClientName = clientName?.Trim() ?? string.Empty,
+            Location = location?.Trim() ?? string.Empty,
             ReceivedAt = email.SentAt ?? received,
             Status = JobStatus.RequestReceived,
             CreatedAt = now,
@@ -211,7 +213,7 @@ public sealed class InspectionRequest
     }
 
     /// <summary>Turns a "maybe" email into a real request of a client whose sender has just been registered.</summary>
-    public void AdoptClient(Guid clientId, string clientName)
+    public void AdoptClient(Guid clientId, string clientName, string? location = null)
     {
         if (clientId == Guid.Empty) throw new ArgumentException("Client is required.", nameof(clientId));
         if (string.IsNullOrWhiteSpace(clientName)) throw new ArgumentException("Client name is required.", nameof(clientName));
@@ -219,6 +221,8 @@ public sealed class InspectionRequest
         Confirm();
         ClientId = clientId;
         ClientName = clientName.Trim();
+        if (string.IsNullOrWhiteSpace(Location) && !string.IsNullOrWhiteSpace(location))
+            Location = location.Trim();
     }
 
     public void SetClient(Guid clientId)

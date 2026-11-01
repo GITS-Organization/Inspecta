@@ -41,8 +41,8 @@ public sealed class ClientMailRuleService(
         // Mail from this sender that was waiting as a "maybe" now belongs to the client: it becomes a real request.
         var promoted = 0;
         if (rule.ClientId is Guid linkedClient &&
-            await ruleRepository.GetClientNameAsync(linkedClient, cancellationToken) is { } clientName)
-            promoted = await ruleRepository.PromoteMaybesAsync(rule, clientName, cancellationToken);
+            await ruleRepository.GetClientSummaryAsync(linkedClient, cancellationToken) is { } client)
+            promoted = await ruleRepository.PromoteMaybesAsync(rule, client, cancellationToken);
         return Map(rule) with { PromotedRequests = promoted };
     }
 

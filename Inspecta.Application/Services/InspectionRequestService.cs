@@ -138,7 +138,7 @@ public sealed class InspectionRequestService(
                     "client_required",
                     "This sender is not registered under a client yet. Add the sender's email to the client first (POST /clients/{clientId}/emails); the request then moves by itself.",
                     409);
-            request.AdoptClient(clientId, sender.ClientName);
+            request.AdoptClient(clientId, sender.ClientName, sender.ClientLocation);
         }
         else
         {

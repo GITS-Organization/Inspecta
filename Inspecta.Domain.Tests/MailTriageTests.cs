@@ -242,6 +242,26 @@ public sealed class MailTriageTests
     }
 
     [Fact]
+    public void ARequestFromAKnownClientStartsWithTheClientsLocationAndKeepsWhatWasTyped()
+    {
+        var clientId = Guid.NewGuid();
+
+        var request = InspectionRequest.CreateFromEmail(
+            ManagerId, CoordinatorId, Email(), clientId: clientId, clientName: "Al Noor", location: " Borg El Arab ");
+
+        Assert.Equal("Borg El Arab", request.Location);
+        Assert.Equal(["items"], request.GetMissingFields());
+
+        var maybe = InspectionRequest.CreateFromEmail(ManagerId, CoordinatorId, Email(), triage: RequestTriage.Maybe);
+        maybe.AdoptClient(clientId, "Al Noor", "Cairo");
+        Assert.Equal("Cairo", maybe.Location);
+
+        var typed = InspectionRequest.CreateFromEmail(ManagerId, CoordinatorId, Email(), triage: RequestTriage.Maybe, location: "Site 7");
+        typed.AdoptClient(clientId, "Al Noor", "Cairo");
+        Assert.Equal("Site 7", typed.Location);
+    }
+
+    [Fact]
     public void AMaybeTakesTheClientWhenItsSenderIsRegistered()
     {
         var clientId = Guid.NewGuid();
@@ -263,7 +283,7 @@ public sealed class MailTriageTests
         var fromSomeoneElse = InspectionRequest.CreateFromEmail(
             manager.Id, CoordinatorId, Email() with { FromAddress = "other@elsewhere.com" }, triage: RequestTriage.Maybe);
         var clientId = Guid.NewGuid();
-        var repository = new FakeRuleRepository { ClientManagerId = manager.Id, ClientName = "Al Noor Heavy Industries" };
+        var repository = new FakeRuleRepository { ClientManagerId = manager.Id, ClientName = "Al Noor Heavy Industries", ClientLocation = "Borg El Arab, Alexandria" };
         repository.Waiting.AddRange([fromBuyer, fromSomeoneElse]);
         var service = new ClientMailRuleService(repository, new IncomingEmailRequestTests.FakeUserRepository(manager));
 
@@ -273,7 +293,9 @@ public sealed class MailTriageTests
         Assert.Equal(clientId, added.ClientId);
         Assert.Equal(RequestTriage.Request, fromBuyer.Triage);
         Assert.Equal("Al Noor Heavy Industries", fromBuyer.ClientName);
+        Assert.Equal("Borg El Arab, Alexandria", fromBuyer.Location);
         Assert.Equal(RequestTriage.Maybe, fromSomeoneElse.Triage);
+        Assert.Equal(string.Empty, fromSomeoneElse.Location);
         Assert.Single(await service.ListForClientAsync(clientId, manager.Id));
     }
 
@@ -308,7 +330,7 @@ public sealed class MailTriageTests
         Assert.Equal(409, refused.StatusCode);
         Assert.Equal(RequestTriage.Maybe, maybe.Triage);
 
-        var known = new FakeSenders(new SenderRule(ClientMailRule.ForKnownAddress(ManagerId, "buyer@alnoor.com", clientId), "Al Noor"));
+        var known = new FakeSenders(new SenderRule(ClientMailRule.ForKnownAddress(ManagerId, "buyer@alnoor.com", clientId), "Al Noor", "Cairo"));
         service = new InspectionRequestService(new FakeRepository(maybe), null!, senderRules: known);
 
         var confirmed = await service.ConfirmAsync(maybe.Id, CoordinatorId, "coordinator");
@@ -316,6 +338,7 @@ public sealed class MailTriageTests
         Assert.Equal(RequestTriage.Request, confirmed.Triage);
         Assert.Equal(clientId, confirmed.ClientId);
         Assert.Equal("Al Noor", confirmed.ClientName);
+        Assert.Equal("Cairo", confirmed.Location);
     }
 
     private sealed class FakeSenders(params SenderRule[] rules) : IEmailSyncRepository
@@ -410,15 +433,16 @@ public sealed class MailTriageTests
             Task.FromResult(ClientManagerId);
 
         public string? ClientName { get; set; }
+        public string? ClientLocation { get; set; }
         public List<InspectionRequest> Waiting { get; } = [];
 
-        public Task<string?> GetClientNameAsync(Guid clientId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(ClientName);
+        public Task<ClientSummary?> GetClientSummaryAsync(Guid clientId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(ClientName is null ? null : new ClientSummary(ClientName, ClientLocation));
 
-        public Task<int> PromoteMaybesAsync(ClientMailRule rule, string clientName, CancellationToken cancellationToken = default)
+        public Task<int> PromoteMaybesAsync(ClientMailRule rule, ClientSummary client, CancellationToken cancellationToken = default)
         {
             var matching = Waiting.Where(request => rule.Matches(request.EmailFrom)).ToList();
-            foreach (var request in matching) request.AdoptClient(rule.ClientId!.Value, clientName);
+            foreach (var request in matching) request.AdoptClient(rule.ClientId!.Value, client.Name, client.Location);
             return Task.FromResult(matching.Count);
         }
 

@@ -74,14 +74,16 @@ public sealed partial class EmailSyncBackgroundService
                         var message = await inbox.GetMessageAsync(uid, cancellationToken);
                         var incoming = ToIncomingEmail(message, uidValidity, uid.Id);
                         var rule = ClientMailRule.FindMatch(rules.Select(item => item.Rule), incoming.FromAddress);
-                        var clientName = rule is null ? null : rules.First(item => item.Rule.Id == rule.Id).ClientName;
+                        var sender = rule is null ? null : rules.First(item => item.Rule.Id == rule.Id);
+                        var clientName = sender?.ClientName;
                         var request = InspectionRequest.CreateFromEmail(
                             config.TenantId,
                             config.CoordinatorId,
                             incoming,
                             triage: rule is null ? RequestTriage.Maybe : RequestTriage.Request,
                             clientId: clientName is null ? null : rule!.ClientId,
-                            clientName: clientName);
+                            clientName: clientName,
+                            location: clientName is null ? null : sender!.ClientLocation);
 
                         await repository.SaveRequestIfNewAsync(request, cancellationToken);
                         FailedImports.TryRemove((config.CoordinatorId, uid.Id), out _);

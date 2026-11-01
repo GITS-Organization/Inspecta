@@ -3,7 +3,7 @@ using Inspecta.Domain.Entities;
 namespace Inspecta.Application.Interfaces;
 
 /// <summary>A configured sender plus the name of the client it points to, if any.</summary>
-public sealed record SenderRule(ClientMailRule Rule, string? ClientName);
+public sealed record SenderRule(ClientMailRule Rule, string? ClientName, string? ClientLocation = null);
 
 public interface IEmailSyncRepository
 {

@@ -45,12 +45,12 @@ public sealed class EfEmailSyncRepository(InspectaDbContext dbContext) : IEmailS
             ? []
             : await dbContext.Clients.IgnoreQueryFilters().AsNoTracking()
                 .Where(client => clientIds.Contains(client.Id) && client.ManagerId == managerId && client.ArchivedAt == null)
-                .ToDictionaryAsync(client => client.Id, client => client.Name, cancellationToken);
+                .ToDictionaryAsync(client => client.Id, client => (client.Name, client.Location), cancellationToken);
 
         var senders = rules
-            .Select(rule => new SenderRule(
-                rule,
-                rule.ClientId is Guid clientId && clientNames.TryGetValue(clientId, out var name) ? name : null))
+            .Select(rule => rule.ClientId is Guid clientId && clientNames.TryGetValue(clientId, out var client)
+                ? new SenderRule(rule, client.Name, client.Location)
+                : new SenderRule(rule, null))
             .ToList();
 
         // A contact's email or the certificates email of a client is a sender of that client too, even if nobody
@@ -69,7 +69,7 @@ public sealed class EfEmailSyncRepository(InspectaDbContext dbContext) : IEmailS
                 ClientMailRule implied;
                 try { implied = ClientMailRule.ForKnownAddress(managerId, address, client.Id); }
                 catch (ArgumentException) { continue; }
-                if (known.Add(implied.Pattern)) senders.Add(new SenderRule(implied, client.Name));
+                if (known.Add(implied.Pattern)) senders.Add(new SenderRule(implied, client.Name, client.Location));
             }
         }
 

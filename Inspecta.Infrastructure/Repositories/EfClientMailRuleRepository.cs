@@ -27,13 +27,13 @@ public sealed class EfClientMailRuleRepository(InspectaDbContext dbContext) : IC
             .Select(client => client.ManagerId)
             .SingleOrDefaultAsync(cancellationToken);
 
-    public Task<string?> GetClientNameAsync(Guid clientId, CancellationToken cancellationToken = default) =>
+    public Task<ClientSummary?> GetClientSummaryAsync(Guid clientId, CancellationToken cancellationToken = default) =>
         dbContext.Clients.IgnoreQueryFilters()
             .Where(client => client.Id == clientId && client.ArchivedAt == null)
-            .Select(client => client.Name)
+            .Select(client => new ClientSummary(client.Name, client.Location))
             .SingleOrDefaultAsync(cancellationToken);
 
-    public async Task<int> PromoteMaybesAsync(ClientMailRule rule, string clientName, CancellationToken cancellationToken = default)
+    public async Task<int> PromoteMaybesAsync(ClientMailRule rule, ClientSummary client, CancellationToken cancellationToken = default)
     {
         if (rule.ClientId is not Guid clientId) return 0;
 
@@ -41,7 +41,7 @@ public sealed class EfClientMailRuleRepository(InspectaDbContext dbContext) : IC
             .Where(request => request.ManagerId == rule.ManagerId && request.Triage == RequestTriage.Maybe && request.EmailFrom != null)
             .ToListAsync(cancellationToken);
         var matching = waiting.Where(request => rule.Matches(request.EmailFrom)).ToList();
-        foreach (var request in matching) request.AdoptClient(clientId, clientName);
+        foreach (var request in matching) request.AdoptClient(clientId, client.Name, client.Location);
 
         if (matching.Count > 0) await dbContext.SaveChangesAsync(cancellationToken);
         return matching.Count;
