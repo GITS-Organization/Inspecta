@@ -470,11 +470,12 @@ public sealed class QuoteService(
             plan.EmailEnabled ? null : "Email delivery is switched off: sending only changes the quotation, no email goes out.",
             blockers.Count == 0,
             blockers,
-            plan.BodyHtml);
+            plan.BodyHtml,
+            plan.ExtraAttachmentNames);
     }
 
     private static QuoteEmailDraft? ToDraft(SendQuoteEmailRequest? email) =>
-        email is null ? null : new QuoteEmailDraft(email.SentTo, email.Cc, email.Subject, email.Message);
+        email is null ? null : new QuoteEmailDraft(email.SentTo, email.Cc, email.Subject, email.Message, ExtraEmailAttachments.Decode(email.Attachments));
 
     private static void AddUnpriced(Quote quote, List<string> blockers)
     {

@@ -299,6 +299,9 @@ public sealed record DeliverCertificatesRequest
     /// <summary>The subject; leave out to use the suggested one (a reply in the original thread).</summary>
     [MaxLength(300)]
     public string? Subject { get; init; }
+
+    /// <summary>Extra files to send with the certificates (at most 5, 15 MB together): the certificates stay first.</summary>
+    public IReadOnlyList<Mail.EmailAttachmentUpload>? Attachments { get; init; }
 }
 
 /// <summary>Hand the certificates over without sending an email (given on paper, by chat, picked up...).</summary>

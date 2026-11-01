@@ -649,7 +649,7 @@ public sealed class QuotationTests
         Assert.Equal("Al Noor", email.ToName);
         Assert.Equal("coordinator@example.com", email.FromAddress);
         Assert.Equal("Eng. Ahmed", email.FromName);
-        Assert.Equal("Re: Quote request", email.Subject);
+        Assert.StartsWith("Quotation ", email.Subject);
         Assert.Equal("<id@alnoor.com>", email.InReplyTo);
         Assert.Contains("<id@alnoor.com>", email.References, StringComparison.Ordinal);
         Assert.Equal("quotation.pdf", email.AttachmentFileName);
@@ -666,6 +666,55 @@ public sealed class QuotationTests
         Assert.Equal(OutboundEmailStatus.Sent, delivery.Status);
         Assert.NotNull(sent.SentAt);
         Assert.Equal(JobStatus.QuoteSent, fixture.Request.Status);
+    }
+
+    [Fact]
+    public async Task FilesAddedByTheCoordinatorGoWithTheQuotationAndOthersAreRefused()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+
+        var terms = new Application.Contracts.Mail.EmailAttachmentUpload("terms.pdf", Convert.ToBase64String("%PDF-1.4 terms"u8.ToArray()));
+        var program = new Application.Contracts.Mail.EmailAttachmentUpload("run.pdf", Convert.ToBase64String("MZ program"u8.ToArray()));
+
+        // A file that is not what its name says is refused and nothing is sent.
+        await Assert.ThrowsAsync<ArgumentException>(() => fixture.Service.SendAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", new SendQuoteEmailRequest { Attachments = [program] }));
+        Assert.Empty(fixture.Sender.Sent);
+
+        var preview = await fixture.Service.PreviewEmailAsync(
+            fixture.Request.Id, quote.Id, "send", CoordinatorId, "coordinator", new SendQuoteEmailRequest { Attachments = [terms] });
+        Assert.Equal(["terms.pdf"], preview.ExtraAttachmentNames);
+
+        await fixture.Service.SendAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", new SendQuoteEmailRequest { Attachments = [terms] });
+
+        var email = Assert.Single(fixture.Sender.Sent);
+        Assert.Equal("quotation.pdf", email.AttachmentFileName);
+        var extra = Assert.Single(email.MoreAttachments!);
+        Assert.Equal("terms.pdf", extra.FileName);
+        Assert.Equal("application/pdf", extra.ContentType);
+        Assert.Equal("%PDF-1.4 terms"u8.ToArray(), extra.Content);
+    }
+
+    [Fact]
+    public void TheExtraFilesAreLimitedInNumberSizeAndType()
+    {
+        string Pdf(int bytes) => Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes("%PDF" + new string('a', bytes)));
+        Application.Contracts.Mail.EmailAttachmentUpload File(string name, string content) => new(name, content);
+
+        Assert.Empty(ExtraEmailAttachments.Decode(null));
+        Assert.Equal("a.pdf", Assert.Single(ExtraEmailAttachments.Decode([File("C:\\docs\\a.pdf", Pdf(10))])).FileName);
+
+        Assert.Throws<ArgumentException>(() => ExtraEmailAttachments.Decode([File("run.exe", Pdf(10))]));
+        Assert.Throws<ArgumentException>(() => ExtraEmailAttachments.Decode([File("noextension", Pdf(10))]));
+        Assert.Throws<ArgumentException>(() => ExtraEmailAttachments.Decode([File("a.pdf", "not base64!")]));
+        Assert.Throws<ArgumentException>(() => ExtraEmailAttachments.Decode([File("a.pdf", "")]));
+        Assert.Throws<ArgumentException>(() => ExtraEmailAttachments.Decode(
+            Enumerable.Range(0, ExtraEmailAttachments.MaxFiles + 1).Select(index => File($"{index}.pdf", Pdf(10))).ToArray()));
+        Assert.Throws<ArgumentException>(() => ExtraEmailAttachments.Decode(
+            [File("big1.pdf", Pdf(9 * 1024 * 1024)), File("big2.pdf", Pdf(9 * 1024 * 1024))]));
     }
 
     [Fact]
@@ -686,7 +735,7 @@ public sealed class QuotationTests
         Assert.Empty(offer.Blockers);
         Assert.Equal("buyer@alnoor.com", offer.To);
         Assert.Equal("coordinator@example.com", offer.From);
-        Assert.Equal("Re: Quote request", offer.Subject);
+        Assert.StartsWith("Quotation ", offer.Subject);
         Assert.Equal("quotation.pdf", offer.AttachmentName);
         Assert.Equal($"/api/v1/requests/{fixture.Request.Id}/quotes/{quote.Id}/pdf", offer.PdfUrl);
         Assert.True(offer.RepliesToOriginalEmail);
@@ -695,6 +744,7 @@ public sealed class QuotationTests
 
         var accept = await fixture.Service.PreviewEmailAsync(fixture.Request.Id, quote.Id, "accept", CoordinatorId, "coordinator");
         Assert.Contains("we accept your request", accept.Body, StringComparison.Ordinal);
+        Assert.StartsWith("Order Confirmation - Quotation ", accept.Subject);
         await Assert.ThrowsAsync<ArgumentException>(() => fixture.Service.PreviewEmailAsync(fixture.Request.Id, quote.Id, "other", CoordinatorId, "coordinator"));
 
         // Nothing was sent and nothing changed.

@@ -33,7 +33,7 @@ public sealed class QuoteDeliveryService(
         var config = request.CoordinatorId is Guid configOwner ? await configRepository.GetByCoordinatorAsync(configOwner, cancellationToken) : null;
 
         var subject = string.IsNullOrWhiteSpace(draft?.Subject)
-            ? ComposeSubject(source?.Subject, quote)
+            ? ComposeSubject(quote, kind, request.ClientName)
             : CertificateDeliveryService.CleanSubject(draft.Subject);
         var body = string.IsNullOrWhiteSpace(draft?.Body)
             ? ComposeBody(kind, quote, toName, coordinator?.FullName ?? string.Empty, source?.Subject)
@@ -53,7 +53,8 @@ public sealed class QuoteDeliveryService(
 
         var preview = EmailLayout.ForCoordinator(body, coordinator, fromAddress, source, branding, EmailLayout.PreviewLogoPath);
         return new QuoteEmailPlan(
-            options is not { Enabled: false }, toAddress, toName, copies, subject, body, pdfName, fromAddress, coordinator?.FullName, replies, blockers, preview.Html);
+            options is not { Enabled: false }, toAddress, toName, copies, subject, body, pdfName, fromAddress, coordinator?.FullName, replies, blockers, preview.Html,
+            draft?.Extra is { Count: > 0 } extra ? extra.Select(file => file.FileName).ToArray() : null);
     }
 
     public async Task<OutboundEmail?> DeliverAsync(
@@ -118,6 +119,7 @@ public sealed class QuoteDeliveryService(
                 new OutgoingEmail(
                     row.FromAddress, row.FromName, row.ToAddress, row.ToName, row.Subject, laidOut.Text, row.MessageId,
                     row.InReplyTo, row.References, row.AttachmentFileName, row.AttachmentContent,
+                    MoreAttachments: draft?.Extra is { Count: > 0 } ? draft.Extra : null,
                     Cc: row.Cc.Count == 0 ? null : row.Cc,
                     BodyHtml: laidOut.Html,
                     InlineImages: laidOut.InlineImages),
@@ -167,11 +169,14 @@ public sealed class QuoteDeliveryService(
         return at >= 0 && at < address.Length - 1 ? address[(at + 1)..] : "inspecta.local";
     }
 
-    private static string ComposeSubject(string? originalSubject, Quote quote)
+    // Says what is being sent: the offer, a revised offer (a counter offer) or the confirmation of the order.
+    private static string ComposeSubject(Quote quote, OutboundEmailKind kind, string? clientName)
     {
-        var subject = originalSubject is null ? string.Empty : string.Concat(originalSubject.Where(character => !char.IsControl(character))).Trim();
-        if (subject.Length == 0) return $"Quotation {quote.ProposalNumber}";
-        return subject.StartsWith("Re:", StringComparison.OrdinalIgnoreCase) ? subject : "Re: " + subject;
+        var subject = kind == OutboundEmailKind.Accept
+            ? $"Order Confirmation - Quotation {quote.ProposalNumber}"
+            : quote.Version > 1 ? $"Revised Quotation {quote.ProposalNumber}" : $"Quotation {quote.ProposalNumber}";
+        var client = string.IsNullOrWhiteSpace(clientName) ? quote.ClientName : clientName;
+        return string.IsNullOrWhiteSpace(client) ? subject : $"{subject} - {client.Trim()}";
     }
 
     private static string ComposeBody(

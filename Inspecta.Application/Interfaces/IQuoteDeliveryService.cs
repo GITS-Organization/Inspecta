@@ -8,7 +8,8 @@ public sealed record QuoteEmailDraft(
     string? To = null,
     IReadOnlyList<string>? Cc = null,
     string? Subject = null,
-    string? Body = null);
+    string? Body = null,
+    IReadOnlyList<EmailAttachment>? Extra = null);
 
 /// <summary>The quotation email as it would go out, and what stops it.</summary>
 public sealed record QuoteEmailPlan(
@@ -23,7 +24,8 @@ public sealed record QuoteEmailPlan(
     string? FromName,
     bool RepliesToOriginalEmail,
     IReadOnlyList<string> Blockers,
-    string? BodyHtml = null);
+    string? BodyHtml = null,
+    IReadOnlyList<string>? ExtraAttachmentNames = null);
 
 /// <summary>Generates the quotation PDF and emails it to whoever sent the original request.</summary>
 public interface IQuoteDeliveryService

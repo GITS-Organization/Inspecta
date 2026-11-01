@@ -206,7 +206,9 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     /// <summary>The coordinator sends the certificates to the client (the Send button).</summary>
     /// <remarks>
     /// Possible once every machine of the job is approved. The body is optional: <c>sentTo</c>, <c>cc</c>, <c>subject</c> and <c>message</c>
-    /// replace the suggestion of the preview. With email delivery on, the email goes out first (a reply to the original request, from
+    /// replace the suggestion of the preview (the suggested subject is <c>Inspection Certificates - {client}</c>). <c>attachments</c> adds files of the
+    /// coordinator (<c>[{ "fileName": "...", "contentBase64": "..." }]</c>, at most 5 and 15 MB together, common document and image types), sent after the
+    /// certificates. With email delivery on, the email goes out first (a reply to the original request, from
     /// the coordinator's mailbox, every PDF attached) and only then are the certificates marked delivered and the job <c>sent_to_client</c>:
     /// if the mail server refuses, the answer is <c>502</c> and nothing changes, so Send can be pressed again (never two emails). With
     /// no address to send to it answers <c>409 no_recipient</c>. With email delivery off it only marks the job as handed over. The owning

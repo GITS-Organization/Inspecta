@@ -365,6 +365,13 @@ Content-Type: application/json
 
 { "sentTo": "quality@client.com", "cc": ["boss@client.com"], "subject": "Our offer", "message": "Dear team, our offer is attached." }
 
+### Send the offer with an extra file of the coordinator (base64; at most 5 files, 15 MB together). It goes after the quotation PDF
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/send
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "attachments": [ { "fileName": "terms.txt", "contentBase64": "VGVybXMgb2YgYnVzaW5lc3M=" } ] }
+
 ### Accept the request: closes the quotation as accepted and emails the PDF to the original sender
 POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/accept
 Authorization: Bearer {{accessToken}}

@@ -21,6 +21,9 @@ public sealed record SendQuoteEmailRequest
     /// <summary>The whole text of the email, greeting and sign-off included.</summary>
     [MaxLength(20000)]
     public string? Message { get; init; }
+
+    /// <summary>Extra files to send with the quotation (at most 5, 15 MB together): the quotation PDF stays first.</summary>
+    public IReadOnlyList<Mail.EmailAttachmentUpload>? Attachments { get; init; }
 }
 
 /// <summary>The email that would carry the quotation PDF to the client, ready to be edited and sent.</summary>
@@ -44,4 +47,5 @@ public sealed record QuoteEmailPreviewResponse(
     string? Notice,
     bool CanSend,
     IReadOnlyList<string> Blockers,
-    string? BodyHtml = null);
+    string? BodyHtml = null,
+    IReadOnlyList<string>? ExtraAttachmentNames = null);

@@ -445,7 +445,7 @@ public sealed class MachineInspectionService(
         // The email goes first: if the mail server refuses it nothing below changes and the call can be repeated.
         var sent = deliveryService is null
             ? new CertificateDeliveryResult(false, null, "Email delivery is not available, so no email was sent. The certificates are marked as handed over.")
-            : await deliveryService.DeliverAsync(request, files, new CertificateEmailDraft(delivery.SentTo, delivery.Cc, delivery.Subject, delivery.Message), cancellationToken);
+            : await deliveryService.DeliverAsync(request, files, new CertificateEmailDraft(delivery.SentTo, delivery.Cc, delivery.Subject, delivery.Message, ExtraEmailAttachments.Decode(delivery.Attachments)), cancellationToken);
         var sentTo = sent.SentTo ?? (string.IsNullOrWhiteSpace(delivery.SentTo) ? client?.CertificatesEmail : delivery.SentTo);
         await MarkDeliveredAsync(request, actorId, sentTo, string.IsNullOrWhiteSpace(sentTo) ? null : $"Delivered to {sentTo}", cancellationToken);
         return (await BuildListAsync(request, actorId, role, cancellationToken)) with
@@ -541,7 +541,7 @@ public sealed class MachineInspectionService(
         var tester = await userRepository.GetByIdAsync(actorId, cancellationToken)
             ?? throw new KeyNotFoundException("User was not found.");
         var result = await deliveryService.SendTestAsync(
-            request, files, new CertificateEmailDraft(draft.SentTo, draft.Cc, draft.Subject, draft.Message), tester.Email, tester.FullName, cancellationToken);
+            request, files, new CertificateEmailDraft(draft.SentTo, draft.Cc, draft.Subject, draft.Message, ExtraEmailAttachments.Decode(draft.Attachments)), tester.Email, tester.FullName, cancellationToken);
         return new TestEmailResponse(result.SentTo, result.Subject);
     }
 

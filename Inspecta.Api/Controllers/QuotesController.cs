@@ -91,6 +91,10 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     /// <remarks>
     /// The body is optional. To let the coordinator edit the email, call <c>GET {quoteId}/email?action=send</c> first and send back
     /// <c>sentTo</c>, <c>cc</c>, <c>subject</c> and <c>message</c>; a field that is left out keeps the suggestion. The PDF is never changed.
+    /// The suggested subject says what is sent: <c>Quotation {number} - {client}</c>, <c>Revised Quotation ...</c> for a counter offer.
+    /// <c>attachments</c> adds files of the coordinator (<c>[{ "fileName": "terms.pdf", "contentBase64": "..." }]</c>; at most 5, 15 MB together;
+    /// pdf, images, Word, Excel, PowerPoint, txt, csv and zip; the content must match the type, or <c>400</c>). They go after the quotation PDF.
+    /// If sending fails, send the files again with the retry.
     /// </remarks>
     [HttpPost("{quoteId:guid}/send")]
     [ProducesResponseType<QuoteResponse>(StatusCodes.Status200OK)]

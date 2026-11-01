@@ -19,7 +19,8 @@ public sealed record CertificateEmailDraft(
     string? To = null,
     IReadOnlyList<string>? Cc = null,
     string? Subject = null,
-    string? Body = null);
+    string? Body = null,
+    IReadOnlyList<EmailAttachment>? Extra = null);
 
 /// <summary>Who the certificates would be emailed to, and what the email would say.</summary>
 public sealed record CertificateDeliveryPlan(
@@ -94,7 +95,7 @@ public sealed class CertificateDeliveryService(
         var config = request.CoordinatorId is Guid configOwner ? await configRepository.GetByCoordinatorAsync(configOwner, cancellationToken) : null;
 
         var subject = string.IsNullOrWhiteSpace(draft?.Subject)
-            ? ComposeSubject(source?.Subject, request.ClientName)
+            ? ComposeSubject(request.ClientName)
             : CleanSubject(draft.Subject);
         var body = string.IsNullOrWhiteSpace(draft?.Body)
             ? ComposeBody(toName, request.ClientName, files, coordinator?.FullName)
@@ -107,7 +108,7 @@ public sealed class CertificateDeliveryService(
             copies,
             subject,
             body,
-            AttachmentNames(files),
+            AttachmentNames(files).Concat(draft?.Extra?.Select(file => file.FileName) ?? []).ToArray(),
             replies && string.IsNullOrWhiteSpace(draft?.To),
             config is not null && coordinator is not null ? QuoteDeliveryService.ResolveFromAddress(config, coordinator) : null,
             coordinator?.FullName,
@@ -142,7 +143,7 @@ public sealed class CertificateDeliveryService(
         var (config, coordinator, fromAddress) = await MailboxAsync(coordinatorId, cancellationToken);
         var source = plan.RepliesToOriginalEmail ? await requestRepository.GetEmailAsync(request.Id, cancellationToken) : null;
 
-        var attachments = BuildAttachments(files);
+        var attachments = BuildAttachments(files).Concat(draft?.Extra ?? []).ToArray();
         var row = await deliveryRepository.GetPendingAsync(request.Id, cancellationToken);
         var isNew = row is null;
         if (row is null)
@@ -199,7 +200,7 @@ public sealed class CertificateDeliveryService(
         var messageId = $"<{Guid.NewGuid():N}@{QuoteDeliveryService.DomainOf(fromAddress)}>";
         try
         {
-            await SendAsync(config, coordinator, fromAddress, toAddress, toName, [], subject, plan.Body, messageId, null, BuildAttachments(files), cancellationToken);
+            await SendAsync(config, coordinator, fromAddress, toAddress, toName, [], subject, plan.Body, messageId, null, BuildAttachments(files).Concat(draft?.Extra ?? []).ToArray(), cancellationToken);
         }
         catch (Exception exception)
         {
@@ -315,12 +316,8 @@ public sealed class CertificateDeliveryService(
         return cleaned.Length > MaxSubjectLength ? cleaned[..MaxSubjectLength] : cleaned;
     }
 
-    private static string ComposeSubject(string? originalSubject, string clientName)
-    {
-        var subject = originalSubject is null ? string.Empty : CleanSubject(originalSubject);
-        if (subject.Length == 0) return $"Inspection certificates - {clientName}";
-        return subject.StartsWith("Re:", StringComparison.OrdinalIgnoreCase) ? subject : "Re: " + subject;
-    }
+    private static string ComposeSubject(string clientName) =>
+        string.IsNullOrWhiteSpace(clientName) ? "Inspection Certificates" : $"Inspection Certificates - {clientName.Trim()}";
 
     /// <summary>The suggested email: a greeting, one block per certificate with its result, dates and check link, and the sign-off.</summary>
     internal static string ComposeBody(string? recipientName, string clientName, IReadOnlyList<IssuedCertificateFile> files, string? coordinatorName)

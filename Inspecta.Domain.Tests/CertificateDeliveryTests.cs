@@ -72,6 +72,22 @@ public sealed class CertificateDeliveryTests : IDisposable
     }
 
     [Fact]
+    public async Task FilesAddedByTheCoordinatorGoAfterTheCertificates()
+    {
+        await ApprovedJobAsync(fromEmail: true);
+        var notes = new Application.Contracts.Mail.EmailAttachmentUpload("notes.txt", Convert.ToBase64String("Please keep these."u8.ToArray()));
+
+        var delivered = await Run(true, service => service.DeliverAsync(
+            requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest { Attachments = [notes] }));
+
+        Assert.True(delivered.Delivery!.EmailSent);
+        var email = Assert.Single(sender.Sent);
+        Assert.Equal(2, email.MoreAttachments!.Count);
+        Assert.Equal("notes.txt", email.MoreAttachments.Last().FileName);
+        Assert.EndsWith(".pdf", email.AttachmentFileName);
+    }
+
+    [Fact]
     public async Task WithEmailOnTheCertificatesGoAsAReplyToTheOriginalRequestWithEveryPdfAttached()
     {
         await ApprovedJobAsync(fromEmail: true);
@@ -81,7 +97,7 @@ public sealed class CertificateDeliveryTests : IDisposable
         Assert.Null(preview.Notice);
         Assert.Equal("buyer@alnoor.com", preview.To);
         Assert.True(preview.RepliesToOriginalEmail);
-        Assert.Equal("Re: Inspection request", preview.Subject);
+        Assert.Equal("Inspection Certificates - Al Noor Industries", preview.Subject);
         Assert.Contains("Forklift Truck - CERT-", preview.Body);
         Assert.Contains("QR code", preview.Body);
         Assert.Equal(2, preview.Attachments.Count);
@@ -94,7 +110,7 @@ public sealed class CertificateDeliveryTests : IDisposable
         var email = Assert.Single(sender.Sent);
         Assert.Equal("buyer@alnoor.com", email.ToAddress);
         Assert.Equal("coordinator@example.com", email.FromAddress);
-        Assert.Equal("Re: Inspection request", email.Subject);
+        Assert.Equal("Inspection Certificates - Al Noor Industries", email.Subject);
         Assert.Equal("<id@alnoor.com>", email.InReplyTo);
         Assert.Contains("<id@alnoor.com>", email.References);
         Assert.Equal(2, 1 + email.MoreAttachments!.Count);
@@ -349,11 +365,11 @@ public sealed class CertificateDeliveryTests : IDisposable
             new DeliverCertificatesRequest { SentTo = "client@alnoor.com", Cc = ["boss@alnoor.com"], Message = "Draft text" }));
 
         Assert.Equal("coordinator@example.com", test.SentTo);
-        Assert.Equal("[TEST] Re: Inspection request", test.Subject);
+        Assert.Equal("[TEST] Inspection Certificates - Al Noor Industries", test.Subject);
         var email = Assert.Single(sender.Sent);
         Assert.Equal("coordinator@example.com", email.ToAddress);
         Assert.True(email.Cc is null or { Count: 0 });
-        Assert.Equal("[TEST] Re: Inspection request", email.Subject);
+        Assert.Equal("[TEST] Inspection Certificates - Al Noor Industries", email.Subject);
         Assert.Equal("Draft text", email.BodyText);
         Assert.Null(email.InReplyTo);
         Assert.Equal(2, 1 + email.MoreAttachments!.Count);
@@ -418,7 +434,7 @@ public sealed class CertificateDeliveryTests : IDisposable
         var preview = await Run(true, service => service.PreviewDeliveryAsync(requestId, coordinator.Id, "coordinator"));
         Assert.Equal("certificates@alnoor.com", preview.To);
         Assert.False(preview.RepliesToOriginalEmail);
-        Assert.StartsWith("Inspection certificates - Al Noor Industries", preview.Subject);
+        Assert.StartsWith("Inspection Certificates - Al Noor Industries", preview.Subject);
 
         await Run(true, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest()));
         Assert.Equal("certificates@alnoor.com", Assert.Single(sender.Sent).ToAddress);
