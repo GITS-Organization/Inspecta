@@ -55,10 +55,20 @@ public sealed class EfEmailSyncRepository(InspectaDbContext dbContext) : IEmailS
 
         // A contact's email or the certificates email of a client is a sender of that client too, even if nobody
         // listed it as a rule. They come after the explicit rules, so a rule always wins.
-        var clients = await dbContext.Clients.IgnoreQueryFilters().AsNoTracking()
-            .Include(client => client.Contacts)
-            .Where(client => client.ManagerId == managerId && client.ArchivedAt == null)
-            .ToListAsync(cancellationToken);
+        IReadOnlyList<Client> clients;
+        try
+        {
+            clients = await dbContext.Clients.IgnoreQueryFilters().AsNoTracking()
+                .Include(client => client.Contacts)
+                .Where(client => client.ManagerId == managerId && client.ArchivedAt == null)
+                .ToListAsync(cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Only an extra: the registered senders keep working if the clients cannot be read.
+            return senders;
+        }
+
         var known = senders.Select(sender => sender.Rule.Pattern).ToHashSet(StringComparer.Ordinal);
         foreach (var client in clients)
         {

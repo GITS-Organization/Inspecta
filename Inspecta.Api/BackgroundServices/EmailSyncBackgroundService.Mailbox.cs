@@ -77,7 +77,7 @@ public sealed partial class EmailSyncBackgroundService
                         var rule = ClientMailRule.FindMatch(rules.Select(item => item.Rule), incoming.FromAddress);
                         var sender = rule is null ? null : rules.First(item => item.Rule.Id == rule.Id);
                         var clientName = sender?.ClientName;
-                        var request = InspectionRequest.CreateFromEmail(
+                        InspectionRequest NewRequest() => InspectionRequest.CreateFromEmail(
                             config.TenantId,
                             config.CoordinatorId,
                             incoming,
@@ -85,14 +85,16 @@ public sealed partial class EmailSyncBackgroundService
                             clientId: clientName is null ? null : rule!.ClientId,
                             clientName: clientName,
                             location: clientName is null ? null : sender!.ClientLocation);
+                        var request = NewRequest();
 
                         // The machines the email names (of the known client) go on the request. Reading is a help only:
                         // whatever goes wrong here, the request is still imported.
+                        var filled = 0;
                         if (clientName is not null)
                         {
                             try
                             {
-                                await machineSuggestions.AutofillAsync(request, incoming.TextBody, incoming.HtmlBody, cancellationToken);
+                                filled = (await machineSuggestions.AutofillAsync(request, incoming.TextBody, incoming.HtmlBody, cancellationToken)).Count;
                             }
                             catch (Exception exception) when (exception is not OperationCanceledException)
                             {
@@ -100,7 +102,17 @@ public sealed partial class EmailSyncBackgroundService
                             }
                         }
 
-                        await repository.SaveRequestIfNewAsync(request, cancellationToken);
+                        try
+                        {
+                            await repository.SaveRequestIfNewAsync(request, cancellationToken);
+                        }
+                        catch (Exception exception) when (filled > 0 && exception is not (OperationCanceledException or ImapProtocolException or IOException))
+                        {
+                            // The machines are only a help: if saving them is what failed, the email is saved without them.
+                            logger.LogWarning(exception, "Could not save message UID {Uid} with its machines; importing it without them.", uid.Id);
+                            await repository.SaveRequestIfNewAsync(NewRequest(), cancellationToken);
+                        }
+
                         FailedImports.TryRemove((config.CoordinatorId, uid.Id), out _);
                         if (!blocked) advanceTo = uid.Id;
                     }
