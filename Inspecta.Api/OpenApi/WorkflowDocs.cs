@@ -24,7 +24,7 @@ public static class WorkflowDocs
             **When:** the coordinator opens the app. Emails that look like work arrive as requests, the others as "maybe".
             **How:** `GET /requests` shows real requests. Add `triage=maybe` for the maybe tab, `status=quote_draft` (or any status) to filter, `q=` to search, `page`/`pageSize` to page.
             Requests whose quotation is already open leave this list and continue in step 5 (ask for them with an explicit `status` if you need them).
-            A request from a known client already has the client and its saved location filled in.
+            A request from a known client already has the client, its saved location and (when the email names them) its machines filled in: use `GET /requests/{requestId}/suggestions` for the less sure ones.
             **Next:** open one (step 3), or confirm a maybe (step 2).
             """),
         [Key<RequestsController>(nameof(RequestsController.Create))] = new(1.1, "Step 1b · Create a request by hand",

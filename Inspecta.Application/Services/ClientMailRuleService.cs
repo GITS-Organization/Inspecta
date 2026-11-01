@@ -8,7 +8,8 @@ namespace Inspecta.Application.Services;
 
 public sealed class ClientMailRuleService(
     IClientMailRuleRepository ruleRepository,
-    IUserRepository userRepository) : IClientMailRuleService
+    IUserRepository userRepository,
+    IMachineSuggestionService? machineSuggestions = null) : IClientMailRuleService
 {
     public async Task<IReadOnlyList<ClientMailRuleResponse>> ListAsync(
         Guid? managerId,
@@ -42,7 +43,13 @@ public sealed class ClientMailRuleService(
         var promoted = 0;
         if (rule.ClientId is Guid linkedClient &&
             await ruleRepository.GetClientSummaryAsync(linkedClient, cancellationToken) is { } client)
-            promoted = await ruleRepository.PromoteMaybesAsync(rule, client, cancellationToken);
+            promoted = await ruleRepository.PromoteMaybesAsync(
+                rule,
+                client,
+                machineSuggestions is null
+                    ? null
+                    : request => machineSuggestions.AutofillAsync(request, request.Email?.TextBody, request.Email?.HtmlBody, cancellationToken),
+                cancellationToken);
         return Map(rule) with { PromotedRequests = promoted };
     }
 

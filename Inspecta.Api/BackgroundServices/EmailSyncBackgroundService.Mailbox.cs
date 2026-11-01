@@ -26,6 +26,7 @@ public sealed partial class EmailSyncBackgroundService
             var services = scope.ServiceProvider;
             var protector = services.GetRequiredService<ISecretProtector>();
             var repository = services.GetRequiredService<IEmailSyncRepository>();
+            var machineSuggestions = services.GetRequiredService<IMachineSuggestionService>();
             var password = protector.Unprotect(config.EncryptedPassword);
 
             using var client = new ImapClient();
@@ -84,6 +85,20 @@ public sealed partial class EmailSyncBackgroundService
                             clientId: clientName is null ? null : rule!.ClientId,
                             clientName: clientName,
                             location: clientName is null ? null : sender!.ClientLocation);
+
+                        // The machines the email names (of the known client) go on the request. Reading is a help only:
+                        // whatever goes wrong here, the request is still imported.
+                        if (clientName is not null)
+                        {
+                            try
+                            {
+                                await machineSuggestions.AutofillAsync(request, incoming.TextBody, incoming.HtmlBody, cancellationToken);
+                            }
+                            catch (Exception exception) when (exception is not OperationCanceledException)
+                            {
+                                logger.LogWarning(exception, "Could not read the machines of message UID {Uid}; imported without them.", uid.Id);
+                            }
+                        }
 
                         await repository.SaveRequestIfNewAsync(request, cancellationToken);
                         FailedImports.TryRemove((config.CoordinatorId, uid.Id), out _);

@@ -39,6 +39,11 @@ public sealed class EfEquipmentCatalog(InspectaDbContext dbContext) : IEquipment
                 .Where(item => equipmentIds.Contains(item.Id))
                 .ToDictionaryAsync(item => item.Id, item => item.ClientId, cancellationToken);
 
+    public async Task<IReadOnlyList<Item>> ListClientEquipmentAsync(Guid clientId, CancellationToken cancellationToken = default) =>
+        await dbContext.Items.IgnoreQueryFilters().AsNoTracking()
+            .Where(item => item.ClientId == clientId && item.ArchivedAt == null)
+            .ToListAsync(cancellationToken);
+
     public void Stage(Client client) => dbContext.Clients.Add(client);
 
     public void Stage(Item equipment) => dbContext.Items.Add(equipment);

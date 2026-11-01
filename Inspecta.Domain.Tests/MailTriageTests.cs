@@ -439,7 +439,11 @@ public sealed class MailTriageTests
         public Task<ClientSummary?> GetClientSummaryAsync(Guid clientId, CancellationToken cancellationToken = default) =>
             Task.FromResult(ClientName is null ? null : new ClientSummary(ClientName, ClientLocation));
 
-        public Task<int> PromoteMaybesAsync(ClientMailRule rule, ClientSummary client, CancellationToken cancellationToken = default)
+        public Task<int> PromoteMaybesAsync(
+            ClientMailRule rule,
+            ClientSummary client,
+            Func<InspectionRequest, Task<IReadOnlyList<RequestItem>>>? autofill = null,
+            CancellationToken cancellationToken = default)
         {
             var matching = Waiting.Where(request => rule.Matches(request.EmailFrom)).ToList();
             foreach (var request in matching) request.AdoptClient(rule.ClientId!.Value, client.Name, client.Location);

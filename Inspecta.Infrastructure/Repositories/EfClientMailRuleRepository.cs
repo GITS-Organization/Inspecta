@@ -33,15 +33,35 @@ public sealed class EfClientMailRuleRepository(InspectaDbContext dbContext) : IC
             .Select(client => new ClientSummary(client.Name, client.Location))
             .SingleOrDefaultAsync(cancellationToken);
 
-    public async Task<int> PromoteMaybesAsync(ClientMailRule rule, ClientSummary client, CancellationToken cancellationToken = default)
+    public async Task<int> PromoteMaybesAsync(
+        ClientMailRule rule,
+        ClientSummary client,
+        Func<InspectionRequest, Task<IReadOnlyList<RequestItem>>>? autofill = null,
+        CancellationToken cancellationToken = default)
     {
         if (rule.ClientId is not Guid clientId) return 0;
 
         var waiting = await dbContext.Requests.IgnoreQueryFilters()
+            .Include(request => request.Email)
+            .Include(request => request.Items)
             .Where(request => request.ManagerId == rule.ManagerId && request.Triage == RequestTriage.Maybe && request.EmailFrom != null)
             .ToListAsync(cancellationToken);
         var matching = waiting.Where(request => rule.Matches(request.EmailFrom)).ToList();
-        foreach (var request in matching) request.AdoptClient(clientId, client.Name, client.Location);
+        foreach (var request in matching)
+        {
+            request.AdoptClient(clientId, client.Name, client.Location);
+
+            // Machines the email names are put on the request. Reading an email never stops the request from moving.
+            if (autofill is null) continue;
+            try
+            {
+                // New items carry their own ids, so they are added explicitly.
+                dbContext.RequestItems.AddRange(await autofill(request));
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+            }
+        }
 
         if (matching.Count > 0) await dbContext.SaveChangesAsync(cancellationToken);
         return matching.Count;

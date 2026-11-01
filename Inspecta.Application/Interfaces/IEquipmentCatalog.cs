@@ -24,6 +24,9 @@ public interface IEquipmentCatalog
         IReadOnlyCollection<Guid> equipmentIds,
         CancellationToken cancellationToken = default);
 
+    /// <summary>The active machines of a client.</summary>
+    Task<IReadOnlyList<Item>> ListClientEquipmentAsync(Guid clientId, CancellationToken cancellationToken = default);
+
     void Stage(Client client);
 
     void Stage(Item equipment);

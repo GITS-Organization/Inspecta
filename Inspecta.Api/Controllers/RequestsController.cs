@@ -114,6 +114,39 @@ public sealed class RequestsController(IInspectionRequestService requestService,
         return CreatedAtAction(nameof(GetById), new { requestId = created.Id }, created);
     }
 
+    /// <summary>The client's machines that the request's email seems to ask about.</summary>
+    /// <remarks>
+    /// Only machines of the request's client are considered, and those already on the request are left out. Each one has
+    /// <c>quantity</c>, <c>confidence</c> (0 to 1), <c>level</c> (<c>high</c>, <c>medium</c> or <c>ambiguous</c>), the <c>reason</c> it was
+    /// found (<c>serial</c>, <c>name</c>, <c>model</c>) and the <c>evidence</c> line of the email. Show them as suggestions the coordinator
+    /// accepts by adding the machine to the request (<c>equipmentId</c>). A request without a client has none.
+    /// </remarks>
+    [HttpGet("{requestId:guid}/suggestions")]
+    [ProducesResponseType<IReadOnlyList<MachineSuggestionResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<MachineSuggestionResponse>>> Suggestions(Guid requestId, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await requestService.SuggestMachinesAsync(requestId, actorId, role, cancellationToken));
+    }
+
+    /// <summary>Read the email again and put the machines it names on the request. Owning coordinator only.</summary>
+    /// <remarks>
+    /// Does the same that happens by itself when an email arrives from a known client: when the request has a client and no
+    /// items yet, the confident matches (<c>level: high</c>) are added as items linked to the client's machines. A request that
+    /// already has items is returned unchanged.
+    /// </remarks>
+    [HttpPost("{requestId:guid}/autofill")]
+    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
+    [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<RequestResponse>> Autofill(Guid requestId, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await requestService.AutofillAsync(requestId, actorId, role, cancellationToken));
+    }
+
     /// <summary>Get the original email an email-sourced request was created from.</summary>
     /// <remarks><c>htmlBody</c> is untrusted sender content: sanitize it or render <c>textBody</c> instead.</remarks>
     [HttpGet("{requestId:guid}/email")]

@@ -10,7 +10,8 @@ public sealed class InspectionRequestService(
     IRequestRepository requestRepository,
     IUserRepository userRepository,
     IRequestEquipmentRegistrar? equipmentRegistrar = null,
-    IEmailSyncRepository? senderRules = null) : IInspectionRequestService
+    IEmailSyncRepository? senderRules = null,
+    IMachineSuggestionService? suggestions = null) : IInspectionRequestService
 {
     public async Task<RequestResponse> CreateAsync(
         CreateInspectionRequest request,
@@ -124,6 +125,7 @@ public sealed class InspectionRequestService(
     public async Task<RequestResponse> ConfirmAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
     {
         var request = await LoadForEditAsync(requestId, actorId, role, cancellationToken);
+        IReadOnlyList<RequestItem> autofilled = [];
         if (senderRules is not null && request.Triage == RequestTriage.Maybe)
         {
             // A maybe becomes a request once its sender belongs to a client: register the sender (or a contact email)
@@ -139,14 +141,66 @@ public sealed class InspectionRequestService(
                     "This sender is not registered under a client yet. Add the sender's email to the client first (POST /clients/{clientId}/emails); the request then moves by itself.",
                     409);
             request.AdoptClient(clientId, sender.ClientName, sender.ClientLocation);
+            autofilled = await AutofillQuietlyAsync(request, cancellationToken);
         }
         else
         {
             request.Confirm();
         }
 
-        await requestRepository.SaveAsync(request, cancellationToken);
+        if (autofilled.Count > 0)
+            await requestRepository.SaveRevisionAsync(request, new RequestItemChanges(autofilled, []), cancellationToken);
+        else
+            await requestRepository.SaveAsync(request, cancellationToken);
         return RequestResponseMapper.Map(request);
+    }
+
+    public async Task<IReadOnlyList<MachineSuggestionResponse>> SuggestMachinesAsync(
+        Guid requestId,
+        Guid actorId,
+        string role,
+        CancellationToken cancellationToken = default)
+    {
+        var request = await requestRepository.GetByIdAsync(requestId, tracking: false, cancellationToken);
+        if (request is null || !RequestAccess.IsVisible(request, actorId, role))
+            throw new KeyNotFoundException("Request was not found.");
+        if (suggestions is null) return [];
+
+        var email = await requestRepository.GetEmailAsync(requestId, cancellationToken);
+        return (await suggestions.FindAsync(request, email?.TextBody, email?.HtmlBody, cancellationToken))
+            .Select(match => new MachineSuggestionResponse(
+                match.Machine.EquipmentId,
+                match.Machine.Name,
+                match.Quantity,
+                Math.Round(match.Confidence, 2),
+                match.Ambiguous ? "ambiguous" : match.IsConfident ? "high" : "medium",
+                match.Reason.ToString().ToLowerInvariant(),
+                match.Evidence))
+            .ToArray();
+    }
+
+    public async Task<RequestResponse> AutofillAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
+    {
+        var request = await LoadForEditAsync(requestId, actorId, role, cancellationToken);
+        var added = await AutofillQuietlyAsync(request, cancellationToken);
+        if (added.Count > 0)
+            await requestRepository.SaveRevisionAsync(request, new RequestItemChanges(added, []), cancellationToken);
+        return RequestResponseMapper.Map(request);
+    }
+
+    // Reading the email is a help: when it cannot be read the request is simply left as it is.
+    private async Task<IReadOnlyList<RequestItem>> AutofillQuietlyAsync(InspectionRequest request, CancellationToken cancellationToken)
+    {
+        if (suggestions is null) return [];
+        try
+        {
+            var email = await requestRepository.GetEmailAsync(request.Id, cancellationToken);
+            return await suggestions.AutofillAsync(request, email?.TextBody, email?.HtmlBody, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return [];
+        }
     }
 
     public async Task DeleteMaybeAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)

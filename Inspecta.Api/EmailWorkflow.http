@@ -57,6 +57,14 @@ Authorization: Bearer {{accessToken}}
 GET {{baseUrl}}/api/v1/requests?triage=maybe
 Authorization: Bearer {{accessToken}}
 
+### Machines of the client that the email seems to ask about (suggestions)
+GET {{baseUrl}}/api/v1/requests/{{requestId}}/suggestions
+Authorization: Bearer {{accessToken}}
+
+### Read the email again and fill a request that still has no items (owning coordinator)
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/autofill
+Authorization: Bearer {{accessToken}}
+
 ### Turn a maybe email into a real request (owning coordinator)
 POST {{baseUrl}}/api/v1/requests/{{requestId}}/confirm
 Authorization: Bearer {{accessToken}}

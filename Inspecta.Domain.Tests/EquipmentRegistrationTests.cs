@@ -301,6 +301,9 @@ public sealed class EquipmentRegistrationTests
             Task.FromResult<IReadOnlyDictionary<Guid, Guid>>(
                 Equipment.Where(item => equipmentIds.Contains(item.Id)).ToDictionary(item => item.Id, item => item.ClientId));
 
+        public Task<IReadOnlyList<Item>> ListClientEquipmentAsync(Guid clientId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<Item>>(Equipment.Where(item => item.ClientId == clientId).ToArray());
+
         public void Stage(Client client) => StagedClients.Add(client);
 
         public void Stage(Item equipment) => StagedEquipment.Add(equipment);

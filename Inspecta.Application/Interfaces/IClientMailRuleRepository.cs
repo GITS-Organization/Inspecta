@@ -17,7 +17,11 @@ public interface IClientMailRuleRepository
     /// Turns the waiting "maybe" emails of the team that come from <paramref name="rule"/>'s sender into requests of the
     /// client. Returns how many were turned.
     /// </summary>
-    Task<int> PromoteMaybesAsync(ClientMailRule rule, ClientSummary client, CancellationToken cancellationToken = default);
+    Task<int> PromoteMaybesAsync(
+        ClientMailRule rule,
+        ClientSummary client,
+        Func<InspectionRequest, Task<IReadOnlyList<RequestItem>>>? autofill = null,
+        CancellationToken cancellationToken = default);
 
     Task AddAsync(ClientMailRule rule, CancellationToken cancellationToken = default);
     Task DeleteAsync(ClientMailRule rule, CancellationToken cancellationToken = default);
