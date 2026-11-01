@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Inspecta.Application.Contracts.Clients;
 using Inspecta.Application.Contracts.Equipment;
+using Inspecta.Application.Contracts.Requests;
 using Inspecta.Application.Services;
 using Inspecta.Domain.Entities;
 using Inspecta.Domain.Enums;
@@ -105,6 +106,59 @@ public sealed class ConfigurationTests : IDisposable
         Assert.Equal(clientId, saved.ClientId);
         Assert.Equal("ASME B30.5", saved.InspectionStandard);
         Assert.Single(await new EquipmentService(new EfEquipmentRepository(check)).ListAsync(clientId, includeArchived: false));
+    }
+
+    [Fact]
+    public async Task ARequestCarriesItsClientsDataIncludingTheContract()
+    {
+        var clientId = await CreateClientAsync();
+        await using var db = CreateContext();
+        var request = InspectionRequest.Create("Al Noor Industries", "Borg El Arab", clientId, [RequestItem.Create("Crane", 1)], manager.Id, managerId: manager.Id);
+        var loose = InspectionRequest.Create("Typed name", "Somewhere", null, [RequestItem.Create("Crane", 1)], manager.Id, managerId: manager.Id);
+        db.Requests.AddRange(request, loose);
+        await db.SaveChangesAsync();
+
+        await using var check = CreateContext();
+        var service = new InspectionRequestService(new EfRequestRepository(check), new EfUserRepository(check));
+        var single = (await service.GetVisibleAsync(request.Id, manager.Id, "admin"))!;
+        Assert.Equal(new RequestClientResponse(clientId, "Al Noor Industries", "Cairo", true), single.Client);
+
+        Assert.Null((await service.GetVisibleAsync(loose.Id, manager.Id, "admin"))!.Client);
+
+        // The answer to creating a request already has the client's data.
+        var created = await service.CreateAsync(
+            new CreateInspectionRequest
+            {
+                ClientId = clientId, ClientName = "Al Noor Industries", Location = "Borg El Arab",
+                Items = [new CreateRequestItem { Name = "Crane", Quantity = 1 }]
+            },
+            manager.Id, manager.Id);
+        Assert.True(created.Client?.HasContract);
+    }
+
+    [Fact]
+    public async Task AnArchivedClientsItemsAndMailRulesAreNotListed()
+    {
+        var clientId = await CreateClientAsync();
+        await using var db = CreateContext();
+        var item = Item.Create(clientId, "Crane");
+        var rule = ClientMailRule.Create(manager.Id, "alnoor.com", clientId, manager.Id);
+        db.AddRange(item, rule);
+        await db.SaveChangesAsync();
+
+        await using (var before = CreateContext())
+        {
+            Assert.Single(await new EquipmentService(new EfEquipmentRepository(before)).ListAsync(null, includeArchived: false));
+            Assert.Single(await new EfClientMailRuleRepository(before).ListAsync(manager.Id));
+        }
+
+        await using (var archive = CreateContext())
+            await new ClientService(new EfClientRepository(archive), new EfUserRepository(archive)).ArchiveAsync(clientId);
+
+        await using var after = CreateContext();
+        Assert.Empty(await new EquipmentService(new EfEquipmentRepository(after)).ListAsync(null, includeArchived: false));
+        Assert.Single(await new EquipmentService(new EfEquipmentRepository(after)).ListAsync(null, includeArchived: true));
+        Assert.Empty(await new EfClientMailRuleRepository(after).ListAsync(manager.Id));
     }
 
     [Fact]

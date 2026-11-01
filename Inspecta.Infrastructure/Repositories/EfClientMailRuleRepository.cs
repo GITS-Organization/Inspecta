@@ -12,6 +12,10 @@ public sealed class EfClientMailRuleRepository(InspectaDbContext dbContext) : IC
     {
         var query = dbContext.ClientMailRules.AsNoTracking().AsQueryable();
         if (managerId is Guid id) query = query.Where(rule => rule.ManagerId == id);
+
+        // A rule of an archived client is not shown.
+        var archived = dbContext.Clients.IgnoreQueryFilters().Where(client => client.ArchivedAt != null).Select(client => client.Id);
+        query = query.Where(rule => rule.ClientId == null || !archived.Contains(rule.ClientId.Value));
         return await query.ToListAsync(cancellationToken);
     }
 

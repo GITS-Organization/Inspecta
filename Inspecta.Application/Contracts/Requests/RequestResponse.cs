@@ -32,7 +32,11 @@ public sealed record RequestResponse(
     DateTimeOffset UpdatedAt,
     RequestTriage Triage = RequestTriage.Request,
     DateTimeOffset? MaybeExpiresAt = null,
-    Quotations.QuoteResponse? Quotation = null);
+    Quotations.QuoteResponse? Quotation = null,
+    RequestClientResponse? Client = null);
+
+/// <summary>The client the request belongs to; null while the request has no client yet.</summary>
+public sealed record RequestClientResponse(Guid Id, string Name, string Location, bool HasContract);
 
 /// <summary>Equipment requested for inspection.</summary>
 public sealed record RequestItemResponse(

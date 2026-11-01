@@ -41,6 +41,10 @@ public sealed class PostgresQueryTranslationTests
             db.Requests.IgnoreQueryFilters().AsNoTracking()
                 .Where(item => item.ManagerId == manager && item.Triage == RequestTriage.Maybe && item.EmailFrom != null)
                 .Select(item => new { item.Id, item.EmailFrom }).ToQueryString(),
+            db.Items.AsNoTracking().Where(item => item.ArchivedAt == null && (item.Client == null || item.Client.ArchivedAt == null)).ToQueryString(),
+            db.ClientMailRules.IgnoreQueryFilters().AsNoTracking().Where(rule => rule.ClientId == null || !db.Clients.IgnoreQueryFilters()
+                .Where(client => client.ArchivedAt != null).Select(client => client.Id).Contains(rule.ClientId.Value)).ToQueryString(),
+            db.Requests.Include(item => item.Client).Include(item => item.Items).AsSplitQuery().OrderByDescending(item => item.ReceivedAt).ToQueryString(),
             db.QuotationDrafts.IgnoreQueryFilters().Where(draft => draft.SourceUid == 1u).ToQueryString()
         };
 

@@ -24,7 +24,8 @@ public sealed class EfEquipmentRepository(InspectaDbContext dbContext) : IEquipm
     {
         var query = dbContext.Items.AsNoTracking().AsQueryable();
         if (clientId is Guid id) query = query.Where(equipment => equipment.ClientId == id);
-        if (!includeArchived) query = query.Where(equipment => equipment.ArchivedAt == null);
+        if (!includeArchived)
+            query = query.Where(equipment => equipment.ArchivedAt == null && (equipment.Client == null || equipment.Client.ArchivedAt == null));
         return await query.OrderBy(equipment => equipment.Name).ToListAsync(cancellationToken);
     }
 

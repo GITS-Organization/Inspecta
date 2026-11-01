@@ -82,7 +82,7 @@ public sealed class InspectionRequestService(
             emailPreview: emailPreview,
             managerId: managerId);
         await requestRepository.AddAsync(aggregate, cancellationToken);
-        return RequestResponseMapper.Map(aggregate);
+        return RequestResponseMapper.Map(await requestRepository.GetByIdAsync(aggregate.Id, tracking: false, cancellationToken) ?? aggregate);
     }
 
     public async Task<IReadOnlyList<RequestResponse>> ListVisibleAsync(
@@ -152,7 +152,9 @@ public sealed class InspectionRequestService(
             await requestRepository.SaveRevisionAsync(request, new RequestItemChanges(autofilled, []), cancellationToken);
         else
             await requestRepository.SaveAsync(request, cancellationToken);
-        return RequestResponseMapper.Map(request);
+
+        // A maybe may just have taken its client, so the client's data is read again.
+        return RequestResponseMapper.Map(await requestRepository.GetByIdAsync(requestId, tracking: false, cancellationToken) ?? request);
     }
 
     public async Task<IReadOnlyList<MachineSuggestionResponse>> SuggestMachinesAsync(
@@ -246,7 +248,9 @@ public sealed class InspectionRequestService(
         var request = await LoadForEditAsync(requestId, actorId, role, cancellationToken);
         var changes = await new RequestDetailsEditor(requestRepository, equipmentRegistrar).ApplyAsync(request, details, cancellationToken);
         await requestRepository.SaveRevisionAsync(request, changes, cancellationToken);
-        return RequestResponseMapper.Map(request);
+
+        // The client may have just been changed, so its data is read again.
+        return RequestResponseMapper.Map(await requestRepository.GetByIdAsync(requestId, tracking: false, cancellationToken) ?? request);
     }
 
     public async Task<RequestResponse> AddItemAsync(

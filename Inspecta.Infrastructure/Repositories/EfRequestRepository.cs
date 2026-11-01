@@ -56,6 +56,7 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
     public Task<InspectionRequest?> GetByIdAsync(Guid requestId, bool tracking, CancellationToken cancellationToken = default)
     {
         IQueryable<InspectionRequest> query = dbContext.Requests
+            .Include(item => item.Client)
             .Include(item => item.Items)
             .Include(item => item.Certificates)
             .Include(item => item.History)
@@ -72,6 +73,7 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
     public async Task<IReadOnlyList<InspectionRequest>> ListAsync(RequestListFilter filter, CancellationToken cancellationToken = default)
     {
         var query = Scope(filter)
+            .Include(item => item.Client)
             .Include(item => item.Items)
             .Include(item => item.History)
             .AsSplitQuery();
