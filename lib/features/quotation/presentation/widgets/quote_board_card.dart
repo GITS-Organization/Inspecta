@@ -88,7 +88,7 @@ class QuoteBoardCard extends StatelessWidget {
                     if (showPrice) ...[
                       const SizedBox(width: 12),
                       Text(
-                        Currency.formatEgp(price!),
+                        Currency.format(price!, code: quotation.currency),
                         style: AppTextStyles.cardTitle.copyWith(
                           fontWeight: FontWeight.w700,
                           fontFeatures: const [FontFeature.tabularFigures()],
@@ -254,6 +254,7 @@ class _CounterPrices extends StatelessWidget {
           Expanded(
             child: _PriceBox(
               label: t.yourPriceLabel,
+              currency: quotation.currency,
               price: quotation.totalPiastres,
               background: AppColours.surfaceMuted,
               labelColor: AppColours.inkMuted,
@@ -264,6 +265,7 @@ class _CounterPrices extends StatelessWidget {
           Expanded(
             child: _PriceBox(
               label: t.clientAsksLabel,
+              currency: quotation.currency,
               price: quotation.clientCounterPricePiastres,
               background: AppColours.chipAmberBackground,
               labelColor: AppColours.chipAmberText,
@@ -306,6 +308,7 @@ class _ClientNote extends StatelessWidget {
 
 class _PriceBox extends StatelessWidget {
   final String label;
+  final String currency;
   final int? price;
   final Color background;
   final Color labelColor;
@@ -313,6 +316,7 @@ class _PriceBox extends StatelessWidget {
 
   const _PriceBox({
     required this.label,
+    required this.currency,
     required this.price,
     required this.background,
     required this.labelColor,
@@ -332,7 +336,7 @@ class _PriceBox extends StatelessWidget {
           Text(label, style: AppTextStyles.caption.copyWith(color: labelColor)),
           const SizedBox(height: 2),
           Text(
-            price == null ? '—' : Currency.formatEgp(price!),
+            price == null ? '—' : Currency.format(price!, code: currency),
             style: AppTextStyles.cardTitle.copyWith(
               fontSize: 15,
               color: valueColor,

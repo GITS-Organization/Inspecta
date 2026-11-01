@@ -10,9 +10,10 @@ import '../../../requests/domain/entities/requests_failure.dart';
 part 'certificates_list_state.dart';
 
 /// Backs the inspector's Certificates tab (Feature 05): every job past
-/// intake that has (or needs) a certificate, bucketed into Action /
-/// Submitted / Sent / All, with a search box over client, equipment and
-/// the display cert number. The jobs come from the API's queue, which gives
+/// intake that has (or needs) a certificate, bucketed into Submitted /
+/// Sent / All (All by default; what still needs doing is on the Tasks
+/// tab), with a search box over client, equipment and the display cert
+/// number. The jobs come from the API's queue, which gives
 /// an inspector only their own.
 class CertificatesListCubit extends Cubit<CertificatesListState> {
   final String inspectorId;

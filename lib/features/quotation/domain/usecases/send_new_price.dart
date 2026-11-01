@@ -1,3 +1,4 @@
+import '../../../../core/utils/currency.dart';
 import '../entities/quotation.dart';
 import '../repositories/quotation_repository.dart';
 
@@ -11,11 +12,13 @@ class SendNewPrice {
   Future<Quotation> call({
     required String requestId,
     required int totalPiastres,
+    String currency = Currency.egp,
     int? validityDays,
   }) {
     return _repository.sendNewPrice(
       requestId: requestId,
       totalPiastres: totalPiastres,
+      currency: currency,
       validityDays: validityDays,
     );
   }

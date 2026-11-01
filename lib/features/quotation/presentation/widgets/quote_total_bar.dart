@@ -5,10 +5,12 @@ import '../../../../core/consts/app_text_styles.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// The fixed bottom bar on the request/quotation screen: the running
-/// total, then Save draft and Send quotation.
+/// total, then Save draft and the main action, named for the reply chosen
+/// ([sendLabel]: "Accept quotation", "Send quotation" or "Reject").
 class QuoteTotalBar extends StatelessWidget {
   final String unitsLabel;
   final String totalText;
+  final String sendLabel;
   final bool loading;
   final VoidCallback? onSaveDraft;
   final VoidCallback? onSend;
@@ -17,6 +19,7 @@ class QuoteTotalBar extends StatelessWidget {
     super.key,
     required this.unitsLabel,
     required this.totalText,
+    required this.sendLabel,
     required this.onSaveDraft,
     required this.onSend,
     this.loading = false,
@@ -102,7 +105,7 @@ class QuoteTotalBar extends StatelessWidget {
                               ),
                             )
                           : Text(
-                              t.sendQuotation,
+                              sendLabel,
                               style: AppTextStyles.buttonLabel,
                             ),
                     ),

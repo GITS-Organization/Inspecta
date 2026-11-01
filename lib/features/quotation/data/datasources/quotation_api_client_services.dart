@@ -28,19 +28,33 @@ abstract class QuotationApiClientServices {
     @Body() SendQuoteBody body,
   );
 
-  /// Sends the existing quote to the client (no body). The response may
-  /// carry its version.
+  /// The email that would carry the quote's PDF, ready to edit: `to`, `cc`,
+  /// `subject`, `body`, and whether it can be sent. [action] is `send` (an
+  /// offer or counter offer) or `accept`. Sends nothing.
+  @GET('${ApiUrls.requests}/{requestId}/quotes/{quoteId}/email')
+  Future<dynamic> getQuoteEmail(
+    @Path('requestId') String requestId,
+    @Path('quoteId') String quoteId,
+    @Query('action') String action,
+  );
+
+  /// Sends the existing quote to the client by email. The body is optional:
+  /// `sentTo`, `cc`, `subject` and `message` each replace the suggestion. The
+  /// response may carry its version.
   @POST('${ApiUrls.requests}/{requestId}/quotes/{quoteId}/send')
   Future<dynamic> sendExistingQuote(
     @Path('requestId') String requestId,
     @Path('quoteId') String quoteId,
+    @Body() Map<String, dynamic> body,
   );
 
-  /// Accepts the quote (no body). The response may carry its version.
+  /// Accepts the quote and emails its PDF, with the same optional body as
+  /// [sendExistingQuote]. The response may carry its version.
   @POST('${ApiUrls.requests}/{requestId}/quotes/{quoteId}/accept')
   Future<dynamic> acceptQuote(
     @Path('requestId') String requestId,
     @Path('quoteId') String quoteId,
+    @Body() Map<String, dynamic> body,
   );
 
   /// Saves the priced offer onto the quote.

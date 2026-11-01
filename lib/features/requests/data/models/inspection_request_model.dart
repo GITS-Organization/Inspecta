@@ -1,11 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../../../../core/enums/job_status.dart';
 import '../../domain/entities/inspection_request.dart';
 import '../../domain/entities/request_source.dart';
 import 'request_item_model.dart';
 
-/// A `requests/{id}` Firestore document.
+/// A request as the Inspecta API returns it.
 class InspectionRequestModel {
   final String id;
   final RequestSource source;
@@ -56,8 +54,7 @@ class InspectionRequestModel {
     this.updatedAt,
   });
 
-  /// A request as the Inspecta API returns it: ISO-8601 date strings instead
-  /// of Firestore timestamps, and the id inside the object.
+  /// Dates are ISO-8601 strings, and the id is inside the object.
   factory InspectionRequestModel.fromApiJson(Map<String, dynamic> json) {
     DateTime? date(String key) {
       final value = json[key];
@@ -86,40 +83,6 @@ class InspectionRequestModel {
       inspectorId: json['inspectorId'] as String?,
       scheduledAt: date('scheduledAt'),
       updatedAt: date('updatedAt'),
-    );
-  }
-
-  factory InspectionRequestModel.fromJson(
-    String id,
-    Map<String, dynamic> json,
-  ) {
-    return InspectionRequestModel(
-      id: id,
-      source: RequestSource.fromValue(json['source']),
-      clientId: json['clientId'] as String?,
-      clientName: json['clientName'] as String? ?? '',
-      subject: json['subject'] as String?,
-      emailFrom: json['emailFrom'] as String?,
-      emailFromName: json['emailFromName'] as String?,
-      emailPreview: json['emailPreview'] as String?,
-      receivedAt:
-          (json['receivedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      location: json['location'] as String? ?? '',
-      preferredDate: (json['preferredDate'] as Timestamp?)?.toDate(),
-      accessNotes: json['accessNotes'] as String?,
-      status: JobStatus.fromValue(json['status']),
-      // Older documents stored this as `supervisorId`.
-      coordinatorId: (json['coordinatorId'] ?? json['supervisorId']) as String?,
-      items: (json['items'] as List<dynamic>? ?? const [])
-          .whereType<Map<String, dynamic>>()
-          .map(RequestItemModel.fromJson)
-          .toList(),
-      rejectReason: json['rejectReason'] as String?,
-      inspectorId: json['inspectorId'] as String?,
-      scheduledAt: (json['scheduledAt'] as Timestamp?)?.toDate(),
-      assignmentNote: json['assignmentNote'] as String?,
-      certificateSubmittedAt: (json['certificateSubmittedAt'] as Timestamp?)
-          ?.toDate(),
     );
   }
 

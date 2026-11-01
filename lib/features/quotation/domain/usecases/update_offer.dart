@@ -1,3 +1,4 @@
+import '../../../../core/utils/currency.dart';
 import '../entities/quote_line_item.dart';
 import '../repositories/quotation_repository.dart';
 
@@ -12,6 +13,7 @@ class UpdateOffer {
     required String requestId,
     required String quotationId,
     required List<QuoteLineItem> items,
+    String currency = Currency.egp,
     int? validityDays,
     List<String>? scopeOfWork,
     List<String>? notes,
@@ -21,6 +23,7 @@ class UpdateOffer {
       requestId: requestId,
       quotationId: quotationId,
       items: items,
+      currency: currency,
       validityDays: validityDays,
       scopeOfWork: scopeOfWork,
       notes: notes,

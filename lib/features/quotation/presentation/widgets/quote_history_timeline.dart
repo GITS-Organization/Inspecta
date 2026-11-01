@@ -113,7 +113,7 @@ class QuoteHistoryTimeline extends StatelessWidget {
           ),
           if (version.totalPiastres != null)
             Text(
-              Currency.formatEgp(version.totalPiastres!),
+              Currency.format(version.totalPiastres!, code: version.currency),
               style: AppTextStyles.cardTitle.copyWith(fontSize: 15),
             ),
         ],
@@ -145,7 +145,7 @@ class QuoteHistoryTimeline extends StatelessWidget {
       ClientResponseOutcome.counter => t.timelineClientCountered(
         version.clientCounterPricePiastres == null
             ? ''
-            : Currency.formatEgp(version.clientCounterPricePiastres!),
+            : Currency.format(version.clientCounterPricePiastres!, code: version.currency),
       ),
       ClientResponseOutcome.accepted => t.timelineClientAccepted,
       ClientResponseOutcome.declined => t.timelineClientDeclined,

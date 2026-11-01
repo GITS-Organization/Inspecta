@@ -3,8 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'qualification.dart';
 import 'user_role.dart';
 
-/// An internal staff member. Named `AppUser` so it doesn't clash with
-/// Firebase Auth's `User`.
+/// An internal staff member.
 class AppUser extends Equatable {
   final String id;
   final String name;

@@ -4,6 +4,7 @@ import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/m_primary_button.dart';
+import '../../../../core/utils/currency.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/quotation_failure.dart';
 import 'price_field.dart';
@@ -15,6 +16,9 @@ class SendNewPriceSheet extends StatefulWidget {
   /// The version being sent, shown in the title.
   final int nextVersion;
 
+  /// The quote's currency: a new version is priced in the same one.
+  final String currency;
+
   /// Sends the price; returns why it failed, or `null` when it went through.
   final Future<QuotationFailureCode?> Function({
     required int totalPiastres,
@@ -22,11 +26,17 @@ class SendNewPriceSheet extends StatefulWidget {
   })
   onSubmit;
 
-  const SendNewPriceSheet({super.key, required this.nextVersion, required this.onSubmit});
+  const SendNewPriceSheet({
+    super.key,
+    required this.nextVersion,
+    required this.onSubmit,
+    this.currency = Currency.egp,
+  });
 
   static Future<void> show(
     BuildContext context, {
     required int nextVersion,
+    String currency = Currency.egp,
     required Future<QuotationFailureCode?> Function({
       required int totalPiastres,
       int? validityDays,
@@ -37,7 +47,7 @@ class SendNewPriceSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => SendNewPriceSheet(nextVersion: nextVersion, onSubmit: onSubmit),
+      builder: (_) => SendNewPriceSheet(nextVersion: nextVersion, currency: currency, onSubmit: onSubmit),
     );
   }
 
@@ -120,6 +130,7 @@ class _SendNewPriceSheetState extends State<SendNewPriceSheet> {
               Text(t.newTotalPriceLabel, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
               const SizedBox(height: 6),
               PriceField(
+                currency: widget.currency,
                 controller: _priceController,
                 onChanged: (_) => setState(() {}),
                 errorText: _submitted && _totalPiastres == null ? t.errorTotalPriceRequired : null,

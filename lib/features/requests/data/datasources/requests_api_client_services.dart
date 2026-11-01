@@ -11,11 +11,12 @@ abstract class RequestsApiClientServices {
   factory RequestsApiClientServices(Dio dio, {String? baseUrl}) =
       _RequestsApiClientServices;
 
-  /// One page of the signed-in user's requests, newest first. The API caps
-  /// [pageSize] at 100.
+  /// One page of the signed-in user's requests, newest first, narrowed to
+  /// [status] when given. The API caps [pageSize] at 100.
   @GET(ApiUrls.requests)
   Future<dynamic> getRequests(
     @Query('triage') String triage,
+    @Query('status') String? status,
     @Query('q') String? query,
     @Query('page') int page,
     @Query('pageSize') int pageSize,
@@ -36,6 +37,15 @@ abstract class RequestsApiClientServices {
   /// Turns a "maybe" email into a real request and returns it as it now is.
   @POST('${ApiUrls.requests}/{id}/confirm')
   Future<dynamic> confirmRequest(@Path('id') String id);
+
+  /// The client's machines the request's email seems to ask about.
+  @GET('${ApiUrls.requests}/{id}/suggestions')
+  Future<dynamic> getSuggestions(@Path('id') String id);
+
+  /// Reads the email again and adds the machines it clearly names, when the
+  /// request has a client and no items. Returns the request as it now is.
+  @POST('${ApiUrls.requests}/{id}/autofill')
+  Future<dynamic> autofillRequest(@Path('id') String id);
 
   /// Rejects the request, telling the client the reason.
   @POST('${ApiUrls.requests}/{id}/reject')

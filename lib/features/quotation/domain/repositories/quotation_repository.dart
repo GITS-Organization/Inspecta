@@ -1,56 +1,49 @@
 import 'dart:typed_data';
 
+import '../../../../core/utils/currency.dart';
 import '../entities/client_response_outcome.dart';
 import '../entities/quotation.dart';
+import '../entities/quote_email.dart';
 import '../entities/quote_line_item.dart';
 import '../entities/reply_type.dart';
 
 /// Methods emit / throw [QuotationFailure] on expected errors.
 abstract interface class QuotationRepository {
-  /// Every quotation (drafts and sent), newest first — backs the
-  /// Quotations tab.
-  Stream<List<Quotation>> watchAll();
-
-  /// One page of the user's quotations from the API across all requests,
-  /// without superseded versions — backs the Quotations tab. Rows carry no
-  /// line items. Throws [QuotationFailure].
-  Future<List<Quotation>> list({int page = 1, int pageSize = 50});
-
-  /// Creates the request's draft if none exists yet, otherwise updates
-  /// the existing one (US-03.4). Not used for [ReplyType.reject] — see
-  /// [send].
-  Future<Quotation> saveDraft({
-    required String requestId,
-    required String requestNumber,
-    required String clientName,
-    required String equipmentSummary,
-    required ReplyType type,
-    required List<QuoteLineItem> items,
-    int? validityDays,
-    String? message,
-    List<String>? notes,
-    List<String>? scopeOfWork,
+  /// One page of the user's quotations from the API across all requests —
+  /// backs the Quotations tab. Superseded versions are left out unless
+  /// [includeSuperseded]. Rows carry no line items. Throws [QuotationFailure].
+  Future<List<Quotation>> list({
+    int page = 1,
+    int pageSize = 50,
+    bool includeSuperseded = false,
   });
 
-  /// BR-03.4/03.5/03.8: turns the request's current draft (or creates one
-  /// directly) into the next immutable, numbered version, and marks it
-  /// sent — for all three [ReplyType]s, including reject, so the tracker
-  /// has a full history. Returns the assigned version.
+  /// BR-03.4/03.5: turns the request's quote into its next immutable,
+  /// numbered version and marks it sent. Returns the assigned version. A
+  /// [ReplyType.reject] is not a quote: it goes through
+  /// `RequestsRepository.rejectRequest` instead, and passing it here throws
+  /// an [ArgumentError].
   ///
-  /// With a [quotationId], an offer sends that existing quote through the
-  /// API instead of creating one.
+  /// With a [quotationId], an offer sends that existing quote and an accept
+  /// accepts it: either emails the PDF to the client — as suggested, or as
+  /// edited in [email]. Throws a [QuotationFailure] (`invalidAddress`,
+  /// `mailRefused`…) when the email can't go out.
   Future<int> send({
     required String requestId,
-    required String requestNumber,
-    required String clientName,
-    required String equipmentSummary,
     required ReplyType type,
-    required List<QuoteLineItem> items,
     String? quotationId,
+    String currency = Currency.egp,
     int? validityDays,
-    String? message,
-    List<String>? notes,
-    List<String>? scopeOfWork,
+    QuoteEmailEdits? email,
+  });
+
+  /// The email that would carry quote [quotationId]'s PDF — for accepting it
+  /// when [accept], otherwise for sending the offer. Sends nothing. Throws
+  /// [QuotationFailure].
+  Future<QuoteEmailPreview> getEmailPreview({
+    required String requestId,
+    required String quotationId,
+    required bool accept,
   });
 
   /// Saves the priced offer onto quote [quotationId] (its unit prices,
@@ -60,6 +53,7 @@ abstract interface class QuotationRepository {
     required String requestId,
     required String quotationId,
     required List<QuoteLineItem> items,
+    String currency = Currency.egp,
     int? validityDays,
     List<String>? scopeOfWork,
     List<String>? notes,
@@ -75,12 +69,16 @@ abstract interface class QuotationRepository {
   Future<Quotation> sendNewPrice({
     required String requestId,
     required int totalPiastres,
+    String currency = Currency.egp,
     int? validityDays,
   });
 
   /// BR-03.6: records the client's answer on [quotationId]. When
   /// [outcome] is accepted, every other non-superseded quotation for
   /// [requestId] is marked superseded (BR-03.7).
+  ///
+  /// Not available yet: the API has no endpoint for it, so this always throws
+  /// a [QuotationFailure].
   Future<void> recordClientResponse({
     required String quotationId,
     required String requestId,

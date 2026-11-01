@@ -13,6 +13,18 @@ import '../../domain/usecases/get_triaged_requests.dart';
 
 part 'requests_list_state.dart';
 
+/// How confirming a "maybe" email ended.
+enum ConfirmOutcome {
+  confirmed,
+
+  /// Its sender isn't registered under a client (409 `client_required`).
+  clientRequired,
+  failed,
+
+  /// Already in progress.
+  ignored,
+}
+
 /// Backs the requests inbox: the New and Maybe lists, each loaded a page at a
 /// time from the API, with the search and tab applied to them.
 class RequestsListCubit extends Cubit<RequestsListState> {
@@ -108,13 +120,15 @@ class RequestsListCubit extends Cubit<RequestsListState> {
     }
   }
 
-  /// Keeps a "maybe" email as a request: it leaves Maybe and joins New.
-  /// Returns whether it worked.
-  Future<bool> confirm(String requestId) async {
-    if (!_begin(requestId)) return false;
+  /// Keeps a "maybe" email as a request: it leaves Maybe and joins New. The
+  /// API only allows it for a sender that belongs to a client; for any other
+  /// the outcome is [ConfirmOutcome.clientRequired], and registering the
+  /// sender on a client moves the email on instead.
+  Future<ConfirmOutcome> confirm(String requestId) async {
+    if (!_begin(requestId)) return ConfirmOutcome.ignored;
     try {
       final confirmed = await _confirmRequest(requestId);
-      if (isClosed) return true;
+      if (isClosed) return ConfirmOutcome.confirmed;
       emit(
         state.copyWith(
           // A New tab that was never opened isn't touched: it fetches the
@@ -133,10 +147,10 @@ class RequestsListCubit extends Cubit<RequestsListState> {
           busy: _finish(requestId),
         ),
       );
-      return true;
-    } catch (_) {
+      return ConfirmOutcome.confirmed;
+    } catch (error) {
       if (!isClosed) emit(state.copyWith(busy: _finish(requestId)));
-      return false;
+      return error is ClientRequiredFailure ? ConfirmOutcome.clientRequired : ConfirmOutcome.failed;
     }
   }
 

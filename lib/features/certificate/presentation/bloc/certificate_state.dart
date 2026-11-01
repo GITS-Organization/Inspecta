@@ -17,8 +17,7 @@ class CertificateState extends Equatable {
 
   // Only when the form is open on one machine through the machines API.
 
-  /// The form is working on a machine of the API rather than on the job's
-  /// Firestore certificate.
+  /// The form is working on a machine of the API.
   final bool machineMode;
 
   /// The machine's own technical fields (manufacturer, serial number…), as

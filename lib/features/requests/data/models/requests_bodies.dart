@@ -44,6 +44,9 @@ class UpdateRequestBody {
           // An item without an id is new: the API assigns one. An id it
           // doesn't know is refused, so none is invented.
           if (item.id.isNotEmpty) 'id': item.id,
+          // The link to the client's machine, kept so a save doesn't undo it.
+          // The API refuses a machine of another client (400).
+          'equipmentId': ?item.equipmentId,
           'name': item.type,
           'type': item.type,
           'quantity': item.quantity,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/shared/m_primary_button.dart';
+import '../../../../core/utils/currency.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/client_response_outcome.dart';
 import 'reply_option_tile.dart' show ReplyOptionTile;
@@ -19,10 +20,14 @@ class LogClientReplySheet extends StatefulWidget {
   })
   onSubmit;
 
-  const LogClientReplySheet({super.key, required this.onSubmit});
+  /// The quote's currency: the client's counter price is in the same one.
+  final String currency;
+
+  const LogClientReplySheet({super.key, required this.onSubmit, this.currency = Currency.egp});
 
   static Future<void> show(
     BuildContext context, {
+    String currency = Currency.egp,
     required Future<void> Function({
       required ClientResponseOutcome outcome,
       int? clientPricePiastres,
@@ -34,7 +39,7 @@ class LogClientReplySheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => LogClientReplySheet(onSubmit: onSubmit),
+      builder: (_) => LogClientReplySheet(onSubmit: onSubmit, currency: currency),
     );
   }
 
@@ -134,6 +139,7 @@ class _LogClientReplySheetState extends State<LogClientReplySheet> {
                 Text(t.clientPriceLabel, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
                 const SizedBox(height: 6),
                 PriceField(
+                  currency: widget.currency,
                   controller: _priceController,
                   onChanged: (_) => setState(() {}),
                   errorText: _submitted && _priceMissing ? t.errorClientPriceRequired : null,

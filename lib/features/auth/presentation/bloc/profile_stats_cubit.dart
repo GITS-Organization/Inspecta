@@ -28,7 +28,7 @@ class ProfileStatsCubit extends Cubit<ProfileStatsState> {
 
   ProfileStatsCubit(this._getQuotations, this._getQueue) : super(const ProfileStatsState());
 
-  /// Subscribes to what [user]'s role's tiles are counted from. A technical
+  /// Loads or subscribes to what [user]'s role's tiles are counted from. A technical
   /// manager's come from [certifyQueue], the shell's own list of the
   /// `certify` queue.
   void start(AppUser? user, {Stream<List<InspectionRequest>>? certifyQueue}) {
@@ -36,7 +36,7 @@ class ProfileStatsCubit extends Cubit<ProfileStatsState> {
     _started = true;
     switch (user.role) {
       case UserRole.coordinator:
-        _startCoordinatorStats();
+        _loadCoordinatorStats();
       case UserRole.technicalManager:
         if (certifyQueue != null) _watchReviewStats(certifyQueue);
       case UserRole.inspector:
@@ -51,20 +51,26 @@ class ProfileStatsCubit extends Cubit<ProfileStatsState> {
 
   static bool _inMonth(DateTime? at, DateTime now) => at != null && at.year == now.year && at.month == now.month;
 
-  void _startCoordinatorStats() {
-    _subscriptions.add(
-      _getQuotations().listen((quotations) {
-        final now = DateTime.now();
-        emit(
-          state.copyWith(
-            quotesSentThisMonth: quotations.where((q) => _inMonth(q.sentAt, now)).length,
-            acceptedThisMonth: quotations
-                .where((q) => q.status == QuotationStatus.accepted && _inMonth(q.clientRespondedAt, now))
-                .length,
-          ),
-        );
-      }, onError: (_) {}),
-    );
+  /// Counted from the API's quotes, superseded versions included. A list row
+  /// has no reply date, so an accepted quote counts in the month it was sent.
+  Future<void> _loadCoordinatorStats() async {
+    try {
+      final quotations = await _getQuotations();
+      if (isClosed) return;
+      final now = DateTime.now();
+      emit(
+        state.copyWith(
+          quotesSentThisMonth: quotations.where((q) => _inMonth(q.sentAt, now)).length,
+          acceptedThisMonth: quotations
+              .where(
+                (q) => q.status == QuotationStatus.accepted && _inMonth(q.clientRespondedAt ?? q.sentAt, now),
+              )
+              .length,
+        ),
+      );
+    } catch (_) {
+      // The tiles just stay empty.
+    }
   }
 
   /// Counted from the technical manager's queue (`status=certify`): jobs

@@ -1,5 +1,18 @@
 import '../../../../l10n/app_localizations.dart';
+import '../../../machines/domain/entities/delivery_failure.dart';
 import '../../domain/entities/coordinator_failure.dart';
+
+extension DeliveryFailureMessage on DeliveryFailureCode {
+  String message(AppLocalizations t) => switch (this) {
+    DeliveryFailureCode.permissionDenied => t.actionPermissionDenied,
+    DeliveryFailureCode.network => t.errorNetwork,
+    DeliveryFailureCode.invalidAddress => t.deliveryErrorInvalidAddress,
+    DeliveryFailureCode.noRecipient => t.deliveryErrorNoRecipient,
+    DeliveryFailureCode.mailRefused => t.deliveryErrorMailRefused,
+    DeliveryFailureCode.conflict => t.deliveryErrorConflict,
+    DeliveryFailureCode.unknown => t.actionFailed,
+  };
+}
 
 extension CoordinatorFailureMessage on CoordinatorFailureCode {
   String message(AppLocalizations t) => switch (this) {

@@ -478,6 +478,135 @@ class AppLocalizationsAr extends AppLocalizations {
   String get confirmRequestError => 'تعذّر تأكيد الطلب. حاول مرة أخرى.';
 
   @override
+  String get clientRequiredTitle => 'المرسل غير مسجّل';
+
+  @override
+  String clientRequiredMessage(String sender) {
+    return '$sender غير مسجّل تحت أي عميل بعد. أضف المرسل إلى عميل وسيتحول هذا البريد إلى طلب له تلقائيًا.';
+  }
+
+  @override
+  String get addSenderToClientAction => 'إضافة إلى عميل';
+
+  @override
+  String get chooseClientTitle => 'اختر عميلًا';
+
+  @override
+  String get chooseClientSearchHint => 'ابحث عن عميل';
+
+  @override
+  String get noClientsFound => 'لا يوجد عملاء.';
+
+  @override
+  String get clientPickHint => 'اضغط لاختيار العميل';
+
+  @override
+  String get clientEmailsTitle => 'إيميلات العميل';
+
+  @override
+  String get clientEmailsIntro =>
+      'الرسائل الواردة من هذه العناوين أو النطاقات تتحول إلى طلبات هذا العميل. وتُحتسب تلقائيًا إيميلات جهات اتصال العميل وإيميل الشهادات.';
+
+  @override
+  String get clientEmailsEmpty => 'لا توجد عناوين مسجّلة بعد.';
+
+  @override
+  String get clientEmailAddHint => 'buyer@company.com أو company.com';
+
+  @override
+  String get clientEmailAddAction => 'إضافة';
+
+  @override
+  String get clientEmailDomainLabel => 'نطاق';
+
+  @override
+  String get clientEmailThisAddress => 'هذا العنوان';
+
+  @override
+  String clientEmailWholeDomain(String domain) {
+    return 'النطاق كاملًا ($domain)';
+  }
+
+  @override
+  String get clientEmailAdded => 'تمت إضافة المرسل.';
+
+  @override
+  String clientEmailPromotedMessage(int count) {
+    return 'تمت إضافة المرسل. رسائل منتظرة تحولت إلى طلبات: $count';
+  }
+
+  @override
+  String get clientsErrorInvalidPattern => 'أدخل عنوان بريد أو نطاقًا صحيحًا.';
+
+  @override
+  String get clientsErrorNotFound => 'لم يُعثر على هذا العميل.';
+
+  @override
+  String get clientsErrorDuplicate => 'هذا العنوان أو النطاق مسجّل بالفعل.';
+
+  @override
+  String get fromEmailSuggestionsTitle => 'من البريد';
+
+  @override
+  String get fromEmailSuggestionsSubtitle =>
+      'ماكينات هذا العميل التي يبدو أن البريد يسأل عنها.';
+
+  @override
+  String get suggestionAddAction => 'إضافة';
+
+  @override
+  String get suggestionAdded => 'تمت الإضافة إلى الطلب.';
+
+  @override
+  String get suggestionLevelHigh => 'تطابق واضح';
+
+  @override
+  String get suggestionLevelMedium => 'تطابق محتمل';
+
+  @override
+  String get suggestionLevelAmbiguous => 'عدة احتمالات';
+
+  @override
+  String get suggestionReasonSerial => 'بالرقم التسلسلي';
+
+  @override
+  String get suggestionReasonName => 'بالاسم';
+
+  @override
+  String get suggestionReasonModel => 'بالموديل';
+
+  @override
+  String get fillFromEmailAction => 'املأ من البريد';
+
+  @override
+  String get fillFromEmailDone => 'تم ملء الطلب من البريد.';
+
+  @override
+  String get fillFromEmailNothing => 'لم يُعثر في البريد على شيء واضح للإضافة.';
+
+  @override
+  String get invalidMachineError =>
+      'إحدى الماكينات المختارة لا تتبع هذا العميل (أو لم تعد موجودة). اختر من ماكينات العميل وحاول مرة أخرى.';
+
+  @override
+  String get chooseMachineAction => 'اختر ماكينة';
+
+  @override
+  String get changeMachineAction => 'تغيير';
+
+  @override
+  String get machinePickerTitle => 'ماكينات العميل';
+
+  @override
+  String get searchMachinesHint => 'ابحث عن ماكينة';
+
+  @override
+  String get noMachinesForClient => 'لا توجد ماكينات مسجّلة لهذا العميل بعد.';
+
+  @override
+  String get clientMachineLinked => 'مرتبطة بماكينة العميل';
+
+  @override
   String get deleteRequest => 'حذف';
 
   @override
@@ -612,6 +741,102 @@ class AppLocalizationsAr extends AppLocalizations {
   String get requestCompleted => 'تم استكمال الطلب.';
 
   @override
+  String get chooseClientAction => 'اختيار العميل';
+
+  @override
+  String get clientMatchedBadge => 'تمت المطابقة';
+
+  @override
+  String get clientRequiredBadge => 'مطلوب';
+
+  @override
+  String get intakeClientHint => 'اختر العميل الذي ينتمي إليه هذا الطلب.';
+
+  @override
+  String get locationHint => 'مكان إجراء الفحص';
+
+  @override
+  String get accessNotesHint =>
+      'البوابة، جهة الاتصال في الموقع، معدات السلامة…';
+
+  @override
+  String get equipmentTypeHint => 'مثال: رافعة علوية';
+
+  @override
+  String get intakeEquipmentEmptyTitle => 'لا توجد معدات بعد';
+
+  @override
+  String get intakeEquipmentEmptyBody =>
+      'املأها من البريد الإلكتروني، أو اختر من معدات العميل بنفسك.';
+
+  @override
+  String get chooseFromMachinesAction => 'اختيار من معدات العميل';
+
+  @override
+  String get addManuallyAction => 'إضافة يدويًا';
+
+  @override
+  String get machineNotLinked => 'غير مرتبطة بمعدة مسجلة';
+
+  @override
+  String get decreaseQuantityAction => 'إنقاص الكمية';
+
+  @override
+  String get increaseQuantityAction => 'زيادة الكمية';
+
+  @override
+  String get saveDetailsAction => 'حفظ التفاصيل';
+
+  @override
+  String get requestDetailsSaved =>
+      'تم حفظ التفاصيل. يمكنك تسعير هذا الطلب الآن.';
+
+  @override
+  String get editDetailsAction => 'تعديل التفاصيل';
+
+  @override
+  String get hideDetailsAction => 'إخفاء التفاصيل';
+
+  @override
+  String get requestDetailsTitle => 'التفاصيل';
+
+  @override
+  String get clientMachinesAction => 'معدات العميل';
+
+  @override
+  String itemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عنصر',
+      many: '$count عنصرًا',
+      few: '$count عناصر',
+      two: 'عنصران',
+      one: 'عنصر واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get siteLocationLabel => 'موقع الفحص';
+
+  @override
+  String get intakeReadyTitle => 'جاهز للتسعير';
+
+  @override
+  String intakeProgressTitle(int done, int total) {
+    return '$done من $total جاهز. أكمل الباقي للتسعير.';
+  }
+
+  @override
+  String partNeeded(String label) {
+    return '$label مطلوب';
+  }
+
+  @override
+  String get intakeReadyHint => 'كل شيء جاهز — احفظ التفاصيل لبدء التسعير.';
+
+  @override
   String requestMovedOnMessage(String status) {
     return 'توجد بالفعل عروض أسعار لهذا الطلب — الحالة الحالية: $status. يمكنك متابعته من صفحة عروض الأسعار.';
   }
@@ -658,6 +883,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get validFor => 'صالح لمدة';
 
   @override
+  String get currencyLabel => 'العملة';
+
+  @override
   String validityDaysOption(int days) {
     return '$days يومًا';
   }
@@ -684,6 +912,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get sendQuotation => 'إرسال عرض السعر';
+
+  @override
+  String get acceptQuotation => 'قبول عرض السعر';
 
   @override
   String get errorPriceRequired => 'أدخل سعرًا لكل وحدة.';
@@ -1308,6 +1539,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get defectsOptionalSubtitle => 'اختياري — فقط إن وُجد شيء';
 
   @override
+  String get defectsRequiredWhenNotSafeSubtitle =>
+      'اختياري، عدا وصف العيب: مطلوب عندما تكون النتيجة غير مُرضية';
+
+  @override
   String get existingDangerLabel =>
       'هل ما سبق يشكّل خطرًا قائمًا أو وشيكًا على الأشخاص؟ (عيب يجب الإبلاغ عنه)';
 
@@ -1332,13 +1567,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get potentialDangerShortLabel => 'خطر محتمل';
 
   @override
-  String get safeToOperateOption => 'آمن للتشغيل';
+  String get safeToOperateOption => 'مُرضٍ';
 
   @override
   String get safeWithConditionsOption => 'آمن بشروط (الإصلاح خلال 14 يومًا)';
 
   @override
-  String get notSafeOption => 'غير آمن — خارج الخدمة';
+  String get notSafeOption => 'غير مُرضٍ';
 
   @override
   String get previewAction => 'معاينة';
@@ -1571,9 +1806,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'يُحفظ في ملفك الشخصي ويُستخدم عند كل اعتماد لشهادة.';
 
   @override
-  String get sendSignedPdfToLabel => 'إرسال ملف PDF الموقّع إلى';
-
-  @override
   String get returnAction => 'إعادة';
 
   @override
@@ -1626,15 +1858,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get emailPreviewTitle => 'البريد المرسل إلى العميل';
 
   @override
-  String get deliverMessageHint => 'أضف رسالة إلى العميل (اختياري)';
-
-  @override
-  String get deliverNoEmailHint =>
-      'لا يُرسل البريد من التطبيق بعد: التسليم يسجّل المهمة كمُسلَّمة.';
-
-  @override
   String get certificateDeliveredNoEmailMessage =>
-      'تم تسجيل المهمة كمُسلَّمة. لا يُرسل البريد إلى العميل تلقائيًا بعد.';
+      'تم تسجيل المهمة كمُسلَّمة، لكن لم يُرسل البريد إلى العميل.';
 
   @override
   String get sendToClientAction => 'إرسال للعميل';
@@ -1643,15 +1868,96 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sendCertificateTitle => 'إرسال الشهادة';
 
   @override
-  String get sendCertificateHint =>
-      'نزّل ملف PDF الموقّع وأرسله إلى العميل بالبريد، ثم سجّله كمرسل.';
+  String get previewEmailAction => 'معاينة البريد';
 
   @override
-  String get confirmSendTitle => 'تسجيلها كمرسلة؟';
+  String get emailToLabel => 'إلى';
+
+  @override
+  String get emailCcLabel => 'نسخة (Cc)';
+
+  @override
+  String get emailCcHint => 'أضف عنوان بريد للنسخة';
+
+  @override
+  String get emailCcAddAction => 'إضافة';
+
+  @override
+  String emailCcLimit(int count) {
+    return 'يمكنك إضافة حتى $count أشخاص في النسخة.';
+  }
+
+  @override
+  String get emailSubjectLabel => 'الموضوع';
+
+  @override
+  String get emailBodyLabel => 'الرسالة';
+
+  @override
+  String get emailAttachmentsTitle => 'الشهادات المرفقة';
+
+  @override
+  String get emailInvalidAddress => 'أدخل عنوان بريد إلكتروني صحيحًا.';
+
+  @override
+  String get emailCannotSendTitle => 'لا يمكن الإرسال بعد';
+
+  @override
+  String get emailFromLabel => 'من';
+
+  @override
+  String get quoteEmailDisabledNotice =>
+      'إرسال البريد متوقف، لذا يقتصر الإرسال على تحديث عرض السعر. لن يُرسل أي بريد إلى العميل.';
+
+  @override
+  String get quoteEmailSignatureHint =>
+      'يُضاف توقيعك والبريد الذي ترد عليه تلقائيًا.';
+
+  @override
+  String get quoteEmailUseAction => 'استخدام هذا البريد';
+
+  @override
+  String get quoteEmailAttachmentLabel => 'عرض السعر المرفق';
+
+  @override
+  String get quoteEmailStandardSubtitle => 'عاينه وعدّله قبل الإرسال.';
+
+  @override
+  String get quoteEmailEditedSubtitle => 'تمت المراجعة — سيُرسل كما هو معروض.';
+
+  @override
+  String quoteEmailEditedToSubtitle(String email) {
+    return 'إلى $email · جاهز للإرسال';
+  }
+
+  @override
+  String get quoteEmailPreviewEditAction => 'معاينة وتعديل';
+
+  @override
+  String get deliverySentTitle => 'تم الإرسال إلى العميل';
+
+  @override
+  String get deliveryErrorInvalidAddress =>
+      'أحد عناوين البريد يبدو غير صحيح. تحقق من «إلى» و«نسخة» وحاول مرة أخرى.';
+
+  @override
+  String get deliveryErrorNoRecipient =>
+      'لا يوجد عنوان بريد للعميل. أدخل عنوانًا في «إلى».';
+
+  @override
+  String get deliveryErrorMailRefused =>
+      'رفض خادم البريد الرسالة. لم يُرسل شيء ولم يتغير شيء: اضغط إرسال مرة أخرى.';
+
+  @override
+  String get deliveryErrorConflict =>
+      'لا يمكن إرسال هذه المهمة الآن. ارجع وحدّثها.';
+
+  @override
+  String get confirmSendTitle => 'إرسال إلى العميل؟';
 
   @override
   String confirmSendMessage(String email) {
-    return 'ستُسجَّل الشهادة كمرسلة إلى $email.';
+    return 'سيُرسل البريد إلى $email ومعه الشهادات.';
   }
 
   @override
@@ -1665,7 +1971,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'تم اعتمادها قبل إضافة رموز QR، لذا لا يحتوي رمزها على كود.';
 
   @override
-  String get certificateSentMessage => 'تم تسجيل الشهادة كمرسلة إلى العميل.';
+  String get certificateSentMessage => 'أُرسل البريد إلى العميل ومعه الشهادات.';
 
   @override
   String get awaitingCoordinatorLabel => 'لدى المنسق للإرسال';
@@ -1957,6 +2263,33 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get startInspectionAction => 'بدء الفحص';
+
+  @override
+  String get machineStartFirstHint => 'ابدأ الفحص أولاً';
+
+  @override
+  String get inspectionStepStartTitle => 'ابدأ الفحص';
+
+  @override
+  String get inspectionStepStartHint => 'أعلم المنسق أنك في الموقع.';
+
+  @override
+  String get inspectionStepFillTitle => 'املأ قائمة الفحص لكل ماكينة';
+
+  @override
+  String get inspectionStepFillHint => 'تُفتح بعد بدء الفحص.';
+
+  @override
+  String get machineActionFillIn => 'تعبئة';
+
+  @override
+  String get machineActionFixResubmit => 'تصحيح وإعادة الإرسال';
+
+  @override
+  String get machineActionReview => 'مراجعة';
+
+  @override
+  String get machineActionView => 'عرض';
 
   @override
   String get machineStatusNotStarted => 'لم يبدأ';

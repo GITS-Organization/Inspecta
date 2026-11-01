@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/base/paginated.dart';
+import '../../../../core/utils/currency.dart';
 import '../../domain/entities/quotation.dart';
 import '../../domain/entities/quotation_failure.dart';
 import '../../domain/entities/quote_board_tab.dart';

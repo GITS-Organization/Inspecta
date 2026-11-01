@@ -117,6 +117,10 @@ class _Body extends StatelessWidget {
     cubit.start();
   }
 
+  /// A machine's checklist opens only once the inspection has been started.
+  static bool _isLocked(JobMachines job, MachineSummary machine) =>
+      job.canStartInspection && machine.status == MachineStatus.notStarted;
+
   Future<void> _start(BuildContext context) async {
     final t = AppLocalizations.of(context)!;
     final failure = await context.read<JobMachinesCubit>().startInspection();
@@ -135,48 +139,180 @@ class _Body extends StatelessWidget {
           return const _Skeleton();
         }
 
-        return RefreshIndicator(
-          color: AppColours.primaryColor,
-          onRefresh: context.read<JobMachinesCubit>().start,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, AppLayout.bottomNavClearance),
-            children: [
-              _Summary(job: job, fallbackLocation: request.location),
-              if (job.canStartInspection) ...[
-                const SizedBox(height: 12),
-                MPrimaryButton(
-                  label: t.startInspectionAction,
-                  loading: state.isStarting,
-                  onPressed: () => _start(context),
-                ),
-              ],
-              const SizedBox(height: 12),
-              if (job.machines.isEmpty)
-                SizedBox(height: 320, child: EmptyState(title: t.machinesEmpty))
-              else
-                for (final machine in job.machines) ...[
-                  MachineCard(
-                    machine: machine,
-                    onTap: () => pdfOnly ? _viewPdf(context, machine) : _open(context, machine),
-                    onViewPdf: pdfOnly ? () => _viewPdf(context, machine) : null,
+        return Column(
+          children: [
+            Expanded(
+              child: RefreshIndicator(
+                color: AppColours.primaryColor,
+                onRefresh: context.read<JobMachinesCubit>().start,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    4,
+                    16,
+                    // The Start bar below carries its own spacing; without it
+                    // the list clears the bottom navigation.
+                    job.canStartInspection ? 16 : AppLayout.bottomNavClearance,
                   ),
-                  const SizedBox(height: 12),
-                ],
-            ],
-          ),
+                  children: [
+                    _Summary(job: job, fallbackLocation: request.location, showClient: request.clientName.isEmpty),
+                    const SizedBox(height: 12),
+                    // Start first, then the checklists: the two steps, with the
+                    // second one locked until the first is done.
+                    if (job.canStartInspection) ...[
+                      const _StartSteps(),
+                      const SizedBox(height: 12),
+                    ],
+                    if (job.machines.isEmpty)
+                      SizedBox(height: 320, child: EmptyState(title: t.machinesEmpty))
+                    else
+                      for (final machine in job.machines) ...[
+                        MachineCard(
+                          machine: machine,
+                          locked: _isLocked(job, machine),
+                          onTap: () => _isLocked(job, machine)
+                              ? MToast.showInfo(message: t.machineStartFirstHint)
+                              : pdfOnly
+                              ? _viewPdf(context, machine)
+                              : _open(context, machine),
+                          onViewPdf: pdfOnly ? () => _viewPdf(context, machine) : null,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                  ],
+                ),
+              ),
+            ),
+            // The one thing the inspector does first sits in the thumb zone,
+            // like the footers of the other work screens.
+            if (job.canStartInspection)
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: AppColours.borderSubtle)),
+                ),
+                child: SafeArea(
+                  top: false,
+                  minimum: const EdgeInsets.only(bottom: 6),
+                  child: MPrimaryButton(
+                    label: t.startInspectionAction,
+                    loading: state.isStarting,
+                    onPressed: () => _start(context),
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );
   }
 }
 
-/// Where and when the job is, and how many machines are submitted.
+/// What the inspector does, in order, before any checklist: start the
+/// inspection (step 1, now), then fill in each machine (step 2, locked until
+/// step 1 is done). Shown only while the inspection hasn't started.
+class _StartSteps extends StatelessWidget {
+  const _StartSteps();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
+    return MCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _Step(
+            number: 1,
+            active: true,
+            title: t.inspectionStepStartTitle,
+            hint: t.inspectionStepStartHint,
+          ),
+          Container(
+            margin: const EdgeInsetsDirectional.only(start: 13, top: 4, bottom: 4),
+            width: 2,
+            height: 14,
+            color: AppColours.borderSubtle,
+          ),
+          _Step(
+            number: 2,
+            active: false,
+            title: t.inspectionStepFillTitle,
+            hint: t.inspectionStepFillHint,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One step of [_StartSteps]: a numbered circle (a lock while it can't be
+/// done yet), its title and a line of what it means.
+class _Step extends StatelessWidget {
+  final int number;
+  final bool active;
+  final String title;
+  final String hint;
+
+  const _Step({required this.number, required this.active, required this.title, required this.hint});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active ? AppColours.primaryColor : AppColours.surfaceMuted,
+            shape: BoxShape.circle,
+          ),
+          child: active
+              ? Text(
+                  '$number',
+                  style: AppTextStyles.badge.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+                )
+              : const Icon(Icons.lock_outline_rounded, size: 15, color: AppColours.inkMuted),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: AppTextStyles.cardTitle.copyWith(
+                  fontSize: 15,
+                  color: active ? null : AppColours.inkMuted,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(hint, style: AppTextStyles.caption.copyWith(height: 18 / 13)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Where and when the job is, and how far its machines have got.
+///
+/// The client's name is in the header above, so it is repeated here only
+/// when the header has nothing better than the request id to show
+/// ([showClient]).
 class _Summary extends StatelessWidget {
   final JobMachines job;
   final String fallbackLocation;
+  final bool showClient;
 
-  const _Summary({required this.job, required this.fallbackLocation});
+  const _Summary({required this.job, required this.fallbackLocation, required this.showClient});
 
   @override
   Widget build(BuildContext context) {
@@ -185,48 +321,102 @@ class _Summary extends StatelessWidget {
     final location = job.location.isEmpty ? fallbackLocation : job.location;
     final scheduledAt = job.scheduledAt?.toLocal();
     final progress = job.progress;
-    final value = progress.total == 0 ? 0.0 : (progress.submitted / progress.total).clamp(0.0, 1.0);
+    final client = showClient ? job.clientName : '';
+    final hasDetails = client.isNotEmpty || location.isNotEmpty || scheduledAt != null;
 
     return MCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (job.clientName.isNotEmpty) Text(job.clientName, style: AppTextStyles.cardTitle),
-          if (location.isNotEmpty) ...[
+          if (client.isNotEmpty) ...[
+            Text(client, style: AppTextStyles.cardTitle),
             const SizedBox(height: 4),
+          ],
+          if (location.isNotEmpty)
             Row(
               children: [
-                const Icon(Icons.location_on_outlined, size: 15, color: AppColours.inkMuted),
-                const SizedBox(width: 4),
-                Expanded(child: Text(location, style: AppTextStyles.caption, overflow: TextOverflow.ellipsis)),
+                const Icon(Icons.location_on_outlined, size: 16, color: AppColours.inkMuted),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    location,
+                    style: AppTextStyles.subtitle.copyWith(color: AppColours.inkBody),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
-          ],
           if (scheduledAt != null) ...[
-            const SizedBox(height: 4),
+            if (location.isNotEmpty) const SizedBox(height: 6),
             Row(
               children: [
-                const Icon(Icons.event_outlined, size: 15, color: AppColours.inkMuted),
-                const SizedBox(width: 4),
-                Text(DateFormat('EEE, d MMM · HH:mm', locale).format(scheduledAt), style: AppTextStyles.caption),
+                const Icon(Icons.event_outlined, size: 16, color: AppColours.inkMuted),
+                const SizedBox(width: 6),
+                Text(
+                  DateFormat('EEE, d MMM · HH:mm', locale).format(scheduledAt),
+                  style: AppTextStyles.subtitle.copyWith(color: AppColours.inkBody),
+                ),
               ],
             ),
           ],
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: value,
-              minHeight: 8,
-              color: AppColours.successIcon,
-              backgroundColor: AppColours.primaryTint,
-            ),
-          ),
+          if (hasDetails) const SizedBox(height: 16),
+          _ProgressSegments(machines: job.machines, progress: progress),
           const SizedBox(height: 8),
           Text(t.machinesProgress(progress.submitted, progress.total), style: AppTextStyles.caption),
         ],
       ),
+    );
+  }
+}
+
+/// The job's progress as one segment per machine, each coloured by where
+/// that machine stands — green once submitted (or beyond), blue while being
+/// filled in, red when sent back, pale when untouched — so a job with
+/// several machines shows which ones are left, not just how many. Past
+/// [_maxSegments] machines the segments would be slivers, so it falls back
+/// to a single bar of the submitted share.
+class _ProgressSegments extends StatelessWidget {
+  static const _maxSegments = 16;
+
+  final List<MachineSummary> machines;
+  final MachineProgress progress;
+
+  const _ProgressSegments({required this.machines, required this.progress});
+
+  static Color _colorOf(MachineStatus status) => switch (status) {
+    MachineStatus.submitted || MachineStatus.approved || MachineStatus.delivered => AppColours.successIcon,
+    MachineStatus.returned => AppColours.errorIcon,
+    MachineStatus.draft => AppColours.primaryColor.withValues(alpha: 0.45),
+    MachineStatus.notStarted => AppColours.primaryTint,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    if (machines.isEmpty || machines.length > _maxSegments) {
+      final value = progress.total == 0 ? 0.0 : (progress.submitted / progress.total).clamp(0.0, 1.0);
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: LinearProgressIndicator(
+          value: value,
+          minHeight: 8,
+          color: AppColours.successIcon,
+          backgroundColor: AppColours.primaryTint,
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        for (final (index, machine) in machines.indexed)
+          Expanded(
+            child: Container(
+              height: 8,
+              margin: EdgeInsetsDirectional.only(end: index == machines.length - 1 ? 0 : 4),
+              decoration: BoxDecoration(color: _colorOf(machine.status), borderRadius: BorderRadius.circular(999)),
+            ),
+          ),
+      ],
     );
   }
 }

@@ -914,6 +914,246 @@ abstract class AppLocalizations {
   /// **'Couldn\'t confirm the request. Please try again.'**
   String get confirmRequestError;
 
+  /// No description provided for @clientRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sender isn\'t registered'**
+  String get clientRequiredTitle;
+
+  /// No description provided for @clientRequiredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'{sender} isn\'t registered under any client yet. Add the sender to a client and this email becomes its request by itself.'**
+  String clientRequiredMessage(String sender);
+
+  /// No description provided for @addSenderToClientAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to a client'**
+  String get addSenderToClientAction;
+
+  /// No description provided for @chooseClientTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a client'**
+  String get chooseClientTitle;
+
+  /// No description provided for @chooseClientSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search clients'**
+  String get chooseClientSearchHint;
+
+  /// No description provided for @noClientsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients found.'**
+  String get noClientsFound;
+
+  /// No description provided for @clientPickHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to choose the client'**
+  String get clientPickHint;
+
+  /// No description provided for @clientEmailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Client emails'**
+  String get clientEmailsTitle;
+
+  /// No description provided for @clientEmailsIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Emails from these addresses or domains become this client\'s requests. The emails of the client\'s contacts and its certificates email count automatically.'**
+  String get clientEmailsIntro;
+
+  /// No description provided for @clientEmailsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No addresses registered yet.'**
+  String get clientEmailsEmpty;
+
+  /// No description provided for @clientEmailAddHint.
+  ///
+  /// In en, this message translates to:
+  /// **'buyer@company.com or company.com'**
+  String get clientEmailAddHint;
+
+  /// No description provided for @clientEmailAddAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get clientEmailAddAction;
+
+  /// No description provided for @clientEmailDomainLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Domain'**
+  String get clientEmailDomainLabel;
+
+  /// No description provided for @clientEmailThisAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'This address'**
+  String get clientEmailThisAddress;
+
+  /// No description provided for @clientEmailWholeDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole domain ({domain})'**
+  String clientEmailWholeDomain(String domain);
+
+  /// No description provided for @clientEmailAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Sender added.'**
+  String get clientEmailAdded;
+
+  /// No description provided for @clientEmailPromotedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sender added. Waiting emails that became requests: {count}'**
+  String clientEmailPromotedMessage(int count);
+
+  /// No description provided for @clientsErrorInvalidPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address or domain.'**
+  String get clientsErrorInvalidPattern;
+
+  /// No description provided for @clientsErrorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This client wasn\'t found.'**
+  String get clientsErrorNotFound;
+
+  /// No description provided for @clientsErrorDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'This address or domain is already registered.'**
+  String get clientsErrorDuplicate;
+
+  /// No description provided for @fromEmailSuggestionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'From the email'**
+  String get fromEmailSuggestionsTitle;
+
+  /// No description provided for @fromEmailSuggestionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Machines of this client the email seems to ask about.'**
+  String get fromEmailSuggestionsSubtitle;
+
+  /// No description provided for @suggestionAddAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get suggestionAddAction;
+
+  /// No description provided for @suggestionAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to the request.'**
+  String get suggestionAdded;
+
+  /// No description provided for @suggestionLevelHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear match'**
+  String get suggestionLevelHigh;
+
+  /// No description provided for @suggestionLevelMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Possible match'**
+  String get suggestionLevelMedium;
+
+  /// No description provided for @suggestionLevelAmbiguous.
+  ///
+  /// In en, this message translates to:
+  /// **'Several fit'**
+  String get suggestionLevelAmbiguous;
+
+  /// No description provided for @suggestionReasonSerial.
+  ///
+  /// In en, this message translates to:
+  /// **'by serial number'**
+  String get suggestionReasonSerial;
+
+  /// No description provided for @suggestionReasonName.
+  ///
+  /// In en, this message translates to:
+  /// **'by name'**
+  String get suggestionReasonName;
+
+  /// No description provided for @suggestionReasonModel.
+  ///
+  /// In en, this message translates to:
+  /// **'by model'**
+  String get suggestionReasonModel;
+
+  /// No description provided for @fillFromEmailAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill from email'**
+  String get fillFromEmailAction;
+
+  /// No description provided for @fillFromEmailDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Request filled from the email.'**
+  String get fillFromEmailDone;
+
+  /// No description provided for @fillFromEmailNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing clear to add was found in the email.'**
+  String get fillFromEmailNothing;
+
+  /// No description provided for @invalidMachineError.
+  ///
+  /// In en, this message translates to:
+  /// **'A selected machine doesn\'t belong to this client (or no longer exists). Choose the client\'s machines and try again.'**
+  String get invalidMachineError;
+
+  /// No description provided for @chooseMachineAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a machine'**
+  String get chooseMachineAction;
+
+  /// No description provided for @changeMachineAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get changeMachineAction;
+
+  /// No description provided for @machinePickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Client\'s machines'**
+  String get machinePickerTitle;
+
+  /// No description provided for @searchMachinesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search machines'**
+  String get searchMachinesHint;
+
+  /// No description provided for @noMachinesForClient.
+  ///
+  /// In en, this message translates to:
+  /// **'This client has no machines registered yet.'**
+  String get noMachinesForClient;
+
+  /// No description provided for @clientMachineLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked to the client\'s machine'**
+  String get clientMachineLinked;
+
   /// No description provided for @deleteRequest.
   ///
   /// In en, this message translates to:
@@ -1166,6 +1406,162 @@ abstract class AppLocalizations {
   /// **'Request completed.'**
   String get requestCompleted;
 
+  /// No description provided for @chooseClientAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose client'**
+  String get chooseClientAction;
+
+  /// No description provided for @clientMatchedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Matched'**
+  String get clientMatchedBadge;
+
+  /// No description provided for @clientRequiredBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get clientRequiredBadge;
+
+  /// No description provided for @intakeClientHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the client this request is for.'**
+  String get intakeClientHint;
+
+  /// No description provided for @locationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Where the inspection takes place'**
+  String get locationHint;
+
+  /// No description provided for @accessNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Gate, site contact, safety gear…'**
+  String get accessNotesHint;
+
+  /// No description provided for @equipmentTypeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Overhead crane'**
+  String get equipmentTypeHint;
+
+  /// No description provided for @intakeEquipmentEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No equipment yet'**
+  String get intakeEquipmentEmptyTitle;
+
+  /// No description provided for @intakeEquipmentEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill it from the email, or pick the client\'s machines yourself.'**
+  String get intakeEquipmentEmptyBody;
+
+  /// No description provided for @chooseFromMachinesAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from client\'s machines'**
+  String get chooseFromMachinesAction;
+
+  /// No description provided for @addManuallyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add manually'**
+  String get addManuallyAction;
+
+  /// No description provided for @machineNotLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Not linked to a registered machine'**
+  String get machineNotLinked;
+
+  /// No description provided for @decreaseQuantityAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrease quantity'**
+  String get decreaseQuantityAction;
+
+  /// No description provided for @increaseQuantityAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase quantity'**
+  String get increaseQuantityAction;
+
+  /// No description provided for @saveDetailsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save details'**
+  String get saveDetailsAction;
+
+  /// No description provided for @requestDetailsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Details saved. You can quote this request now.'**
+  String get requestDetailsSaved;
+
+  /// No description provided for @editDetailsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit details'**
+  String get editDetailsAction;
+
+  /// No description provided for @hideDetailsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide details'**
+  String get hideDetailsAction;
+
+  /// No description provided for @requestDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get requestDetailsTitle;
+
+  /// No description provided for @clientMachinesAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Client\'s machines'**
+  String get clientMachinesAction;
+
+  /// No description provided for @itemsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 item} other{{count} items}}'**
+  String itemsCount(int count);
+
+  /// No description provided for @siteLocationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Site location'**
+  String get siteLocationLabel;
+
+  /// No description provided for @intakeReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to quote'**
+  String get intakeReadyTitle;
+
+  /// No description provided for @intakeProgressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {total} ready. Fill in the rest to quote.'**
+  String intakeProgressTitle(int done, int total);
+
+  /// No description provided for @partNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} needed'**
+  String partNeeded(String label);
+
+  /// No description provided for @intakeReadyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'All set — save the details to start quoting.'**
+  String get intakeReadyHint;
+
   /// No description provided for @requestMovedOnMessage.
   ///
   /// In en, this message translates to:
@@ -1250,6 +1646,12 @@ abstract class AppLocalizations {
   /// **'Valid for'**
   String get validFor;
 
+  /// No description provided for @currencyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency'**
+  String get currencyLabel;
+
   /// No description provided for @validityDaysOption.
   ///
   /// In en, this message translates to:
@@ -1297,6 +1699,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Send quotation'**
   String get sendQuotation;
+
+  /// No description provided for @acceptQuotation.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept quotation'**
+  String get acceptQuotation;
 
   /// No description provided for @errorPriceRequired.
   ///
@@ -2402,6 +2810,12 @@ abstract class AppLocalizations {
   /// **'Optional — only if something was found'**
   String get defectsOptionalSubtitle;
 
+  /// No description provided for @defectsRequiredWhenNotSafeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional, except the defect description: it\'s needed when the result is Unsatisfactory'**
+  String get defectsRequiredWhenNotSafeSubtitle;
+
   /// No description provided for @existingDangerLabel.
   ///
   /// In en, this message translates to:
@@ -2447,7 +2861,7 @@ abstract class AppLocalizations {
   /// No description provided for @safeToOperateOption.
   ///
   /// In en, this message translates to:
-  /// **'Safe to operate'**
+  /// **'Satisfactory'**
   String get safeToOperateOption;
 
   /// No description provided for @safeWithConditionsOption.
@@ -2459,7 +2873,7 @@ abstract class AppLocalizations {
   /// No description provided for @notSafeOption.
   ///
   /// In en, this message translates to:
-  /// **'Not safe — out of service'**
+  /// **'Unsatisfactory'**
   String get notSafeOption;
 
   /// No description provided for @previewAction.
@@ -2888,12 +3302,6 @@ abstract class AppLocalizations {
   /// **'Saved to your profile and used every time you approve a certificate.'**
   String get signatureSheetHint;
 
-  /// No description provided for @sendSignedPdfToLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Send signed PDF to'**
-  String get sendSignedPdfToLabel;
-
   /// No description provided for @returnAction.
   ///
   /// In en, this message translates to:
@@ -2990,22 +3398,10 @@ abstract class AppLocalizations {
   /// **'Email to the client'**
   String get emailPreviewTitle;
 
-  /// No description provided for @deliverMessageHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Add a message to the client (optional)'**
-  String get deliverMessageHint;
-
-  /// No description provided for @deliverNoEmailHint.
-  ///
-  /// In en, this message translates to:
-  /// **'The email isn\'t sent from the app yet: delivering marks the job as handed over.'**
-  String get deliverNoEmailHint;
-
   /// No description provided for @certificateDeliveredNoEmailMessage.
   ///
   /// In en, this message translates to:
-  /// **'Job marked as delivered. The client email isn\'t sent automatically yet.'**
+  /// **'Job marked as delivered, but the email to the client wasn\'t sent.'**
   String get certificateDeliveredNoEmailMessage;
 
   /// No description provided for @sendToClientAction.
@@ -3020,22 +3416,166 @@ abstract class AppLocalizations {
   /// **'Send certificate'**
   String get sendCertificateTitle;
 
-  /// No description provided for @sendCertificateHint.
+  /// No description provided for @previewEmailAction.
   ///
   /// In en, this message translates to:
-  /// **'Download the signed PDF, email it to the client, then mark it as sent.'**
-  String get sendCertificateHint;
+  /// **'Preview email'**
+  String get previewEmailAction;
+
+  /// No description provided for @emailToLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get emailToLabel;
+
+  /// No description provided for @emailCcLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cc'**
+  String get emailCcLabel;
+
+  /// No description provided for @emailCcHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a cc address'**
+  String get emailCcHint;
+
+  /// No description provided for @emailCcAddAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get emailCcAddAction;
+
+  /// No description provided for @emailCcLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'You can cc up to {count} people.'**
+  String emailCcLimit(int count);
+
+  /// No description provided for @emailSubjectLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Subject'**
+  String get emailSubjectLabel;
+
+  /// No description provided for @emailBodyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get emailBodyLabel;
+
+  /// No description provided for @emailAttachmentsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificates attached'**
+  String get emailAttachmentsTitle;
+
+  /// No description provided for @emailInvalidAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address.'**
+  String get emailInvalidAddress;
+
+  /// No description provided for @emailCannotSendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t send yet'**
+  String get emailCannotSendTitle;
+
+  /// No description provided for @emailFromLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get emailFromLabel;
+
+  /// No description provided for @quoteEmailDisabledNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Emailing is switched off, so sending only updates the quotation. Nothing is emailed to the client.'**
+  String get quoteEmailDisabledNotice;
+
+  /// No description provided for @quoteEmailSignatureHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your signature and the email you\'re replying to are added automatically.'**
+  String get quoteEmailSignatureHint;
+
+  /// No description provided for @quoteEmailUseAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this email'**
+  String get quoteEmailUseAction;
+
+  /// No description provided for @quoteEmailAttachmentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Attached quotation'**
+  String get quoteEmailAttachmentLabel;
+
+  /// No description provided for @quoteEmailStandardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview and edit it before sending.'**
+  String get quoteEmailStandardSubtitle;
+
+  /// No description provided for @quoteEmailEditedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed — it goes out as shown.'**
+  String get quoteEmailEditedSubtitle;
+
+  /// No description provided for @quoteEmailEditedToSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'To {email} · ready to send'**
+  String quoteEmailEditedToSubtitle(String email);
+
+  /// No description provided for @quoteEmailPreviewEditAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview & edit'**
+  String get quoteEmailPreviewEditAction;
+
+  /// No description provided for @deliverySentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to the client'**
+  String get deliverySentTitle;
+
+  /// No description provided for @deliveryErrorInvalidAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'One of the email addresses looks wrong. Check To and Cc and try again.'**
+  String get deliveryErrorInvalidAddress;
+
+  /// No description provided for @deliveryErrorNoRecipient.
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s no email address for the client. Enter one in To.'**
+  String get deliveryErrorNoRecipient;
+
+  /// No description provided for @deliveryErrorMailRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'The mail server refused the email. Nothing was sent or changed: press Send again.'**
+  String get deliveryErrorMailRefused;
+
+  /// No description provided for @deliveryErrorConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'This job can\'t be sent right now. Go back and refresh it.'**
+  String get deliveryErrorConflict;
 
   /// No description provided for @confirmSendTitle.
   ///
   /// In en, this message translates to:
-  /// **'Mark as sent?'**
+  /// **'Send to client?'**
   String get confirmSendTitle;
 
   /// No description provided for @confirmSendMessage.
   ///
   /// In en, this message translates to:
-  /// **'The certificate will be marked as sent to {email}.'**
+  /// **'The email goes to {email} with the certificates attached.'**
   String confirmSendMessage(String email);
 
   /// No description provided for @previewFinalPdfAction.
@@ -3059,7 +3599,7 @@ abstract class AppLocalizations {
   /// No description provided for @certificateSentMessage.
   ///
   /// In en, this message translates to:
-  /// **'Certificate marked as sent to the client.'**
+  /// **'Email sent to the client with the certificates attached.'**
   String get certificateSentMessage;
 
   /// No description provided for @awaitingCoordinatorLabel.
@@ -3577,6 +4117,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start inspection'**
   String get startInspectionAction;
+
+  /// No description provided for @machineStartFirstHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Start the inspection first'**
+  String get machineStartFirstHint;
+
+  /// No description provided for @inspectionStepStartTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start the inspection'**
+  String get inspectionStepStartTitle;
+
+  /// No description provided for @inspectionStepStartHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Let the coordinator know you\'re on site.'**
+  String get inspectionStepStartHint;
+
+  /// No description provided for @inspectionStepFillTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in each machine\'s checklist'**
+  String get inspectionStepFillTitle;
+
+  /// No description provided for @inspectionStepFillHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocks once the inspection has started.'**
+  String get inspectionStepFillHint;
+
+  /// No description provided for @machineActionFillIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in'**
+  String get machineActionFillIn;
+
+  /// No description provided for @machineActionFixResubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Fix and resubmit'**
+  String get machineActionFixResubmit;
+
+  /// No description provided for @machineActionReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get machineActionReview;
+
+  /// No description provided for @machineActionView.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get machineActionView;
 
   /// No description provided for @machineStatusNotStarted.
   ///

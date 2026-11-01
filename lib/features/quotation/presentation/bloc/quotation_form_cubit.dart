@@ -10,60 +10,110 @@ import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/domain/usecases/get_request_detail.dart';
 import '../../domain/entities/pricing_unit.dart';
 import '../../domain/entities/quotation_failure.dart';
+import '../../domain/entities/quote_email.dart';
 import '../../domain/entities/quote_line_item.dart';
 import '../../domain/entities/reply_type.dart';
 import '../../domain/proposal_terms.dart';
+import '../../domain/usecases/get_quote_email.dart';
 import '../../domain/usecases/get_quote_pdf.dart';
-import '../../domain/usecases/save_draft.dart';
+import '../../domain/usecases/get_request_quote.dart';
 import '../../domain/usecases/send_quotation.dart';
 import '../../domain/usecases/update_offer.dart';
 
 part 'quotation_form_state.dart';
 
 /// The reply panel on a request's detail screen (Feature 03 §5): reply
-/// type, price, validity, message, their validation, and actually
+/// type, price, the email to the client (or, for a reject, the
+/// reason), their validation, and actually
 /// saving/sending them — including reject, which now goes through the
 /// same [SendQuotation] path so the Quotations tracker has a full
 /// history of every reply sent.
 ///
+/// Sending an offer or accepting a quote emails the client the PDF through
+/// the API; [loadEmailPreview] shows that email first and [setEmailEdits]
+/// keeps the coordinator's changes to it, which go out with [send].
+///
+/// Opened without a quote (from the request screen), the form looks up the
+/// request's draft quote itself, so the offer is saved onto it and sent or
+/// accepted through its own endpoints rather than creating a new quote.
+///
 /// Known gaps: Accept has no real price (no price list backend, US-03's
-/// open question #1), there's no VAT line (the proposal just states that
-/// 14% VAT is added), and nothing here emails the client the proposal PDF
-/// (BR-03.5) — that needs a backend job this client can't perform, so for
-/// now it is only previewed.
+/// open question #1), and there's no VAT line (the proposal just states that
+/// 14% VAT is added).
 class QuotationFormCubit extends Cubit<QuotationFormState> {
   final InspectionRequest request;
 
-  /// The quote this reply is for, when the request already has one. An offer
-  /// is then saved onto it through the API and its PDF comes from there.
-  final String? quotationId;
-  final SaveDraft _saveDraft;
   final SendQuotation _sendQuotation;
   final UpdateOffer _updateOffer;
   final GetQuotePdf _getQuotePdf;
+  final GetQuoteEmail _getQuoteEmail;
+  final GetRequestQuote _getRequestQuote;
   final GetRequestDetail _getRequestDetail;
+
+  String? _quotationId;
+
+  /// The look-up of the request's draft quote, while it runs.
+  Future<void>? _resolving;
+
+  /// Why the look-up failed, when it did: sending without the quote would
+  /// create a new one, so a send waits for a look-up that worked.
+  QuotationFailure? _lookupFailure;
 
   /// The request's real items, fetched the first time the offer is saved.
   List<RequestItem>? _realItems;
 
   QuotationFormCubit({
     required this.request,
-    required this.quotationId,
-    required SaveDraft saveDraft,
+    required String? quotationId,
     required SendQuotation sendQuotation,
     required UpdateOffer updateOffer,
     required GetQuotePdf getQuotePdf,
+    required GetQuoteEmail getQuoteEmail,
+    required GetRequestQuote getRequestQuote,
     required GetRequestDetail getRequestDetail,
-  }) : _saveDraft = saveDraft,
+  }) : _quotationId = quotationId,
        _sendQuotation = sendQuotation,
        _updateOffer = updateOffer,
        _getQuotePdf = getQuotePdf,
+       _getQuoteEmail = getQuoteEmail,
+       _getRequestQuote = getRequestQuote,
        _getRequestDetail = getRequestDetail,
-       super(QuotationFormState(itemIds: request.items.map((item) => item.id).toList()));
+       super(
+         QuotationFormState(
+           itemIds: request.items.map((item) => item.id).toList(),
+           isResolvingQuote: quotationId == null,
+         ),
+       ) {
+    if (quotationId == null) _resolving = _resolveQuote();
+  }
 
-  /// Whether the offer goes through the API's quote (it has an id to save
-  /// onto), rather than the older draft path.
-  bool get hasQuote => quotationId != null;
+  /// The quote this reply is for, when the request already has one. An offer
+  /// is then saved onto it through the API and its PDF comes from there.
+  String? get quotationId => _quotationId;
+
+  /// Whether the request has a quote the offer can be saved onto.
+  bool get hasQuote => _quotationId != null;
+
+  Future<void> _resolveQuote() async {
+    try {
+      _quotationId = (await _getRequestQuote(request.id))?.id;
+      _lookupFailure = null;
+    } catch (e) {
+      _lookupFailure = e is QuotationFailure ? e : const QuotationFailure(QuotationFailureCode.unknown);
+    }
+    if (!isClosed) emit(state.copyWith(isResolvingQuote: false));
+  }
+
+  /// Waits for the quote look-up, so a priced reply never goes out before
+  /// the form knows whether the request has a quote. A look-up that failed is
+  /// tried once more; if it fails again, so does the reply — it can't tell a
+  /// missing quote from an unreachable one. Throws [QuotationFailure].
+  Future<void> _ensureQuote() async {
+    await _resolving;
+    if (_quotationId != null || _lookupFailure == null) return;
+    await (_resolving = _resolveQuote());
+    if (_quotationId == null && _lookupFailure != null) throw _lookupFailure!;
+  }
 
   /// Whether [request] was built from a Quotations list row, which has no
   /// equipment lines: it holds a single stand-in line, so the form asks for
@@ -100,6 +150,7 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
       requestId: request.id,
       quotationId: quotationId!,
       items: await _apiLines(),
+      currency: state.currency,
       validityDays: state.validityDays,
       scopeOfWork: scopeOfWork,
       notes: notes,
@@ -111,6 +162,48 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
   /// so it reflects what is on screen.
   Future<Uint8List> fetchPdf() {
     return _getQuotePdf(requestId: request.id, quotationId: quotationId!);
+  }
+
+  /// The email that will carry the PDF to the client. The offer is saved
+  /// first, so the email (its machines, total and validity) reflects what is
+  /// on screen. Throws [QuotationFailure].
+  Future<QuoteEmailPreview> loadEmailPreview() async {
+    await saveOffer();
+    return _getQuoteEmail(
+      requestId: request.id,
+      quotationId: quotationId!,
+      accept: state.replyType == ReplyType.accept,
+    );
+  }
+
+  /// Keeps the email the coordinator reviewed, to go out with Send.
+  void setEmailEdits(QuoteEmailEdits? edits) {
+    if (edits == null || edits.isEmpty) {
+      emit(state.copyWith(clearEmailEdits: true));
+    } else {
+      emit(state.copyWith(emailEdits: edits));
+    }
+  }
+
+  /// The API's suggested email as a full set of values, for a send where the
+  /// coordinator didn't open the email. Null when it can't be read, in which
+  /// case the send carries no body and the API uses its suggestion itself.
+  Future<QuoteEmailEdits?> _suggestedEmail() async {
+    try {
+      final preview = await _getQuoteEmail(
+        requestId: request.id,
+        quotationId: quotationId!,
+        accept: state.replyType == ReplyType.accept,
+      );
+      return QuoteEmailEdits(
+        sentTo: preview.to,
+        cc: preview.cc,
+        subject: preview.subject,
+        message: preview.body,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Sum of every line's price × quantity, or `null` until each line has a
@@ -133,69 +226,56 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
   List<String> get notes =>
       state.notes.map((note) => note.trim()).where((note) => note.isNotEmpty).toList();
 
-  /// "Overhead crane × 2", or each item type joined when there's more
-  /// than one — shown on the Quotations tracker's cards.
-  String get _equipmentSummary {
-    if (request.items.isEmpty) return request.equipmentTitle;
-    return request.items.map((item) => '${item.type} × ${item.quantity}').join(', ');
-  }
-
+  // The email's text states the machines, the total and the validity (and
+  // differs between an offer and an accept), so changing any of them drops
+  // the coordinator's edits: sending a stale total would be worse than
+  // editing the email again.
   void selectReplyType(ReplyType type) {
-    emit(state.copyWith(replyType: type, submitted: false, clearFailure: true));
+    emit(state.copyWith(replyType: type, submitted: false, clearFailure: true, clearEmailEdits: true));
   }
 
   void changeLinePrice(String itemId, String value) =>
-      emit(state.copyWith(linePrices: {...state.linePrices, itemId: value}));
+      emit(state.copyWith(linePrices: {...state.linePrices, itemId: value}, clearEmailEdits: true));
 
   void changeScopeOfWork(List<String> value) => emit(state.copyWith(scopeOfWork: value));
 
   void changeNotes(List<String> value) => emit(state.copyWith(notes: value));
 
-  void changeValidity(int days) => emit(state.copyWith(validityDays: days));
+
+  /// Every price on the quote is in one currency: the amounts typed stay as
+  /// they are and are now read in [code].
+  void changeCurrency(String code) =>
+      emit(state.copyWith(currency: Currency.normalize(code), clearEmailEdits: true));
 
   void changeMessage(String value) => emit(state.copyWith(message: value));
 
   /// The offer's lines, each at its own entered price, per visit.
-  List<QuoteLineItem> offerLines({bool priced = true}) {
+  List<QuoteLineItem> offerLines() {
     return request.items
         .map(
           (item) => QuoteLineItem(
             requestItemId: item.id,
             type: item.type,
             quantity: item.quantity,
-            unitPricePiastres: priced ? (state.unitPriceOf(item.id) ?? 0) : 0,
+            unitPricePiastres: state.unitPriceOf(item.id) ?? 0,
             pricingUnit: PricingUnit.perVisit,
           ),
         )
         .toList();
   }
 
-  /// US-03.4: not available once Reject is chosen — there's nothing
-  /// meaningful to draft.
+  /// US-03.4: saves the offer onto the request's quote. Not available once
+  /// Reject is chosen — there's nothing meaningful to draft — nor while the
+  /// request has no quote: the API creates one only by sending it.
   Future<void> saveDraft() async {
     if (state.replyType == null || state.replyType == ReplyType.reject) return;
     if (state.isSubmitting) return;
 
     emit(state.copyWith(isSubmitting: true));
     try {
-      if (state.isPriced && hasQuote) {
-        await saveOffer();
-      } else {
-        await _saveDraft(
-          requestId: request.id,
-          requestNumber: request.id,
-          clientName: request.clientName,
-          equipmentSummary: _equipmentSummary,
-          type: state.replyType!,
-          items: state.isPriced
-              ? offerLines()
-              : offerLines(priced: false),
-          validityDays: state.isPriced ? state.validityDays : null,
-          message: state.message,
-          notes: state.isPriced ? notes : null,
-          scopeOfWork: state.isPriced ? scopeOfWork : null,
-        );
-      }
+      await _ensureQuote();
+      if (!hasQuote) throw const QuotationFailure(QuotationFailureCode.unknown);
+      await saveOffer();
       _completeAction(QuotationAction.saveDraft, success: true);
     } catch (e) {
       _completeAction(QuotationAction.saveDraft, success: false, failure: _mapFailure(e));
@@ -210,23 +290,21 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
 
     emit(state.copyWith(isSubmitting: true));
     try {
+      if (state.isPriced) await _ensureQuote();
       // The prices go onto the quote first; sending (or accepting) then
       // releases it.
       if (state.isPriced && hasQuote) await saveOffer();
+      // The email goes out in full: as the coordinator reviewed it, or — when
+      // they never opened it — as the API suggests it.
+      final email = state.isPriced && hasQuote ? (state.emailEdits ?? await _suggestedEmail()) : null;
       final version = await _sendQuotation(
         requestId: request.id,
-        requestNumber: request.id,
-        clientName: request.clientName,
-        equipmentSummary: _equipmentSummary,
         type: state.replyType!,
-        items: state.isPriced
-            ? offerLines()
-            : offerLines(priced: false),
         quotationId: quotationId,
+        currency: state.currency,
         validityDays: state.isPriced ? state.validityDays : null,
         message: state.message,
-        notes: state.isPriced ? notes : null,
-        scopeOfWork: state.isPriced ? scopeOfWork : null,
+        email: email,
       );
       emit(state.copyWith(sentVersion: version));
       _completeAction(QuotationAction.send, success: true);
@@ -235,9 +313,9 @@ class QuotationFormCubit extends Cubit<QuotationFormState> {
     }
   }
 
-  /// [_saveDraft]/[_sendQuotation] throw [QuotationFailure]; a reject
-  /// send also touches the requests collection and can throw
-  /// [RequestsFailure]. Both map onto the same failure codes for display.
+  /// [saveOffer]/[_sendQuotation] throw [QuotationFailure]; a reject send
+  /// goes through the requests API and can throw [RequestsFailure]. Both map
+  /// onto the same failure codes for display.
   QuotationFailureCode _mapFailure(Object error) {
     if (error is QuotationFailure) return error.code;
     if (error is RequestsFailure) {

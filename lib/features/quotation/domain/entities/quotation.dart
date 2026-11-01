@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../../core/utils/currency.dart';
 import 'client_response_outcome.dart';
 import 'quote_line_item.dart';
 import 'quotation_status.dart';
@@ -58,6 +59,9 @@ class Quotation extends Equatable {
   /// report it — what a draft has left to fill in.
   final int missingPrices;
 
+  /// ISO 4217 code of the currency every amount on the quote is in.
+  final String currency;
+
   // BR-03.6: the client's answer, logged by the coordinator.
   final ClientResponseOutcome? clientResponseOutcome;
   final int? clientCounterPricePiastres;
@@ -83,6 +87,7 @@ class Quotation extends Equatable {
     this.location = '',
     this.totalUnits = 0,
     this.missingPrices = 0,
+    this.currency = Currency.egp,
     this.subtotalPiastres,
     this.totalPiastres,
     this.validUntil,
@@ -142,6 +147,7 @@ class Quotation extends Equatable {
     createdAt,
     totalUnits,
     missingPrices,
+    currency,
     clientResponseOutcome,
     clientCounterPricePiastres,
     clientResponseNote,

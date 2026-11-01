@@ -3,16 +3,16 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
-import '../../../../core/shared/m_card.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/inspection_request.dart';
+import 'request_section_parts.dart';
 
 /// The intake email: who sent it and when, its subject as a title, and its
 /// text — a few lines at first, all of it once "Read full email" is tapped
 /// (US-02.3), which then reads "Show less".
 class EmailSummaryCard extends StatefulWidget {
   /// Lines of the email shown before it is expanded.
-  static const collapsedLines = 5;
+  static const collapsedLines = 3;
 
   final InspectionRequest request;
 
@@ -40,13 +40,14 @@ class _EmailSummaryCardState extends State<EmailSummaryCard> {
     final time = DateFormat.Hm().format(request.receivedAt);
     final subject = request.subject?.trim() ?? '';
     final body = request.emailPreview?.trim() ?? '';
+    final from = request.emailFrom?.trim() ?? '';
     final bodyStyle = AppTextStyles.body.copyWith(
-      fontSize: 14,
-      height: 22 / 14,
-      color: AppColours.ink,
+      fontSize: 15,
+      height: 23 / 15,
+      color: AppColours.inkBody,
     );
 
-    return MCard(
+    return RequestSection(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -64,7 +65,7 @@ class _EmailSummaryCardState extends State<EmailSummaryCard> {
                 child: Text(
                   _initials(request.senderLabel),
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: AppColours.primaryDark,
                   ),
@@ -76,16 +77,29 @@ class _EmailSummaryCardState extends State<EmailSummaryCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      request.senderLabel,
-                      style: AppTextStyles.cardTitle,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            request.senderLabel,
+                            style: AppTextStyles.cardTitle.copyWith(fontSize: 16),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(time, style: rowLabelStyle),
+                      ],
                     ),
-                    Text(
-                      request.emailFrom == null ? time : '${request.emailFrom} · $time',
-                      style: AppTextStyles.caption.copyWith(fontSize: 12, height: 16 / 12),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    if (from.isNotEmpty)
+                      Text(
+                        from,
+                        style: AppTextStyles.caption.copyWith(height: 18 / 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                   ],
                 ),
               ),
@@ -97,7 +111,7 @@ class _EmailSummaryCardState extends State<EmailSummaryCard> {
             Text(subject, style: AppTextStyles.cardTitle),
           ],
           if (body.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             AnimatedSize(
               duration: const Duration(milliseconds: 180),
               alignment: Alignment.topCenter,
@@ -108,16 +122,14 @@ class _EmailSummaryCardState extends State<EmailSummaryCard> {
               ),
             ),
           ],
-          if (body.isNotEmpty || subject.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            GestureDetector(
-              onTap: () => setState(() => _expanded = !_expanded),
-              child: Text(
-                _expanded ? t.showLessEmail : t.readFullEmail,
-                style: AppTextStyles.link,
+          if (body.isNotEmpty || subject.isNotEmpty)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: UnderlineLink(
+                label: _expanded ? t.showLessEmail : t.readFullEmail,
+                onPressed: () => setState(() => _expanded = !_expanded),
               ),
             ),
-          ],
         ],
       ),
     );

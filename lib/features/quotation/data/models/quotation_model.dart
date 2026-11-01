@@ -1,12 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
+import '../../../../core/utils/currency.dart';
 import '../../domain/entities/client_response_outcome.dart';
 import '../../domain/entities/quotation.dart';
 import '../../domain/entities/quotation_status.dart';
 import '../../domain/entities/reply_type.dart';
 import 'quote_line_item_model.dart';
 
-/// A `quotations/{id}` Firestore document.
+/// A quote as the Inspecta API returns it, in full or as a list row.
 class QuotationModel {
   final String id;
   final String requestId;
@@ -29,6 +28,9 @@ class QuotationModel {
   final DateTime createdAt;
   final int totalUnits;
   final int missingPrices;
+
+  /// ISO code of the currency the amounts are in.
+  final String currency;
   final String? clientResponseOutcome;
   final int? clientCounterPricePiastres;
   final String? clientResponseNote;
@@ -48,6 +50,7 @@ class QuotationModel {
     this.location = '',
     this.totalUnits = 0,
     this.missingPrices = 0,
+    this.currency = Currency.egp,
     this.type,
     this.subtotalPiastres,
     this.totalPiastres,
@@ -63,37 +66,6 @@ class QuotationModel {
     this.clientRespondedAt,
     this.lastReminderAt,
   });
-
-  factory QuotationModel.fromJson(String id, Map<String, dynamic> json) {
-    return QuotationModel(
-      id: id,
-      requestId: json['requestId'] as String? ?? '',
-      requestNumber: json['requestNumber'] as String? ?? '',
-      clientName: json['clientName'] as String? ?? '',
-      equipmentSummary: json['equipmentSummary'] as String? ?? '',
-      version: (json['version'] as num?)?.toInt(),
-      type: json['type'] as String?,
-      items: (json['items'] as List<dynamic>? ?? const [])
-          .whereType<Map<String, dynamic>>()
-          .map(QuoteLineItemModel.fromJson)
-          .toList(),
-      subtotalPiastres: (json['subtotalPiastres'] as num?)?.toInt(),
-      totalPiastres: (json['totalPiastres'] as num?)?.toInt(),
-      validUntil: (json['validUntil'] as Timestamp?)?.toDate(),
-      message: json['message'] as String?,
-      notes: (json['notes'] as List<dynamic>? ?? const []).whereType<String>().toList(),
-      scopeOfWork: (json['scopeOfWork'] as List<dynamic>? ?? const []).whereType<String>().toList(),
-      status: json['status'] as String?,
-      sentAt: (json['sentAt'] as Timestamp?)?.toDate(),
-      createdBy: json['createdBy'] as String? ?? '',
-      createdAt: (json['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      clientResponseOutcome: json['clientResponseOutcome'] as String?,
-      clientCounterPricePiastres: (json['clientCounterPricePiastres'] as num?)?.toInt(),
-      clientResponseNote: json['clientResponseNote'] as String?,
-      clientRespondedAt: (json['clientRespondedAt'] as Timestamp?)?.toDate(),
-      lastReminderAt: (json['lastReminderAt'] as Timestamp?)?.toDate(),
-    );
-  }
 
   /// A quote as the Inspecta API returns it. The API has no reply type (every
   /// quote is a priced offer), calls the number `proposalNumber`, and calls a
@@ -121,6 +93,7 @@ class QuotationModel {
       requestNumber: json['proposalNumber'] as String? ?? '',
       clientName: json['clientName'] as String? ?? '',
       equipmentSummary: _summarise(items),
+      currency: Currency.normalize(json['currency'] as String?),
       location: json['location'] as String? ?? '',
       version: (json['version'] as num?)?.toInt(),
       type: ReplyType.offer.value,
@@ -161,6 +134,7 @@ class QuotationModel {
           json['proposalNumber'] as String? ?? json['quotationNumber'] as String? ?? '',
       clientName: json['clientName'] as String? ?? '',
       equipmentSummary: '',
+      currency: Currency.normalize(json['currency'] as String?),
       location: json['location'] as String? ?? '',
       version: (json['version'] as num?)?.toInt(),
       totalUnits: (json['totalUnits'] as num?)?.toInt() ?? 0,
@@ -207,6 +181,7 @@ class QuotationModel {
       version: version,
       totalUnits: totalUnits,
       missingPrices: missingPrices,
+      currency: currency,
       type: replyType,
       items: items.map((item) => item.toEntity()).toList(),
       subtotalPiastres: subtotalPiastres,

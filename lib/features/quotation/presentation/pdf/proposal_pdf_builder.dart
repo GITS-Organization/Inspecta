@@ -49,6 +49,9 @@ Future<Uint8List> buildProposalPdf({
   required List<String> notes,
   List<String>? scopeOfWork,
   required ProposalDetails details,
+
+  /// ISO code the prices are printed in.
+  String currency = 'EGP',
 }) async {
   final regular = pw.Font.ttf(await rootBundle.load('assets/fonts/inter/Inter-Regular.ttf'));
   final bold = pw.Font.ttf(await rootBundle.load('assets/fonts/inter/Inter-Bold.ttf'));
@@ -106,7 +109,7 @@ Future<Uint8List> buildProposalPdf({
   contentPage(proposalIndustrialServicesPage);
   contentPage(proposalEnvironmentalServicesPage);
   contentPage(() => _scopePage(request));
-  contentPage(() => _budgetPage(request, lines, scopeOfWork, notes));
+  contentPage(() => _budgetPage(request, lines, scopeOfWork, notes, currency));
   contentPage(proposalTermsPage);
   doc.addPage(
     pw.Page(
@@ -296,13 +299,15 @@ String _describe(RequestItem item) {
 
 // ---- Page: 6-Project Budget --------------------------------------------------
 
-String _egp(int piastres) => '${NumberFormat('#,##0.##', 'en').format(piastres / 100)} EGP';
+String _money(int minorUnits, String currency) =>
+    '${NumberFormat('#,##0.##', 'en').format(minorUnits / 100)} $currency';
 
 List<pw.Widget> _budgetPage(
   InspectionRequest request,
   List<QuoteLineItem> lines,
   List<String>? scopeOfWork,
   List<String> notes,
+  String currency,
 ) {
   final grandTotal = lines.fold<int>(0, (sum, line) => sum + line.lineTotalPiastres);
 
@@ -332,9 +337,9 @@ List<pw.Widget> _budgetPage(
             head('Item'),
             head('Description'),
             head('Unit of Pricing'),
-            head('Cost Per Item (EGP)'),
+            head('Cost Per Item ($currency)'),
             head('Qty'),
-            head('Total Cost (EGP)'),
+            head('Total Cost ($currency)'),
           ],
         ),
         for (var i = 0; i < lines.length; i++)
@@ -344,9 +349,9 @@ List<pw.Widget> _budgetPage(
               proposalCell('${i + 1}', align: pw.Alignment.center, vertical: 11),
               _lineDescription(request, lines[i]),
               proposalCell(lines[i].pricingUnit.pdfLabel, align: pw.Alignment.center, vertical: 11),
-              proposalCell(_egp(lines[i].unitPricePiastres), align: pw.Alignment.center, vertical: 11),
+              proposalCell(_money(lines[i].unitPricePiastres, currency), align: pw.Alignment.center, vertical: 11),
               proposalCell('${lines[i].quantity}', align: pw.Alignment.center, vertical: 11),
-              proposalCell(_egp(lines[i].lineTotalPiastres), align: pw.Alignment.center, vertical: 11),
+              proposalCell(_money(lines[i].lineTotalPiastres, currency), align: pw.Alignment.center, vertical: 11),
             ],
           ),
         if (lines.length > 1)
@@ -358,7 +363,7 @@ List<pw.Widget> _budgetPage(
               pw.SizedBox(),
               pw.SizedBox(),
               proposalCell('Total', bold: true, color: ProposalColors.navy, align: pw.Alignment.center),
-              proposalCell(_egp(grandTotal), bold: true, color: ProposalColors.navy, align: pw.Alignment.center),
+              proposalCell(_money(grandTotal, currency), bold: true, color: ProposalColors.navy, align: pw.Alignment.center),
             ],
           ),
       ],

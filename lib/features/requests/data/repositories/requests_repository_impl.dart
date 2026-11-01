@@ -1,27 +1,26 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/base/paginated.dart';
 import '../../../../core/base/safe_request_handler.dart';
-import '../../../../core/enums/job_status.dart';
 import '../../../../core/error/api_error_handler.dart';
 import '../../../../core/error/api_failure.dart';
 import '../../domain/entities/inspection_request.dart';
+import '../../domain/entities/machine_suggestion.dart';
 import '../../domain/entities/request_item.dart';
 import '../../domain/entities/request_triage.dart';
 import '../../domain/entities/requests_failure.dart';
 import '../../domain/repositories/requests_repository.dart';
 import '../datasources/requests_api_client_services.dart';
-import '../datasources/requests_remote_datasource.dart';
 import '../models/inspection_request_model.dart';
 import '../models/requests_bodies.dart';
 
 class RequestsRepositoryImpl implements RequestsRepository {
   static const _safeApi = SafeApi();
 
-  final RequestsRemoteDataSource _remote;
   final RequestsApiClientServices _api;
 
-  const RequestsRepositoryImpl(this._remote, this._api);
+  const RequestsRepositoryImpl(this._api);
 
   @override
   Future<Paginated<InspectionRequest>> listRequests({
@@ -31,7 +30,13 @@ class RequestsRepositoryImpl implements RequestsRepository {
     int pageSize = 20,
   }) async {
     final result = await _safeApi(() async {
-      final rows = await _api.getRequests(triage.value, query, page, pageSize);
+      final rows = await _api.getRequests(
+        triage.value,
+        triage.status?.value,
+        query,
+        page,
+        pageSize,
+      );
       return [
         for (final json in (rows as List).whereType<Map<String, dynamic>>())
           InspectionRequestModel.fromApiJson(json),
@@ -52,6 +57,7 @@ class RequestsRepositoryImpl implements RequestsRepository {
       () async => InspectionRequestModel.fromApiJson(
         await _api.confirmRequest(requestId) as Map<String, dynamic>,
       ),
+      mapError: _clientRequiredOf,
     );
     final model = result.fold((data) => data, (f) => throw _mapError(f));
     final entity = model.toEntity();
@@ -62,18 +68,57 @@ class RequestsRepositoryImpl implements RequestsRepository {
     return entity;
   }
 
+  /// The 409 `client_required` answer to a confirm: the sender isn't
+  /// registered under a client yet.
+  static ClientRequiredFailure? _clientRequiredOf(Object error) {
+    if (error is! DioException || error.response?.statusCode != 409) return null;
+    final data = error.response?.data;
+    return data is Map && data['code'] == 'client_required' ? const ClientRequiredFailure() : null;
+  }
+
+  /// The 400 answer to saving items: a machine of another client, or one
+  /// that doesn't exist. Nothing was saved.
+  static InvalidMachineFailure? _invalidMachineOf(Object error) =>
+      error is DioException && error.response?.statusCode == 400 ? const InvalidMachineFailure() : null;
+
+  @override
+  Future<List<MachineSuggestion>> getSuggestions(String requestId) async {
+    final result = await _safeApi(() async {
+      final rows = await _api.getSuggestions(requestId);
+      return [
+        for (final json in (rows is List ? rows : const []).whereType<Map<String, dynamic>>())
+          if (json['equipmentId'] is String)
+            MachineSuggestion(
+              equipmentId: json['equipmentId'] as String,
+              name: json['name'] as String? ?? '',
+              quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+              confidence: (json['confidence'] as num?)?.toDouble() ?? 0,
+              level: SuggestionLevel.fromValue(json['level']),
+              reason: json['reason'] as String?,
+              evidence: json['evidence'] as String?,
+            ),
+      ];
+    });
+    return result.fold((data) => data, (f) => throw _mapError(f));
+  }
+
+  @override
+  Future<InspectionRequest> autofill(String requestId) async {
+    final result = await _safeApi(
+      () async => InspectionRequestModel.fromApiJson(
+        await _api.autofillRequest(requestId) as Map<String, dynamic>,
+      ),
+    );
+    final model = result.fold((data) => data, (f) => throw _mapError(f));
+    final entity = model.toEntity();
+    if (entity == null) throw const RequestsFailure(RequestsFailureCode.unknown);
+    return entity;
+  }
+
   @override
   Future<void> deleteRequest(String requestId) async {
     final result = await _safeApi<void>(() => _api.deleteRequest(requestId));
     result.fold((_) {}, (f) => throw _mapError(f));
-  }
-
-  @override
-  Stream<List<InspectionRequest>> watchRequests() {
-    return _remote
-        .watchRequests()
-        .map(_entities)
-        .handleError((Object error) => throw _mapError(error));
   }
 
   @override
@@ -88,19 +133,6 @@ class RequestsRepositoryImpl implements RequestsRepository {
       (f) => f is ApiFailure && f.code == 404 ? null : throw _mapError(f),
     );
     return model?.toEntity();
-  }
-
-  @override
-  Future<void> updateStatus(
-    String requestId,
-    JobStatus status, {
-    String? note,
-  }) async {
-    try {
-      await _remote.updateStatus(requestId, status, note: note);
-    } catch (e) {
-      throw _mapError(e);
-    }
   }
 
   @override
@@ -139,6 +171,7 @@ class RequestsRepositoryImpl implements RequestsRepository {
     required InspectionRequest request,
     required String clientName,
     required String location,
+    String? clientId,
     String? accessNotes,
     required List<RequestItem> items,
   }) async {
@@ -146,7 +179,7 @@ class RequestsRepositoryImpl implements RequestsRepository {
       () => _api.updateRequest(
         request.id,
         UpdateRequestBody(
-          clientId: request.clientId,
+          clientId: clientId ?? request.clientId,
           clientName: clientName,
           location: location,
           preferredDate: request.preferredDate,
@@ -155,6 +188,7 @@ class RequestsRepositoryImpl implements RequestsRepository {
           expectedUpdatedAt: request.updatedAt,
         ),
       ),
+      mapError: _invalidMachineOf,
     );
     result.fold((_) {}, (f) => throw _mapError(f));
   }

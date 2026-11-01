@@ -26,32 +26,70 @@ class MachinesParser {
         }
       : const {};
 
-  static DeliveryPreview deliveryPreview(Map<String, dynamic> json) {
-    // An attachment is a file name, or an object naming the file.
-    String? attachment(Object? value) {
-      final text = value is Map ? value['fileName'] ?? value['name'] ?? value['filename'] : value;
-      final trimmed = text?.toString().trim();
-      return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  /// The first of [keys] that [json] holds as a non-empty string.
+  static String? _pick(Map json, List<String> keys) {
+    for (final key in keys) {
+      final value = _nullableString(json[key]);
+      if (value != null) return value;
     }
+    return null;
+  }
 
-    final to = json['to'];
-    return DeliveryPreview(
-      // `to` is an address, or a list of them.
-      to: to is List ? to.whereType<String>().join(', ') : _nullableString(to),
-      subject: _string(json['subject']),
-      text: _string(json['text'] ?? json['body']),
-      attachments: [
-        if (json['attachments'] is List)
-          for (final item in json['attachments'] as List)
-            if (attachment(item) case final name?) name,
-      ],
+  /// One certificate of the delivery email. The PDF link names the machine
+  /// (`…/machines/{itemId}/pdf`), which stands in for an id the API left out.
+  static DeliveryCertificate _deliveryCertificate(Map<String, dynamic> json) {
+    final pdfUrl = _pick(json, ['pdfUrl', 'pdf']);
+    return DeliveryCertificate(
+      requestItemId:
+          _pick(json, ['requestItemId', 'itemId']) ??
+          (pdfUrl == null ? null : RegExp(r'/machines/([^/?#]+)/pdf').firstMatch(pdfUrl)?.group(1)),
+      number: _pick(json, ['number', 'certificateNumber']) ?? '',
+      name: _pick(json, ['name', 'machineName', 'itemName']),
+      result: _pick(json, ['result']),
+      examinationDate: _pick(json, ['examinationDate', 'examinedAt', 'date']),
+      nextExaminationDate: _pick(json, ['nextExaminationDate', 'nextExaminationDue']),
+      checkUrl: _pick(json, ['checkUrl', 'verifyUrl', 'verificationUrl', 'qrUrl']),
+      pdfUrl: pdfUrl,
     );
   }
 
-  static DeliveryResult deliveryResult(Object? json) {
-    final delivery = json is Map ? json['delivery'] : null;
-    return DeliveryResult(emailSent: delivery is Map && delivery['emailSent'] == true);
+  static DeliveryPreview deliveryPreview(Map<String, dynamic> json) {
+    final to = json['to'];
+    final certificates = _maps(json['certificates']).map(_deliveryCertificate).toList();
+    final blockers = [
+      if (json['blockers'] is List)
+        for (final blocker in json['blockers'] as List)
+          if (_blocker(blocker) case final text?) text,
+    ];
+    return DeliveryPreview(
+      // `to` is an address, or a list of them: the first one is the client's.
+      to: to is List ? to.whereType<String>().where((a) => a.isNotEmpty).firstOrNull : _nullableString(to),
+      cc: _strings(json['cc']),
+      subject: _string(json['subject']),
+      body: _string(json['body'] ?? json['text']),
+      certificates: certificates,
+      // Without a flag, the email can go unless the API names a blocker.
+      canSend: json['canSend'] is bool ? json['canSend'] as bool : blockers.isEmpty,
+      blockers: blockers,
+    );
   }
+
+  /// A `delivery` object: what went out to the client. Null when [value]
+  /// isn't one.
+  static DeliveryResult? _delivery(Object? value) {
+    if (value is! Map) return null;
+    final sentAt = value['sentAt'];
+    return DeliveryResult(
+      emailSent: value['emailSent'] == true,
+      sentTo: _pick(value, ['sentTo', 'to']),
+      cc: _strings(value['cc']),
+      subject: _pick(value, ['subject']),
+      sentAt: sentAt is String ? DateTime.tryParse(sentAt) : null,
+    );
+  }
+
+  static DeliveryResult deliveryResult(Object? json) =>
+      _delivery(json is Map ? json['delivery'] : null) ?? const DeliveryResult();
 
   static List<String> _strings(Object? value) =>
       value is List ? [for (final v in value) if (v is String && v.isNotEmpty) v] : const [];
@@ -120,11 +158,14 @@ class MachinesParser {
     final canReview = json['canReview'] is bool ? json['canReview'] as bool : machines.any((m) => m.canReview);
     final canApprove = json['canApprove'] is bool ? json['canApprove'] as bool : canReview;
 
+    // The newer answers wrap the quotation work in `request`.
+    final request = json['request'] is Map ? json['request'] as Map : const {};
+
     return JobMachines(
       requestId: _string(json['requestId']),
       requestStatus: _string(json['requestStatus']),
-      clientName: _string(json['clientName']),
-      location: _string(json['location']),
+      clientName: _pick(json, ['clientName']) ?? _pick(request, ['clientName']) ?? '',
+      location: _pick(json, ['location']) ?? _pick(request, ['location']) ?? '',
       scheduledAt: scheduledAt is String ? DateTime.tryParse(scheduledAt) : null,
       progress: progress is Map<String, dynamic>
           ? MachineProgress(
@@ -149,6 +190,7 @@ class MachinesParser {
           for (final entry in json['reviewHistory'] as List)
             if (_comment(entry) case final comment?) comment,
       ],
+      delivery: _delivery(json['delivery']),
     );
   }
 
@@ -217,6 +259,7 @@ class MachinesParser {
       dates: _stringMap(json['dates']),
       reviewNote: _nullableString(json['reviewNote']),
       certificateNumber: _nullableString(json['certificateNumber']),
+      result: _nullableString(json['result']),
     );
   }
 }

@@ -6,7 +6,6 @@ import 'core/framework/app_preferences.dart';
 import 'core/networking/dio_factory.dart';
 import 'features/auth/data/datasources/auth_api_client_services.dart';
 import 'features/auth/data/datasources/auth_local_datasource.dart';
-import 'features/auth/data/datasources/auth_remote_datasource.dart';
 import 'features/auth/data/datasources/signature_local_datasource.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/repositories/auth_repository.dart';
@@ -20,18 +19,21 @@ import 'features/auth/presentation/bloc/forgot_password_cubit.dart';
 import 'features/auth/presentation/bloc/my_signature_cubit.dart';
 import 'features/auth/presentation/bloc/profile_stats_cubit.dart';
 import 'features/auth/presentation/bloc/sign_in_cubit.dart';
-import 'features/certificate/data/datasources/certificate_remote_datasource.dart';
-import 'features/certificate/data/repositories/certificate_repository_impl.dart';
-import 'features/certificate/domain/repositories/certificate_repository.dart';
 import 'features/certificate/domain/machine_certificate_source.dart';
-import 'features/certificate/domain/usecases/send_certificate_to_client.dart';
-import 'features/certificate/domain/usecases/watch_certificate.dart';
 import 'features/certificate/presentation/bloc/certificate_cubit.dart';
+import 'features/clients/data/datasources/clients_api_client_services.dart';
+import 'features/clients/data/repositories/clients_repository_impl.dart';
+import 'features/clients/domain/entities/client.dart';
+import 'features/clients/domain/repositories/clients_repository.dart';
+import 'features/clients/domain/usecases/add_client_email.dart';
+import 'features/clients/domain/usecases/get_client_emails.dart';
+import 'features/clients/domain/usecases/get_client_machines.dart';
+import 'features/clients/domain/usecases/get_clients.dart';
+import 'features/clients/domain/usecases/remove_client_email.dart';
+import 'features/clients/presentation/bloc/client_emails_cubit.dart';
 import 'features/coordinator/data/datasources/coordinator_api_client_services.dart';
-import 'features/coordinator/data/datasources/inspectors_remote_datasource.dart';
 import 'features/coordinator/data/repositories/coordinator_repository_impl.dart';
 import 'features/coordinator/domain/repositories/coordinator_repository.dart';
-import 'features/coordinator/domain/usecases/get_inspectors.dart';
 import 'features/coordinator/domain/usecases/list_inspectors.dart';
 import 'features/coordinator/presentation/bloc/assign_inspector_cubit.dart';
 import 'features/machines/data/datasources/machines_api_client_services.dart';
@@ -56,37 +58,39 @@ import 'features/queue/domain/repositories/queue_repository.dart';
 import 'features/queue/domain/usecases/get_queue.dart';
 import 'features/queue/domain/usecases/get_to_review.dart';
 import 'features/queue/presentation/bloc/coordinator_queue_cubit.dart';
+import 'features/coordinator/presentation/bloc/delivery_email_cubit.dart';
 import 'features/coordinator/presentation/bloc/send_certificate_cubit.dart';
 import 'features/inspector/presentation/bloc/certificates_list_cubit.dart';
 import 'features/inspector/presentation/bloc/inspector_tasks_cubit.dart';
 import 'features/quotation/data/datasources/quotation_api_client_services.dart';
-import 'features/quotation/data/datasources/quotation_remote_datasource.dart';
 import 'features/quotation/data/repositories/quotation_repository_impl.dart';
 import 'features/quotation/domain/entities/quotation.dart';
 import 'features/quotation/domain/repositories/quotation_repository.dart';
 import 'features/quotation/domain/usecases/get_quotation_board.dart';
+import 'features/quotation/domain/usecases/get_quote_email.dart';
 import 'features/quotation/domain/usecases/get_quote_pdf.dart';
+import 'features/quotation/domain/usecases/get_request_quote.dart';
 import 'features/quotation/domain/usecases/get_quotations.dart';
 import 'features/quotation/domain/usecases/update_offer.dart';
 import 'features/quotation/domain/usecases/log_client_response.dart';
-import 'features/quotation/domain/usecases/save_draft.dart';
 import 'features/quotation/domain/usecases/send_new_price.dart';
 import 'features/quotation/domain/usecases/send_quotation.dart';
 import 'features/quotation/presentation/bloc/quotation_detail_cubit.dart';
 import 'features/quotation/presentation/bloc/quotation_form_cubit.dart';
 import 'features/quotation/presentation/bloc/quotations_list_cubit.dart';
 import 'features/requests/data/datasources/requests_api_client_services.dart';
-import 'features/requests/data/datasources/requests_remote_datasource.dart';
 import 'features/requests/data/repositories/requests_repository_impl.dart';
 import 'features/requests/domain/entities/inspection_request.dart';
 import 'features/requests/domain/repositories/requests_repository.dart';
 import 'features/requests/domain/usecases/assign_inspector.dart';
+import 'features/requests/domain/usecases/autofill_request.dart';
 import 'features/requests/domain/usecases/complete_intake.dart';
 import 'features/requests/domain/usecases/confirm_request.dart';
 import 'features/requests/domain/usecases/delete_request.dart';
+import 'features/requests/domain/usecases/get_machine_suggestions.dart';
 import 'features/requests/domain/usecases/get_triaged_requests.dart';
 import 'features/requests/domain/usecases/get_request_detail.dart';
-import 'features/requests/domain/usecases/get_requests.dart';
+import 'features/requests/presentation/bloc/request_suggestions_cubit.dart';
 import 'features/requests/presentation/bloc/requests_list_cubit.dart';
 import 'features/technical_manager/presentation/bloc/review_detail_cubit.dart';
 import 'features/technical_manager/presentation/bloc/review_queue_cubit.dart';
@@ -106,6 +110,7 @@ Future<void> setupDependencies() async {
 
   _registerAuth(storage);
   _registerRequests();
+  _registerClients();
   _registerQuotation();
   _registerCoordinator();
   _registerQueue();
@@ -119,10 +124,9 @@ Future<void> setupDependencies() async {
 void _registerAuth(FlutterSecureStorage storage) {
   getIt
     ..registerLazySingleton(() => AuthApiClientServices(DioFactory.getDio()))
-    ..registerLazySingleton(AuthRemoteDataSource.new)
     ..registerLazySingleton(() => AuthLocalDataSource(storage))
     ..registerLazySingleton<AuthRepository>(
-      () => AuthRepositoryImpl(getIt(), getIt(), getIt()),
+      () => AuthRepositoryImpl(getIt(), getIt()),
     )
     ..registerLazySingleton(() => SignIn(getIt()))
     ..registerLazySingleton(() => SignOut(getIt()))
@@ -136,49 +140,74 @@ void _registerAuth(FlutterSecureStorage storage) {
 
 void _registerRequests() {
   getIt
-    ..registerLazySingleton(
-      () => RequestsRemoteDataSource(currentUserId: () => getIt<AuthCubit>().user?.id),
-    )
     ..registerLazySingleton(() => RequestsApiClientServices(DioFactory.getDio()))
     ..registerLazySingleton<RequestsRepository>(
-      () => RequestsRepositoryImpl(getIt(), getIt()),
+      () => RequestsRepositoryImpl(getIt()),
     )
-    ..registerLazySingleton(() => GetRequests(getIt()))
     ..registerLazySingleton(() => GetTriagedRequests(getIt()))
     ..registerLazySingleton(() => ConfirmRequest(getIt()))
     ..registerLazySingleton(() => DeleteRequest(getIt()))
     ..registerLazySingleton(() => GetRequestDetail(getIt()))
     ..registerLazySingleton(() => AssignInspector(getIt()))
     ..registerLazySingleton(() => CompleteIntake(getIt()))
-    ..registerFactory(() => RequestsListCubit(getIt(), getIt(), getIt()));
+    ..registerLazySingleton(() => GetMachineSuggestions(getIt()))
+    ..registerLazySingleton(() => AutofillRequest(getIt()))
+    ..registerFactory(() => RequestsListCubit(getIt(), getIt(), getIt()))
+    ..registerFactoryParam<RequestSuggestionsCubit, InspectionRequest, void>(
+      (request, _) => RequestSuggestionsCubit(
+        request: request,
+        getSuggestions: getIt(),
+        autofill: getIt(),
+        completeIntake: getIt(),
+        getRequest: getIt(),
+      ),
+    );
+}
+
+void _registerClients() {
+  getIt
+    ..registerLazySingleton(() => ClientsApiClientServices(DioFactory.getDio()))
+    ..registerLazySingleton<ClientsRepository>(() => ClientsRepositoryImpl(getIt()))
+    ..registerLazySingleton(() => GetClients(getIt()))
+    ..registerLazySingleton(() => GetClientMachines(getIt()))
+    ..registerLazySingleton(() => GetClientEmails(getIt()))
+    ..registerLazySingleton(() => AddClientEmail(getIt()))
+    ..registerLazySingleton(() => RemoveClientEmail(getIt()))
+    ..registerFactoryParam<ClientEmailsCubit, Client, void>(
+      (client, _) => ClientEmailsCubit(
+        client: client,
+        getClientEmails: getIt(),
+        addClientEmail: getIt(),
+        removeClientEmail: getIt(),
+      ),
+    );
 }
 
 void _registerQuotation() {
   getIt
-    ..registerLazySingleton(
-      () => QuotationRemoteDataSource(currentUserId: () => getIt<AuthCubit>().user?.id),
-    )
     ..registerLazySingleton(() => QuotationApiClientServices(DioFactory.getDio()))
     ..registerLazySingleton<QuotationRepository>(
-      () => QuotationRepositoryImpl(getIt(), getIt()),
+      () => QuotationRepositoryImpl(getIt()),
     )
     ..registerLazySingleton(() => GetQuotations(getIt()))
-    ..registerLazySingleton(() => SaveDraft(getIt()))
     ..registerLazySingleton(() => SendQuotation(getIt(), getIt()))
-    ..registerLazySingleton(() => LogClientResponse(getIt(), getIt()))
+    ..registerLazySingleton(() => LogClientResponse(getIt()))
     ..registerLazySingleton(() => SendNewPrice(getIt()))
     ..registerLazySingleton(() => GetQuotationBoard(getIt()))
     ..registerFactory(() => QuotationsListCubit(getIt()))
     ..registerLazySingleton(() => UpdateOffer(getIt()))
     ..registerLazySingleton(() => GetQuotePdf(getIt()))
+    ..registerLazySingleton(() => GetQuoteEmail(getIt()))
+    ..registerLazySingleton(() => GetRequestQuote(getIt()))
     ..registerFactoryParam<QuotationFormCubit, InspectionRequest, String?>(
       (request, quotationId) => QuotationFormCubit(
         request: request,
         quotationId: quotationId,
-        saveDraft: getIt(),
         sendQuotation: getIt(),
         updateOffer: getIt(),
         getQuotePdf: getIt(),
+        getQuoteEmail: getIt(),
+        getRequestQuote: getIt(),
         getRequestDetail: getIt(),
       ),
     )
@@ -233,17 +262,17 @@ void _registerQueue() {
 
 void _registerCoordinator() {
   getIt
-    ..registerLazySingleton(InspectorsRemoteDataSource.new)
     ..registerLazySingleton(() => CoordinatorApiClientServices(DioFactory.getDio()))
     ..registerLazySingleton<CoordinatorRepository>(
-      () => CoordinatorRepositoryImpl(getIt(), getIt()),
+      () => CoordinatorRepositoryImpl(getIt()),
     )
-    ..registerLazySingleton(() => GetInspectors(getIt()))
     ..registerLazySingleton(() => ListInspectors(getIt()))
     ..registerFactoryParam<SendCertificateCubit, InspectionRequest, void>(
-      (request, _) => SendCertificateCubit(
-        request: request,
-        getJobMachines: getIt(),
+      (request, _) => SendCertificateCubit(request: request, getJobMachines: getIt()),
+    )
+    ..registerFactoryParam<DeliveryEmailCubit, String, void>(
+      (requestId, _) => DeliveryEmailCubit(
+        requestId: requestId,
         getDeliveryPreview: getIt(),
         deliverToClient: getIt(),
       ),
@@ -282,12 +311,6 @@ void _registerInspector() {
 
 void _registerCertificate() {
   getIt
-    ..registerLazySingleton(CertificateRemoteDataSource.new)
-    ..registerLazySingleton<CertificateRepository>(
-      () => CertificateRepositoryImpl(getIt(), getIt()),
-    )
-    ..registerLazySingleton(() => WatchCertificate(getIt()))
-    ..registerLazySingleton(() => SendCertificateToClient(getIt()))
     ..registerFactoryParam<CertificateCubit, InspectionRequest, String>(
       (request, requestItemId) => CertificateCubit(
         request: request,

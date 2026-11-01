@@ -1,20 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/enums/job_status.dart';
 import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/m_back_button.dart';
-import '../../../../core/shared/m_card.dart';
 import '../../../../core/shared/m_notice.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../quotation/presentation/bloc/quotation_form_cubit.dart';
 import '../../../quotation/presentation/pages/quotation_detail_page.dart';
+import '../../../quotation/presentation/widgets/quotation_footer.dart';
+import '../../../quotation/presentation/widgets/quotation_reply_card.dart';
+import '../../../clients/domain/usecases/get_client_machines.dart';
 import '../../domain/entities/inspection_request.dart';
 import '../../domain/entities/requests_failure.dart';
 import '../../domain/usecases/complete_intake.dart';
-import '../widgets/complete_request_sheet.dart';
+import '../../domain/usecases/get_request_detail.dart';
+import '../bloc/request_suggestions_cubit.dart';
+import '../controllers/request_intake_controller.dart';
+import '../widgets/request_details_card.dart';
+import '../widgets/request_intake_cards.dart';
+import '../widgets/request_section_parts.dart';
+import '../widgets/request_suggestions_panel.dart';
 import '../widgets/email_summary_card.dart';
 import '../widgets/equipment_grid.dart';
 import '../widgets/job_stepper.dart';
@@ -22,16 +32,42 @@ import '../widgets/requests_labels.dart';
 import '../widgets/status_chip.dart';
 
 /// Feature 02 §5's "Request detail" screen: the six-step progress bar,
-/// the intake email and the equipment. While the request is still New/a
-/// draft it offers "Reply to request", which opens the quotation details,
-/// where Feature 03's reply panel lives. Once a quote has gone out (any
-/// [JobStatus] beyond `requestReceived`/`quoteDraft`), the request's story
-/// continues in Quotations (see `requests_tab.dart`), so this screen shows
-/// a read-only status instead.
-class RequestDetailPage extends StatelessWidget {
+/// the intake email and the equipment. While the request still lacks what a
+/// quote needs (BR-02.5), the screen is a form: the client, the location and
+/// the equipment as editable cards, filled from the email in one tap, with
+/// Save at the bottom. Once the request can be quoted and is still New/a draft,
+/// Feature 03's reply panel ("How do you want to reply?") closes the page and
+/// its Save draft / Send bar sits below; a request the client has countered
+/// keeps a "Reply to request" button that opens the quotation details instead.
+/// Once a quote has gone out (any [JobStatus] beyond
+/// `requestReceived`/`quoteDraft`), the request's story continues in
+/// Quotations (see `requests_tab.dart`), so this screen shows a read-only
+/// status instead.
+class RequestDetailPage extends StatefulWidget {
   final InspectionRequest request;
 
   const RequestDetailPage({super.key, required this.request});
+
+  @override
+  State<RequestDetailPage> createState() => _RequestDetailPageState();
+}
+
+class _RequestDetailPageState extends State<RequestDetailPage> {
+  /// The request as it now is: it changes when it is filled from the email or
+  /// its details are saved.
+  late InspectionRequest request = widget.request;
+
+  /// What is typed into the client, location and equipment cards.
+  late final RequestIntakeController _intake = RequestIntakeController(
+    request: widget.request,
+    completeIntake: getIt<CompleteIntake>(),
+    getRequest: getIt<GetRequestDetail>(),
+    getMachines: getIt<GetClientMachines>(),
+  );
+
+  /// Whether the details form is open: from the start for a new request that
+  /// can't be quoted yet, and again when "Edit details" is tapped.
+  late bool _editing = request.isNew && !request.isQuotable;
 
   /// Whether this request can receive a reply here — a first quote (it
   /// hasn't been quoted yet, BR-02.5) or a new version after the client's
@@ -39,23 +75,95 @@ class RequestDetailPage extends StatelessWidget {
   /// to quote.
   bool get _quotable => request.isQuotable;
 
+  /// A request that is still new gets its reply form on this screen, at the
+  /// end of the page; one the client has countered keeps the button that
+  /// opens the quotation.
+  bool get _inlineReply => _quotable && request.isNew && !_editing;
+
+  /// A new request of a known client can be filled from its email: the
+  /// client's machines it asks about are suggested.
+  bool get _suggest => request.isNew && request.clientId != null;
+
+  @override
+  void dispose() {
+    _intake.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final t = AppLocalizations.of(context)!;
+    try {
+      final saved = await _intake.save();
+      if (saved == null || !mounted) return;
+      final stillEditing = saved.isNew && !saved.isQuotable;
+      setState(() {
+        request = saved;
+        _editing = stillEditing;
+      });
+      if (!stillEditing) MToast.showSuccess(message: t.requestDetailsSaved);
+    } catch (e) {
+      if (mounted) MToast.showError(message: e is RequestsFailure ? e.text(t) : t.actionFailed);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final content = Column(
+      children: [
+        _Header(request: request),
+        Expanded(
+          child: _Body(
+            request: request,
+            intake: _editing ? _intake : null,
+            suggestions: _editing && _suggest ? RequestSuggestionsPanel(intake: _intake) : null,
+            onEdit: request.isNew ? () => setState(() => _editing = true) : null,
+            trailing: _inlineReply ? const QuotationReplyCard() : null,
+          ),
+        ),
+        if (_editing)
+          RequestIntakeFooter(intake: _intake, onSave: _save)
+        else if (_inlineReply)
+          QuotationFooter(
+            unitsLabel: t.unitsCount(request.totalUnits),
+            // The reply moved the request on: back to the inbox, which
+            // reloads on `true`.
+            onSent: () => Navigator.of(context).pop(true),
+          )
+        else if (_quotable)
+          _ReplyAction(request: request)
+        else
+          _MovedOnNotice(request: request),
+      ],
+    );
+
+    // The reply form is built from the request's items, so it starts over
+    // when they change.
+    final body = _inlineReply
+        ? BlocProvider(
+            key: ValueKey('${request.id}:${request.items.map((item) => item.id).join(',')}'),
+            create: (_) => getIt<QuotationFormCubit>(param1: request, param2: null),
+            child: content,
+          )
+        : content;
+
     return Scaffold(
       backgroundColor: AppColours.background,
       body: SafeArea(
-        child: Column(
-          children: [
-            _Header(request: request),
-            Expanded(child: _Body(request: request)),
-            if (_quotable)
-              _ReplyAction(request: request)
-            else if (request.isNew)
-              _NotReadyNotice(request: request)
-            else
-              _MovedOnNotice(request: request),
-          ],
-        ),
+        child: _suggest
+            ? BlocProvider(
+                create: (_) => getIt<RequestSuggestionsCubit>(param1: widget.request)..start(),
+                child: BlocListener<RequestSuggestionsCubit, RequestSuggestionsState>(
+                  listenWhen: (previous, current) => previous.request != current.request,
+                  listener: (context, state) {
+                    // Filled from the email: the form takes what was found.
+                    _intake.applyRequest(state.request);
+                    setState(() => request = state.request);
+                  },
+                  child: body,
+                ),
+              )
+            : body,
       ),
     );
   }
@@ -64,25 +172,57 @@ class RequestDetailPage extends StatelessWidget {
 class _Body extends StatelessWidget {
   final InspectionRequest request;
 
-  const _Body({required this.request});
+  /// The details form, while it is open; the request's equipment is shown
+  /// read-only otherwise.
+  final RequestIntakeController? intake;
+
+  /// The "From the email" panel, while the request can be filled from it.
+  final Widget? suggestions;
+
+  /// Opens the details form again, from the read-only equipment.
+  final VoidCallback? onEdit;
+
+  /// What closes the page after the request's own cards — the inline reply
+  /// form while the request can be replied to here.
+  final Widget? trailing;
+
+  const _Body({
+    required this.request,
+    this.intake,
+    this.suggestions,
+    this.onEdit,
+    this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final form = intake;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      // Dragging the list closes the keyboard, so the form's fields never hide
+      // the Save bar's checklist.
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 20),
       children: [
         if (request.emailPreview != null || request.emailFrom != null) ...[
           EmailSummaryCard(request: request),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
         ],
-        EquipmentGrid(
-          items: request.items,
-          preferredDate: request.preferredDate,
-          location: request.location,
-        ),
-        if (request.accessNotes != null && request.accessNotes!.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          _NotesCard(notes: request.accessNotes!),
+        if (suggestions != null) ...[
+          suggestions!,
+          const SizedBox(height: 14),
+        ],
+        if (form != null) ...[
+          RequestClientCard(intake: form),
+          const SizedBox(height: 14),
+          RequestEquipmentCard(intake: form),
+        ] else ...[
+          RequestDetailsCard(request: request, onEdit: onEdit),
+          const SizedBox(height: 14),
+          EquipmentGrid(items: request.items),
+        ],
+        if (trailing != null) ...[
+          const SizedBox(height: 14),
+          trailing!,
         ],
       ],
     );
@@ -100,122 +240,22 @@ class _ReplyAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: AppColours.border)),
-      ),
-      child: SizedBox(
-        height: 54,
-        child: ElevatedButton(
-          onPressed: () async {
-            final sent = await Navigator.of(context).push<bool>(
-              MaterialPageRoute<bool>(
-                builder: (_) => QuotationDetailPage(
-                  requestId: request.id,
-                  request: request,
-                ),
-              ),
-            );
-            // The reply moved the request on: back to the inbox, which
-            // reloads on `true`.
-            if (sent == true && context.mounted) Navigator.of(context).pop(true);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColours.primaryColor,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            textStyle: AppTextStyles.buttonLabel,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          ),
-          child: Text(t.replyToRequestAction),
-        ),
-      ),
-    );
-  }
-}
-
-/// Shown while a request can't be quoted yet, with a button that opens the
-/// sheet to fill in what is missing.
-class _NotReadyNotice extends StatelessWidget {
-  final InspectionRequest request;
-
-  const _NotReadyNotice({required this.request});
-
-  /// Only offer the fix the sheet can make: what it fills in is missing.
-  bool get _canComplete =>
-      request.clientName.isEmpty || request.location.isEmpty || request.items.isEmpty;
-
-  Future<void> _complete(BuildContext context) async {
-    final t = AppLocalizations.of(context)!;
-    final completed = await CompleteRequestSheet.show(
-      context,
-      request: request,
-      onSubmit: ({required clientName, required location, accessNotes, required items}) async {
-        try {
-          await getIt<CompleteIntake>()(
-            request: request,
-            clientName: clientName,
-            location: location,
-            accessNotes: accessNotes,
-            items: items,
-          );
-          if (context.mounted) MToast.showSuccess(message: t.requestCompleted);
-          return true;
-        } catch (e) {
-          if (context.mounted) {
-            MToast.showError(
-              message: e is RequestsFailure
-                  ? e.code.message(t)
-                  : t.actionFailed,
-            );
-          }
-          return false;
-        }
-      },
-    );
-    // The request is a static snapshot on this page — back to the inbox,
-    // which reloads on `true`, rather than trying to refresh it in place.
-    if (completed == true && context.mounted) Navigator.of(context).pop(true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: AppColours.border)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          MNotice(type: MNoticeType.info, message: t.notReadyToQuote),
-          if (_canComplete) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 48,
-              child: OutlinedButton(
-                onPressed: () => _complete(context),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColours.ink,
-                  side: const BorderSide(color: AppColours.border),
-                  textStyle: AppTextStyles.buttonLabel.copyWith(
-                    color: AppColours.ink,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: Text(t.completeRequestAction),
+    return RequestFooterBar(
+      child: RequestCtaButton(
+        label: t.replyToRequestAction,
+        onPressed: () async {
+          final sent = await Navigator.of(context).push<bool>(
+            MaterialPageRoute<bool>(
+              builder: (_) => QuotationDetailPage(
+                requestId: request.id,
+                request: request,
               ),
             ),
-          ],
-        ],
+          );
+          // The reply moved the request on: back to the inbox, which
+          // reloads on `true`.
+          if (sent == true && context.mounted) Navigator.of(context).pop(true);
+        },
       ),
     );
   }
@@ -247,12 +287,7 @@ class _MovedOnNotice extends StatelessWidget {
         ? t.requestRejectedReasonMessage(reason)
         : t.requestMovedOnMessage(status.label(t));
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: AppColours.border)),
-      ),
+    return RequestFooterBar(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -264,7 +299,7 @@ class _MovedOnNotice extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 48,
+            height: 52,
             child: OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -280,7 +315,7 @@ class _MovedOnNotice extends StatelessWidget {
                   color: AppColours.ink,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
             ),
@@ -346,30 +381,3 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _NotesCard extends StatelessWidget {
-  final String notes;
-
-  const _NotesCard({required this.notes});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    return MCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(t.accessNotesLabel, style: AppTextStyles.caption),
-          const SizedBox(height: 4),
-          Text(
-            notes,
-            style: AppTextStyles.body.copyWith(
-              height: 22 / 14,
-              color: AppColours.ink,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import 'delivery.dart';
 import 'machine_status.dart';
 
 /// How many of a job's machines have reached each stage.
@@ -141,6 +142,9 @@ class JobMachines extends Equatable {
   /// Earlier comments on the job's review, newest first.
   final List<ReviewComment> reviewHistory;
 
+  /// What went out to the client; null until the job has been delivered.
+  final DeliveryResult? delivery;
+
   const JobMachines({
     required this.requestId,
     required this.requestStatus,
@@ -155,6 +159,7 @@ class JobMachines extends Equatable {
     this.canApprove = false,
     this.reviewBlockers = const [],
     this.reviewHistory = const [],
+    this.delivery,
   });
 
   @override
@@ -172,5 +177,6 @@ class JobMachines extends Equatable {
     canApprove,
     reviewBlockers,
     reviewHistory,
+    delivery,
   ];
 }

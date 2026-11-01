@@ -53,6 +53,7 @@ Future<void> previewProposalPdf(
   DateTime? date,
   DateTime? validUntil,
   int validityDays = 14,
+  String currency = 'EGP',
 }) {
   final t = AppLocalizations.of(context)!;
   final issued = date ?? DateTime.now();
@@ -71,6 +72,7 @@ Future<void> previewProposalPdf(
         lines: lines,
         notes: notes,
         scopeOfWork: scopeOfWork,
+        currency: currency,
         details: ProposalDetails(
           proposalNumber: number,
           quotationNumber: quotationNumberFor(request, date: issued),

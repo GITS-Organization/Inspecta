@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/widgets/app_filter_chip.dart';
+import '../../../../core/widgets/app_segmented_filter.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../bloc/inspector_tasks_cubit.dart';
 
@@ -16,28 +16,21 @@ class InspectorTasksFilters extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     return BlocBuilder<InspectorTasksCubit, InspectorTasksState>(
       builder: (context, state) {
-        final cubit = context.read<InspectorTasksCubit>();
-        Widget chip(TasksFilter filter, String label) => AppFilterChip(
+        AppSegment<TasksFilter> segment(TasksFilter filter, String label) => AppSegment(
+          value: filter,
           label: label,
           count: state.countFor(filter),
           alert: filter == TasksFilter.overdue,
-          selected: state.filter == filter,
-          onTap: () => cubit.selectFilter(filter),
         );
 
-        return SizedBox(
-          height: 40,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              chip(TasksFilter.today, t.tasksFilterToday),
-              const SizedBox(width: 8),
-              chip(TasksFilter.upcoming, t.tasksFilterUpcoming),
-              const SizedBox(width: 8),
-              chip(TasksFilter.overdue, t.tasksFilterOverdue),
-            ],
-          ),
+        return AppSegmentedFilter<TasksFilter>(
+          segments: [
+            segment(TasksFilter.today, t.tasksFilterToday),
+            segment(TasksFilter.upcoming, t.tasksFilterUpcoming),
+            segment(TasksFilter.overdue, t.tasksFilterOverdue),
+          ],
+          selected: state.filter,
+          onChanged: context.read<InspectorTasksCubit>().selectFilter,
         );
       },
     );

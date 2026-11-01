@@ -55,9 +55,18 @@ abstract interface class MachinesRepository {
   /// The email that would go to the client with the job's certificates.
   Future<DeliveryPreview> getDeliveryPreview(String requestId);
 
-  /// The coordinator hands the job's certificates to the client: the job
-  /// becomes sent to client. [sentTo] and [message] are optional.
-  Future<DeliveryResult> deliverToClient(String requestId, {String? sentTo, String? message});
+  /// The coordinator hands the job's certificates to the client by email: the
+  /// job becomes sent to client. Every part is optional — pass only what the
+  /// coordinator edited ([sentTo], up to ten [cc] addresses, [subject], the
+  /// text in [message]); the rest is what the preview said. Throws a
+  /// [DeliveryFailure] when the email can't go out.
+  Future<DeliveryResult> deliverToClient(
+    String requestId, {
+    String? sentTo,
+    List<String>? cc,
+    String? subject,
+    String? message,
+  });
 
   /// The machine's certificate PDF as the API renders it: marked DRAFT until
   /// approved, then the stored final file with its QR code.

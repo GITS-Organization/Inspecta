@@ -7,18 +7,21 @@ import '../../../../core/widgets/app_filter_chip.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// The row between the status tabs and the list: the board's total open
-/// value on the left, and on the right the "Expiring soon" toggle — which
-/// cuts across the tabs, so it isn't one of them. The toggle is there only
-/// while something is expiring (or the filter is on, so it can be cleared).
+/// value on the left — one amount per currency, since amounts in different
+/// currencies are never added — and on the right the "Expiring soon" toggle,
+/// which cuts across the tabs, so it isn't one of them. The toggle is there
+/// only while something is expiring (or the filter is on, so it can be
+/// cleared).
 class QuoteValueSummary extends StatelessWidget {
-  final int openTotalPiastres;
+  /// Total open value in minor units, by ISO currency code.
+  final Map<String, int> openTotals;
   final int expiringSoonCount;
   final bool expiringSoonSelected;
   final VoidCallback onExpiringSoon;
 
   const QuoteValueSummary({
     super.key,
-    required this.openTotalPiastres,
+    required this.openTotals,
     required this.expiringSoonCount,
     required this.expiringSoonSelected,
     required this.onExpiringSoon,
@@ -28,7 +31,7 @@ class QuoteValueSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final showToggle = expiringSoonCount > 0 || expiringSoonSelected;
-    if (openTotalPiastres <= 0 && !showToggle) return const SizedBox.shrink();
+    if (openTotals.isEmpty && !showToggle) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 16, 0),
@@ -40,10 +43,13 @@ class QuoteValueSummary extends StatelessWidget {
                 style: AppTextStyles.subtitle,
                 children: [
                   TextSpan(text: '${t.openValueLabel} '),
-                  TextSpan(
-                    text: Currency.formatEgp(openTotalPiastres),
-                    style: const TextStyle(fontWeight: FontWeight.w800, color: AppColours.ink),
-                  ),
+                  for (final (index, entry) in openTotals.entries.indexed) ...[
+                    if (index > 0) const TextSpan(text: ' · '),
+                    TextSpan(
+                      text: Currency.format(entry.value, code: entry.key),
+                      style: const TextStyle(fontWeight: FontWeight.w800, color: AppColours.ink),
+                    ),
+                  ],
                 ],
               ),
               overflow: TextOverflow.ellipsis,

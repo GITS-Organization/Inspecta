@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/certificate_template.dart';
+import '../../domain/entities/certificate_result.dart';
 import '../bloc/certificate_cubit.dart';
 import 'certificate_form_fields.dart';
 import 'certificate_section_card.dart';
@@ -11,19 +12,28 @@ import 'certificate_section_card.dart';
 /// a danger now or could become one (and by when), and what's needed to
 /// put it right. Every field here is optional: left empty, the defect and
 /// repair fields print as NONE / N/A on the certificate, and an unanswered
-/// danger question prints as neither yes nor no.
+/// danger question prints as neither yes nor no. The one exception is the
+/// API's rule that a machine whose result is "Not safe" needs a defect
+/// description, which the subtitle says when that result is chosen.
 class DefectsSection extends StatelessWidget {
   const DefectsSection({super.key});
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    return BlocSelector<CertificateCubit, CertificateState, bool>(
+      selector: (state) => state.certificate?.finalResult == CertificateResult.notSafe,
+      builder: (context, notSafe) => _card(context, t, notSafe: notSafe),
+    );
+  }
+
+  Widget _card(BuildContext context, AppLocalizations t, {required bool notSafe}) {
     return CertificateSectionCard(
       stepNumber: 4,
       highlighted: false,
       done: false,
       title: t.defectsTitle,
-      subtitle: t.defectsOptionalSubtitle,
+      subtitle: notSafe ? t.defectsRequiredWhenNotSafeSubtitle : t.defectsOptionalSubtitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

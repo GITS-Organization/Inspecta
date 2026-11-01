@@ -8,6 +8,7 @@ import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/loading.dart';
 import '../../../../core/shared/m_back_button.dart';
 import '../../../../core/shared/m_notice.dart';
+import '../../../../core/utils/currency.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/pdf_preview_page.dart';
 import '../../../../injection.dart';
@@ -109,6 +110,7 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
   void _logOtherReply(QuotationDetailCubit cubit) {
     LogClientReplySheet.show(
       context,
+      currency: cubit.state.current?.currency ?? Currency.egp,
       onSubmit: ({required outcome, clientPricePiastres, note}) => cubit.logResponse(
         outcome: outcome,
         clientPricePiastres: clientPricePiastres,
@@ -265,6 +267,7 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
                                 onSendNewPrice: () => SendNewPriceSheet.show(
                                   context,
                                   nextVersion: (current.version ?? 0) + 1,
+                                  currency: current.currency,
                                   onSubmit: cubit.sendNewPrice,
                                 ),
                                 onAcceptClientPrice: current.clientCounterPricePiastres == null
@@ -365,7 +368,9 @@ class _DraftBody extends StatelessWidget {
 
     return BlocProvider(
       key: ValueKey(request.id),
-      create: (_) => getIt<QuotationFormCubit>(param1: request, param2: quote?.id),
+      // A draft keeps the currency it was started in.
+      create: (_) => getIt<QuotationFormCubit>(param1: request, param2: quote?.id)
+        ..changeCurrency(quote?.currency ?? Currency.egp),
       child: Column(
         children: [
           Expanded(

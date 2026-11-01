@@ -471,6 +471,139 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t confirm the request. Please try again.';
 
   @override
+  String get clientRequiredTitle => 'Sender isn\'t registered';
+
+  @override
+  String clientRequiredMessage(String sender) {
+    return '$sender isn\'t registered under any client yet. Add the sender to a client and this email becomes its request by itself.';
+  }
+
+  @override
+  String get addSenderToClientAction => 'Add to a client';
+
+  @override
+  String get chooseClientTitle => 'Choose a client';
+
+  @override
+  String get chooseClientSearchHint => 'Search clients';
+
+  @override
+  String get noClientsFound => 'No clients found.';
+
+  @override
+  String get clientPickHint => 'Tap to choose the client';
+
+  @override
+  String get clientEmailsTitle => 'Client emails';
+
+  @override
+  String get clientEmailsIntro =>
+      'Emails from these addresses or domains become this client\'s requests. The emails of the client\'s contacts and its certificates email count automatically.';
+
+  @override
+  String get clientEmailsEmpty => 'No addresses registered yet.';
+
+  @override
+  String get clientEmailAddHint => 'buyer@company.com or company.com';
+
+  @override
+  String get clientEmailAddAction => 'Add';
+
+  @override
+  String get clientEmailDomainLabel => 'Domain';
+
+  @override
+  String get clientEmailThisAddress => 'This address';
+
+  @override
+  String clientEmailWholeDomain(String domain) {
+    return 'Whole domain ($domain)';
+  }
+
+  @override
+  String get clientEmailAdded => 'Sender added.';
+
+  @override
+  String clientEmailPromotedMessage(int count) {
+    return 'Sender added. Waiting emails that became requests: $count';
+  }
+
+  @override
+  String get clientsErrorInvalidPattern =>
+      'Enter a valid email address or domain.';
+
+  @override
+  String get clientsErrorNotFound => 'This client wasn\'t found.';
+
+  @override
+  String get clientsErrorDuplicate =>
+      'This address or domain is already registered.';
+
+  @override
+  String get fromEmailSuggestionsTitle => 'From the email';
+
+  @override
+  String get fromEmailSuggestionsSubtitle =>
+      'Machines of this client the email seems to ask about.';
+
+  @override
+  String get suggestionAddAction => 'Add';
+
+  @override
+  String get suggestionAdded => 'Added to the request.';
+
+  @override
+  String get suggestionLevelHigh => 'Clear match';
+
+  @override
+  String get suggestionLevelMedium => 'Possible match';
+
+  @override
+  String get suggestionLevelAmbiguous => 'Several fit';
+
+  @override
+  String get suggestionReasonSerial => 'by serial number';
+
+  @override
+  String get suggestionReasonName => 'by name';
+
+  @override
+  String get suggestionReasonModel => 'by model';
+
+  @override
+  String get fillFromEmailAction => 'Fill from email';
+
+  @override
+  String get fillFromEmailDone => 'Request filled from the email.';
+
+  @override
+  String get fillFromEmailNothing =>
+      'Nothing clear to add was found in the email.';
+
+  @override
+  String get invalidMachineError =>
+      'A selected machine doesn\'t belong to this client (or no longer exists). Choose the client\'s machines and try again.';
+
+  @override
+  String get chooseMachineAction => 'Choose a machine';
+
+  @override
+  String get changeMachineAction => 'Change';
+
+  @override
+  String get machinePickerTitle => 'Client\'s machines';
+
+  @override
+  String get searchMachinesHint => 'Search machines';
+
+  @override
+  String get noMachinesForClient =>
+      'This client has no machines registered yet.';
+
+  @override
+  String get clientMachineLinked => 'Linked to the client\'s machine';
+
+  @override
   String get deleteRequest => 'Delete';
 
   @override
@@ -607,6 +740,98 @@ class AppLocalizationsEn extends AppLocalizations {
   String get requestCompleted => 'Request completed.';
 
   @override
+  String get chooseClientAction => 'Choose client';
+
+  @override
+  String get clientMatchedBadge => 'Matched';
+
+  @override
+  String get clientRequiredBadge => 'Required';
+
+  @override
+  String get intakeClientHint => 'Choose the client this request is for.';
+
+  @override
+  String get locationHint => 'Where the inspection takes place';
+
+  @override
+  String get accessNotesHint => 'Gate, site contact, safety gear…';
+
+  @override
+  String get equipmentTypeHint => 'e.g. Overhead crane';
+
+  @override
+  String get intakeEquipmentEmptyTitle => 'No equipment yet';
+
+  @override
+  String get intakeEquipmentEmptyBody =>
+      'Fill it from the email, or pick the client\'s machines yourself.';
+
+  @override
+  String get chooseFromMachinesAction => 'Choose from client\'s machines';
+
+  @override
+  String get addManuallyAction => 'Add manually';
+
+  @override
+  String get machineNotLinked => 'Not linked to a registered machine';
+
+  @override
+  String get decreaseQuantityAction => 'Decrease quantity';
+
+  @override
+  String get increaseQuantityAction => 'Increase quantity';
+
+  @override
+  String get saveDetailsAction => 'Save details';
+
+  @override
+  String get requestDetailsSaved =>
+      'Details saved. You can quote this request now.';
+
+  @override
+  String get editDetailsAction => 'Edit details';
+
+  @override
+  String get hideDetailsAction => 'Hide details';
+
+  @override
+  String get requestDetailsTitle => 'Details';
+
+  @override
+  String get clientMachinesAction => 'Client\'s machines';
+
+  @override
+  String itemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get siteLocationLabel => 'Site location';
+
+  @override
+  String get intakeReadyTitle => 'Ready to quote';
+
+  @override
+  String intakeProgressTitle(int done, int total) {
+    return '$done of $total ready. Fill in the rest to quote.';
+  }
+
+  @override
+  String partNeeded(String label) {
+    return '$label needed';
+  }
+
+  @override
+  String get intakeReadyHint => 'All set — save the details to start quoting.';
+
+  @override
   String requestMovedOnMessage(String status) {
     return 'A quote already exists for this request — current status: $status. Manage it from Quotations.';
   }
@@ -653,6 +878,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get validFor => 'Valid for';
 
   @override
+  String get currencyLabel => 'Currency';
+
+  @override
   String validityDaysOption(int days) {
     return '$days days';
   }
@@ -679,6 +907,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sendQuotation => 'Send quotation';
+
+  @override
+  String get acceptQuotation => 'Accept quotation';
 
   @override
   String get errorPriceRequired => 'Enter a price per unit.';
@@ -1305,6 +1536,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Optional — only if something was found';
 
   @override
+  String get defectsRequiredWhenNotSafeSubtitle =>
+      'Optional, except the defect description: it\'s needed when the result is Unsatisfactory';
+
+  @override
   String get existingDangerLabel =>
       'Is the above an existing or imminent danger to persons? (a reportable defect)';
 
@@ -1330,14 +1565,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get potentialDangerShortLabel => 'Potential danger';
 
   @override
-  String get safeToOperateOption => 'Safe to operate';
+  String get safeToOperateOption => 'Satisfactory';
 
   @override
   String get safeWithConditionsOption =>
       'Safe with conditions (fix in 14 days)';
 
   @override
-  String get notSafeOption => 'Not safe — out of service';
+  String get notSafeOption => 'Unsatisfactory';
 
   @override
   String get previewAction => 'Preview';
@@ -1570,9 +1805,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Saved to your profile and used every time you approve a certificate.';
 
   @override
-  String get sendSignedPdfToLabel => 'Send signed PDF to';
-
-  @override
   String get returnAction => 'Return';
 
   @override
@@ -1627,15 +1859,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emailPreviewTitle => 'Email to the client';
 
   @override
-  String get deliverMessageHint => 'Add a message to the client (optional)';
-
-  @override
-  String get deliverNoEmailHint =>
-      'The email isn\'t sent from the app yet: delivering marks the job as handed over.';
-
-  @override
   String get certificateDeliveredNoEmailMessage =>
-      'Job marked as delivered. The client email isn\'t sent automatically yet.';
+      'Job marked as delivered, but the email to the client wasn\'t sent.';
 
   @override
   String get sendToClientAction => 'Send to client';
@@ -1644,15 +1869,97 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendCertificateTitle => 'Send certificate';
 
   @override
-  String get sendCertificateHint =>
-      'Download the signed PDF, email it to the client, then mark it as sent.';
+  String get previewEmailAction => 'Preview email';
 
   @override
-  String get confirmSendTitle => 'Mark as sent?';
+  String get emailToLabel => 'To';
+
+  @override
+  String get emailCcLabel => 'Cc';
+
+  @override
+  String get emailCcHint => 'Add a cc address';
+
+  @override
+  String get emailCcAddAction => 'Add';
+
+  @override
+  String emailCcLimit(int count) {
+    return 'You can cc up to $count people.';
+  }
+
+  @override
+  String get emailSubjectLabel => 'Subject';
+
+  @override
+  String get emailBodyLabel => 'Message';
+
+  @override
+  String get emailAttachmentsTitle => 'Certificates attached';
+
+  @override
+  String get emailInvalidAddress => 'Enter a valid email address.';
+
+  @override
+  String get emailCannotSendTitle => 'Can\'t send yet';
+
+  @override
+  String get emailFromLabel => 'From';
+
+  @override
+  String get quoteEmailDisabledNotice =>
+      'Emailing is switched off, so sending only updates the quotation. Nothing is emailed to the client.';
+
+  @override
+  String get quoteEmailSignatureHint =>
+      'Your signature and the email you\'re replying to are added automatically.';
+
+  @override
+  String get quoteEmailUseAction => 'Use this email';
+
+  @override
+  String get quoteEmailAttachmentLabel => 'Attached quotation';
+
+  @override
+  String get quoteEmailStandardSubtitle =>
+      'Preview and edit it before sending.';
+
+  @override
+  String get quoteEmailEditedSubtitle => 'Reviewed — it goes out as shown.';
+
+  @override
+  String quoteEmailEditedToSubtitle(String email) {
+    return 'To $email · ready to send';
+  }
+
+  @override
+  String get quoteEmailPreviewEditAction => 'Preview & edit';
+
+  @override
+  String get deliverySentTitle => 'Sent to the client';
+
+  @override
+  String get deliveryErrorInvalidAddress =>
+      'One of the email addresses looks wrong. Check To and Cc and try again.';
+
+  @override
+  String get deliveryErrorNoRecipient =>
+      'There\'s no email address for the client. Enter one in To.';
+
+  @override
+  String get deliveryErrorMailRefused =>
+      'The mail server refused the email. Nothing was sent or changed: press Send again.';
+
+  @override
+  String get deliveryErrorConflict =>
+      'This job can\'t be sent right now. Go back and refresh it.';
+
+  @override
+  String get confirmSendTitle => 'Send to client?';
 
   @override
   String confirmSendMessage(String email) {
-    return 'The certificate will be marked as sent to $email.';
+    return 'The email goes to $email with the certificates attached.';
   }
 
   @override
@@ -1667,7 +1974,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get certificateSentMessage =>
-      'Certificate marked as sent to the client.';
+      'Email sent to the client with the certificates attached.';
 
   @override
   String get awaitingCoordinatorLabel => 'With the coordinator to send';
@@ -1962,6 +2269,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get startInspectionAction => 'Start inspection';
+
+  @override
+  String get machineStartFirstHint => 'Start the inspection first';
+
+  @override
+  String get inspectionStepStartTitle => 'Start the inspection';
+
+  @override
+  String get inspectionStepStartHint =>
+      'Let the coordinator know you\'re on site.';
+
+  @override
+  String get inspectionStepFillTitle => 'Fill in each machine\'s checklist';
+
+  @override
+  String get inspectionStepFillHint =>
+      'Unlocks once the inspection has started.';
+
+  @override
+  String get machineActionFillIn => 'Fill in';
+
+  @override
+  String get machineActionFixResubmit => 'Fix and resubmit';
+
+  @override
+  String get machineActionReview => 'Review';
+
+  @override
+  String get machineActionView => 'View';
 
   @override
   String get machineStatusNotStarted => 'Not started';

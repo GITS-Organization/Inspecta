@@ -2,6 +2,7 @@ import '../../domain/entities/request_item.dart';
 
 class RequestItemModel {
   final String id;
+  final String? equipmentId;
   final String type;
   final String? category;
   final String? manufacturer;
@@ -15,6 +16,7 @@ class RequestItemModel {
   const RequestItemModel({
     required this.id,
     required this.type,
+    this.equipmentId,
     this.category,
     this.manufacturer,
     this.model,
@@ -28,6 +30,7 @@ class RequestItemModel {
   factory RequestItemModel.fromJson(Map<String, dynamic> json) {
     return RequestItemModel(
       id: json['id'] as String? ?? '',
+      equipmentId: json['equipmentId'] as String?,
       type: json['type'] as String? ?? '',
       category: json['category'] as String?,
       manufacturer: json['manufacturer'] as String?,
@@ -42,6 +45,7 @@ class RequestItemModel {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'equipmentId': equipmentId,
     'type': type,
     'category': category,
     'manufacturer': manufacturer,
@@ -55,6 +59,7 @@ class RequestItemModel {
 
   RequestItem toEntity() => RequestItem(
     id: id,
+    equipmentId: equipmentId,
     type: type,
     category: category,
     manufacturer: manufacturer,

@@ -2,7 +2,7 @@ part of 'certificates_list_cubit.dart';
 
 enum CertificatesListStatus { loading, ready, error }
 
-enum CertificatesFilter { action, submitted, sent, all }
+enum CertificatesFilter { submitted, sent, all }
 
 class CertificatesListState extends Equatable {
   final CertificatesListStatus status;
@@ -16,7 +16,7 @@ class CertificatesListState extends Equatable {
     this.requests = const [],
     this.failure,
     this.query = '',
-    this.filter = CertificatesFilter.action,
+    this.filter = CertificatesFilter.all,
   });
 
   /// Anything on the inspector's radar for a certificate — everything
@@ -31,15 +31,10 @@ class CertificatesListState extends Equatable {
     _ => false,
   };
 
-  static bool _inAction(JobStatus status) =>
-      status == JobStatus.inProgress || status == JobStatus.certificateReturned;
-
   static bool _inSubmitted(JobStatus status) =>
       status == JobStatus.certificateSubmitted || status == JobStatus.certificateApproved;
 
   static bool _inSent(JobStatus status) => status == JobStatus.sentToClient;
-
-  int get actionCount => requests.where((r) => _inAction(r.status)).length;
 
   int get submittedCount => requests.where((r) => _inSubmitted(r.status)).length;
 
@@ -49,7 +44,6 @@ class CertificatesListState extends Equatable {
   /// first.
   List<InspectionRequest> get visible {
     final bucketed = requests.where((r) => switch (filter) {
-      CertificatesFilter.action => _inAction(r.status),
       CertificatesFilter.submitted => _inSubmitted(r.status),
       CertificatesFilter.sent => _inSent(r.status),
       CertificatesFilter.all => _isCertRelevant(r.status),

@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/base/safe_request_handler.dart';
@@ -13,7 +11,6 @@ import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_api_client_services.dart';
 import '../datasources/auth_local_datasource.dart';
-import '../datasources/auth_remote_datasource.dart';
 import '../models/auth_requests.dart';
 import '../models/auth_session_model.dart';
 
@@ -21,13 +18,12 @@ class AuthRepositoryImpl implements AuthRepository {
   static const _safeApi = SafeApi();
 
   final AuthApiClientServices _api;
-  final AuthRemoteDataSource _remote;
   final AuthLocalDataSource _local;
 
   /// Session changes after the first [watch] event: sign-in and sign-out.
   final _changes = StreamController<AppUser?>.broadcast();
 
-  AuthRepositoryImpl(this._api, this._remote, this._local);
+  AuthRepositoryImpl(this._api, this._local);
 
   @override
   Future<void> applySessionPolicy() async {
@@ -172,19 +168,10 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String languageCode,
   }) async {
-    try {
-      await _remote.sendPasswordReset(email: email, languageCode: languageCode);
-    } on FirebaseAuthException catch (e) {
-      // Don't reveal whether an account exists for this email.
-      if (e.code == 'user-not-found') return;
-      throw _mapError(e);
-    } catch (e) {
-      // FirebaseAuth.instance throws a non-Firebase error when no app exists.
-      if (Firebase.apps.isEmpty) {
-        throw const AuthFailure(AuthFailureCode.unavailable);
-      }
-      throw _mapError(e);
-    }
+    // The API has no forgot-password endpoint in the app's client yet (it
+    // is BE-AUTH-08 in docs/backend/login-flow-user-stories.md), so there is
+    // nothing to call.
+    throw const AuthFailure(AuthFailureCode.unavailable);
   }
 
   /// Best-effort server-side logout; a failure only means the refresh token
@@ -229,14 +216,6 @@ class AuthRepositoryImpl implements AuthRepository {
         400 || 401 => AuthFailureCode.invalidCredentials,
         403 => AuthFailureCode.accountDisabled,
         429 => AuthFailureCode.tooManyAttempts,
-        _ => AuthFailureCode.unknown,
-      });
-    }
-    if (error is FirebaseAuthException) {
-      return AuthFailure(switch (error.code) {
-        'invalid-email' => AuthFailureCode.invalidEmail,
-        'too-many-requests' => AuthFailureCode.tooManyAttempts,
-        'network-request-failed' => AuthFailureCode.network,
         _ => AuthFailureCode.unknown,
       });
     }

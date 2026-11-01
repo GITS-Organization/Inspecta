@@ -105,6 +105,10 @@ class MachineForm extends Equatable {
   final String? reviewNote;
   final String? certificateNumber;
 
+  /// The inspector's verdict: `satisfactory` or `unsatisfactory`; null until
+  /// chosen. Required before the machine can be submitted.
+  final String? result;
+
   const MachineForm({
     required this.requestId,
     required this.requestItemId,
@@ -124,6 +128,7 @@ class MachineForm extends Equatable {
     this.dates = const {},
     this.reviewNote,
     this.certificateNumber,
+    this.result,
   });
 
   MachineForm copyWith({
@@ -138,6 +143,7 @@ class MachineForm extends Equatable {
     Map<String, String>? dates,
     String? reviewNote,
     String? certificateNumber,
+    String? result,
   }) {
     return MachineForm(
       requestId: requestId,
@@ -158,6 +164,7 @@ class MachineForm extends Equatable {
       dates: dates ?? this.dates,
       reviewNote: reviewNote ?? this.reviewNote,
       certificateNumber: certificateNumber ?? this.certificateNumber,
+      result: result ?? this.result,
     );
   }
 
@@ -181,6 +188,7 @@ class MachineForm extends Equatable {
     dates,
     reviewNote,
     certificateNumber,
+    result,
   ];
 }
 
@@ -196,17 +204,26 @@ class MachineFormChanges extends Equatable {
   final Map<String, String> texts;
   final Map<String, String> dates;
 
+  /// The verdict, `satisfactory` or `unsatisfactory`, when it changed.
+  final String? result;
+
   const MachineFormChanges({
     this.fields = const {},
     this.checklist = const {},
     this.answers = const {},
     this.texts = const {},
     this.dates = const {},
+    this.result,
   });
 
   bool get isEmpty =>
-      fields.isEmpty && checklist.isEmpty && answers.isEmpty && texts.isEmpty && dates.isEmpty;
+      fields.isEmpty &&
+      checklist.isEmpty &&
+      answers.isEmpty &&
+      texts.isEmpty &&
+      dates.isEmpty &&
+      result == null;
 
   @override
-  List<Object?> get props => [fields, checklist, answers, texts, dates];
+  List<Object?> get props => [fields, checklist, answers, texts, dates, result];
 }

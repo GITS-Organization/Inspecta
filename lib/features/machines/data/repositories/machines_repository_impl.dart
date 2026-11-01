@@ -8,6 +8,7 @@ import '../../../../core/error/api_error_handler.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../domain/entities/certificate_incomplete_failure.dart';
 import '../../domain/entities/delivery.dart';
+import '../../domain/entities/delivery_failure.dart';
 import '../../domain/entities/job_machines.dart';
 import '../../domain/entities/machine_form.dart';
 import '../../domain/repositories/machines_repository.dart';
@@ -155,16 +156,47 @@ class MachinesRepositoryImpl implements MachinesRepository {
   }
 
   @override
-  Future<DeliveryResult> deliverToClient(String requestId, {String? sentTo, String? message}) async {
+  Future<DeliveryResult> deliverToClient(
+    String requestId, {
+    String? sentTo,
+    List<String>? cc,
+    String? subject,
+    String? message,
+  }) async {
+    // Every part is optional: what is left out is what the preview said.
     final body = <String, dynamic>{
       if (sentTo != null && sentTo.isNotEmpty) 'sentTo': sentTo,
+      if (cc != null) 'cc': cc,
+      if (subject != null && subject.isNotEmpty) 'subject': subject,
       if (message != null && message.isNotEmpty) 'message': message,
     };
     final result = await _safeApi(
       () async => MachinesParser.deliveryResult(await _api.deliverToClient(requestId, body)),
+      mapError: _deliveryFailureOf,
     );
-    return result.fold((data) => data, (f) => throw _mapError(f));
+    return result.fold((data) => data, (f) => throw f is DeliveryFailure ? f : _deliveryFailureFrom(f));
   }
+
+  /// The answers a delivery has of its own: 400 a wrong address, 409
+  /// `no_recipient` nobody to send to, 502 the mail server refused. Anything
+  /// else (null) is classified like every other call.
+  static DeliveryFailure? _deliveryFailureOf(Object error) {
+    if (error is! DioException) return null;
+    final data = error.response?.data;
+    return switch (error.response?.statusCode) {
+      400 => const DeliveryFailure(DeliveryFailureCode.invalidAddress),
+      409 when data is Map && data['code'] == 'no_recipient' => const DeliveryFailure(DeliveryFailureCode.noRecipient),
+      502 => const DeliveryFailure(DeliveryFailureCode.mailRefused),
+      _ => null,
+    };
+  }
+
+  DeliveryFailure _deliveryFailureFrom(Object error) => DeliveryFailure(switch (_mapError(error).code) {
+    RequestsFailureCode.permissionDenied => DeliveryFailureCode.permissionDenied,
+    RequestsFailureCode.network => DeliveryFailureCode.network,
+    RequestsFailureCode.conflict => DeliveryFailureCode.conflict,
+    RequestsFailureCode.unknown => DeliveryFailureCode.unknown,
+  });
 
   @override
   Future<Uint8List> getMachinePdf(String requestId, String requestItemId) async {

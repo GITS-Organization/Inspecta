@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/utils/currency.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../domain/entities/client_response_outcome.dart';
 import '../../domain/entities/quotation.dart';
@@ -51,6 +52,8 @@ class QuotationDetailCubit extends Cubit<QuotationDetailState> {
       final sent = await _sendNewPrice(
         requestId: requestId,
         totalPiastres: totalPiastres,
+        // The new version is priced in the quote's own currency.
+        currency: state.current?.currency ?? Currency.egp,
         validityDays: validityDays,
       );
       if (!isClosed) emit(state.copyWith(versions: [sent, ...state.versions]));

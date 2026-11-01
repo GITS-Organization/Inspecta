@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -142,7 +144,12 @@ class CertificateCubit extends Cubit<CertificateState> {
       final form = await machine.getForm(request.id, machine.requestItemId);
       if (isClosed) return;
       _form = form;
-      final certificate = MachineCertificateMapper.toCertificate(form);
+      // A checklist the inspector can still edit starts with every row on
+      // Yes. What the API holds stays as it is until the defaults are saved
+      // (below), so the diff sends them with the first save.
+      final defaults = form.canEdit && MachineCertificateMapper.needsDefaultAnswers(form.checklist);
+      final checklist = defaults ? MachineCertificateMapper.withDefaultAnswers(form.checklist) : form.checklist;
+      final certificate = MachineCertificateMapper.toCertificate(form.copyWith(checklist: checklist));
       _saved = certificate;
       _savedChecklist = MachineCertificateMapper.checklistOf(form.checklist);
       emit(
@@ -152,12 +159,13 @@ class CertificateCubit extends Cubit<CertificateState> {
           clearFailure: true,
           machineMode: true,
           machineFields: form.fields,
-          checklist: form.checklist,
+          checklist: checklist,
           inspectedItem: form.header.inspectedItem,
           apiReady: form.canEdit && form.readyToSubmit,
           missing: form.missing,
         ),
       );
+      if (defaults) unawaited(_persistMachine(certificate));
     } catch (error) {
       if (isClosed) return;
       emit(state.copyWith(status: CertificateStatus.error, failure: _failureOf(error)));

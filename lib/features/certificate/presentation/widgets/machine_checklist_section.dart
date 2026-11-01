@@ -11,8 +11,8 @@ import 'certificate_form_fields.dart';
 import 'certificate_section_card.dart';
 
 /// The machine's checklist (machine mode only): each section's rows ticked
-/// Yes / No / N/A, and a note on every No, all saved to the API as they are
-/// answered.
+/// Yes / No — Yes to begin with — and a note on every No, all saved to the API
+/// as they are answered.
 class MachineChecklistSection extends StatelessWidget {
   const MachineChecklistSection({super.key});
 
@@ -79,7 +79,6 @@ class _ChecklistRow extends StatelessWidget {
             options: [
               CertificateSegmentOption(label: t.yesOption, value: 'yes', selectedColor: AppColours.successIcon),
               CertificateSegmentOption(label: t.noOption, value: 'no', selectedColor: AppColours.errorIcon),
-              CertificateSegmentOption(label: t.naOption, value: 'na', selectedColor: AppColours.inkMuted),
             ],
             onChanged: (value) => cubit.setChecklistAnswer(row.key, value),
           ),

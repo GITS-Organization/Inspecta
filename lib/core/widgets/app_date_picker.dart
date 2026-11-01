@@ -183,7 +183,7 @@ class _AppDatePickerState extends State<AppDatePicker> {
                             width: 1.5,
                           ),
                           textStyle: AppTextStyles.buttonLabel.copyWith(
-                            fontSize: 14,
+                            fontSize: 13,
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -210,7 +210,7 @@ class _AppDatePickerState extends State<AppDatePicker> {
                         child: Text(
                           t.confirmAction,
                           style: AppTextStyles.buttonLabel.copyWith(
-                            fontSize: 14,
+                            fontSize: 13,
                           ),
                         ),
                       ),
@@ -266,7 +266,7 @@ class _Header extends StatelessWidget {
             title,
             style: AppTextStyles.pageTitle.copyWith(
               color: Colors.white,
-              fontSize: 22,
+              fontSize: 18,
             ),
           ),
           const SizedBox(height: 16),
@@ -324,6 +324,7 @@ class _DateTile extends StatelessWidget {
           Text(
             label,
             style: AppTextStyles.caption.copyWith(
+              fontSize: 11,
               fontWeight: FontWeight.w600,
               color: active
                   ? AppColours.inkSecondary
@@ -336,7 +337,7 @@ class _DateTile extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
               color: active ? AppColours.primaryDark : Colors.white,
             ),
@@ -374,6 +375,7 @@ class _HintCard extends StatelessWidget {
             child: Text(
               message,
               style: AppTextStyles.caption.copyWith(
+                fontSize: 12,
                 color: AppColours.inkBody,
                 fontWeight: FontWeight.w600,
               ),
@@ -418,7 +420,7 @@ class _Calendar extends StatelessWidget {
   });
 
   static final TextStyle _dayStyle = AppTextStyles.input.copyWith(
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: FontWeight.w600,
   );
   static const double _tileRadius = 10;
@@ -493,7 +495,7 @@ class _Calendar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dayFormat = DateFormat.d(locale);
-    final dowStyle = AppTextStyles.fieldLabel.copyWith(fontSize: 13);
+    final dowStyle = AppTextStyles.fieldLabel.copyWith(fontSize: 11);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -691,7 +693,7 @@ class _HeaderDropdown extends StatelessWidget {
             color: AppColours.primaryColor,
           ),
           style: AppTextStyles.emphasis.copyWith(
-            fontSize: 15,
+            fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
           items: [

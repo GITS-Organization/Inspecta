@@ -4,6 +4,11 @@ import 'package:equatable/equatable.dart';
 /// and certified separately (BR-02.6).
 class RequestItem extends Equatable {
   final String id;
+
+  /// The client's registered machine this item is linked to, when it is (an
+  /// item filled in from the email, or picked from the client's machines).
+  /// Only machines of the request's client can be linked.
+  final String? equipmentId;
   final String type;
   final String? category;
   final String? manufacturer;
@@ -25,6 +30,7 @@ class RequestItem extends Equatable {
   const RequestItem({
     required this.id,
     required this.type,
+    this.equipmentId,
     this.category,
     this.manufacturer,
     this.model,
@@ -44,6 +50,7 @@ class RequestItem extends Equatable {
   @override
   List<Object?> get props => [
     id,
+    equipmentId,
     type,
     category,
     manufacturer,

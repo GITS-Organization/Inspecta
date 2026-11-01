@@ -18,17 +18,13 @@ abstract final class MachineCertificateMapper {
     CertText.testsCarriedOut,
     CertText.note,
     CertText.clientRepresentative,
-    conclusionKey,
   };
 
-  /// The API keeps the verdict as the `conclusion` text.
-  static const conclusionKey = 'conclusion';
-
-  static const _verdictPhrases = {
-    CertificateResult.safeToOperate: 'Safe to operate',
-    CertificateResult.safeWithConditions: 'Safe to operate with conditions',
-    CertificateResult.notSafe: 'Not safe to operate',
-  };
+  /// The API keeps the verdict as `result`: `satisfactory` or
+  /// `unsatisfactory`, required before a machine can be submitted. (Its
+  /// `conclusion` text is not printed on the certificate, so it isn't used.)
+  static const _satisfactory = 'satisfactory';
+  static const _unsatisfactory = 'unsatisfactory';
 
   /// The form as a [Certificate]: the API's texts and the machine's own
   /// fields share the texts map, keyed as the API keys them.
@@ -58,7 +54,7 @@ abstract final class MachineCertificateMapper {
       dates: dates,
       answers: form.answers,
       functionCheck: functionCheckOf(form.checklist),
-      finalResult: verdictOf(texts[conclusionKey]),
+      finalResult: verdictOf(form.result),
       reviewNote: form.reviewNote,
       certificateNumber: form.certificateNumber,
     );
@@ -84,10 +80,7 @@ abstract final class MachineCertificateMapper {
         texts[entry.key] = entry.value;
       }
     }
-    final phrase = _verdictPhrases[current.finalResult];
-    if (current.finalResult != saved.finalResult && phrase != null) {
-      texts[conclusionKey] = phrase;
-    }
+    final result = current.finalResult == saved.finalResult ? null : resultOf(current.finalResult);
 
     final dates = <String, String>{
       for (final entry in current.dates.entries)
@@ -111,7 +104,14 @@ abstract final class MachineCertificateMapper {
       }
     }
 
-    return MachineFormChanges(fields: fields, checklist: rows, answers: answers, texts: texts, dates: dates);
+    return MachineFormChanges(
+      fields: fields,
+      checklist: rows,
+      answers: answers,
+      texts: texts,
+      dates: dates,
+      result: result,
+    );
   }
 
   /// The checklist rows as saved: what [diff] compares against.
@@ -133,6 +133,30 @@ abstract final class MachineCertificateMapper {
     _ => '',
   };
 
+  /// Whether any row still lacks a yes / no answer: unanswered, or N/A, which
+  /// the checklist no longer offers.
+  static bool needsDefaultAnswers(List<MachineFormSection> checklist) =>
+      checklist.any((section) => section.items.any((row) => !_isYesOrNo(row)));
+
+  /// [checklist] with every row that lacks a yes / no answer set to yes, the
+  /// answer a row starts with. Answered rows are kept as they are.
+  static List<MachineFormSection> withDefaultAnswers(List<MachineFormSection> checklist) => [
+    for (final section in checklist)
+      MachineFormSection(
+        key: section.key,
+        title: section.title,
+        items: [
+          for (final row in section.items)
+            _isYesOrNo(row) ? row : MachineFormRow(key: row.key, label: row.label, value: 'yes'),
+        ],
+      ),
+  ];
+
+  static bool _isYesOrNo(MachineFormRow row) {
+    final answer = normalizeAnswer(row.value);
+    return answer == 'yes' || answer == 'no';
+  }
+
   /// The old "function check", now what the checklist adds up to: unanswered
   /// until every row is answered, then fail if any is a no.
   static ChecklistAnswer functionCheckOf(List<MachineFormSection> checklist) {
@@ -144,14 +168,19 @@ abstract final class MachineCertificateMapper {
     return answers.contains('no') ? ChecklistAnswer.fail : ChecklistAnswer.pass;
   }
 
-  static CertificateResult? verdictOf(String? conclusion) {
-    final text = conclusion?.trim().toLowerCase();
-    if (text == null || text.isEmpty) return null;
-    for (final entry in _verdictPhrases.entries) {
-      if (entry.value.toLowerCase() == text) return entry.key;
-    }
-    return null;
-  }
+  /// The form's verdict for the API's `result`; null while none is chosen.
+  static CertificateResult? verdictOf(String? result) => switch (result?.trim().toLowerCase()) {
+    _satisfactory => CertificateResult.safeToOperate,
+    _unsatisfactory => CertificateResult.notSafe,
+    _ => null,
+  };
+
+  /// The API's `result` for the form's verdict.
+  static String? resultOf(CertificateResult? verdict) => switch (verdict) {
+    CertificateResult.safeToOperate || CertificateResult.safeWithConditions => _satisfactory,
+    CertificateResult.notSafe => _unsatisfactory,
+    null => null,
+  };
 
   static String formatDate(DateTime date) =>
       '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';

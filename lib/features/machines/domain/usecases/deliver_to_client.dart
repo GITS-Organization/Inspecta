@@ -7,6 +7,11 @@ class DeliverToClient {
 
   const DeliverToClient(this._repository);
 
-  Future<DeliveryResult> call(String requestId, {String? sentTo, String? message}) =>
-      _repository.deliverToClient(requestId, sentTo: sentTo, message: message);
+  Future<DeliveryResult> call(
+    String requestId, {
+    String? sentTo,
+    List<String>? cc,
+    String? subject,
+    String? message,
+  }) => _repository.deliverToClient(requestId, sentTo: sentTo, cc: cc, subject: subject, message: message);
 }

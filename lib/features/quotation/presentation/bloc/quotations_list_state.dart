@@ -62,8 +62,19 @@ class QuotationsListState extends Equatable {
     }).toList();
   }
 
-  int get openTotalPiastres => _forTab(QuoteBoardTab.open)
-      .fold(0, (sum, q) => sum + (q.totalPiastres ?? 0));
+  /// The open quotes' total value per currency (in minor units), in the
+  /// order of [Currency.supported]; amounts in different currencies are never
+  /// added together, and a currency with nothing open is left out.
+  Map<String, int> get openTotals {
+    final totals = <String, int>{};
+    for (final quote in _forTab(QuoteBoardTab.open)) {
+      totals[quote.currency] = (totals[quote.currency] ?? 0) + (quote.totalPiastres ?? 0);
+    }
+    return {
+      for (final code in Currency.supported)
+        if ((totals[code] ?? 0) > 0) code: totals[code]!,
+    };
+  }
 
   int get acceptedThisMonthTotalPiastres =>
       _acceptedThisMonth().fold(0, (sum, q) => sum + (q.totalPiastres ?? 0));

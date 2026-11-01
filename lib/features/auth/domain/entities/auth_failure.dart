@@ -13,8 +13,7 @@ enum AuthFailureCode {
   tooManyAttempts,
   network,
 
-  /// Firebase isn't initialised (e.g. `flutterfire configure` not run yet),
-  /// which only the password-reset email depends on.
+  /// The API has no endpoint for this yet: the password-reset request.
   unavailable,
   unknown,
 }

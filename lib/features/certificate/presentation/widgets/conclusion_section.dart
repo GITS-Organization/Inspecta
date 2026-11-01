@@ -14,8 +14,17 @@ import 'certificate_section_card.dart';
 
 /// Step 5 of the certificate (Feature 05): the inspector's verdict (the
 /// "Conclusion / remarks" row) and a free-form note.
+///
+/// "Safe with conditions" is no longer offered; the value stays in
+/// [CertificateResult] so certificates already saved with it still read
+/// correctly.
 class ConclusionSection extends StatelessWidget {
   const ConclusionSection({super.key});
+
+  static final _options = [
+    for (final result in CertificateResult.values)
+      if (result != CertificateResult.safeWithConditions) result,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -37,12 +46,12 @@ class ConclusionSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (var i = 0; i < CertificateResult.values.length; i++) ...[
+              for (final (i, result) in _options.indexed) ...[
                 if (i > 0) const SizedBox(height: 10),
                 _ResultOption(
-                  label: CertificateResult.values[i].label(t),
-                  selected: certificate.finalResult == CertificateResult.values[i],
-                  onTap: () => cubit.setFinalResult(CertificateResult.values[i]),
+                  label: result.label(t),
+                  selected: certificate.finalResult == result,
+                  onTap: () => cubit.setFinalResult(result),
                 ),
               ],
               certificateFieldGap,

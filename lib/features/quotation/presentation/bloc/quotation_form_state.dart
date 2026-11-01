@@ -4,7 +4,7 @@ enum QuotationAction { saveDraft, send }
 
 class QuotationFormState extends Equatable {
   final ReplyType? replyType;
-  /// Typed price (EGP) per request item, keyed by item id — always a fixed
+  /// Typed price (in [currency]) per request item, keyed by item id — always a fixed
   /// price per visit.
   final Map<String, String> linePrices;
 
@@ -18,12 +18,25 @@ class QuotationFormState extends Equatable {
   /// The request's item ids, so validation knows which lines need a price.
   final List<String> itemIds;
   final int validityDays;
+
+  /// ISO code the typed prices are in; one currency for the whole quote.
+  final String currency;
+
+  /// The reason typed for a reject.
   final String message;
+
+  /// What the coordinator changed in the email to the client; null while the
+  /// API's suggestion is to go out as it is.
+  final QuoteEmailEdits? emailEdits;
 
   /// Field errors show only after a send attempt, then update live.
   final bool submitted;
 
   final bool isSubmitting;
+
+  /// Whether the form is still looking up the request's quote, so the email
+  /// row can wait for it instead of giving way to the message field.
+  final bool isResolvingQuote;
 
   /// Bumped whenever [QuotationAction.saveDraft] or [.send] finishes, so a
   /// listener can react exactly once per action (BlocListener's
@@ -41,9 +54,12 @@ class QuotationFormState extends Equatable {
     this.notes = defaultProposalNotes,
     this.itemIds = const [],
     this.validityDays = 14,
+    this.currency = Currency.egp,
     this.message = '',
+    this.emailEdits,
     this.submitted = false,
     this.isSubmitting = false,
+    this.isResolvingQuote = false,
     this.actionSeq = 0,
     this.lastAction,
     this.lastActionSuccess = false,
@@ -87,10 +103,14 @@ class QuotationFormState extends Equatable {
     Map<String, String>? linePrices,
     List<String>? notes,
     int? validityDays,
+    String? currency,
     List<String>? scopeOfWork,
     String? message,
+    QuoteEmailEdits? emailEdits,
+    bool clearEmailEdits = false,
     bool? submitted,
     bool? isSubmitting,
+    bool? isResolvingQuote,
     int? actionSeq,
     QuotationAction? lastAction,
     bool? lastActionSuccess,
@@ -104,10 +124,13 @@ class QuotationFormState extends Equatable {
       notes: notes ?? this.notes,
       itemIds: itemIds,
       validityDays: validityDays ?? this.validityDays,
+      currency: currency ?? this.currency,
       scopeOfWork: scopeOfWork ?? this.scopeOfWork,
       message: message ?? this.message,
+      emailEdits: clearEmailEdits ? null : (emailEdits ?? this.emailEdits),
       submitted: submitted ?? this.submitted,
       isSubmitting: isSubmitting ?? this.isSubmitting,
+      isResolvingQuote: isResolvingQuote ?? this.isResolvingQuote,
       actionSeq: actionSeq ?? this.actionSeq,
       lastAction: lastAction ?? this.lastAction,
       lastActionSuccess: lastActionSuccess ?? this.lastActionSuccess,
@@ -123,10 +146,13 @@ class QuotationFormState extends Equatable {
     notes,
     itemIds,
     validityDays,
+    currency,
     scopeOfWork,
     message,
+    emailEdits,
     submitted,
     isSubmitting,
+    isResolvingQuote,
     actionSeq,
     lastAction,
     lastActionSuccess,

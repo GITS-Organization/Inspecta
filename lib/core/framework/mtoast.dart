@@ -18,6 +18,11 @@ class MToast {
     _show(message: message, backgroundColor: AppColours.errorIcon);
   }
 
+  /// A neutral nudge (a step to take first), not an error.
+  static void showInfo({required String message}) {
+    _show(message: message, backgroundColor: AppColours.navy);
+  }
+
   static void _show({required String message, required Color backgroundColor}) {
     final messenger = messengerKey.currentState;
     if (messenger == null) return;

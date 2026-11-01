@@ -18,6 +18,7 @@ class SaveMachineBody {
           },
       },
     if (changes.answers.isNotEmpty) 'answers': changes.answers,
+    if (changes.result != null) 'result': changes.result,
     if (changes.texts.isNotEmpty) 'texts': changes.texts,
     if (changes.dates.isNotEmpty) 'dates': changes.dates,
   };

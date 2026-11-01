@@ -56,19 +56,29 @@ class QuotationFooter extends StatelessWidget {
 
           final String totalText;
           if (state.isPriced && !state.priceInvalid) {
-            totalText = Currency.formatEgp(cubit.totalPiastres!);
+            totalText = Currency.format(cubit.totalPiastres!, code: state.currency);
           } else {
             totalText = '—';
           }
 
+          // A draft is the offer saved onto the request's quote, so it needs
+          // one.
           final canSaveDraft =
               !state.isSubmitting &&
+              !state.isResolvingQuote &&
+              cubit.hasQuote &&
               state.replyType != null &&
               state.replyType != ReplyType.reject;
 
           return QuoteTotalBar(
             unitsLabel: unitsLabel,
             totalText: totalText,
+            // The button says what the chosen reply does.
+            sendLabel: switch (state.replyType) {
+              ReplyType.accept => t.acceptQuotation,
+              ReplyType.reject => t.replyReject,
+              _ => t.sendQuotation,
+            },
             loading: state.isSubmitting,
             onSaveDraft: canSaveDraft ? cubit.saveDraft : null,
             onSend: state.isSubmitting

@@ -22,6 +22,7 @@ class _RequestsApiClientServices implements RequestsApiClientServices {
   @override
   Future<dynamic> getRequests(
     String triage,
+    String? status,
     String? query,
     int page,
     int pageSize,
@@ -29,6 +30,7 @@ class _RequestsApiClientServices implements RequestsApiClientServices {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'triage': triage,
+      r'status': status,
       r'q': query,
       r'page': page,
       r'pageSize': pageSize,
@@ -83,6 +85,48 @@ class _RequestsApiClientServices implements RequestsApiClientServices {
           .compose(
             _dio.options,
             'requests/${id}/confirm',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
+    return _value;
+  }
+
+  @override
+  Future<dynamic> getSuggestions(String id) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<dynamic>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            'requests/${id}/suggestions',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
+    return _value;
+  }
+
+  @override
+  Future<dynamic> autofillRequest(String id) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<dynamic>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            'requests/${id}/autofill',
             queryParameters: queryParameters,
             data: _data,
           )

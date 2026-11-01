@@ -8,19 +8,26 @@ class SendQuoteBody {
   /// The new total, when sending a new price version.
   final int? amountPiastres;
 
-  const SendQuoteBody({this.validForDays, this.amountPiastres});
+  /// ISO 4217 code the amounts are in (`EGP`, `USD`, `EUR`…).
+  final String? currency;
+
+  const SendQuoteBody({this.validForDays, this.amountPiastres, this.currency});
 
   Map<String, dynamic> toJson() => {
     'validForDays': ?validForDays,
     'amountPiastres': ?amountPiastres,
+    'currency': ?currency,
   };
 }
 
 /// The body of `PUT /requests/{id}/quotes/{quoteId}`: each item's unit price,
-/// how long the quote stays valid, and its scope, notes and message. Parts
-/// that are null or empty are left out.
+/// the currency they're in, how long the quote stays valid, and its scope,
+/// notes and message. Parts that are null or empty are left out.
 class UpdateQuoteBody {
   final List<QuoteLineItem> items;
+
+  /// ISO 4217 code the unit prices are in (`EGP`, `USD`, `EUR`…).
+  final String? currency;
   final int? validForDays;
   final List<String>? scopeOfWork;
   final List<String>? notes;
@@ -28,6 +35,7 @@ class UpdateQuoteBody {
 
   const UpdateQuoteBody({
     required this.items,
+    this.currency,
     this.validForDays,
     this.scopeOfWork,
     this.notes,
@@ -42,6 +50,7 @@ class UpdateQuoteBody {
           'unitPricePiastres': item.unitPricePiastres,
         },
     ],
+    'currency': ?currency,
     'validForDays': ?validForDays,
     if (scopeOfWork != null && scopeOfWork!.isNotEmpty) 'scopeOfWork': scopeOfWork,
     if (notes != null && notes!.isNotEmpty) 'notes': notes,

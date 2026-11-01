@@ -9,7 +9,12 @@ import '../../../../core/enums/job_status.dart';
 import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/m_notice.dart';
 import '../../../../core/widgets/empty_widget.dart';
+import '../../../../core/widgets/picker_sheet.dart';
+import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../clients/domain/entities/client.dart';
+import '../../../clients/domain/usecases/get_clients.dart';
+import '../../../clients/presentation/pages/client_emails_page.dart';
 import '../../domain/entities/inspection_request.dart';
 import '../../domain/entities/request_source.dart';
 import '../../domain/entities/requests_failure.dart';
@@ -126,8 +131,56 @@ class RequestsListView extends StatelessWidget {
 
   Future<void> _confirm(BuildContext context, InspectionRequest request) async {
     final message = AppLocalizations.of(context)!.confirmRequestError;
-    final confirmed = await context.read<RequestsListCubit>().confirm(request.id);
-    if (!confirmed) MToast.showError(message: message);
+    final outcome = await context.read<RequestsListCubit>().confirm(request.id);
+    switch (outcome) {
+      case ConfirmOutcome.confirmed || ConfirmOutcome.ignored:
+        break;
+      case ConfirmOutcome.failed:
+        MToast.showError(message: message);
+      case ConfirmOutcome.clientRequired:
+        if (context.mounted) await _registerSender(context, request);
+    }
+  }
+
+  /// The email's sender isn't registered under a client, so it can't be
+  /// confirmed. Offers the way out: pick the client and add the sender's
+  /// address (or domain) to it, after which the email becomes its request by
+  /// itself — and every other waiting email from that sender with it.
+  Future<void> _registerSender(BuildContext context, InspectionRequest request) async {
+    final t = AppLocalizations.of(context)!;
+    final cubit = context.read<RequestsListCubit>();
+    final sender = request.emailFrom;
+
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(t.clientRequiredTitle),
+        content: Text(t.clientRequiredMessage(sender ?? request.senderLabel)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(t.cancel)),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(t.addSenderToClientAction)),
+        ],
+      ),
+    );
+    if (go != true || !context.mounted) return;
+
+    final client = await PickerSheet.show<Client>(
+      context,
+      title: t.chooseClientTitle,
+      searchHint: t.chooseClientSearchHint,
+      emptyText: t.noClientsFound,
+      load: getIt<GetClients>().call,
+      titleOf: (client) => client.name,
+      subtitleOf: (client) => client.location,
+    );
+    if (client == null || !context.mounted) return;
+
+    final promoted = await Navigator.of(context).push<int>(
+      MaterialPageRoute<int>(builder: (_) => ClientEmailsPage(client: client, suggestedSender: sender)),
+    );
+    // Registering the sender moved waiting emails onto the client: both lists
+    // changed.
+    if ((promoted ?? 0) > 0) await cubit.refresh();
   }
 
   Future<void> _delete(BuildContext context, InspectionRequest request) async {

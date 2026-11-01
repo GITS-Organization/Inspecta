@@ -135,7 +135,7 @@ class _QuotationsBoardViewState extends State<_QuotationsBoardView> {
                   previous.board != current.board ||
                   previous.onlyExpiringSoon != current.onlyExpiringSoon,
               builder: (context, state) => QuoteValueSummary(
-                openTotalPiastres: state.openTotalPiastres,
+                openTotals: state.openTotals,
                 expiringSoonCount: state.expiringSoonCount,
                 expiringSoonSelected: state.onlyExpiringSoon,
                 onExpiringSoon: cubit.showExpiringSoon,
