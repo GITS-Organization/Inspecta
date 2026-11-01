@@ -63,6 +63,21 @@ public sealed class MachineMatcherTests
     }
 
     [Fact]
+    public void AShortSerialIsFoundWhetherItIsDashedSpacedOrRunTogether()
+    {
+        var hoist = Machine("Electric Wire Rope Hoist", serial: "WH-002");
+
+        foreach (var text in new[] { "Item ID: WH-002", "Item ID: WH 002", "item id wh002", "ID WH – 002 please" })
+        {
+            var match = Assert.Single(MachineMatcher.Match(EmailTextCleaner.NewText(null, text, null), [hoist]));
+            Assert.Equal(MachineMatchReason.Serial, match.Reason);
+            Assert.True(match.IsConfident);
+        }
+
+        Assert.Empty(MachineMatcher.Match("Item ID: WH-003", [hoist]));
+    }
+
+    [Fact]
     public void ThePluralsAndASmallTypoStillFindTheMachineButAreOnlyASuggestion()
     {
         Assert.True(Assert.Single(Read("Kindly inspect our pressure vessels", null, Vessel)).IsConfident);

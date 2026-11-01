@@ -382,7 +382,22 @@ public static class MachineMatcher
                 var lineNumber = document.lines.Count;
                 document.lines.Add(original.Trim());
                 var normalized = Normalize(line);
-                foreach (var raw in Tokenize(normalized))
+                var lineStart = document.Tokens.Count;
+                var rawLine = Tokenize(normalized).ToList();
+
+                // A serial such as "WH-002" is split at the dash into "wh" and "002": the words next to each other are also
+                // kept joined ("wh002"), so the serial is found however it is spaced or dashed.
+                for (var start = 0; start < rawLine.Count; start++)
+                {
+                    var joined = rawLine[start];
+                    for (var length = 2; length <= 3 && start + length <= rawLine.Count; length++)
+                    {
+                        joined += rawLine[start + length - 1];
+                        document.rawTokens.TryAdd(joined, lineStart);
+                    }
+                }
+
+                foreach (var raw in rawLine)
                 {
                     document.rawTokens.TryAdd(raw, document.Tokens.Count);
                     var token = Stem(raw);
