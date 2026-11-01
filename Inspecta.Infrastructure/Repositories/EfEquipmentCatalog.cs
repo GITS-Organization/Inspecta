@@ -30,6 +30,15 @@ public sealed class EfEquipmentCatalog(InspectaDbContext dbContext) : IEquipment
             Same(item.SerialNumber, serialNumber) && Same(item.Capacity, capacity));
     }
 
+    public async Task<IReadOnlyDictionary<Guid, Guid>> GetEquipmentOwnersAsync(
+        IReadOnlyCollection<Guid> equipmentIds,
+        CancellationToken cancellationToken = default) =>
+        equipmentIds.Count == 0
+            ? new Dictionary<Guid, Guid>()
+            : await dbContext.Items
+                .Where(item => equipmentIds.Contains(item.Id))
+                .ToDictionaryAsync(item => item.Id, item => item.ClientId, cancellationToken);
+
     public void Stage(Client client) => dbContext.Clients.Add(client);
 
     public void Stage(Item equipment) => dbContext.Items.Add(equipment);

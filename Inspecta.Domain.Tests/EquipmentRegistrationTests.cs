@@ -145,17 +145,80 @@ public sealed class EquipmentRegistrationTests
         var fixture = new Fixture();
         var client = Client.Create("Al Noor", managerId: ManagerId);
         fixture.Catalog.Clients.Add(client);
-        var linkedTo = Guid.NewGuid();
+        var machine = Item.Create(client.Id, "Crane");
+        fixture.Catalog.Equipment.Add(machine);
 
         var saved = await fixture.SaveAsync(new UpdateRequestDetailsRequest
         {
             ClientId = client.Id,
             Location = "Cairo",
-            Items = [new SaveRequestItem { Name = "Crane", EquipmentId = linkedTo }]
+            Items = [new SaveRequestItem { Name = "Crane", EquipmentId = machine.Id }]
         });
 
         Assert.Empty(fixture.Catalog.StagedEquipment);
-        Assert.Equal(linkedTo, Assert.Single(saved.Items).EquipmentId);
+        Assert.Equal(machine.Id, Assert.Single(saved.Items).EquipmentId);
+    }
+
+    [Fact]
+    public async Task AMachineOfAnotherClientOrAnUnknownOneIsRefused()
+    {
+        var fixture = new Fixture();
+        var client = Client.Create("Al Noor", managerId: ManagerId);
+        fixture.Catalog.Clients.Add(client);
+        var foreign = Item.Create(Guid.NewGuid(), "Crane");
+        fixture.Catalog.Equipment.Add(foreign);
+
+        var other = await Assert.ThrowsAsync<ArgumentException>(() => fixture.SaveAsync(new UpdateRequestDetailsRequest
+        {
+            ClientId = client.Id,
+            Location = "Cairo",
+            Items = [new SaveRequestItem { Name = "Crane", EquipmentId = foreign.Id }]
+        }));
+        Assert.Contains("does not belong to the client", other.Message, StringComparison.Ordinal);
+
+        var unknown = await Assert.ThrowsAsync<ArgumentException>(() => fixture.SaveAsync(new UpdateRequestDetailsRequest
+        {
+            ClientId = client.Id,
+            Location = "Cairo",
+            Items = [new SaveRequestItem { Name = "Crane", EquipmentId = Guid.NewGuid() }]
+        }));
+        Assert.Contains("not found", unknown.Message, StringComparison.Ordinal);
+        Assert.Equal(0, fixture.Repository.Saves);
+    }
+
+    [Fact]
+    public async Task WithoutAutoRegistrationTypedMachinesAndClientsAreOnlyLinkedNeverCreated()
+    {
+        var fixture = new Fixture(createMissing: false);
+        var client = Client.Create("Al Noor", managerId: ManagerId);
+        fixture.Catalog.Clients.Add(client);
+        var known = Item.Create(client.Id, "Crane");
+        fixture.Catalog.Equipment.Add(known);
+
+        var typedClient = await fixture.SaveAsync(new UpdateRequestDetailsRequest
+        {
+            ClientName = "Brand New Client",
+            Location = "Cairo",
+            Items = [new SaveRequestItem { Name = "Crane" }]
+        });
+        Assert.Empty(fixture.Catalog.StagedClients);
+        Assert.Null(typedClient.ClientId);
+
+        var saved = await fixture.SaveAsync(new UpdateRequestDetailsRequest
+        {
+            ClientId = client.Id,
+            ClientName = "Al Noor",
+            Location = "Cairo",
+            Items =
+            [
+                new SaveRequestItem { Name = "Crane" },
+                new SaveRequestItem { Name = "Mystery machine" }
+            ]
+        });
+
+        Assert.Empty(fixture.Catalog.StagedEquipment);
+        Assert.Equal(known.Id, saved.Items[0].EquipmentId);
+        Assert.Null(saved.Items[1].EquipmentId);
     }
 
     [Fact]
@@ -195,14 +258,14 @@ public sealed class EquipmentRegistrationTests
 
     private sealed class Fixture
     {
-        public Fixture()
+        public Fixture(bool createMissing = true)
         {
             Request = InspectionRequest.CreateFromEmail(ManagerId, CoordinatorId, new IncomingEmail(
                 "42", 1, "Please quote.", null, "buyer@alnoor.com", "Al Noor", "Quote request",
                 [], [], [], [], [], "<id@alnoor.com>", null, null, DateTimeOffset.UtcNow.AddMinutes(-5)));
             Repository = new RequestSaveTests.Repo(Request) { ClientManagerId = ManagerId };
             Catalog = new FakeCatalog();
-            Service = new InspectionRequestService(Repository, null!, new RequestEquipmentRegistrar(Catalog));
+            Service = new InspectionRequestService(Repository, null!, new RequestEquipmentRegistrar(Catalog, createMissing));
         }
 
         public InspectionRequest Request { get; }
@@ -232,6 +295,11 @@ public sealed class EquipmentRegistrationTests
                 string.Equals(item.Name, name.Trim(), StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(item.SerialNumber, serialNumber, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(item.Capacity, capacity, StringComparison.OrdinalIgnoreCase)));
+
+        public Task<IReadOnlyDictionary<Guid, Guid>> GetEquipmentOwnersAsync(
+            IReadOnlyCollection<Guid> equipmentIds, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, Guid>>(
+                Equipment.Where(item => equipmentIds.Contains(item.Id)).ToDictionary(item => item.Id, item => item.ClientId));
 
         public void Stage(Client client) => StagedClients.Add(client);
 

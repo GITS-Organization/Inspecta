@@ -19,6 +19,11 @@ public interface IEquipmentCatalog
         string? capacity,
         CancellationToken cancellationToken = default);
 
+    /// <summary>The client each of these machines belongs to; a machine that does not exist (or is not visible) is left out.</summary>
+    Task<IReadOnlyDictionary<Guid, Guid>> GetEquipmentOwnersAsync(
+        IReadOnlyCollection<Guid> equipmentIds,
+        CancellationToken cancellationToken = default);
+
     void Stage(Client client);
 
     void Stage(Item equipment);

@@ -96,7 +96,8 @@ builder.Services.AddScoped<IClientRepository, EfClientRepository>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IEquipmentRepository, EfEquipmentRepository>();
 builder.Services.AddScoped<IEquipmentCatalog, EfEquipmentCatalog>();
-builder.Services.AddScoped<IRequestEquipmentRegistrar, RequestEquipmentRegistrar>();
+builder.Services.AddScoped<IRequestEquipmentRegistrar>(services => new RequestEquipmentRegistrar(
+    services.GetRequiredService<IEquipmentCatalog>(), builder.Configuration.GetValue("Requests:AutoRegisterEquipment", true)));
 builder.Services.AddScoped<IEquipmentService, EquipmentService>();
 builder.Services.AddScoped<IQuoteRepository, EfQuoteRepository>();
 builder.Services.AddScoped<IQuoteService, QuoteService>();

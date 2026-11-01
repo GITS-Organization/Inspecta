@@ -4,11 +4,19 @@ using Inspecta.Domain.Enums;
 
 namespace Inspecta.Application.Services;
 
-public sealed class RequestEquipmentRegistrar(IEquipmentCatalog catalog) : IRequestEquipmentRegistrar
+/// <summary>
+/// Keeps the machines of a request tied to its client. A machine picked by id must be one of the request client's.
+/// With <paramref name="createMissing"/> (the original behaviour) machines and clients that are not in the records are
+/// created from the typed text; without it they are only linked when they already exist, so the records stay the ones
+/// the team registered.
+/// </summary>
+public sealed class RequestEquipmentRegistrar(IEquipmentCatalog catalog, bool createMissing = true) : IRequestEquipmentRegistrar
 {
     public async Task RegisterAsync(InspectionRequest request, CancellationToken cancellationToken = default)
     {
         if (request.ManagerId is not Guid managerId || !request.CanEditDetails) return;
+        await EnsureMachinesBelongToTheClientAsync(request, cancellationToken);
+
         var unmatched = request.Items.Where(item => item.EquipmentId is null).ToList();
         if (unmatched.Count == 0) return;
 
@@ -23,11 +31,27 @@ public sealed class RequestEquipmentRegistrar(IEquipmentCatalog catalog) : IRequ
             if (!registered.TryGetValue(key, out var equipment))
             {
                 equipment = await catalog.FindEquipmentAsync(clientId.Value, item.Name, item.SerialNumber, item.Capacity, cancellationToken)
-                    ?? CreateEquipment(clientId.Value, item);
+                    ?? (createMissing ? CreateEquipment(clientId.Value, item) : null);
+                if (equipment is null) continue;
                 registered[key] = equipment;
             }
 
             item.MatchEquipment(equipment.Id);
+        }
+    }
+
+    private async Task EnsureMachinesBelongToTheClientAsync(InspectionRequest request, CancellationToken cancellationToken)
+    {
+        var picked = request.Items.Where(item => item.EquipmentId is not null).Select(item => item.EquipmentId!.Value).Distinct().ToList();
+        if (picked.Count == 0) return;
+
+        var owners = await catalog.GetEquipmentOwnersAsync(picked, cancellationToken);
+        foreach (var equipmentId in picked)
+        {
+            if (!owners.TryGetValue(equipmentId, out var owner))
+                throw new ArgumentException("The selected machine was not found.");
+            if (request.ClientId is Guid clientId && owner != clientId)
+                throw new ArgumentException("The selected machine does not belong to the client of this request. Choose one of the client's machines.");
         }
     }
 
@@ -39,6 +63,7 @@ public sealed class RequestEquipmentRegistrar(IEquipmentCatalog catalog) : IRequ
         var client = await catalog.FindClientByNameAsync(managerId, name, cancellationToken);
         if (client is null)
         {
+            if (!createMissing) return null;
             client = Client.Create(
                 name,
                 location: string.IsNullOrWhiteSpace(request.Location) ? null : request.Location,

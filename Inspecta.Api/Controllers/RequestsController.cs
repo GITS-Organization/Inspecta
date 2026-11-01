@@ -139,6 +139,7 @@ public sealed class RequestsController(IInspectionRequestService requestService,
     /// before a quote is sent.
     /// </summary>
     [HttpPut("{requestId:guid}")]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
