@@ -65,6 +65,23 @@ Authorization: Bearer {{accessToken}}
 DELETE {{baseUrl}}/api/v1/requests/{{requestId}}
 Authorization: Bearer {{accessToken}}
 
+### A client can have many emails: list them
+GET {{baseUrl}}/api/v1/clients/{{clientId}}/emails
+Authorization: Bearer {{accessToken}}
+
+### Add another address (or a domain) to the client; its waiting maybe emails become requests
+POST {{baseUrl}}/api/v1/clients/{{clientId}}/emails
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "pattern": "procurement@alnoor-industries.example"
+}
+
+### Remove an address from the client
+DELETE {{baseUrl}}/api/v1/clients/{{clientId}}/emails/replace-with-rule-id
+Authorization: Bearer {{accessToken}}
+
 ### List the client senders of the team (Admin: add ?managerId=)
 GET {{baseUrl}}/api/v1/client-mail-rules
 Authorization: Bearer {{managerToken}}

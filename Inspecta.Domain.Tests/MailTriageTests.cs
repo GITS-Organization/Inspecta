@@ -228,6 +228,111 @@ public sealed class MailTriageTests
         Assert.Contains(ManagerId.ToString(), sql, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void ADifferentAddressOfTheSameClientIsRecognisedWithoutARule()
+    {
+        var clientId = Guid.NewGuid();
+        var implied = ClientMailRule.ForKnownAddress(ManagerId, " Procurement@AlNoor.com ", clientId);
+        var domain = ClientMailRule.Create(ManagerId, "alnoor.com", Guid.NewGuid(), CoordinatorId);
+
+        Assert.Equal("procurement@alnoor.com", implied.Pattern);
+        Assert.Equal(clientId, implied.ClientId);
+        Assert.Same(implied, ClientMailRule.FindMatch([domain, implied], "procurement@alnoor.com"));
+        Assert.Throws<ArgumentException>(() => ClientMailRule.ForKnownAddress(ManagerId, "alnoor.com", clientId));
+    }
+
+    [Fact]
+    public void AMaybeTakesTheClientWhenItsSenderIsRegistered()
+    {
+        var clientId = Guid.NewGuid();
+        var maybe = InspectionRequest.CreateFromEmail(ManagerId, CoordinatorId, Email(), triage: RequestTriage.Maybe);
+
+        maybe.AdoptClient(clientId, " Al Noor ");
+
+        Assert.Equal(RequestTriage.Request, maybe.Triage);
+        Assert.Equal(clientId, maybe.ClientId);
+        Assert.Equal("Al Noor", maybe.ClientName);
+        Assert.Throws<InvalidOperationException>(() => maybe.AdoptClient(clientId, "Al Noor"));
+    }
+
+    [Fact]
+    public async Task AddingASenderToAClientTurnsItsWaitingMaybesIntoRequests()
+    {
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
+        var fromBuyer = InspectionRequest.CreateFromEmail(manager.Id, CoordinatorId, Email(), triage: RequestTriage.Maybe);
+        var fromSomeoneElse = InspectionRequest.CreateFromEmail(
+            manager.Id, CoordinatorId, Email() with { FromAddress = "other@elsewhere.com" }, triage: RequestTriage.Maybe);
+        var clientId = Guid.NewGuid();
+        var repository = new FakeRuleRepository { ClientManagerId = manager.Id, ClientName = "Al Noor Heavy Industries" };
+        repository.Waiting.AddRange([fromBuyer, fromSomeoneElse]);
+        var service = new ClientMailRuleService(repository, new IncomingEmailRequestTests.FakeUserRepository(manager));
+
+        var added = await service.AddForClientAsync(clientId, manager.Id, CoordinatorId, new AddClientEmailRequest { Pattern = "alnoor.com" });
+
+        Assert.Equal(1, added.PromotedRequests);
+        Assert.Equal(clientId, added.ClientId);
+        Assert.Equal(RequestTriage.Request, fromBuyer.Triage);
+        Assert.Equal("Al Noor Heavy Industries", fromBuyer.ClientName);
+        Assert.Equal(RequestTriage.Maybe, fromSomeoneElse.Triage);
+        Assert.Single(await service.ListForClientAsync(clientId, manager.Id));
+    }
+
+    [Fact]
+    public async Task AClientsEmailsCanOnlyBeManagedByItsOwnTeam()
+    {
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
+        var repository = new FakeRuleRepository { ClientManagerId = manager.Id, ClientName = "Al Noor" };
+        var service = new ClientMailRuleService(repository, new IncomingEmailRequestTests.FakeUserRepository(manager));
+        var clientId = Guid.NewGuid();
+        var otherTeam = Guid.NewGuid();
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.ListForClientAsync(clientId, otherTeam));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.AddForClientAsync(clientId, otherTeam, CoordinatorId, new AddClientEmailRequest { Pattern = "alnoor.com" }));
+
+        var added = await service.AddForClientAsync(clientId, null, CoordinatorId, new AddClientEmailRequest { Pattern = "buyer@alnoor.com" });
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.RemoveForClientAsync(Guid.NewGuid(), added.Id, manager.Id));
+        await service.RemoveForClientAsync(clientId, added.Id, manager.Id);
+        Assert.Empty(await service.ListForClientAsync(clientId, manager.Id));
+    }
+
+    [Fact]
+    public async Task ConfirmingAMaybeNeedsItsSenderToBelongToAClient()
+    {
+        var clientId = Guid.NewGuid();
+        var maybe = InspectionRequest.CreateFromEmail(ManagerId, CoordinatorId, Email(), triage: RequestTriage.Maybe);
+        var stranger = new FakeSenders();
+        var service = new InspectionRequestService(new FakeRepository(maybe), null!, senderRules: stranger);
+
+        var refused = await Assert.ThrowsAsync<AuthException>(() => service.ConfirmAsync(maybe.Id, CoordinatorId, "coordinator"));
+        Assert.Equal(409, refused.StatusCode);
+        Assert.Equal(RequestTriage.Maybe, maybe.Triage);
+
+        var known = new FakeSenders(new SenderRule(ClientMailRule.ForKnownAddress(ManagerId, "buyer@alnoor.com", clientId), "Al Noor"));
+        service = new InspectionRequestService(new FakeRepository(maybe), null!, senderRules: known);
+
+        var confirmed = await service.ConfirmAsync(maybe.Id, CoordinatorId, "coordinator");
+
+        Assert.Equal(RequestTriage.Request, confirmed.Triage);
+        Assert.Equal(clientId, confirmed.ClientId);
+        Assert.Equal("Al Noor", confirmed.ClientName);
+    }
+
+    private sealed class FakeSenders(params SenderRule[] rules) : IEmailSyncRepository
+    {
+        public Task<IReadOnlyList<CoordinatorEmailConfig>> ListActiveConfigsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<CoordinatorEmailConfig>>([]);
+
+        public Task<IReadOnlyList<SenderRule>> ListSenderRulesAsync(Guid managerId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<SenderRule>>(rules);
+
+        public Task<bool> SaveRequestIfNewAsync(InspectionRequest request, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task SaveSyncCursorAsync(Guid coordinatorId, string uidValidity, long lastUid, DateTimeOffset syncFromUtc, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<int> CountUntouchedEmailRequestsAsync(DateTimeOffset createdBefore, Guid? managerId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<int> DeleteUntouchedEmailRequestsAsync(DateTimeOffset createdBefore, Guid? managerId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<int> DeleteExpiredMaybeRequestsAsync(DateTimeOffset createdBefore, CancellationToken cancellationToken = default) => Task.FromResult(0);
+    }
+
     private static IncomingEmail Email() => new(
         "42", 1, "Kindly quote for our air receivers.", null, "buyer@alnoor.com", "Al Noor", "Quote request",
         [], [], [], [], [], "<id@alnoor.com>", null, null, DateTimeOffset.UtcNow.AddMinutes(-5));
@@ -303,6 +408,19 @@ public sealed class MailTriageTests
 
         public Task<Guid?> GetClientManagerIdAsync(Guid clientId, CancellationToken cancellationToken = default) =>
             Task.FromResult(ClientManagerId);
+
+        public string? ClientName { get; set; }
+        public List<InspectionRequest> Waiting { get; } = [];
+
+        public Task<string?> GetClientNameAsync(Guid clientId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(ClientName);
+
+        public Task<int> PromoteMaybesAsync(ClientMailRule rule, string clientName, CancellationToken cancellationToken = default)
+        {
+            var matching = Waiting.Where(request => rule.Matches(request.EmailFrom)).ToList();
+            foreach (var request in matching) request.AdoptClient(rule.ClientId!.Value, clientName);
+            return Task.FromResult(matching.Count);
+        }
 
         public Task AddAsync(ClientMailRule rule, CancellationToken cancellationToken = default)
         {

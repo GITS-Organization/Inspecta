@@ -16,11 +16,23 @@ public sealed record CreateClientMailRuleRequest
     public Guid? ManagerId { get; init; }
 }
 
-/// <summary>A configured client sender of a team.</summary>
+/// <summary>Adds an email address or domain to one client.</summary>
+public sealed record AddClientEmailRequest
+{
+    /// <summary>An address (<c>buyer@alnoor.com</c>) or a whole domain (<c>alnoor.com</c>).</summary>
+    [Required, MaxLength(320)]
+    public required string Pattern { get; init; }
+}
+
+/// <summary>
+/// A configured client sender of a team. <c>PromotedRequests</c> is how many waiting "maybe" emails from this sender
+/// became real requests of the client when the sender was added.
+/// </summary>
 public sealed record ClientMailRuleResponse(
     Guid Id,
     Guid ManagerId,
     string Pattern,
     bool IsDomain,
     Guid? ClientId,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    int PromotedRequests = 0);

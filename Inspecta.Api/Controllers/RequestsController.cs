@@ -55,6 +55,10 @@ public sealed class RequestsController(IInspectionRequestService requestService,
     }
 
     /// <summary>Turn a maybe email into a real request. Owning coordinator only.</summary>
+    /// <remarks>
+    /// The sender must already belong to a client (an address added with <c>POST /clients/{clientId}/emails</c>, or the email of one of the client's contacts); the request is then attached to that client.
+    /// Otherwise the answer is <c>409</c> with code <c>client_required</c>. Adding the sender to the client moves its waiting maybe emails by itself, so this call is rarely needed.
+    /// </remarks>
     [HttpPost("{requestId:guid}/confirm")]
     [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]

@@ -210,6 +210,17 @@ public sealed class InspectionRequest
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
+    /// <summary>Turns a "maybe" email into a real request of a client whose sender has just been registered.</summary>
+    public void AdoptClient(Guid clientId, string clientName)
+    {
+        if (clientId == Guid.Empty) throw new ArgumentException("Client is required.", nameof(clientId));
+        if (string.IsNullOrWhiteSpace(clientName)) throw new ArgumentException("Client name is required.", nameof(clientName));
+
+        Confirm();
+        ClientId = clientId;
+        ClientName = clientName.Trim();
+    }
+
     public void SetClient(Guid clientId)
     {
         if (clientId == Guid.Empty) throw new ArgumentException("Client is required.", nameof(clientId));

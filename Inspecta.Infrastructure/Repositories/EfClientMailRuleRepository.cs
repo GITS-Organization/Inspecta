@@ -1,5 +1,6 @@
 using Inspecta.Application.Interfaces;
 using Inspecta.Domain.Entities;
+using Inspecta.Domain.Enums;
 using Inspecta.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,6 +26,26 @@ public sealed class EfClientMailRuleRepository(InspectaDbContext dbContext) : IC
             .Where(client => client.Id == clientId && client.ArchivedAt == null)
             .Select(client => client.ManagerId)
             .SingleOrDefaultAsync(cancellationToken);
+
+    public Task<string?> GetClientNameAsync(Guid clientId, CancellationToken cancellationToken = default) =>
+        dbContext.Clients.IgnoreQueryFilters()
+            .Where(client => client.Id == clientId && client.ArchivedAt == null)
+            .Select(client => client.Name)
+            .SingleOrDefaultAsync(cancellationToken);
+
+    public async Task<int> PromoteMaybesAsync(ClientMailRule rule, string clientName, CancellationToken cancellationToken = default)
+    {
+        if (rule.ClientId is not Guid clientId) return 0;
+
+        var waiting = await dbContext.Requests.IgnoreQueryFilters()
+            .Where(request => request.ManagerId == rule.ManagerId && request.Triage == RequestTriage.Maybe && request.EmailFrom != null)
+            .ToListAsync(cancellationToken);
+        var matching = waiting.Where(request => rule.Matches(request.EmailFrom)).ToList();
+        foreach (var request in matching) request.AdoptClient(clientId, clientName);
+
+        if (matching.Count > 0) await dbContext.SaveChangesAsync(cancellationToken);
+        return matching.Count;
+    }
 
     public async Task AddAsync(ClientMailRule rule, CancellationToken cancellationToken = default)
     {

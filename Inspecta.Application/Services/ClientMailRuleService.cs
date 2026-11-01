@@ -37,7 +37,61 @@ public sealed class ClientMailRuleService(
             throw new InvalidOperationException("This sender is already configured.");
 
         await ruleRepository.AddAsync(rule, cancellationToken);
-        return Map(rule);
+
+        // Mail from this sender that was waiting as a "maybe" now belongs to the client: it becomes a real request.
+        var promoted = 0;
+        if (rule.ClientId is Guid linkedClient &&
+            await ruleRepository.GetClientNameAsync(linkedClient, cancellationToken) is { } clientName)
+            promoted = await ruleRepository.PromoteMaybesAsync(rule, clientName, cancellationToken);
+        return Map(rule) with { PromotedRequests = promoted };
+    }
+
+    public async Task<IReadOnlyList<ClientMailRuleResponse>> ListForClientAsync(
+        Guid clientId,
+        Guid? tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureClientAsync(clientId, tenantId, cancellationToken);
+        return (await ruleRepository.ListAsync(tenantId, cancellationToken))
+            .Where(rule => rule.ClientId == clientId)
+            .OrderBy(rule => rule.Pattern, StringComparer.Ordinal)
+            .Select(Map)
+            .ToArray();
+    }
+
+    public async Task<ClientMailRuleResponse> AddForClientAsync(
+        Guid clientId,
+        Guid? tenantId,
+        Guid actorId,
+        AddClientEmailRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var managerId = await EnsureClientAsync(clientId, tenantId, cancellationToken);
+        return await CreateAsync(
+            managerId, actorId, new CreateClientMailRuleRequest { Pattern = request.Pattern, ClientId = clientId }, cancellationToken);
+    }
+
+    public async Task RemoveForClientAsync(
+        Guid clientId,
+        Guid ruleId,
+        Guid? tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureClientAsync(clientId, tenantId, cancellationToken);
+        var rule = await ruleRepository.GetByIdAsync(ruleId, cancellationToken);
+        if (rule is null || rule.ClientId != clientId)
+            throw new KeyNotFoundException("Mail rule was not found.");
+        await ruleRepository.DeleteAsync(rule, cancellationToken);
+    }
+
+    /// <summary>The team of the client; a caller that belongs to a team (not Admin) can only reach their own team's clients.</summary>
+    private async Task<Guid> EnsureClientAsync(Guid clientId, Guid? tenantId, CancellationToken cancellationToken)
+    {
+        var managerId = await ruleRepository.GetClientManagerIdAsync(clientId, cancellationToken)
+            ?? throw new KeyNotFoundException("Client was not found.");
+        if (tenantId is Guid tenant && tenant != managerId)
+            throw new KeyNotFoundException("Client was not found.");
+        return managerId;
     }
 
     public async Task DeleteAsync(Guid ruleId, CancellationToken cancellationToken = default)

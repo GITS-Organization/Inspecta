@@ -47,11 +47,33 @@ public sealed class EfEmailSyncRepository(InspectaDbContext dbContext) : IEmailS
                 .Where(client => clientIds.Contains(client.Id) && client.ManagerId == managerId && client.ArchivedAt == null)
                 .ToDictionaryAsync(client => client.Id, client => client.Name, cancellationToken);
 
-        return rules
+        var senders = rules
             .Select(rule => new SenderRule(
                 rule,
                 rule.ClientId is Guid clientId && clientNames.TryGetValue(clientId, out var name) ? name : null))
-            .ToArray();
+            .ToList();
+
+        // A contact's email or the certificates email of a client is a sender of that client too, even if nobody
+        // listed it as a rule. They come after the explicit rules, so a rule always wins.
+        var clients = await dbContext.Clients.IgnoreQueryFilters().AsNoTracking()
+            .Include(client => client.Contacts)
+            .Where(client => client.ManagerId == managerId && client.ArchivedAt == null)
+            .ToListAsync(cancellationToken);
+        var known = senders.Select(sender => sender.Rule.Pattern).ToHashSet(StringComparer.Ordinal);
+        foreach (var client in clients)
+        {
+            var addresses = client.Contacts.Select(contact => contact.Email).Append(client.CertificatesEmail);
+            foreach (var address in addresses)
+            {
+                if (string.IsNullOrWhiteSpace(address)) continue;
+                ClientMailRule implied;
+                try { implied = ClientMailRule.ForKnownAddress(managerId, address, client.Id); }
+                catch (ArgumentException) { continue; }
+                if (known.Add(implied.Pattern)) senders.Add(new SenderRule(implied, client.Name));
+            }
+        }
+
+        return senders;
     }
 
     public Task SaveSyncCursorAsync(

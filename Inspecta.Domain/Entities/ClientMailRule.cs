@@ -40,6 +40,29 @@ public sealed class ClientMailRule
         };
     }
 
+    /// <summary>
+    /// A sender the client record already knows (a contact's email, the certificates email). It is not stored: the
+    /// import builds it on the fly, so it never shows in the rule list and an explicit rule always wins.
+    /// </summary>
+    public static ClientMailRule ForKnownAddress(Guid managerId, string address, Guid clientId)
+    {
+        if (managerId == Guid.Empty) throw new ArgumentException("Manager is required.", nameof(managerId));
+        if (clientId == Guid.Empty) throw new ArgumentException("Client is required.", nameof(clientId));
+        var pattern = NormalizePattern(address);
+        if (!pattern.Contains('@', StringComparison.Ordinal))
+            throw new ArgumentException("An email address is required.", nameof(address));
+
+        return new ClientMailRule
+        {
+            Id = Guid.NewGuid(),
+            ManagerId = managerId,
+            Pattern = pattern,
+            ClientId = clientId,
+            CreatedById = Guid.Empty,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+    }
+
     /// <summary>Lower-cases the pattern and accepts <c>name@host.com</c>, <c>@host.com</c> or <c>host.com</c>.</summary>
     public static string NormalizePattern(string? pattern)
     {

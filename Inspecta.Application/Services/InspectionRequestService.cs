@@ -9,7 +9,8 @@ namespace Inspecta.Application.Services;
 public sealed class InspectionRequestService(
     IRequestRepository requestRepository,
     IUserRepository userRepository,
-    IRequestEquipmentRegistrar? equipmentRegistrar = null) : IInspectionRequestService
+    IRequestEquipmentRegistrar? equipmentRegistrar = null,
+    IEmailSyncRepository? senderRules = null) : IInspectionRequestService
 {
     public async Task<RequestResponse> CreateAsync(
         CreateInspectionRequest request,
@@ -123,7 +124,27 @@ public sealed class InspectionRequestService(
     public async Task<RequestResponse> ConfirmAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
     {
         var request = await LoadForEditAsync(requestId, actorId, role, cancellationToken);
-        request.Confirm();
+        if (senderRules is not null && request.Triage == RequestTriage.Maybe)
+        {
+            // A maybe becomes a request once its sender belongs to a client: register the sender (or a contact email)
+            // under the client first, then the request takes that client.
+            var senders = request.ManagerId is Guid managerId
+                ? await senderRules.ListSenderRulesAsync(managerId, cancellationToken)
+                : [];
+            var match = ClientMailRule.FindMatch(senders.Select(item => item.Rule), request.EmailFrom);
+            var sender = match is null ? null : senders.First(item => item.Rule.Id == match.Id);
+            if (sender?.Rule.ClientId is not Guid clientId || string.IsNullOrWhiteSpace(sender.ClientName))
+                throw new AuthException(
+                    "client_required",
+                    "This sender is not registered under a client yet. Add the sender's email to the client first (POST /clients/{clientId}/emails); the request then moves by itself.",
+                    409);
+            request.AdoptClient(clientId, sender.ClientName);
+        }
+        else
+        {
+            request.Confirm();
+        }
+
         await requestRepository.SaveAsync(request, cancellationToken);
         return RequestResponseMapper.Map(request);
     }

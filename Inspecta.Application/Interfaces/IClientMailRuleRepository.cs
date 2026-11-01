@@ -8,6 +8,14 @@ public interface IClientMailRuleRepository
     Task<ClientMailRule?> GetByIdAsync(Guid ruleId, CancellationToken cancellationToken = default);
     Task<bool> ExistsAsync(Guid managerId, string pattern, CancellationToken cancellationToken = default);
     Task<Guid?> GetClientManagerIdAsync(Guid clientId, CancellationToken cancellationToken = default);
+    Task<string?> GetClientNameAsync(Guid clientId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Turns the waiting "maybe" emails of the team that come from <paramref name="rule"/>'s sender into requests of the
+    /// client. Returns how many were turned.
+    /// </summary>
+    Task<int> PromoteMaybesAsync(ClientMailRule rule, string clientName, CancellationToken cancellationToken = default);
+
     Task AddAsync(ClientMailRule rule, CancellationToken cancellationToken = default);
     Task DeleteAsync(ClientMailRule rule, CancellationToken cancellationToken = default);
 }

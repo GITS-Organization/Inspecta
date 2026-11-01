@@ -36,7 +36,7 @@ public static class WorkflowDocs
         [Key<RequestsController>(nameof(RequestsController.Confirm))] = new(2, "Step 2 · Confirm a maybe email",
             """
             **When:** an email in the maybe tab is really a request.
-            **How:** no body. The email becomes a normal request. A maybe nobody confirms is deleted after a week; delete one yourself with `DELETE /requests/{requestId}`.
+            **How:** the normal way is to register the sender under a client: `POST /clients/{clientId}/emails` with `{ "pattern": "buyer@alnoor.com" }` (or a domain). Every waiting maybe from that sender becomes a request of the client by itself (`promotedRequests` says how many). `POST /requests/{requestId}/confirm` (no body) does the same for one email, but only when its sender already belongs to a client: otherwise it answers `409 client_required`. The emails of the client's contacts and its certificates email are recognised too. A maybe nobody handles is deleted after a week; delete one yourself with `DELETE /requests/{requestId}`.
             """),
         [Key<RequestsController>(nameof(RequestsController.GetById))] = new(3, "Step 3 · Open a request",
             """
