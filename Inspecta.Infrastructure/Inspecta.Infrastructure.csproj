@@ -19,6 +19,7 @@
     <PackageReference Include="QuestPDF" Version="2026.8.0" />
     <EmbeddedResource Include="Pdf\Assets\*.png" />
     <EmbeddedResource Include="Pdf\Fonts\*.ttf" />
+    <EmbeddedResource Include="Services\qr-logo.rgb" />
     <ProjectReference Include="..\Inspecta.Application\Inspecta.Application.csproj" />
     <ProjectReference Include="..\Inspecta.Domain\Inspecta.Domain.csproj" />
   </ItemGroup>
