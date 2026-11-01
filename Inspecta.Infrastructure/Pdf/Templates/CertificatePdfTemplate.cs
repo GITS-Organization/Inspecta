@@ -53,14 +53,42 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
             page.Size(PageSizes.A4);
             page.Margin(20);
             page.DefaultTextStyle(style => style.FontFamily(PdfTheme.FontFamily).FontSize(8.4f).FontColor(Ink));
-            // The frame around every page.
-            page.Background().Border(1).BorderColor(Ink);
+            // The frame, the faded logo and the bands of the company colours on every page.
+            page.Background().Element(ComposeBackground);
             page.Header().PaddingHorizontal(10).PaddingTop(8).Element(container => ComposeHeader(container, model));
             page.Content().PaddingHorizontal(10).PaddingVertical(4).Element(container => ComposeBody(container, model));
             page.Footer().PaddingHorizontal(10).PaddingBottom(6).Element(container => ComposeFooter(container, model));
             if (model.IsDraft)
                 page.Foreground().AlignCenter().AlignMiddle().Rotate(-35)
                     .Text("DRAFT").FontSize(110).Bold().FontColor(Color.FromRGB(190, 197, 210).WithAlpha(90));
+        });
+
+    // ---- Page background (on every page) ------------------------------------------------------------------------
+
+    private static readonly Color BandBlue = Color.FromRGB(24, 72, 150);
+    private static readonly Color BandGreen = Color.FromRGB(52, 160, 70);
+    private const float BandHeight = 14;
+
+    // One logo in the middle, faded by a nearly opaque white layer over it (the image is stored once in the file), and a band
+    // at the top and the bottom of the page. All of it is behind the text, so nothing printed on the certificate is touched.
+    private static void ComposeBackground(IContainer container) =>
+        container.Layers(layers =>
+        {
+            layers.Layer().AlignCenter().AlignMiddle().Width(360).Image(PdfAssets.CertificateLogo).FitWidth();
+            layers.Layer().Background(Colors.White.WithAlpha(232));
+
+            layers.Layer().Unconstrained().Width(PageSizes.A4.Width).Height(BandHeight).Row(row =>
+            {
+                row.RelativeItem(72).Background(BandBlue);
+                row.RelativeItem(28).Background(BandGreen);
+            });
+            layers.Layer().Unconstrained().TranslateY(PageSizes.A4.Height - BandHeight).Width(PageSizes.A4.Width).Height(BandHeight).Row(row =>
+            {
+                row.RelativeItem(28).Background(BandGreen);
+                row.RelativeItem(72).Background(BandBlue);
+            });
+
+            layers.PrimaryLayer().Border(1).BorderColor(Ink);
         });
 
     // ---- Header and footer (on every page) ----------------------------------------------------------------------
@@ -159,8 +187,9 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.ConstantColumn(130);
+                // The same grid as the tables below: a label column of a quarter, so every vertical line of the page lines up.
                 columns.RelativeColumn();
+                columns.RelativeColumn(3);
             });
             foreach (var (label, value) in new[]
                      {
@@ -266,8 +295,8 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
     private static void ComposeGeneralNotes(IContainer container) =>
         container.Row(row =>
         {
-            row.ConstantItem(105).Element(Cell).AlignMiddle().AlignCenter().Text("General Notes and Recommendations").AlignCenter();
-            row.RelativeItem().Element(Cell).Column(column =>
+            row.RelativeItem(1).Element(Cell).AlignMiddle().AlignCenter().Text("General Notes and Recommendations").AlignCenter();
+            row.RelativeItem(3).Element(Cell).Column(column =>
             {
                 foreach (var note in GeneralNotes)
                     column.Item().Row(line =>
@@ -283,10 +312,10 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.RelativeColumn(3.1f);
-                columns.RelativeColumn(3.8f);
-                columns.RelativeColumn(2.4f);
-                columns.RelativeColumn(1.9f);
+                columns.RelativeColumn();
+                columns.RelativeColumn();
+                columns.RelativeColumn();
+                columns.RelativeColumn();
             });
             Head(table, "Name & Qualifications of person making this report");
             Head(table, "Name of person signing or authenticating this report on behalf of the author");
@@ -297,7 +326,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
             {
                 column.Item().AlignCenter().Text(model.PreparedByName ?? "—").Bold();
                 if (!string.IsNullOrWhiteSpace(model.PreparedByQualifications))
-                    column.Item().AlignCenter().Text(model.PreparedByQualifications).FontSize(7.4f);
+                    column.Item().AlignCenter().Text(model.PreparedByQualifications).FontSize(6.2f);
             });
             table.Cell().Element(Cell).Height(54).Column(column =>
             {

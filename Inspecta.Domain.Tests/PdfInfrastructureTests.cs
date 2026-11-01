@@ -106,6 +106,27 @@ public sealed class PdfInfrastructureTests
         Assert.Contains(nameof(UnknownModel), exception.Message, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ACertificateWithItsBackgroundStaysSmall(bool draft)
+    {
+        using var provider = BuildProvider();
+        var model = new CertificatePdfModel(
+            draft ? null : "CERT-2026-0001", DateTimeOffset.UtcNow, draft, "Delta Steel Co.", "10th of Ramadan", "Ahmed",
+            null, null, null, new DateOnly(2026, 10, 26), new DateOnly(2027, 10, 25), "Forklift Truck", ["ISO 2330"], "Visual",
+            "Satisfactory", [new CertificatePdfField("Serial Number", "FK-100")],
+            new CertificatePdfQuestionnaire(true, true, false, true, true, false, "NONE", false, false, null, "N/A", "NONE", null),
+            [new CertificatePdfSection("Brakes", [new CertificatePdfRow("Service brake", "Yes", null)])],
+            "Karim", "Lifts", "Mona", null, "https://example.com/verify/ABCD");
+
+        var file = provider.GetRequiredService<IPdfGenerator>().Generate(model);
+
+        // The faded logo is one image stored once: the file must not grow with it (a repeated logo made it 2 MB).
+        Assert.Equal("%PDF-", Encoding.ASCII.GetString(file.Content, 0, 5));
+        Assert.InRange(file.Content.Length, 10_000, 600_000);
+    }
+
     [Fact]
     public void RenderingFailuresAreWrappedAndTheOriginalErrorIsKept()
     {
