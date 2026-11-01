@@ -3,11 +3,14 @@ using Inspecta.Domain.Entities;
 using Inspecta.Domain.Enums;
 using Inspecta.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace Inspecta.Infrastructure.Repositories;
 
-public sealed class EfEmailSyncRepository(InspectaDbContext dbContext) : IEmailSyncRepository
+public sealed class EfEmailSyncRepository(
+    InspectaDbContext dbContext,
+    ILogger<EfEmailSyncRepository>? logger = null) : IEmailSyncRepository
 {
     private const string SourceUidIndexName =
         "IX_RequestEmails_CoordinatorId_MailboxUidValidity_MailboxUid";
@@ -55,35 +58,98 @@ public sealed class EfEmailSyncRepository(InspectaDbContext dbContext) : IEmailS
 
         // A contact's email or the certificates email of a client is a sender of that client too, even if nobody
         // listed it as a rule. They come after the explicit rules, so a rule always wins.
-        IReadOnlyList<Client> clients;
         try
         {
-            clients = await dbContext.Clients.IgnoreQueryFilters().AsNoTracking()
-                .Include(client => client.Contacts)
+            // Plain projections (no entity graph): the same two small queries on every cycle.
+            var clients = await dbContext.Clients.IgnoreQueryFilters().AsNoTracking()
                 .Where(client => client.ManagerId == managerId && client.ArchivedAt == null)
+                .Select(client => new { client.Id, client.Name, client.Location, client.CertificatesEmail })
                 .ToListAsync(cancellationToken);
+            var ids = clients.Select(client => client.Id).ToList();
+            var contacts = ids.Count == 0
+                ? []
+                : await dbContext.ClientContacts.IgnoreQueryFilters().AsNoTracking()
+                    .Where(contact => ids.Contains(contact.ClientId) && contact.Email != null)
+                    .Select(contact => new { contact.ClientId, contact.Email })
+                    .ToListAsync(cancellationToken);
+
+            var known = senders.Select(sender => sender.Rule.Pattern).ToHashSet(StringComparer.Ordinal);
+            foreach (var client in clients)
+            {
+                var addresses = contacts.Where(contact => contact.ClientId == client.Id).Select(contact => contact.Email).Append(client.CertificatesEmail);
+                foreach (var address in addresses)
+                {
+                    if (string.IsNullOrWhiteSpace(address)) continue;
+                    ClientMailRule implied;
+                    try { implied = ClientMailRule.ForKnownAddress(managerId, address, client.Id); }
+                    catch (ArgumentException) { continue; }
+                    if (known.Add(implied.Pattern)) senders.Add(new SenderRule(implied, client.Name, client.Location));
+                }
+            }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             // Only an extra: the registered senders keep working if the clients cannot be read.
-            return senders;
-        }
-
-        var known = senders.Select(sender => sender.Rule.Pattern).ToHashSet(StringComparer.Ordinal);
-        foreach (var client in clients)
-        {
-            var addresses = client.Contacts.Select(contact => contact.Email).Append(client.CertificatesEmail);
-            foreach (var address in addresses)
-            {
-                if (string.IsNullOrWhiteSpace(address)) continue;
-                ClientMailRule implied;
-                try { implied = ClientMailRule.ForKnownAddress(managerId, address, client.Id); }
-                catch (ArgumentException) { continue; }
-                if (known.Add(implied.Pattern)) senders.Add(new SenderRule(implied, client.Name, client.Location));
-            }
+            logger?.LogWarning(exception, "Could not read the client emails of team {ManagerId}; using the registered senders only.", managerId);
         }
 
         return senders;
+    }
+
+    public async Task<int> PromoteMatchingMaybesAsync(
+        Guid managerId,
+        IReadOnlyList<SenderRule> senders,
+        Func<InspectionRequest, Task<IReadOnlyList<RequestItem>>>? autofill = null,
+        CancellationToken cancellationToken = default)
+    {
+        var known = senders.Where(sender => sender.Rule.ClientId is not null && !string.IsNullOrWhiteSpace(sender.ClientName)).ToList();
+        if (known.Count == 0) return 0;
+
+        // First only who wrote each waiting email (the bodies can be large), then load the ones that belong to a client.
+        var waiting = await dbContext.Requests.IgnoreQueryFilters().AsNoTracking()
+            .Where(request => request.ManagerId == managerId && request.Triage == RequestTriage.Maybe && request.EmailFrom != null)
+            .Select(request => new { request.Id, request.EmailFrom })
+            .ToListAsync(cancellationToken);
+        var rules = known.Select(sender => sender.Rule).ToList();
+        var matches = waiting
+            .Select(request => (request.Id, Rule: ClientMailRule.FindMatch(rules, request.EmailFrom)))
+            .Where(match => match.Rule is not null)
+            .ToList();
+        if (matches.Count == 0) return 0;
+
+        var ids = matches.Select(match => match.Id).ToList();
+        var requests = await dbContext.Requests.IgnoreQueryFilters()
+            .Include(request => request.Email)
+            .Include(request => request.Items)
+            .Where(request => ids.Contains(request.Id))
+            .ToListAsync(cancellationToken);
+        foreach (var request in requests)
+        {
+            var rule = matches.First(match => match.Id == request.Id).Rule!;
+            var sender = known.First(item => item.Rule.Id == rule.Id);
+            request.AdoptClient(rule.ClientId!.Value, sender.ClientName!, sender.ClientLocation);
+            if (autofill is null) continue;
+            try
+            {
+                // New items carry their own ids, so they are added explicitly.
+                dbContext.RequestItems.AddRange(await autofill(request));
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                logger?.LogWarning(exception, "Could not read the machines of request {RequestId}; moved without them.", request.Id);
+            }
+        }
+
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        finally
+        {
+            dbContext.ChangeTracker.Clear();
+        }
+
+        return requests.Count;
     }
 
     public Task SaveSyncCursorAsync(

@@ -79,6 +79,10 @@ public sealed class EmailBacklogTests
         public Task<bool> SaveRequestIfNewAsync(InspectionRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(true);
 
+        public Task<int> PromoteMatchingMaybesAsync(
+            Guid managerId, IReadOnlyList<SenderRule> senders, Func<InspectionRequest, Task<IReadOnlyList<RequestItem>>>? autofill = null,
+            CancellationToken cancellationToken = default) => Task.FromResult(0);
+
         public Task SaveSyncCursorAsync(Guid coordinatorId, string uidValidity, long lastUid, DateTimeOffset syncFromUtc, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
 

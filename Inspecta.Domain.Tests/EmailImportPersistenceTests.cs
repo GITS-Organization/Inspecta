@@ -76,5 +76,35 @@ public sealed class EmailImportPersistenceTests : IDisposable
         if (known) Assert.Equal(4, saved.Items.Single().Quantity);
     }
 
+    [Fact]
+    public async Task WaitingMaybesOfASenderTheClientNowOwnsAreMovedOnTheNextCycle()
+    {
+        await using var db = Background();
+        var fromCertificatesEmail = InspectionRequest.CreateFromEmail(
+            manager.Id, coordinator.Id, Email("certs@alnoor.com", "Please inspect 3 air receivers.", 1), triage: RequestTriage.Maybe);
+        var fromContact = InspectionRequest.CreateFromEmail(
+            manager.Id, coordinator.Id, Email("MOHAMMED@alnoor.com", "Hello", 2), triage: RequestTriage.Maybe);
+        var stranger = InspectionRequest.CreateFromEmail(
+            manager.Id, coordinator.Id, Email("stranger@elsewhere.com", "Hello", 3), triage: RequestTriage.Maybe);
+        var repository = new EfEmailSyncRepository(db);
+        foreach (var request in new[] { fromCertificatesEmail, fromContact, stranger })
+            Assert.True(await repository.SaveRequestIfNewAsync(request));
+
+        var senders = await repository.ListSenderRulesAsync(manager.Id);
+        var moved = await repository.PromoteMatchingMaybesAsync(
+            manager.Id, senders, request => new MachineSuggestionService(new EfEquipmentCatalog(db)).AutofillAsync(request, request.Email?.TextBody, request.Email?.HtmlBody));
+
+        Assert.Equal(2, moved);
+        await using var check = Background();
+        var saved = await check.Requests.IgnoreQueryFilters().Include(item => item.Items).ToDictionaryAsync(item => item.Id);
+        Assert.Equal(RequestTriage.Request, saved[fromCertificatesEmail.Id].Triage);
+        Assert.Equal(client.Id, saved[fromCertificatesEmail.Id].ClientId);
+        Assert.Equal("Borg El Arab", saved[fromCertificatesEmail.Id].Location);
+        Assert.Equal(3, Assert.Single(saved[fromCertificatesEmail.Id].Items).Quantity);
+        Assert.Equal(RequestTriage.Request, saved[fromContact.Id].Triage);
+        Assert.Equal(RequestTriage.Maybe, saved[stranger.Id].Triage);
+        Assert.Equal(0, await repository.PromoteMatchingMaybesAsync(manager.Id, senders));
+    }
+
     public void Dispose() => connection.Dispose();
 }

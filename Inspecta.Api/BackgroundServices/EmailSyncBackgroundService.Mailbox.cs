@@ -56,6 +56,21 @@ public sealed partial class EmailSyncBackgroundService
             }
 
             var rules = await repository.ListSenderRulesAsync(config.TenantId, cancellationToken);
+            try
+            {
+                var promoted = await repository.PromoteMatchingMaybesAsync(
+                    config.TenantId,
+                    rules,
+                    request => machineSuggestions.AutofillAsync(request, request.Email?.TextBody, request.Email?.HtmlBody, cancellationToken),
+                    cancellationToken);
+                if (promoted > 0)
+                    logger.LogInformation("Moved {Count} waiting maybe emails of team {ManagerId} to requests of their clients.", promoted, config.TenantId);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                logger.LogWarning(exception, "Could not re-check the waiting maybe emails of team {ManagerId}.", config.TenantId);
+            }
+
             var newUids = (await inbox.SearchAsync(
                     SearchQuery.Uids(new UniqueIdRange(new UniqueId((uint)(cursor + 1)), UniqueId.MaxValue)),
                     cancellationToken))
@@ -86,6 +101,9 @@ public sealed partial class EmailSyncBackgroundService
                             clientName: clientName,
                             location: clientName is null ? null : sender!.ClientLocation);
                         var request = NewRequest();
+                        logger.LogInformation(
+                            "Message UID {Uid} from {Sender} for coordinator {CoordinatorId}: {Triage} ({Rules} senders known to team {ManagerId}, matched {Pattern}, client {Client}).",
+                            uid.Id, incoming.FromAddress, config.CoordinatorId, request.Triage, rules.Count, config.TenantId, rule?.Pattern ?? "none", clientName ?? "none");
 
                         // The machines the email names (of the known client) go on the request. Reading is a help only:
                         // whatever goes wrong here, the request is still imported.
