@@ -261,31 +261,7 @@ public static class WorkflowDocs
             """),
     };
 
-    internal static string QueueDescription =>
-        """
-        Where an accepted quotation goes next. **One list endpoint, `GET /quotation-queue?status=...`**, returns them by queue; each row carries `queue` (`unassigned`, `assigned` or `certify`) and `requestStatus`.
-
-        | `status` | Meaning | Who acts next |
-        |---|---|---|
-        | `unassigned` | Accepted, waiting for an inspector | Coordinator |
-        | `assigned` | Given to an inspector, inspection not finished | Inspector |
-        | `certify` | Inspection done, certificate on its way (all four below) | — |
-        | `review` | Every machine submitted | Technical manager |
-        | `returned` | Sent back to fix | Inspector |
-        | `approved` | Every certificate approved, with its QR code | Coordinator |
-        | `delivered` | Handed to the client | — |
-
-        1. **List** the queue you need. 2. **Pick an inspector** (`GET /inspectors`) and 3. **assign** the job (`POST /requests/{id}/assignment`). The coordinator that owns the quotation keeps full access and can hand the job to another inspector until the work starts.
-        The inspector sees only their own jobs, without prices, and can **change the inspection date** (4), nothing else.
-
-        **Inspector (steps 5-10):** 5. **start** the inspection; 6. see the **machines**; 7. **open** one (the form of that kind of machine); 8. **save** it as often as needed; 8. choose the **result** (satisfactory or unsatisfactory) for every machine; 9. **submit** it (this makes its QR); 10. see the **certificate PDF** (marked DRAFT, with the QR) at any time. When every machine is submitted the job goes to the technical manager (`to-review`).
-
-        **Technical manager (steps 10-14), always on the whole job:** 11. list the jobs **to review** (`GET /quotation-queue/to-review`); 10b. **preview all its certificates** with their QR codes in one ZIP (or 10. one at a time); then either 12. **approve the job**: every certificate, Satisfactory or Unsatisfactory, gets its number and final PDF, filed under the client, and the job goes to the coordinator (`status=approved`); or 14. **send the job back** to the inspector with a note and comments per machine: it shows for the inspector in `status=returned`, who fixes and submits everything again. Every comment stays in the job's `reviewHistory`.
-
-        **Coordinator (steps 15-18):** 15. the **QR code** of each certificate (printed on it once approved; scanning it opens the public check page with the certificate's PDF); 16. the **Deliver button** opens the **ready email** (to, cc, subject, text, the certificates to open, `canSend`); 17. download the **ZIP**, 17b. send a **test copy to myself**; 18. **Send to the client** (one click, an Undo in the app is a good idea), or 18b. mark it **delivered another way** with no email. Every certificate stays in the client's archive with its QR code (Configurations: the client's certificates).
-
-        Each machine's certificate status is `not_started`, `draft`, `submitted`, `returned`, `approved` or `delivered`.
-        """;
+    internal static string QueueDescription => "After acceptance: assign an inspector, inspect, review the certificates and deliver them to the client.";
 
     /// <summary>Admin-only client management, kept apart for testing.</summary>
     public const string TalabatTag = "talabat 3rfa";
@@ -347,16 +323,9 @@ public static class WorkflowDocs
             "**Who:** Admin only. **How:** `PUT /technical-managers/{managerId}/subscription` with the new status and the end date of the subscription."),
     };
 
-    internal static string CompanyDescription =>
-        """
-        Setting up a new customer, for the Admin: create the technical manager account **with its company** in one call (name, address, contacts, logo, accreditation marks, colours), then read or change the company profile later and manage the subscription.
-        The company identity is printed on the team's certificates, quotations and email signatures. A team without a profile uses the built-in identity of the first customer.
-        """;
+    internal static string CompanyDescription => "Admin: create a technical manager with its company, and manage its company profile and subscription.";
 
-    internal static string TalabatDescription =>
-        """
-        Admin-only shortcuts for managing clients of any team while testing: add (with the team's `managerId`), list, open, change, and archive or delete. Technical managers keep using the same actions for their own team under **Configurations**.
-        """;
+    internal static string TalabatDescription => "Admin shortcuts to manage the clients of any team, and the technical manager's overview dashboard.";
 
     /// <summary>The setup section: clients with their contacts and the items registered for each client.</summary>
     public const string ConfigTag = "Configurations";
@@ -407,16 +376,7 @@ public static class WorkflowDocs
             "**How:** `DELETE /equipment/{equipmentId}` archives the item; it can no longer be edited."),
     };
 
-    internal static string ConfigDescription =>
-        """
-        One-time setup of the data the workflow uses, in the order to do it. **Creating, updating and archiving clients and items is for Technical managers and Admin;** coordinators can list and open them (to pick a client in a request).
-
-        1. **Create a client** with its contacts and emails.
-        2. **Create the client's items** (equipment). Each item belongs to one client and carries its **standard of inspection**.
-        3. List, open and update clients and items as they change. Contacts are edited together with the client.
-
-        Clients and items are also registered automatically when a request is saved with a new client name or new machines, so this section is for entering them up front or correcting them later.
-        """;
+    internal static string ConfigDescription => "One-time setup: clients with their contacts, and the items registered for each client.";
 
     /// <summary>Sections that are not part of the main workflow; they are listed last and say so.</summary>
     internal static readonly IReadOnlyDictionary<string, string> LegacyTags = new Dictionary<string, string>
@@ -424,27 +384,7 @@ public static class WorkflowDocs
         ["QuotationDrafts"] = "**Legacy.** The older quotation-draft flow. It is not part of the main workflow: use **Requests & Quotations**."
     };
 
-    internal static string Description =>
-        """
-        The whole life of a request, in the order a coordinator uses it. Every endpoint below is titled with its step.
-
-        1. **List requests** (`GET /requests`): emails become requests or "maybe".
-        2. **Confirm** a maybe email.
-        3. **Open** the request.
-        4. **Fill the data** (client, location, machines) and open the quotation: `PUT /requests/{id}` with `prepareQuotation: true`.
-        5. **List my quotations** (`GET /quotations?stage=draft`) and pick one with `canEdit: true`.
-        6. **Open** the quotation, then 7. **price** every machine and save.
-        8. **Preview the PDF.**
-        9. **Send the offer**; the client then answers:
-           - 10. **Accept**: the PDF is emailed and the request is accepted.
-           - 11. **Counter offer**: new revision with the old prices, edit (7) and send (9) again.
-           - 12. **Reject**: closes the request; no email.
-
-        After acceptance the quotation continues in the **Quotation queue** section: unassigned, assigned to an inspector, then certification.
-
-        Amounts are in piastres (1 EGP = 100 piastres). Statuses and enums are lowercase snake_case in JSON.
-        Email requests can only be changed by the coordinator whose mailbox received them; managers and admins can read them.
-        """;
+    internal static string Description => "From email to quotation: list requests, fill them in, price the quotation, send it, then accept, counter or reject.";
 
     private static string Key<TController>(string action) => $"{typeof(TController).Name}.{action}";
 
