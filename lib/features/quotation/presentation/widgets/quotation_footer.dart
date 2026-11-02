@@ -61,14 +61,10 @@ class QuotationFooter extends StatelessWidget {
             totalText = '—';
           }
 
-          // A draft is the offer saved onto the request's quote, so it needs
-          // one.
+          // A draft is the offer saved onto the request's quote, which a
+          // reject has no use for.
           final canSaveDraft =
-              !state.isSubmitting &&
-              !state.isResolvingQuote &&
-              cubit.hasQuote &&
-              state.replyType != null &&
-              state.replyType != ReplyType.reject;
+              !state.isSubmitting && state.replyType != null && state.replyType != ReplyType.reject;
 
           return QuoteTotalBar(
             unitsLabel: unitsLabel,

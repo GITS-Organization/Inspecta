@@ -60,6 +60,8 @@ abstract interface class RequestsRepository {
   /// request belongs to when it has none yet (picked from the client list);
   /// without it the request's own is kept. Throws [RequestsFailure], and an
   /// [InvalidMachineFailure] when an item's machine isn't the client's.
+  /// With [prepareQuotation] the API also opens the request's quotation, ready
+  /// for the quotation screen.
   Future<void> completeIntake({
     required InspectionRequest request,
     required String clientName,
@@ -67,5 +69,6 @@ abstract interface class RequestsRepository {
     String? clientId,
     String? accessNotes,
     required List<RequestItem> items,
+    bool prepareQuotation = false,
   });
 }

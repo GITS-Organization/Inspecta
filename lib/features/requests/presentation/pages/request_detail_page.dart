@@ -10,10 +10,7 @@ import '../../../../core/shared/m_notice.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../quotation/presentation/bloc/quotation_form_cubit.dart';
 import '../../../quotation/presentation/pages/quotation_detail_page.dart';
-import '../../../quotation/presentation/widgets/quotation_footer.dart';
-import '../../../quotation/presentation/widgets/quotation_reply_card.dart';
 import '../../../clients/domain/usecases/get_client_machines.dart';
 import '../../domain/entities/inspection_request.dart';
 import '../../domain/entities/requests_failure.dart';
@@ -35,10 +32,12 @@ import '../widgets/status_chip.dart';
 /// the intake email and the equipment. While the request still lacks what a
 /// quote needs (BR-02.5), the screen is a form: the client, the location and
 /// the equipment as editable cards, filled from the email in one tap, with
-/// Save at the bottom. Once the request can be quoted and is still New/a draft,
-/// Feature 03's reply panel ("How do you want to reply?") closes the page and
-/// its Save draft / Send bar sits below; a request the client has countered
-/// keeps a "Reply to request" button that opens the quotation details instead.
+/// "Save & open quotation" at the bottom: one update that also opens the
+/// request's quotation (`prepareQuotation`) and goes to the quotation screen.
+/// Once the request can be quoted and is still New/a draft, the same button
+/// reads "Open quotation". The reply itself ("How do you want to reply?") is
+/// chosen only on the quotation screen, never here; a request the client has
+/// countered keeps a "Reply to request" button that opens it the same way.
 /// Once a quote has gone out (any [JobStatus] beyond
 /// `requestReceived`/`quoteDraft`), the request's story continues in
 /// Quotations (see `requests_tab.dart`), so this screen shows a read-only
@@ -69,16 +68,14 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
   /// can't be quoted yet, and again when "Edit details" is tapped.
   late bool _editing = request.isNew && !request.isQuotable;
 
-  /// Whether this request can receive a reply here — a first quote (it
-  /// hasn't been quoted yet, BR-02.5) or a new version after the client's
-  /// counter ("Send new price" on the quote detail) — and has enough data
-  /// to quote.
+  /// Whether this request can receive a reply — a first quote (it hasn't been
+  /// quoted yet, BR-02.5) or a new version after the client's counter ("Send
+  /// new price" on the quote detail) — and has enough data to quote.
   bool get _quotable => request.isQuotable;
 
-  /// A request that is still new gets its reply form on this screen, at the
-  /// end of the page; one the client has countered keeps the button that
-  /// opens the quotation.
-  bool get _inlineReply => _quotable && request.isNew && !_editing;
+  /// A request that is still new opens its quotation from this screen; one the
+  /// client has countered keeps the button that opens the quotation details.
+  bool get _canOpenQuotation => _quotable && request.isNew && !_editing;
 
   /// A new request of a known client can be filled from its email: the
   /// client's machines it asks about are suggested.
@@ -90,17 +87,34 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
     super.dispose();
   }
 
-  Future<void> _save() async {
+  /// Saves the details and opens the request's quotation in one update, then
+  /// shows the quotation screen. A quotation that is already open, with
+  /// nothing edited, is shown as it is: the update would only race the changes
+  /// the quotation screen has made since.
+  Future<void> _openQuotation() async {
     final t = AppLocalizations.of(context)!;
     try {
-      final saved = await _intake.save();
-      if (saved == null || !mounted) return;
-      final stillEditing = saved.isNew && !saved.isQuotable;
-      setState(() {
-        request = saved;
-        _editing = stillEditing;
-      });
-      if (!stillEditing) MToast.showSuccess(message: t.requestDetailsSaved);
+      var ready = request;
+      if (_editing || request.draftQuoteId == null) {
+        final saved = await _intake.save(prepareQuotation: true);
+        if (saved == null || !mounted) return;
+        final stillEditing = saved.isNew && !saved.isQuotable;
+        setState(() {
+          request = saved;
+          _editing = stillEditing;
+        });
+        // The API still wants something: the form stays open.
+        if (stillEditing) return;
+        ready = saved;
+      }
+      final sent = await Navigator.of(context).push<bool>(
+        MaterialPageRoute<bool>(
+          builder: (_) => QuotationDetailPage(requestId: ready.id, request: ready),
+        ),
+      );
+      // The reply moved the request on: back to the inbox, which reloads on
+      // `true`.
+      if (sent == true && mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) MToast.showError(message: e is RequestsFailure ? e.text(t) : t.actionFailed);
     }
@@ -108,7 +122,6 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
     final content = Column(
       children: [
         _Header(request: request),
@@ -118,34 +131,18 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
             intake: _editing ? _intake : null,
             suggestions: _editing && _suggest ? RequestSuggestionsPanel(intake: _intake) : null,
             onEdit: request.isNew ? () => setState(() => _editing = true) : null,
-            trailing: _inlineReply ? const QuotationReplyCard() : null,
           ),
         ),
         if (_editing)
-          RequestIntakeFooter(intake: _intake, onSave: _save)
-        else if (_inlineReply)
-          QuotationFooter(
-            unitsLabel: t.unitsCount(request.totalUnits),
-            // The reply moved the request on: back to the inbox, which
-            // reloads on `true`.
-            onSent: () => Navigator.of(context).pop(true),
-          )
+          RequestIntakeFooter(intake: _intake, onSave: _openQuotation)
+        else if (_canOpenQuotation)
+          _OpenQuotationAction(intake: _intake, onOpen: _openQuotation)
         else if (_quotable)
           _ReplyAction(request: request)
         else
           _MovedOnNotice(request: request),
       ],
     );
-
-    // The reply form is built from the request's items, so it starts over
-    // when they change.
-    final body = _inlineReply
-        ? BlocProvider(
-            key: ValueKey('${request.id}:${request.items.map((item) => item.id).join(',')}'),
-            create: (_) => getIt<QuotationFormCubit>(param1: request, param2: null),
-            child: content,
-          )
-        : content;
 
     return Scaffold(
       backgroundColor: AppColours.background,
@@ -160,10 +157,10 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
                     _intake.applyRequest(state.request);
                     setState(() => request = state.request);
                   },
-                  child: body,
+                  child: content,
                 ),
               )
-            : body,
+            : content,
       ),
     );
   }
@@ -182,16 +179,11 @@ class _Body extends StatelessWidget {
   /// Opens the details form again, from the read-only equipment.
   final VoidCallback? onEdit;
 
-  /// What closes the page after the request's own cards — the inline reply
-  /// form while the request can be replied to here.
-  final Widget? trailing;
-
   const _Body({
     required this.request,
     this.intake,
     this.suggestions,
     this.onEdit,
-    this.trailing,
   });
 
   @override
@@ -220,11 +212,32 @@ class _Body extends StatelessWidget {
           const SizedBox(height: 14),
           EquipmentGrid(items: request.items),
         ],
-        if (trailing != null) ...[
-          const SizedBox(height: 14),
-          trailing!,
-        ],
       ],
+    );
+  }
+}
+
+/// Shown while a new request has all it needs to be quoted: opens its
+/// quotation, where the reply — Accept, Send price offer or Reject — is chosen.
+class _OpenQuotationAction extends StatelessWidget {
+  final RequestIntakeController intake;
+  final Future<void> Function() onOpen;
+
+  const _OpenQuotationAction({required this.intake, required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
+    return ListenableBuilder(
+      listenable: intake,
+      builder: (context, _) => RequestFooterBar(
+        child: RequestCtaButton(
+          label: t.openQuotationAction,
+          loading: intake.saving,
+          onPressed: onOpen,
+        ),
+      ),
     );
   }
 }

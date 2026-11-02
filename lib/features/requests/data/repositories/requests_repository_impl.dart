@@ -174,6 +174,7 @@ class RequestsRepositoryImpl implements RequestsRepository {
     String? clientId,
     String? accessNotes,
     required List<RequestItem> items,
+    bool prepareQuotation = false,
   }) async {
     final result = await _safeApi(
       () => _api.updateRequest(
@@ -186,6 +187,7 @@ class RequestsRepositoryImpl implements RequestsRepository {
           accessNotes: accessNotes,
           items: items,
           expectedUpdatedAt: request.updatedAt,
+          prepareQuotation: prepareQuotation,
         ),
       ),
       mapError: _invalidMachineOf,

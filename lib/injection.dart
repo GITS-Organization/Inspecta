@@ -69,7 +69,6 @@ import 'features/quotation/domain/repositories/quotation_repository.dart';
 import 'features/quotation/domain/usecases/get_quotation_board.dart';
 import 'features/quotation/domain/usecases/get_quote_email.dart';
 import 'features/quotation/domain/usecases/get_quote_pdf.dart';
-import 'features/quotation/domain/usecases/get_request_quote.dart';
 import 'features/quotation/domain/usecases/get_quotations.dart';
 import 'features/quotation/domain/usecases/update_offer.dart';
 import 'features/quotation/domain/usecases/log_client_response.dart';
@@ -198,7 +197,6 @@ void _registerQuotation() {
     ..registerLazySingleton(() => UpdateOffer(getIt()))
     ..registerLazySingleton(() => GetQuotePdf(getIt()))
     ..registerLazySingleton(() => GetQuoteEmail(getIt()))
-    ..registerLazySingleton(() => GetRequestQuote(getIt()))
     ..registerFactoryParam<QuotationFormCubit, InspectionRequest, String?>(
       (request, quotationId) => QuotationFormCubit(
         request: request,
@@ -207,7 +205,6 @@ void _registerQuotation() {
         updateOffer: getIt(),
         getQuotePdf: getIt(),
         getQuoteEmail: getIt(),
-        getRequestQuote: getIt(),
         getRequestDetail: getIt(),
       ),
     )

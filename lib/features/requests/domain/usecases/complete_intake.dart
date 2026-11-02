@@ -17,6 +17,7 @@ class CompleteIntake {
     String? clientId,
     String? accessNotes,
     required List<RequestItem> items,
+    bool prepareQuotation = false,
   }) => _repository.completeIntake(
     request: request,
     clientName: clientName.trim(),
@@ -24,5 +25,6 @@ class CompleteIntake {
     clientId: clientId,
     accessNotes: accessNotes?.trim().isEmpty ?? true ? null : accessNotes!.trim(),
     items: items,
+    prepareQuotation: prepareQuotation,
   );
 }

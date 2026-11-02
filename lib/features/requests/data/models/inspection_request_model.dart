@@ -30,6 +30,9 @@ class InspectionRequestModel {
   /// API can refuse it if someone else changed the request meanwhile.
   final DateTime? updatedAt;
 
+  /// Id of the request's `quotation` while it can still be priced.
+  final String? draftQuoteId;
+
   const InspectionRequestModel({
     required this.id,
     required this.source,
@@ -52,6 +55,7 @@ class InspectionRequestModel {
     this.assignmentNote,
     this.certificateSubmittedAt,
     this.updatedAt,
+    this.draftQuoteId,
   });
 
   /// Dates are ISO-8601 strings, and the id is inside the object.
@@ -60,6 +64,13 @@ class InspectionRequestModel {
       final value = json[key];
       return value is String ? DateTime.tryParse(value) : null;
     }
+
+    // A quote that was sent can't be priced any more: the next version is
+    // opened instead.
+    final quotation = json['quotation'];
+    final draftQuoteId = quotation is Map<String, dynamic> && quotation['canEdit'] == true
+        ? quotation['id'] as String?
+        : null;
 
     return InspectionRequestModel(
       id: json['id'] as String,
@@ -83,6 +94,7 @@ class InspectionRequestModel {
       inspectorId: json['inspectorId'] as String?,
       scheduledAt: date('scheduledAt'),
       updatedAt: date('updatedAt'),
+      draftQuoteId: draftQuoteId,
     );
   }
 
@@ -113,6 +125,7 @@ class InspectionRequestModel {
       assignmentNote: assignmentNote,
       certificateSubmittedAt: certificateSubmittedAt,
       updatedAt: updatedAt,
+      draftQuoteId: draftQuoteId,
     );
   }
 }

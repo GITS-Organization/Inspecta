@@ -1496,6 +1496,18 @@ abstract class AppLocalizations {
   /// **'Save details'**
   String get saveDetailsAction;
 
+  /// No description provided for @saveAndOpenQuotationAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save & open quotation'**
+  String get saveAndOpenQuotationAction;
+
+  /// No description provided for @openQuotationAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Open quotation'**
+  String get openQuotationAction;
+
   /// No description provided for @requestDetailsSaved.
   ///
   /// In en, this message translates to:
@@ -3115,6 +3127,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reject with notes'**
   String get rejectWithNotesAction;
+
+  /// No description provided for @examinationResultLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Examination result'**
+  String get examinationResultLabel;
+
+  /// No description provided for @modelYearShortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model / year'**
+  String get modelYearShortLabel;
+
+  /// No description provided for @examinationIntervalMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 month} other{{count} months}}'**
+  String examinationIntervalMonths(int count);
 
   /// No description provided for @confirmApproveAllTitle.
   ///

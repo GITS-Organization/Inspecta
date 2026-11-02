@@ -73,6 +73,11 @@ class InspectionRequest extends Equatable {
   /// that didn't come from the API.
   final DateTime? updatedAt;
 
+  /// The quote the API has open for this request and the coordinator can still
+  /// price, when it has one — it opens when the request's details are saved
+  /// complete. Null before that, and once the quote has gone out.
+  final String? draftQuoteId;
+
   /// Per-stage counts of the job's machine certificates; only the queue rows
   /// carry them.
   final CertificateCounts? certificates;
@@ -100,6 +105,7 @@ class InspectionRequest extends Equatable {
     this.assignmentNote,
     this.certificateSubmittedAt,
     this.updatedAt,
+    this.draftQuoteId,
     this.certificates,
   });
 
@@ -179,6 +185,7 @@ class InspectionRequest extends Equatable {
     assignmentNote,
     certificateSubmittedAt,
     updatedAt,
+    draftQuoteId,
     certificates,
   ];
 }

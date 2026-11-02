@@ -276,8 +276,9 @@ class RequestIntakeController extends ChangeNotifier {
 
   /// Saves the form, reads the request again and takes it. Returns the saved
   /// request, or null when something is still missing (the form then marks it).
+  /// With [prepareQuotation] the same call opens the request's quotation.
   /// Throws what the API refused with.
-  Future<InspectionRequest?> save() async {
+  Future<InspectionRequest?> save({bool prepareQuotation = false}) async {
     submitted = true;
     notifyListeners();
     if (!isComplete || saving) return null;
@@ -295,6 +296,7 @@ class RequestIntakeController extends ChangeNotifier {
           for (final row in rows)
             if (row.toItem() != null) row.toItem()!,
         ],
+        prepareQuotation: prepareQuotation,
       );
       final fresh = await _getRequest(_request.id);
       if (fresh != null && !_disposed) applyRequest(fresh);

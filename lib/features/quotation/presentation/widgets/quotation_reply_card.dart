@@ -127,20 +127,19 @@ class _QuotationReplyCardState extends State<QuotationReplyCard> {
                   isStandard ? t.proposalNotesStandard(count) : t.proposalNotesCount(count),
             ),
           ],
-          if (state.isPriced && (cubit.hasQuote || state.isResolvingQuote)) ...[
+          if (state.isPriced) ...[
             // The offer or accept goes out as an email with the PDF: preview
             // it, and edit it if needed, before sending. It stands in for the
-            // message field, and waits for the quote it belongs to.
+            // message field.
             const SizedBox(height: 14),
             _EmailSection(
               edits: state.emailEdits,
-              onTap: cubit.hasQuote ? () => _openEmail(cubit) : null,
+              onTap: () => _openEmail(cubit),
             ),
-          ] else if (state.isPriced || state.replyType == ReplyType.reject) ...[
+          ] else if (state.replyType == ReplyType.reject) ...[
             const SizedBox(height: 14),
             _MessageField(
               controller: _messageController,
-              required: state.replyType == ReplyType.reject,
               hasError: state.showReasonError,
               onChanged: cubit.changeMessage,
             ),
@@ -192,11 +191,10 @@ class _QuotationReplyCardState extends State<QuotationReplyCard> {
 
 /// The email to the client, as a row like the scope and notes ones: what
 /// goes out (the standard email, or the coordinator's edited version), and a
-/// tap opens it to preview and edit. Without [onTap] the email isn't ready
-/// yet and the row shows a spinner.
+/// tap opens it to preview and edit.
 class _EmailSection extends StatelessWidget {
   final QuoteEmailEdits? edits;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
   const _EmailSection({required this.edits, required this.onTap});
 
@@ -240,18 +238,8 @@ class _EmailSection extends StatelessWidget {
                   ],
                 ),
               ),
-              if (onTap == null)
-                const Padding(
-                  padding: EdgeInsets.only(right: 4),
-                  child: SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColours.primaryColor),
-                  ),
-                )
-              else ...[
-                Text(t.quoteEmailPreviewEditAction, style: AppTextStyles.link.copyWith(fontSize: 13)),
-                const Icon(Icons.chevron_right_rounded, size: 20, color: AppColours.primaryColor),
-              ],
+              Text(t.quoteEmailPreviewEditAction, style: AppTextStyles.link.copyWith(fontSize: 13)),
+              const Icon(Icons.chevron_right_rounded, size: 20, color: AppColours.primaryColor),
             ],
           ),
         ),
@@ -260,15 +248,14 @@ class _EmailSection extends StatelessWidget {
   }
 }
 
+/// The reason a reject tells the client.
 class _MessageField extends StatelessWidget {
   final TextEditingController controller;
-  final bool required;
   final bool hasError;
   final ValueChanged<String> onChanged;
 
   const _MessageField({
     required this.controller,
-    required this.required,
     required this.hasError,
     required this.onChanged,
   });
@@ -276,13 +263,12 @@ class _MessageField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final label = required ? t.reasonToClient : '${t.messageToClient} (${t.optionalLabel})';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
+        Text(t.reasonToClient, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
         const SizedBox(height: 6),
         TextField(
           controller: controller,

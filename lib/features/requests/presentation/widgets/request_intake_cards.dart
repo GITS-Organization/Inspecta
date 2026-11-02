@@ -235,7 +235,7 @@ class RequestIntakeFooter extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               RequestCtaButton(
-                label: t.saveDetailsAction,
+                label: t.saveAndOpenQuotationAction,
                 loading: intake.saving,
                 ready: complete,
                 onPressed: onSave,

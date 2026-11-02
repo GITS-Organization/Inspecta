@@ -299,7 +299,8 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
 /// with the reply options below — Accept, Send price offer or Reject. Nothing
 /// is requested to show them: when the request isn't at hand, the form is
 /// built from the list row (one price per unit, scope of work, validity,
-/// notes), and the request's items are only fetched when the offer is saved.
+/// notes), and reads the request's items in the background for when the offer
+/// is saved.
 /// A successful send closes the screen with `true`, so the screen behind
 /// reloads.
 class _DraftBody extends StatelessWidget {

@@ -34,10 +34,6 @@ class QuotationFormState extends Equatable {
 
   final bool isSubmitting;
 
-  /// Whether the form is still looking up the request's quote, so the email
-  /// row can wait for it instead of giving way to the message field.
-  final bool isResolvingQuote;
-
   /// Bumped whenever [QuotationAction.saveDraft] or [.send] finishes, so a
   /// listener can react exactly once per action (BlocListener's
   /// `listenWhen` compares this, not the whole state).
@@ -59,7 +55,6 @@ class QuotationFormState extends Equatable {
     this.emailEdits,
     this.submitted = false,
     this.isSubmitting = false,
-    this.isResolvingQuote = false,
     this.actionSeq = 0,
     this.lastAction,
     this.lastActionSuccess = false,
@@ -110,7 +105,6 @@ class QuotationFormState extends Equatable {
     bool clearEmailEdits = false,
     bool? submitted,
     bool? isSubmitting,
-    bool? isResolvingQuote,
     int? actionSeq,
     QuotationAction? lastAction,
     bool? lastActionSuccess,
@@ -130,7 +124,6 @@ class QuotationFormState extends Equatable {
       emailEdits: clearEmailEdits ? null : (emailEdits ?? this.emailEdits),
       submitted: submitted ?? this.submitted,
       isSubmitting: isSubmitting ?? this.isSubmitting,
-      isResolvingQuote: isResolvingQuote ?? this.isResolvingQuote,
       actionSeq: actionSeq ?? this.actionSeq,
       lastAction: lastAction ?? this.lastAction,
       lastActionSuccess: lastActionSuccess ?? this.lastActionSuccess,
@@ -152,7 +145,6 @@ class QuotationFormState extends Equatable {
     emailEdits,
     submitted,
     isSubmitting,
-    isResolvingQuote,
     actionSeq,
     lastAction,
     lastActionSuccess,

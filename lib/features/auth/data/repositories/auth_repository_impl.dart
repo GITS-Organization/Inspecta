@@ -58,12 +58,12 @@ class AuthRepositoryImpl implements AuthRepository {
         // A remembered session outlives its access token: renew it quietly.
         switch (await _renewSession()) {
           case _Renewal.renewed:
-            // The API just issued this session, so it is trusted as it
-            // stands: the device's clock isn't asked again.
+          // The API just issued this session, so it is trusted as it
+          // stands: the device's clock isn't asked again.
             session = await _local.readSession();
           case _Renewal.unreachable:
-            // No answer (offline at startup, server down): keep the session.
-            // Its token is renewed when the first request needs it.
+          // No answer (offline at startup, server down): keep the session.
+          // Its token is renewed when the first request needs it.
             debugPrint('Session kept: refresh could not reach the API');
           case _Renewal.rejected:
             debugPrint('Session dropped: the API refused the refresh token');
@@ -85,7 +85,8 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<_Renewal>? _renewing;
 
   @override
-  Future<bool> refreshSession() async => await _renewSession() == _Renewal.renewed;
+  Future<bool> refreshSession() async =>
+      await _renewSession() == _Renewal.renewed;
 
   /// One renewal at a time: callers that arrive while it runs share it.
   Future<_Renewal> _renewSession() {
@@ -97,7 +98,9 @@ class AuthRepositoryImpl implements AuthRepository {
       final session = await _local.readSession();
       if (session == null) return _Renewal.rejected;
       final result = await _safeApi(
-        () => _api.refresh(RefreshTokenRequest(refreshToken: session.refreshToken)),
+            () =>
+            _api.refresh(
+                RefreshTokenRequest(refreshToken: session.refreshToken)),
       );
       Object? failure;
       final fresh = result.fold<AuthSessionModel?>((data) => data, (f) {
@@ -108,7 +111,9 @@ class AuthRepositoryImpl implements AuthRepository {
       if (fresh == null) {
         // A 4xx means the API understood and said no; anything else (no
         // connection, a 5xx) says nothing about the refresh token.
-        final status = failure is ApiFailure ? (failure as ApiFailure).code : null;
+        final status = failure is ApiFailure
+            ? (failure as ApiFailure).code
+            : null;
         return status != null && status >= 400 && status < 500
             ? _Renewal.rejected
             : _Renewal.unreachable;
@@ -130,7 +135,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     try {
       final result = await _safeApi(
-        () => _api.login(LoginRequest(email: email, password: password)),
+            () => _api.login(LoginRequest(email: email, password: password)),
       );
       final session = result.fold((data) => data, (f) => throw _mapError(f));
       final failure = _validate(session.user);
@@ -178,10 +183,11 @@ class AuthRepositoryImpl implements AuthRepository {
   /// stays valid until it expires.
   Future<void> _revoke(AuthSessionModel session) async {
     final result = await _safeApi<void>(
-      () => _api.logout(
-        'Bearer ${session.accessToken}',
-        RefreshTokenRequest(refreshToken: session.refreshToken),
-      ),
+          () =>
+          _api.logout(
+            'Bearer ${session.accessToken}',
+            RefreshTokenRequest(refreshToken: session.refreshToken),
+          ),
     );
     result.fold((_) {}, (f) => debugPrint('Logout request failed: $f'));
   }

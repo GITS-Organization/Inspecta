@@ -57,14 +57,16 @@ class QuotationRepositoryImpl implements QuotationRepository {
     QuoteEmailEdits? email,
   }) async {
     if (type == ReplyType.reject) {
-      // A rejection closes the request instead and records no quote: see
-      // RequestsRepository.rejectRequest.
       throw ArgumentError.value(type, 'type', 'A rejection is not a quote');
     }
     if (quotationId != null && type == ReplyType.accept) {
       final result = await _safeApi(
         () async => _versionOf(
-          await _api.acceptQuote(requestId, quotationId, QuoteEmailModel.toBody(email)),
+          await _api.acceptQuote(
+            requestId,
+            quotationId,
+            QuoteEmailModel.toBody(email),
+          ),
         ),
         mapError: _emailFailureOf,
       );
@@ -73,7 +75,11 @@ class QuotationRepositoryImpl implements QuotationRepository {
     if (quotationId != null && type == ReplyType.offer) {
       final result = await _safeApi(
         () async => _versionOf(
-          await _api.sendExistingQuote(requestId, quotationId, QuoteEmailModel.toBody(email)),
+          await _api.sendExistingQuote(
+            requestId,
+            quotationId,
+            QuoteEmailModel.toBody(email),
+          ),
         ),
         mapError: _emailFailureOf,
       );
@@ -112,7 +118,11 @@ class QuotationRepositoryImpl implements QuotationRepository {
   }) async {
     final result = await _safeApi(
       () async => QuoteEmailModel.fromJson(
-        await _api.getQuoteEmail(requestId, quotationId, accept ? 'accept' : 'send') as Map<String, dynamic>,
+        await _api.getQuoteEmail(
+          requestId,
+          quotationId,
+          accept ? 'accept' : 'send',
+        ) as Map<String, dynamic>,
       ),
     );
     return result.fold((data) => data, (f) => throw _mapError(f));

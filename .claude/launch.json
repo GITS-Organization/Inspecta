@@ -12,6 +12,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["website/serve.mjs", "8780"],
       "port": 8780
+    },
+    {
+      "name": "preview-review-summary",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": ["run", "-d", "web-server", "--web-port", "8771", "--no-pub", "-t", "lib/preview_review_main.dart"],
+      "port": 8771
     }
   ]
 }

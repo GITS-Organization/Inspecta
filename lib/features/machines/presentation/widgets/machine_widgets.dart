@@ -73,7 +73,10 @@ class MachinesHeader extends StatelessWidget {
 class MachineStatusChip extends StatelessWidget {
   final MachineStatus status;
 
-  const MachineStatusChip({super.key, required this.status});
+  /// A small glyph before the label.
+  final IconData? icon;
+
+  const MachineStatusChip({super.key, required this.status, this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -111,13 +114,26 @@ class MachineStatusChip extends StatelessWidget {
       ),
     };
 
+    final text = Text(
+      label,
+      style: AppTextStyles.badge.copyWith(color: textColor),
+    );
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsetsDirectional.fromSTEB(icon == null ? 12 : 9, 6, 12, 6),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(label, style: AppTextStyles.badge.copyWith(color: textColor)),
+      child: icon == null
+          ? text
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 15, color: textColor),
+                const SizedBox(width: 6),
+                text,
+              ],
+            ),
     );
   }
 }

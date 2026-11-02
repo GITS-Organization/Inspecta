@@ -20,8 +20,8 @@ abstract class QuotationApiClientServices {
     @Query('pageSize') int pageSize,
   );
 
-  /// Sends the quote of the request, returning it as the API recorded it
-  /// (with its version and number).
+  /// Opens a quote on the request — the machines unpriced — and returns it as
+  /// the API recorded it (with its id, version and number).
   @POST('${ApiUrls.requests}/{requestId}/quotes')
   Future<dynamic> sendQuote(
     @Path('requestId') String requestId,

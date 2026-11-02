@@ -786,6 +786,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveDetailsAction => 'Save details';
 
   @override
+  String get saveAndOpenQuotationAction => 'Save & open quotation';
+
+  @override
+  String get openQuotationAction => 'Open quotation';
+
+  @override
   String get requestDetailsSaved =>
       'Details saved. You can quote this request now.';
 
@@ -1700,6 +1706,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rejectWithNotesAction => 'Reject with notes';
+
+  @override
+  String get examinationResultLabel => 'Examination result';
+
+  @override
+  String get modelYearShortLabel => 'Model / year';
+
+  @override
+  String examinationIntervalMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count months',
+      one: '1 month',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get confirmApproveAllTitle => 'Approve all certificates?';

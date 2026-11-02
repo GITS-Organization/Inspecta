@@ -788,6 +788,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get saveDetailsAction => 'حفظ التفاصيل';
 
   @override
+  String get saveAndOpenQuotationAction => 'حفظ وفتح عرض السعر';
+
+  @override
+  String get openQuotationAction => 'فتح عرض السعر';
+
+  @override
   String get requestDetailsSaved =>
       'تم حفظ التفاصيل. يمكنك تسعير هذا الطلب الآن.';
 
@@ -1701,6 +1707,26 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get rejectWithNotesAction => 'رفض مع ملاحظات';
+
+  @override
+  String get examinationResultLabel => 'نتيجة الفحص';
+
+  @override
+  String get modelYearShortLabel => 'الطراز / السنة';
+
+  @override
+  String examinationIntervalMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count شهر',
+      many: '$count شهرًا',
+      few: '$count أشهر',
+      two: 'شهران',
+      one: 'شهر واحد',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get confirmApproveAllTitle => 'اعتماد جميع الشهادات؟';

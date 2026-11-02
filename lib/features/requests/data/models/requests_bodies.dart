@@ -22,6 +22,10 @@ class UpdateRequestBody {
   /// request changed since.
   final DateTime? expectedUpdatedAt;
 
+  /// Opens the request's quotation as part of the update, so the quotation
+  /// screen has a draft to work on.
+  final bool prepareQuotation;
+
   const UpdateRequestBody({
     required this.clientName,
     required this.location,
@@ -30,6 +34,7 @@ class UpdateRequestBody {
     this.preferredDate,
     this.accessNotes,
     this.expectedUpdatedAt,
+    this.prepareQuotation = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -56,6 +61,7 @@ class UpdateRequestBody {
         },
     ],
     'expectedUpdatedAt': ?expectedUpdatedAt?.toUtc().toIso8601String(),
+    if (prepareQuotation) 'prepareQuotation': true,
   };
 }
 
