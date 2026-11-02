@@ -84,6 +84,8 @@ builder.Services.AddScoped<IEmailParserService, EmailParserService>();
 builder.Services.AddScoped<IRequestRepository, EfRequestRepository>();
 builder.Services.AddScoped<IClientMailRuleRepository, EfClientMailRuleRepository>();
 builder.Services.AddScoped<ICompanyProfileRepository, EfCompanyProfileRepository>();
+builder.Services.AddScoped<IDashboardRepository, EfDashboardRepository>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<CompanyProfileService>();
 builder.Services.AddScoped<ICompanyProfileService>(provider => provider.GetRequiredService<CompanyProfileService>());
 builder.Services.AddScoped<ICompanyBrandingProvider>(provider => provider.GetRequiredService<CompanyProfileService>());

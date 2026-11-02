@@ -365,6 +365,10 @@ Content-Type: application/json
 
 { "sentTo": "quality@client.com", "cc": ["boss@client.com"], "subject": "Our offer", "message": "Dear team, our offer is attached." }
 
+### Technical manager: the overview dashboard in one call (every filter is optional; from and to go together)
+GET {{baseUrl}}/api/v1/dashboard/overview?clientId={{clientId}}&inspectorId={{inspectorId}}&from=2026-10-01&to=2026-11-02
+Authorization: Bearer {{accessToken}}
+
 ### Admin: create a technical manager together with its company identity (the logo and accreditations are optional: the built-in ones are used when left out)
 POST {{baseUrl}}/api/v1/technical-managers
 Authorization: Bearer {{accessToken}}

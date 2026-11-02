@@ -316,6 +316,16 @@ public static class WorkflowDocs
             **How:** `PUT /admin/managers/{managerId}/company-profile` with `name` and `address` (together; leave both out to keep the built-in company details and set only the images and colours), `certificateTitle`, `issuerName`, `tagline`, `phones`, `emails`, `website`, `signerName`, `primaryColor` and `accentColor` (`#RRGGBB`), and the images `logoBase64` and `accreditationsBase64` (PNG, at most 1 MB; left out keeps the current one, an empty text removes it; a company without its own logo or accreditation marks gets the built-in ones). The same object can be sent as `companyProfile` in `POST /technical-managers`.
             It then shows on the certificates (header, footer, logo, faded logo, bands, notes, signature box), on the signature of the emails and on the quotation. A quotation of such a team has no cover and leaves out the pages of texts it does not have. Documents already issued do not change.
             """),
+        [Key<DashboardController>(nameof(DashboardController.Overview))] = new(8, "Dashboard · The manager's overview",
+            """
+            **Who:** the technical manager (Admin may pass `managerId`). **How:** `GET /dashboard/overview` returns the whole overview screen in one call:
+            - `pipeline`: the team's real requests by status (every status listed, as of today).
+            - `attention`: `equipmentOverdue`, `equipmentDueSoon` (next 30 days) and `jobsAwaitingReview` (`certificate_submitted`), with a `total`.
+            - `certificates`: approved (issued) certificates `thisMonth`, `previousMonth` and `byMonth` (default the last 7 months) split into `safe`, `withConditions`, `notSafe`.
+            - `equipmentDue`: the first 10 items overdue or due in 30 days, overdue first, with `total` and `overdue`.
+            - `inspectorWorkload`: certificates each active inspector had approved in the period (default the last 30 days), most first.
+            Filters: `clientId`, `inspectorId` (not for equipment), and `from`+`to` (`yyyy-MM-dd`, both or neither, at most two years) for the workload and the chart. Months are counted in UTC.
+            """),
     };
 
     internal static string TalabatDescription =>

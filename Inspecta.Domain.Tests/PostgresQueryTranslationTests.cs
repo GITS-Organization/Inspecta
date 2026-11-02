@@ -45,6 +45,18 @@ public sealed class PostgresQueryTranslationTests
             db.ClientMailRules.IgnoreQueryFilters().AsNoTracking().Where(rule => rule.ClientId == null || !db.Clients.IgnoreQueryFilters()
                 .Where(client => client.ArchivedAt != null).Select(client => client.Id).Contains(rule.ClientId.Value)).ToQueryString(),
             db.Requests.Include(item => item.Client).Include(item => item.Items).AsSplitQuery().OrderByDescending(item => item.ReceivedAt).ToQueryString(),
+            // The dashboard: the same queries as EfDashboardRepository.
+            db.Requests.AsNoTracking().Where(item => item.Triage == RequestTriage.Request && item.ManagerId == manager && item.ClientId == client && item.InspectorId == client)
+                .GroupBy(item => item.Status).Select(group => new { Status = group.Key, Count = group.Count() }).ToQueryString(),
+            db.Certificates.AsNoTracking()
+                .Where(item => item.ReviewedAt != null && item.CertificateNumber != null && item.ReviewedAt >= DateTimeOffset.UtcNow && item.ReviewedAt <= DateTimeOffset.UtcNow)
+                .Where(item => item.Request!.ManagerId == manager).Where(item => item.Request!.ClientId == client).Where(item => item.InspectorId == client)
+                .Select(item => new { item.InspectorId, At = item.ReviewedAt!.Value, item.FinalResult }).ToQueryString(),
+            db.Items.AsNoTracking()
+                .Where(item => item.NextInspectionDueAt != null && item.NextInspectionDueAt <= DateTimeOffset.UtcNow && item.Status == EquipmentStatus.Active &&
+                               !item.IsArchived && item.ArchivedAt == null && item.Client!.ArchivedAt == null)
+                .Where(item => item.Client!.ManagerId == manager).Where(item => item.ClientId == client)
+                .Select(item => new { item.Id, item.Name, item.SerialNumber, item.ClientId, ClientName = item.Client!.Name, Due = item.NextInspectionDueAt!.Value }).ToQueryString(),
             db.QuotationDrafts.IgnoreQueryFilters().Where(draft => draft.SourceUid == 1u).ToQueryString()
         };
 
