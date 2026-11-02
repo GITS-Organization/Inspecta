@@ -308,14 +308,6 @@ public static class WorkflowDocs
             - Default (`permanent=false`): the client is **archived**: it leaves the lists and can no longer be edited.
             - `permanent=true`: the client and its contacts are **deleted for good**. Refused with `409 client_in_use` while requests or registered items still use the client; archive it instead.
             """),
-        [Key<AdminCompanyProfilesController>(nameof(AdminCompanyProfilesController.Get))] = new(6, "Admin 6 · Open the company profile of a team",
-            "**How:** `GET /admin/managers/{managerId}/company-profile` returns the identity printed for that team, or `404` when it has none (the built-in profile is used)."),
-        [Key<AdminCompanyProfilesController>(nameof(AdminCompanyProfilesController.Save))] = new(7, "Admin 7 · Set the company profile of a team",
-            """
-            **Who:** Admin only. Do this when a new company is set up, before its first certificate or quotation: without a profile its documents carry the built-in identity.
-            **How:** `PUT /admin/managers/{managerId}/company-profile` with `name` and `address` (together; leave both out to keep the built-in company details and set only the images and colours), `certificateTitle`, `issuerName`, `tagline`, `phones`, `emails`, `website`, `signerName`, `primaryColor` and `accentColor` (`#RRGGBB`), and the images `logoBase64` and `accreditationsBase64` (PNG, at most 1 MB; left out keeps the current one, an empty text removes it; a company without its own logo or accreditation marks gets the built-in ones). The same object can be sent as `companyProfile` in `POST /technical-managers`.
-            It then shows on the certificates (header, footer, logo, faded logo, bands, notes, signature box), on the signature of the emails and on the quotation. A quotation of such a team has no cover and leaves out the pages of texts it does not have. Documents already issued do not change.
-            """),
         [Key<DashboardController>(nameof(DashboardController.Overview))] = new(8, "Dashboard · The manager's overview",
             """
             **Who:** the technical manager (Admin may pass `managerId`). **How:** `GET /dashboard/overview` returns the whole overview screen in one call:
@@ -327,6 +319,39 @@ public static class WorkflowDocs
             Filters: `clientId`, `inspectorId` (not for equipment), and `from`+`to` (`yyyy-MM-dd`, both or neither, at most two years) for the workload and the chart. Months are counted in UTC.
             """),
     };
+
+    /// <summary>Provisioning a new customer: its technical manager account and its company identity.</summary>
+    public const string CompanyTag = "Create company";
+
+    private static readonly Dictionary<string, Step> CompanySteps = new()
+    {
+        [Key<TechnicalManagersController>(nameof(TechnicalManagersController.Create))] = new(1, "Company 1 · Create a technical manager and its company",
+            """
+            **Who:** Admin only. **When:** a new company becomes a customer. Everything is set in one call.
+            **How:** `POST /technical-managers` with `email`, `fullName`, `password` (at least 12 characters) and `subscriptionMonths` (1 to 120, default 1). Add `companyProfile` to set the company identity at the same time:
+            - `name` and `address` go together: give both for the company's own details, or leave both out to keep the built-in details (the first customer's) and change only the logo, accreditation marks and colours.
+            - `phones`, `emails` (at most 5 each), `website`, `certificateTitle`, `issuerName`, `tagline`, `signerName`, `primaryColor` and `accentColor` (`#RRGGBB`).
+            - `logoBase64` and `accreditationsBase64`: PNG, at most 1 MB each. Left out, the built-in logo and accreditation marks are used.
+            A mistake in `companyProfile` answers `400` and creates no account. `409` when the email is already used.
+            **Next:** sign in as the new manager and add the team (coordinators and inspectors), or open the profile (step 2).
+            """),
+        [Key<AdminCompanyProfilesController>(nameof(AdminCompanyProfilesController.Get))] = new(2, "Company 2 · Open the company profile of a team",
+            "**How:** `GET /admin/managers/{managerId}/company-profile` returns the identity printed for that team, or `404` when it has none (the built-in profile is used)."),
+        [Key<AdminCompanyProfilesController>(nameof(AdminCompanyProfilesController.Save))] = new(3, "Company 3 · Change the company profile of a team",
+            """
+            **Who:** Admin only. Do this when a new company is set up, before its first certificate or quotation: without a profile its documents carry the built-in identity.
+            **How:** `PUT /admin/managers/{managerId}/company-profile` with `name` and `address` (together; leave both out to keep the built-in company details and set only the images and colours), `certificateTitle`, `issuerName`, `tagline`, `phones`, `emails`, `website`, `signerName`, `primaryColor` and `accentColor` (`#RRGGBB`), and the images `logoBase64` and `accreditationsBase64` (PNG, at most 1 MB; left out keeps the current one, an empty text removes it; a company without its own logo or accreditation marks gets the built-in ones). The same object can be sent as `companyProfile` in `POST /technical-managers`.
+            It then shows on the certificates (header, footer, logo, faded logo, bands, notes, signature box), on the signature of the emails and on the quotation. A quotation of such a team has no cover and leaves out the pages of texts it does not have. Documents already issued do not change.
+            """),
+        [Key<TechnicalManagersController>(nameof(TechnicalManagersController.UpdateSubscription))] = new(4, "Company 4 · Activate, suspend or extend the subscription",
+            "**Who:** Admin only. **How:** `PUT /technical-managers/{managerId}/subscription` with the new status and the end date of the subscription."),
+    };
+
+    internal static string CompanyDescription =>
+        """
+        Setting up a new customer, for the Admin: create the technical manager account **with its company** in one call (name, address, contacts, logo, accreditation marks, colours), then read or change the company profile later and manage the subscription.
+        The company identity is printed on the team's certificates, quotations and email signatures. A team without a profile uses the built-in identity of the first customer.
+        """;
 
     internal static string TalabatDescription =>
         """
@@ -428,10 +453,10 @@ public static class WorkflowDocs
         var type = context.MethodInfo.DeclaringType?.Name;
         var key = $"{type}.{context.MethodInfo.Name}";
         if (type is not null &&
-            (Steps.TryGetValue(key, out var step) || QueueSteps.TryGetValue(key, out step) || ConfigSteps.TryGetValue(key, out step) || TalabatSteps.TryGetValue(key, out step)))
+            (Steps.TryGetValue(key, out var step) || QueueSteps.TryGetValue(key, out step) || ConfigSteps.TryGetValue(key, out step) || CompanySteps.TryGetValue(key, out step) || TalabatSteps.TryGetValue(key, out step)))
         {
             (order, title, guide) = (step.Order, step.Title, step.Guide);
-            tag = Steps.ContainsKey(key) ? Tag : QueueSteps.ContainsKey(key) ? QueueTag : TalabatSteps.ContainsKey(key) ? TalabatTag : ConfigTag;
+            tag = Steps.ContainsKey(key) ? Tag : QueueSteps.ContainsKey(key) ? QueueTag : TalabatSteps.ContainsKey(key) ? TalabatTag : CompanySteps.ContainsKey(key) ? CompanyTag : ConfigTag;
             return true;
         }
 
@@ -502,8 +527,9 @@ public sealed class WorkflowDocumentFilter : IDocumentFilter
             .OrderBy(name => name == WorkflowDocs.Tag ? 0
                 : name == WorkflowDocs.QueueTag ? 1
                 : name == WorkflowDocs.ConfigTag ? 2
-                : name == WorkflowDocs.TalabatTag ? 3
-                : WorkflowDocs.LegacyTags.ContainsKey(name) ? 5 : 4)
+                : name == WorkflowDocs.CompanyTag ? 3
+                : name == WorkflowDocs.TalabatTag ? 4
+                : WorkflowDocs.LegacyTags.ContainsKey(name) ? 6 : 5)
             .ThenBy(name => name, StringComparer.OrdinalIgnoreCase);
         var described = (swaggerDoc.Tags ?? [])
             .Where(tag => !string.IsNullOrWhiteSpace(tag.Description))
@@ -519,6 +545,8 @@ public sealed class WorkflowDocumentFilter : IDocumentFilter
                     ? WorkflowDocs.QueueDescription
                     : name == WorkflowDocs.TalabatTag
                     ? WorkflowDocs.TalabatDescription
+                    : name == WorkflowDocs.CompanyTag
+                    ? WorkflowDocs.CompanyDescription
                     : name == WorkflowDocs.Tag
                     ? WorkflowDocs.Description
                     : WorkflowDocs.LegacyTags.GetValueOrDefault(name) ?? described.GetValueOrDefault(name)
