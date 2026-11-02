@@ -108,6 +108,8 @@ class InspectorOptionTile extends StatelessWidget {
                                 ? t.noQualificationsListed
                                 : inspector.qualifications.map((q) => q.name).join(', ')),
                       style: AppTextStyles.caption.copyWith(height: 18 / 13),
+                      // Credentials wrap onto a second line rather than being cut off.
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],

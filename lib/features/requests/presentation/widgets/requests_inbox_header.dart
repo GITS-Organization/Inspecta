@@ -8,7 +8,7 @@ import '../bloc/requests_list_cubit.dart';
 import 'requests_tab_bar.dart';
 
 /// The inbox's header: avatar, role + greeting, bell, the "Requests" title,
-/// and the search box with the New / Maybe toggle beside it.
+/// the search box and, under it, the New / Maybe toggle.
 class RequestsInboxHeader extends StatelessWidget {
   final TextEditingController searchController;
   final VoidCallback onOpenProfile;
@@ -26,18 +26,17 @@ class RequestsInboxHeader extends StatelessWidget {
     return UserAppHeader(
       title: t.navRequests,
       onOpenProfile: onOpenProfile,
-      bottom: Row(
+      bottom: Column(
         children: [
-          Expanded(
-            child: ISearchField(
-              controller: searchController,
-              onChanged: context.read<RequestsListCubit>().setQuery,
-              hintText: t.searchRequestsHint,
-            ),
+          ISearchField(
+            controller: searchController,
+            onChanged: context.read<RequestsListCubit>().setQuery,
+            hintText: t.searchRequestsHint,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(height: 12),
           RequestsTabBar(
             selected: context.select((RequestsListCubit c) => c.state.tab),
+            newCount: context.select((RequestsListCubit c) => c.state.newTab.requests.items.length),
             onChanged: context.read<RequestsListCubit>().setTab,
           ),
         ],

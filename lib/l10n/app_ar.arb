@@ -259,6 +259,23 @@
   "hideDetailsAction": "إخفاء التفاصيل",
   "requestDetailsTitle": "التفاصيل",
   "clientMachinesAction": "معدات العميل",
+  "machinesCount": "{count, plural, one{آلة واحدة} two{آلتان} few{{count} آلات} other{{count} آلة}}",
+  "@machinesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "machineSerialLine": "الرقم التسلسلي {serial}",
+  "@machineSerialLine": {
+    "placeholders": {
+      "serial": {
+        "type": "String"
+      }
+    }
+  },
+  "copyIdAction": "نسخ المعرّف",
   "itemsCount": "{count, plural, one{عنصر واحد} two{عنصران} few{{count} عناصر} many{{count} عنصرًا} other{{count} عنصر}}",
   "siteLocationLabel": "موقع الفحص",
   "intakeReadyTitle": "جاهز للتسعير",
@@ -271,6 +288,8 @@
   "comingSoon": "لم يُبنَ بعد.",
 
   "howDoYouWantToReply": "كيف تريد الرد؟",
+  "yourResponse": "ردك",
+  "replyOfferShort": "إرسال عرض",
   "replyAccept": "قبول",
   "replyAcceptSubtitle": "استخدام السعر القياسي",
   "replyOffer": "إرسال عرض سعر",
@@ -416,6 +435,12 @@
   "startTimeLabel": "وقت البدء",
   "chooseInspectorStepLabel": "2. اختر المفتش",
   "assignNotesLabel": "3. ملاحظات (اختياري)",
+  "pickTimeTitle": "اختر الموعد",
+  "chooseInspectorTitle": "اختر المفتش",
+  "assignNotesTitle": "ملاحظات",
+  "optionalChipLabel": "اختياري",
+  "assignNotesHint": "أضف ملاحظة للمفتش",
+  "idCopiedMessage": "تم نسخ المعرّف.",
   "noQualificationsListed": "لا توجد مؤهلات مسجلة",
   "bestMatchTag": "الأنسب",
   "emptyInspectors": "لا يوجد مفتشون نشطون بعد.",

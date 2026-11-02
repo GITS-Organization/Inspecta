@@ -810,6 +810,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get clientMachinesAction => 'معدات العميل';
 
   @override
+  String machinesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count آلة',
+      few: '$count آلات',
+      two: 'آلتان',
+      one: 'آلة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String machineSerialLine(String serial) {
+    return 'الرقم التسلسلي $serial';
+  }
+
+  @override
+  String get copyIdAction => 'نسخ المعرّف';
+
+  @override
   String itemsCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -860,6 +881,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get howDoYouWantToReply => 'كيف تريد الرد؟';
+
+  @override
+  String get yourResponse => 'ردك';
+
+  @override
+  String get replyOfferShort => 'إرسال عرض';
 
   @override
   String get replyAccept => 'قبول';
@@ -1304,6 +1331,24 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get assignNotesLabel => '3. ملاحظات (اختياري)';
+
+  @override
+  String get pickTimeTitle => 'اختر الموعد';
+
+  @override
+  String get chooseInspectorTitle => 'اختر المفتش';
+
+  @override
+  String get assignNotesTitle => 'ملاحظات';
+
+  @override
+  String get optionalChipLabel => 'اختياري';
+
+  @override
+  String get assignNotesHint => 'أضف ملاحظة للمفتش';
+
+  @override
+  String get idCopiedMessage => 'تم نسخ المعرّف.';
 
   @override
   String get noQualificationsListed => 'لا توجد مؤهلات مسجلة';

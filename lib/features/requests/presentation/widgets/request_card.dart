@@ -60,7 +60,11 @@ class RequestCard extends StatelessWidget {
                         children: [
                           Text(
                             request.equipmentTitle,
-                            style: AppTextStyles.cardTitle,
+                            style: AppTextStyles.cardTitle.copyWith(
+                              fontSize: 17,
+                              height: 24 / 17,
+                              fontWeight: FontWeight.w700,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
@@ -87,20 +91,20 @@ class RequestCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        StatusChip(status: request.status),
-                        if (waiting) ...[
-                          const SizedBox(height: 6),
-                          const WaitingChip(),
-                        ],
-                      ],
-                    ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                // What it is and how urgent: the status and, as a chip with a
+                // clock, that it has waited more than a day.
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    StatusChip(status: request.status),
+                    if (waiting) const WaitingChip(),
+                  ],
+                ),
+                const SizedBox(height: 14),
                 Row(
                   children: [
                     if (request.location.isNotEmpty)

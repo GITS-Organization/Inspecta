@@ -34,6 +34,7 @@ class RequestDetailsCard extends StatelessWidget {
         trailing: StatusPill(
           label: request.clientId != null ? t.clientMatchedBadge : t.clientRequiredBadge,
           tone: request.clientId != null ? PillTone.success : PillTone.warning,
+          icon: request.clientId != null ? Icons.check_rounded : null,
         ),
       ),
       if (_has(request.location))

@@ -47,9 +47,13 @@ class QuoteBoardCard extends StatelessWidget {
     // instead, the footer says what's missing.
     final showPrice = !hasCounter && price != null && (price > 0 || !quotation.isDraft);
 
+    // "QT-2026-7CE49D rev01 · Smouha": the quote number with its revision,
+    // then where the work is (the equipment, when the row doesn't know).
+    final version = quotation.version;
+    final number = quotation.requestNumber.isEmpty ? quotation.id : quotation.requestNumber;
     final reference = [
-      quotation.requestNumber.isEmpty ? quotation.id : quotation.requestNumber,
-      quotation.equipmentSummary.isNotEmpty ? quotation.equipmentSummary : quotation.location,
+      version != null && version > 0 ? '$number rev${version.toString().padLeft(2, '0')}' : number,
+      quotation.location.isNotEmpty ? quotation.location : quotation.equipmentSummary,
     ].where((part) => part.isNotEmpty).join(' · ');
 
     final action = _action(t, tab, expired);
@@ -117,13 +121,22 @@ class QuoteBoardCard extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: _StatusLine(
-                        status: status,
-                        timing: timing,
-                        timingColor: quotation.isExpiringSoon() && !replied
-                            ? AppColours.chipAmberText
-                            : AppColours.inkMuted,
-                      ),
+                      child: quotation.isDraft
+                          // A draft says it is one, and what blocks it, as
+                          // chips: they are two different things.
+                          ? _DraftChips(
+                              label: t.quoteDraftLabel,
+                              missing: quotation.missingPrices > 0
+                                  ? t.quoteMissingPrices(quotation.missingPrices)
+                                  : null,
+                            )
+                          : _StatusLine(
+                              status: status,
+                              timing: timing,
+                              timingColor: quotation.isExpiringSoon() && !replied
+                                  ? AppColours.chipAmberText
+                                  : AppColours.inkMuted,
+                            ),
                     ),
                     if (action != null) ...[
                       const SizedBox(width: 12),
@@ -179,6 +192,36 @@ class QuoteBoardCard extends StatelessWidget {
       QuoteBoardTab.accepted => _Status(AppColours.successIcon, AppColours.chipGreenText, tab.label(t)),
       QuoteBoardTab.rejected => _Status(AppColours.errorIcon, AppColours.chipRedText, tab.label(t)),
     };
+  }
+}
+
+/// A draft's "Draft" chip and, beside it in amber, what it still lacks.
+class _DraftChips extends StatelessWidget {
+  final String label;
+  final String? missing;
+
+  const _DraftChips({required this.label, this.missing});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget chip(String text, Color background, Color foreground, {Color? border}) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: border == null ? null : Border.all(color: border),
+      ),
+      child: Text(text, style: AppTextStyles.badge.copyWith(color: foreground)),
+    );
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children: [
+        chip(label, AppColours.surfaceMuted, AppColours.chipGreyText, border: AppColours.border),
+        if (missing != null) chip(missing!, AppColours.chipAmberBackground, AppColours.chipAmberText),
+      ],
+    );
   }
 }
 
@@ -352,7 +395,8 @@ class _PriceBox extends StatelessWidget {
 
 /// The card's next step. Purely a signpost: the whole card already opens
 /// the quote on tap. Filled only when the coordinator owes a reply; the rest
-/// are tonal so a column of them doesn't compete with the money.
+/// are outlined 40px buttons, so they read as tappable without competing
+/// with the money.
 class _ActionButton extends StatelessWidget {
   final String label;
   final bool primary;
@@ -362,23 +406,37 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = primary ? Colors.white : AppColours.primaryDark;
+    final foreground = primary ? Colors.white : AppColours.ink;
+    final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
+    final text = Text(
+      label,
+      style: AppTextStyles.buttonLabel.copyWith(fontSize: 13, color: foreground),
+    );
     return SizedBox(
       height: 40,
-      child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: primary ? AppColours.primaryColor : AppColours.primaryTint,
-          foregroundColor: foreground,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.buttonLabel.copyWith(fontSize: 13, color: foreground),
-        ),
-      ),
+      child: primary
+          ? FilledButton(
+              onPressed: onPressed,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColours.primaryColor,
+                foregroundColor: foreground,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                shape: shape,
+              ),
+              child: text,
+            )
+          : OutlinedButton(
+              onPressed: onPressed,
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: foreground,
+                side: const BorderSide(color: AppColours.border),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                shape: shape,
+              ),
+              child: text,
+            ),
     );
   }
 }

@@ -109,23 +109,28 @@ class _QuotationsBoardViewState extends State<_QuotationsBoardView> {
             UserAppHeader(
               title: t.quotationsTitle,
               onOpenProfile: widget.onOpenProfile,
-              bottom: ISearchField(
-                controller: _searchController,
-                onChanged: cubit.setQuery,
-                hintText: t.searchQuotesHint,
-              ),
-            ),
-            const SizedBox(height: 12),
-            BlocBuilder<QuotationsListCubit, QuotationsListState>(
-              buildWhen: (previous, current) =>
-                  previous.board != current.board ||
-                  previous.tab != current.tab ||
-                  previous.onlyExpiringSoon != current.onlyExpiringSoon,
-              builder: (context, state) => QuoteBoardTabBar(
-                selected: state.tab,
-                expiringSoonSelected: state.onlyExpiringSoon,
-                countOf: state.countOf,
-                onChanged: cubit.setTab,
+              // The search box, then the status switch across the full width.
+              bottom: Column(
+                children: [
+                  ISearchField(
+                    controller: _searchController,
+                    onChanged: cubit.setQuery,
+                    hintText: t.searchQuotesHint,
+                  ),
+                  const SizedBox(height: 12),
+                  BlocBuilder<QuotationsListCubit, QuotationsListState>(
+                    buildWhen: (previous, current) =>
+                        previous.board != current.board ||
+                        previous.tab != current.tab ||
+                        previous.onlyExpiringSoon != current.onlyExpiringSoon,
+                    builder: (context, state) => QuoteBoardTabBar(
+                      selected: state.tab,
+                      expiringSoonSelected: state.onlyExpiringSoon,
+                      countOf: state.countOf,
+                      onChanged: cubit.setTab,
+                    ),
+                  ),
+                ],
               ),
             ),
             // Pinned under the tabs, so the Expiring soon toggle stays in

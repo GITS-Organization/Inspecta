@@ -19,6 +19,7 @@ import '../../../requests/domain/entities/request_source.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/domain/usecases/get_request_detail.dart';
 import '../../../requests/presentation/pages/request_detail_page.dart';
+import '../../../requests/presentation/widgets/job_stepper.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
 import '../../domain/entities/client_response_outcome.dart';
 import '../../domain/entities/quotation.dart';
@@ -143,46 +144,59 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
               return Column(
                 children: [
                   AppBanner(
-                    child: Row(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const MBackButton(),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                current?.id ?? t.quoteDetailTitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.caption.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.24,
-                                  height: 16 / 12,
-                                  fontSize: 12,
-                                ),
+                        Row(
+                          children: [
+                            const MBackButton(),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    current?.id ?? t.quoteDetailTitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.caption.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.24,
+                                      height: 16 / 12,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    current?.clientName ?? '',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.sectionTitle.copyWith(
+                                      fontSize: 22,
+                                      height: 28 / 22,
+                                      letterSpacing: -0.22,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                current?.clientName ?? '',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.sectionTitle.copyWith(
-                                  fontSize: 22,
-                                  height: 28 / 22,
-                                  letterSpacing: -0.22,
-                                ),
-                              ),
+                            ),
+                            if (current != null) ...[
+                              const SizedBox(width: 8),
+                              current.status == QuotationStatus.countered
+                                  ? _YourTurnChip(label: t.yourTurnBadge)
+                                  : QuoteBoardStatusChip(quotation: current),
                             ],
-                          ),
+                          ],
                         ),
-                        if (current != null) ...[
-                          const SizedBox(width: 8),
-                          current.status == QuotationStatus.countered
-                              ? _YourTurnChip(label: t.yourTurnBadge)
-                              : QuoteBoardStatusChip(quotation: current),
-                        ],
+                        const SizedBox(height: 18),
+                        // This screen is the Quote step, whatever the request's
+                        // own status says (it may still be "received").
+                        JobStepper(
+                          status: state.request?.status ?? JobStatus.quoteDraft,
+                          currentStep: 1,
+                        ),
                       ],
                     ),
                   ),

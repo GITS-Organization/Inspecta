@@ -66,7 +66,10 @@ class StatusPill extends StatelessWidget {
   final String label;
   final PillTone tone;
 
-  const StatusPill({super.key, required this.label, this.tone = PillTone.info});
+  /// Shown before the label (a check on "Matched").
+  final IconData? icon;
+
+  const StatusPill({super.key, required this.label, this.tone = PillTone.info, this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -76,10 +79,16 @@ class StatusPill extends StatelessWidget {
       PillTone.warning => (AppColours.chipAmberBackground, AppColours.chipAmberText),
       PillTone.danger => (AppColours.chipRedBackground, AppColours.chipRedText),
     };
+    final text = Text(label, style: AppTextStyles.badge.copyWith(color: foreground));
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(999)),
-      child: Text(label, style: AppTextStyles.badge.copyWith(color: foreground)),
+      child: icon == null
+          ? text
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [Icon(icon, size: 14, color: foreground), const SizedBox(width: 4), text],
+            ),
     );
   }
 }

@@ -11,7 +11,8 @@ import '../bloc/coordinator_queue_cubit.dart';
 /// that group; tapping it again clears the filter (the cubit's toggle).
 /// Unassigned is red when there's anything waiting on the coordinator.
 ///
-/// Five groups don't fit side by side, so the control scrolls sideways.
+/// Five groups don't fit side by side, so the control scrolls sideways — the
+/// one cut off at the edge says there is more.
 class CoordinatorQueueFilters extends StatelessWidget {
   const CoordinatorQueueFilters({super.key});
 
@@ -28,7 +29,9 @@ class CoordinatorQueueFilters extends StatelessWidget {
           alert: filter == QueueFilter.unassigned,
         );
 
+        // Sits inside the header banner, which already has its own gutter.
         return AppSegmentedFilter<QueueFilter>(
+          margin: EdgeInsets.zero,
           segments: [
             segment(QueueFilter.unassigned, t.statUnassigned),
             segment(QueueFilter.scheduled, t.statScheduled),

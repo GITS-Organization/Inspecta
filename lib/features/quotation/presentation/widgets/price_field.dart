@@ -23,6 +23,14 @@ class PriceField extends StatefulWidget {
   /// Makes the currency pickable; called with the code the user chose.
   final ValueChanged<String>? onCurrencyChanged;
 
+  /// Shown while the field is empty, e.g. "0.00".
+  final String? hintText;
+
+  /// Draws the field with a navy outline even at rest: the price the
+  /// coordinator is being asked to set (an offer), rather than one that is
+  /// only confirmed.
+  final bool emphasised;
+
   const PriceField({
     super.key,
     required this.controller,
@@ -30,6 +38,8 @@ class PriceField extends StatefulWidget {
     this.errorText,
     this.currency = Currency.egp,
     this.onCurrencyChanged,
+    this.hintText,
+    this.emphasised = false,
   });
 
   @override
@@ -54,9 +64,10 @@ class _PriceFieldState extends State<PriceField> {
   @override
   Widget build(BuildContext context) {
     final hasError = widget.errorText != null;
+    final strong = _focusNode.hasFocus || widget.emphasised;
     final borderColor = hasError
         ? AppColours.errorIcon
-        : _focusNode.hasFocus
+        : strong
         ? AppColours.primaryColor
         : AppColours.border;
 
@@ -70,7 +81,7 @@ class _PriceFieldState extends State<PriceField> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: borderColor, width: _focusNode.hasFocus ? 2 : 1),
+            border: Border.all(color: borderColor, width: strong ? 2 : 1),
           ),
           child: Row(
             children: [
@@ -90,9 +101,14 @@ class _PriceFieldState extends State<PriceField> {
                   ],
                   textAlignVertical: TextAlignVertical.center,
                   style: AppTextStyles.input.copyWith(fontWeight: FontWeight.w600),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     border: InputBorder.none,
                     isCollapsed: true,
+                    hintText: widget.hintText,
+                    hintStyle: AppTextStyles.input.copyWith(
+                      fontWeight: FontWeight.w400,
+                      color: AppColours.inkMuted,
+                    ),
                   ),
                 ),
               ),

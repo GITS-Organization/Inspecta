@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/consts/app_colors.dart';
@@ -360,16 +361,40 @@ class _Header extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      request.id,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.caption.copyWith(
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.24,
-                        height: 16 / 12,
-                        fontSize: 12,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '#${request.id}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.24,
+                              height: 16 / 12,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        // The id is long; one tap puts it on the clipboard.
+                        InkWell(
+                          onTap: () async {
+                            final message = AppLocalizations.of(context)!.idCopiedMessage;
+                            await Clipboard.setData(ClipboardData(text: request.id));
+                            MToast.showSuccess(message: message);
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.copy_rounded,
+                              size: 14,
+                              semanticLabel: AppLocalizations.of(context)!.copyIdAction,
+                              color: AppColours.primaryDark,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(

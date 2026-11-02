@@ -81,6 +81,7 @@ class RequestClientCard extends StatelessWidget {
                             : clientError
                             ? PillTone.danger
                             : PillTone.warning,
+                        icon: hasClient ? Icons.check_rounded : null,
                       ),
                       if (pickable)
                         const Icon(Icons.chevron_right_rounded, size: 20, color: AppColours.inkMuted),
@@ -125,8 +126,19 @@ class RequestEquipmentCard extends StatelessWidget {
       emptyText: t.noMachinesForClient,
       load: intake.machines,
       titleOf: (machine) => machine.name,
-      subtitleOf: (machine) => machine.details,
+      // Capacity, make and model on one line, the serial on the next.
+      subtitleOf: (machine) => [
+        [machine.capacity, machine.manufacturer, machine.model]
+            .whereType<String>()
+            .map((part) => part.trim())
+            .where((part) => part.isNotEmpty)
+            .join(' · '),
+        if (machine.serialNumber?.trim().isNotEmpty ?? false) t.machineSerialLine(machine.serialNumber!.trim()),
+      ].where((line) => line.isNotEmpty).join('\n'),
       matches: (machine, query) => '${machine.name} ${machine.details}'.toLowerCase().contains(query),
+      contextOf: (count) => '${intake.clientName} · ${t.machinesCount(count)}',
+      itemIcon: Icons.precision_manufacturing_outlined,
+      actionLabel: row == null ? t.suggestionAddAction : t.chooseMachineAction,
     );
     if (machine == null) return;
     if (row == null) {
@@ -433,11 +445,19 @@ class _ItemEditor extends StatelessWidget {
                         ),
                       ),
                     ),
-                    IconButton(
-                      onPressed: onRemove,
-                      tooltip: t.removeItemAction,
-                      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-                      icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColours.dangerText),
+                    // Apart from "Change", and tinted as a danger.
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 8),
+                      child: IconButton(
+                        onPressed: onRemove,
+                        tooltip: t.removeItemAction,
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColours.errorBackground,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+                        icon: const Icon(Icons.delete_outline_rounded, size: 22, color: AppColours.errorText),
+                      ),
                     ),
                   ],
                 ),

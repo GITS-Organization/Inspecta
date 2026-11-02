@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -78,17 +79,7 @@ class _Header extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      request.id,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.caption.copyWith(
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.24,
-                        height: 16 / 12,
-                        fontSize: 12,
-                      ),
-                    ),
+                    _CopyableId(request.id),
                     const SizedBox(height: 2),
                     Text(
                       t.assignInspectorTitle,
@@ -106,7 +97,90 @@ class _Header extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          const JobStepper(status: JobStatus.assigned),
+          // Request and Quote are done; this screen is the Assign step.
+          const JobStepper(status: JobStatus.assigned, currentStep: 2),
+        ],
+      ),
+    );
+  }
+}
+
+/// The request id under the back button, as "#id" with a copy icon: tapping
+/// it puts the id on the clipboard.
+class _CopyableId extends StatelessWidget {
+  final String id;
+
+  const _CopyableId(this.id);
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: () async {
+        await Clipboard.setData(ClipboardData(text: id));
+        MToast.showSuccess(message: t.idCopiedMessage);
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              '#$id',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.24,
+                height: 16 / 12,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.copy_rounded, size: 13, color: AppColours.inkMuted),
+        ],
+      ),
+    );
+  }
+}
+
+/// A numbered step card of the form: a round navy badge with the step's
+/// number, its [title], an optional [trailing] chip, then the [child].
+class _StepCard extends StatelessWidget {
+  final int number;
+  final String title;
+  final Widget? trailing;
+  final Widget child;
+
+  const _StepCard({required this.number, required this.title, required this.child, this.trailing});
+
+  @override
+  Widget build(BuildContext context) {
+    return MCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(color: AppColours.navy, shape: BoxShape.circle),
+                child: Text(
+                  '$number',
+                  style: const TextStyle(fontSize: 13, height: 1, fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Flexible(child: Text(title, style: AppTextStyles.sectionTitle)),
+              if (trailing != null) ...[const SizedBox(width: 10), trailing!],
+            ],
+          ),
+          const SizedBox(height: 16),
+          child,
         ],
       ),
     );
@@ -194,14 +268,10 @@ class _Body extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         // When.
-        MCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(t.pickTimeStepLabel, style: AppTextStyles.sectionTitle),
-              const SizedBox(height: 16),
-              BlocBuilder<AssignInspectorCubit, AssignInspectorState>(
+        _StepCard(
+          number: 1,
+          title: t.pickTimeTitle,
+          child: BlocBuilder<AssignInspectorCubit, AssignInspectorState>(
                 buildWhen: (previous, current) => previous.scheduledAt != current.scheduledAt,
                 builder: (context, state) {
                   final cubit = context.read<AssignInspectorCubit>();
@@ -253,19 +323,13 @@ class _Body extends StatelessWidget {
                   );
                 },
               ),
-            ],
-          ),
         ),
         const SizedBox(height: 12),
         // Who.
-        MCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(t.chooseInspectorStepLabel, style: AppTextStyles.sectionTitle),
-              const SizedBox(height: 16),
-              BlocBuilder<AssignInspectorCubit, AssignInspectorState>(
+        _StepCard(
+          number: 2,
+          title: t.chooseInspectorTitle,
+          child: BlocBuilder<AssignInspectorCubit, AssignInspectorState>(
                 builder: (context, state) {
                   final cubit = context.read<AssignInspectorCubit>();
                   if (state.inspectorsStatus == InspectorsStatus.loading) {
@@ -305,36 +369,49 @@ class _Body extends StatelessWidget {
                   );
                 },
               ),
-            ],
-          ),
         ),
         const SizedBox(height: 12),
         // Notes.
-        MCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(t.assignNotesLabel, style: AppTextStyles.sectionTitle),
-              const SizedBox(height: 12),
-              TextField(
+        _StepCard(
+          number: 3,
+          title: t.assignNotesTitle,
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColours.surfaceMuted,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: AppColours.border),
+            ),
+            child: Text(
+              t.optionalChipLabel,
+              style: AppTextStyles.badge.copyWith(color: AppColours.inkSecondary),
+            ),
+          ),
+          child: TextField(
                 onChanged: context.read<AssignInspectorCubit>().changeNote,
-                minLines: 2,
-                maxLines: 4,
+                minLines: 3,
+                maxLines: 5,
                 cursorColor: AppColours.primaryColor,
                 style: AppTextStyles.input.copyWith(fontWeight: FontWeight.w400, fontSize: 14, height: 20 / 14),
                 decoration: InputDecoration(
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: AppColours.surfaceMuted,
+                  hintText: t.assignNotesHint,
+                  hintStyle: AppTextStyles.input.copyWith(
+                    fontWeight: FontWeight.w400,
+                    fontSize: 15,
+                    height: 20 / 15,
+                    color: AppColours.inkMuted,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppColours.border),
+                    borderSide: const BorderSide(color: AppColours.borderSubtle),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppColours.border),
+                    borderSide: const BorderSide(color: AppColours.borderSubtle),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -342,8 +419,6 @@ class _Body extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
-          ),
         ),
       ],
     );
@@ -390,13 +465,13 @@ class _PickerField extends StatelessWidget {
             height: 48,
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColours.surfaceMuted,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColours.border),
+              border: Border.all(color: AppColours.borderSubtle),
             ),
             child: Row(
               children: [
-                Icon(icon, size: 18, color: AppColours.inkMuted),
+                Icon(icon, size: 20, color: AppColours.inkSecondary),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(

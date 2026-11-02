@@ -14,13 +14,13 @@ import '../pages/quote_email_page.dart';
 import '../pdf/proposal_pdf_preview.dart';
 import 'price_field.dart';
 import 'proposal_points_editor.dart';
+import 'quote_section_header.dart';
+import 'reply_type_switch.dart';
 
-import 'reply_option_tile.dart';
-
-/// Feature 03 §5's "Reply panel (on Request detail)": Accept / Offer
-/// price / Reject, with the offer's price, and — for an offer or
-/// accept on a saved quote — the email to the client, which a reject
-/// replaces with its reason.
+/// Feature 03 §5's "Reply panel": "Your response" — Accept / Send offer /
+/// Reject as one switch — then, as cards of their own, the offer's price, the
+/// scope of work and notes, and the email to the client (an offer or accept),
+/// or the reason (a reject).
 class QuotationReplyCard extends StatefulWidget {
   const QuotationReplyCard({super.key});
 
@@ -63,133 +63,128 @@ class _QuotationReplyCardState extends State<QuotationReplyCard> {
     final cubit = context.watch<QuotationFormCubit>();
     final state = cubit.state;
 
-    return MCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(t.howDoYouWantToReply, style: AppTextStyles.sectionTitle),
-          const SizedBox(height: 12),
-          ReplyOptionTile(
-            title: t.replyAccept,
-            subtitle: t.replyAcceptSubtitle,
-            selected: state.replyType == ReplyType.accept,
-            onTap: () => cubit.selectReplyType(ReplyType.accept),
-          ),
-          const SizedBox(height: 12),
-          ReplyOptionTile(
-            title: t.replyOffer,
-            subtitle: t.replyOfferSubtitle,
-            selected: state.replyType == ReplyType.offer,
-            onTap: () => cubit.selectReplyType(ReplyType.offer),
-          ),
-          const SizedBox(height: 12),
-          ReplyOptionTile(
-            title: t.replyReject,
-            subtitle: t.replyRejectSubtitle,
-            danger: true,
-            selected: state.replyType == ReplyType.reject,
-            onTap: () => cubit.selectReplyType(ReplyType.reject),
-          ),
-          if (state.isPriced) ...[
-            for (final item in cubit.request.items) ...[
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        MCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(t.yourResponse, style: AppTextStyles.sectionTitle),
               const SizedBox(height: 14),
-              _LinePricing(
+              ReplyTypeSwitch(
+                selected: state.replyType,
+                onChanged: cubit.selectReplyType,
+              ),
+            ],
+          ),
+        ),
+        if (state.isPriced) ...[
+          for (final item in cubit.request.items) ...[
+            const SizedBox(height: 12),
+            MCard(
+              child: _LinePricing(
                 currency: state.currency,
                 onCurrencyChanged: cubit.changeCurrency,
                 title: '${item.displayTitle} × ${item.quantity}',
                 controller: _priceControllers.putIfAbsent(item.id, TextEditingController.new),
                 priceError: state.submitted && state.linePriceInvalid(item.id),
+                emphasised: state.replyType == ReplyType.offer,
                 onPriceChanged: (value) => cubit.changeLinePrice(item.id, value),
               ),
-            ],
-            const SizedBox(height: 14),
-            ProposalPointsEditor(
-              icon: Icons.checklist_rounded,
-              label: t.scopeOfWorkLabel,
-              errorText: state.showScopeError ? t.errorScopeRequired : null,
-              help: t.proposalNotesHelp,
-              addLabel: t.addScopePoint,
-              initial: state.scopeOfWork,
-              onChanged: cubit.changeScopeOfWork,
-              summaryOf: (count, _) => count == 0 ? t.scopeOfWorkEmpty : t.proposalNotesCount(count),
-            ),
-            const SizedBox(height: 14),
-            ProposalPointsEditor(
-              icon: Icons.sticky_note_2_outlined,
-              label: t.proposalNotesLabel,
-              help: t.proposalNotesHelp,
-              addLabel: t.addNote,
-              initial: state.notes,
-              standard: defaultProposalNotes,
-              onChanged: cubit.changeNotes,
-              summaryOf: (count, isStandard) =>
-                  isStandard ? t.proposalNotesStandard(count) : t.proposalNotesCount(count),
             ),
           ],
-          if (state.isPriced) ...[
-            // The offer or accept goes out as an email with the PDF: preview
-            // it, and edit it if needed, before sending. It stands in for the
-            // message field.
-            const SizedBox(height: 14),
-            _EmailSection(
-              edits: state.emailEdits,
-              onTap: () => _openEmail(cubit),
-            ),
-          ] else if (state.replyType == ReplyType.reject) ...[
-            const SizedBox(height: 14),
-            _MessageField(
+          const SizedBox(height: 12),
+          ProposalPointsEditor(
+            icon: Icons.checklist_rounded,
+            label: t.scopeOfWorkLabel,
+            errorText: state.showScopeError ? t.errorScopeRequired : null,
+            help: t.proposalNotesHelp,
+            addLabel: t.addScopePoint,
+            initial: state.scopeOfWork,
+            onChanged: cubit.changeScopeOfWork,
+            summaryOf: (count, _) => count == 0 ? t.scopeOfWorkEmpty : t.proposalNotesCount(count),
+          ),
+          const SizedBox(height: 12),
+          ProposalPointsEditor(
+            icon: Icons.sticky_note_2_outlined,
+            label: t.proposalNotesLabel,
+            help: t.proposalNotesHelp,
+            addLabel: t.addNote,
+            initial: state.notes,
+            standard: defaultProposalNotes,
+            onChanged: cubit.changeNotes,
+            summaryOf: (count, isStandard) =>
+                isStandard ? t.proposalNotesStandard(count) : t.proposalNotesCount(count),
+          ),
+        ],
+        if (state.isPriced) ...[
+          // The offer or accept goes out as an email with the PDF: preview
+          // it, and edit it if needed, before sending. It stands in for the
+          // message field.
+          const SizedBox(height: 12),
+          _EmailSection(
+            edits: state.emailEdits,
+            onTap: () => _openEmail(cubit),
+          ),
+        ] else if (state.replyType == ReplyType.reject) ...[
+          const SizedBox(height: 12),
+          MCard(
+            child: _MessageField(
               controller: _messageController,
               hasError: state.showReasonError,
               onChanged: cubit.changeMessage,
             ),
-          ],
-          if (state.isPriced && !state.priceInvalid) ...[
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton.icon(
-                onPressed: () => cubit.hasQuote
-                    // The API generates the PDF from the saved quote, so the
-                    // offer is saved first.
-                    ? PdfPreviewPage.open(
-                        context,
-                        title: t.proposalTitle,
-                        fileName: 'proposal.pdf',
-                        allowDownload: false,
-                        build: () async {
-                          await cubit.saveOffer();
-                          return cubit.fetchPdf();
-                        },
-                      )
-                    : previewProposalPdf(
-                        context,
-                        request: cubit.request,
-                        lines: cubit.offerLines(),
-                        scopeOfWork: cubit.scopeOfWork,
-                        notes: cubit.notes,
-                        validityDays: state.validityDays,
-                        currency: state.currency,
-                      ),
-                icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                label: Text(t.previewProposal),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColours.ink,
-                  side: const BorderSide(color: AppColours.border),
-                  textStyle: AppTextStyles.buttonLabel,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
+          ),
+        ],
+        if (state.isPriced && !state.priceInvalid) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: () => cubit.hasQuote
+                  // The API generates the PDF from the saved quote, so the
+                  // offer is saved first.
+                  ? PdfPreviewPage.open(
+                      context,
+                      title: t.proposalTitle,
+                      fileName: 'proposal.pdf',
+                      allowDownload: false,
+                      build: () async {
+                        await cubit.saveOffer();
+                        return cubit.fetchPdf();
+                      },
+                    )
+                  : previewProposalPdf(
+                      context,
+                      request: cubit.request,
+                      lines: cubit.offerLines(),
+                      scopeOfWork: cubit.scopeOfWork,
+                      notes: cubit.notes,
+                      validityDays: state.validityDays,
+                      currency: state.currency,
+                    ),
+              icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+              label: Text(t.previewProposal),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColours.ink,
+                side: const BorderSide(color: AppColours.border),
+                textStyle: AppTextStyles.buttonLabel,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
-          ],
+          ),
         ],
-      ),
+      ],
     );
   }
 }
 
-/// The email to the client, as a row like the scope and notes ones: what
+/// The email to the client, as a card like the scope and notes ones: what
 /// goes out (the standard email, or the coordinator's edited version), and a
 /// tap opens it to preview and edit.
 class _EmailSection extends StatelessWidget {
@@ -207,40 +202,23 @@ class _EmailSection extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColours.border, width: 1.5),
+        borderRadius: BorderRadius.circular(24),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-          child: Row(
-            children: [
-              const Icon(Icons.mail_outline_rounded, size: 20, color: AppColours.primaryColor),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(t.emailPreviewTitle, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
-                    const SizedBox(height: 2),
-                    Text(
-                      !edited
-                          ? t.quoteEmailStandardSubtitle
-                          : to == null
-                          ? t.quoteEmailEditedSubtitle
-                          : t.quoteEmailEditedToSubtitle(to),
-                      style: AppTextStyles.caption,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              Text(t.quoteEmailPreviewEditAction, style: AppTextStyles.link.copyWith(fontSize: 13)),
-              const Icon(Icons.chevron_right_rounded, size: 20, color: AppColours.primaryColor),
-            ],
+          padding: const EdgeInsets.all(16),
+          child: QuoteSectionHeader(
+            icon: Icons.mail_outline_rounded,
+            title: t.emailPreviewTitle,
+            summary: !edited
+                ? t.quoteEmailStandardSubtitle
+                : to == null
+                ? t.quoteEmailEditedSubtitle
+                : t.quoteEmailEditedToSubtitle(to),
+            // It opens the email on a page of its own, not unfolds in place.
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppColours.inkMuted),
           ),
         ),
       ),
@@ -322,6 +300,9 @@ class _LinePricing extends StatelessWidget {
   final ValueChanged<String> onCurrencyChanged;
   final TextEditingController controller;
   final bool priceError;
+
+  /// Outlines the field in navy: the price is being set, not just confirmed.
+  final bool emphasised;
   final ValueChanged<String> onPriceChanged;
 
   const _LinePricing({
@@ -330,6 +311,7 @@ class _LinePricing extends StatelessWidget {
     required this.onCurrencyChanged,
     required this.controller,
     required this.priceError,
+    required this.emphasised,
     required this.onPriceChanged,
   });
 
@@ -341,12 +323,14 @@ class _LinePricing extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(title, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
+        Text(title, style: AppTextStyles.sectionTitle),
         const SizedBox(height: 2),
         Text(t.fixedPricePerVisit, style: AppTextStyles.caption),
-        const SizedBox(height: 6),
+        const SizedBox(height: 12),
         PriceField(
           currency: currency,
+          hintText: '0.00',
+          emphasised: emphasised,
           // One currency for the whole quote: picking it on any line changes
           // every line.
           onCurrencyChanged: onCurrencyChanged,

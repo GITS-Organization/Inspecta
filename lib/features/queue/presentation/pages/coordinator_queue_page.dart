@@ -56,9 +56,8 @@ class CoordinatorQueuePage extends StatelessWidget {
               UserAppHeader(
                 title: AppLocalizations.of(context)!.navQueue,
                 onOpenProfile: onOpenProfile,
+                bottom: const CoordinatorQueueFilters(),
               ),
-              const SizedBox(height: 12),
-              const CoordinatorQueueFilters(),
               const Expanded(child: _Body()),
             ],
           ),
@@ -143,7 +142,19 @@ class _Body extends StatelessWidget {
                           t.coordinatorQueueHeading,
                           style: AppTextStyles.sectionTitle,
                         ),
-                        Text(t.byDueDate, style: AppTextStyles.caption),
+                        // The queue is always listed by due date: the label is
+                        // drawn as a sort control, but there is nothing to switch.
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              t.byDueDate,
+                              style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(width: 2),
+                            const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: AppColours.inkMuted),
+                          ],
+                        ),
                       ],
                     ),
                   ),

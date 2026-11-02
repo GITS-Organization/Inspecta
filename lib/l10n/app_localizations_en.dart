@@ -808,6 +808,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientMachinesAction => 'Client\'s machines';
 
   @override
+  String machinesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count machines',
+      one: '1 machine',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String machineSerialLine(String serial) {
+    return 'Serial $serial';
+  }
+
+  @override
+  String get copyIdAction => 'Copy ID';
+
+  @override
   String itemsCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -855,6 +874,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get howDoYouWantToReply => 'How do you want to reply?';
+
+  @override
+  String get yourResponse => 'Your response';
+
+  @override
+  String get replyOfferShort => 'Send offer';
 
   @override
   String get replyAccept => 'Accept';
@@ -1299,6 +1324,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assignNotesLabel => '3. Notes (optional)';
+
+  @override
+  String get pickTimeTitle => 'Pick a time';
+
+  @override
+  String get chooseInspectorTitle => 'Choose inspector';
+
+  @override
+  String get assignNotesTitle => 'Notes';
+
+  @override
+  String get optionalChipLabel => 'Optional';
+
+  @override
+  String get assignNotesHint => 'Add a note for the inspector';
+
+  @override
+  String get idCopiedMessage => 'ID copied.';
 
   @override
   String get noQualificationsListed => 'No qualifications on file';

@@ -2,8 +2,7 @@
 class AppLayout {
   AppLayout._();
 
-  /// Space a scrollable tab should reserve at its bottom so its content
-  /// doesn't end up hidden behind the floating root bottom nav (excludes
-  /// the device safe area, which the scroll view handles separately).
-  static const double bottomNavClearance = 90;
+  /// Space a scrollable tab leaves at its bottom, under its last card. The
+  /// root bottom nav is a bar of its own, so nothing hides behind it.
+  static const double bottomNavClearance = 24;
 }

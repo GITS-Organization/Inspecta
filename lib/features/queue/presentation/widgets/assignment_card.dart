@@ -6,10 +6,9 @@ import '../../../../core/consts/app_text_styles.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/presentation/widgets/status_chip.dart';
-import '../../../coordinator/presentation/widgets/coordinator_labels.dart';
 
 /// One row in the coordinator's queue: a "ready to assign" job shows its
-/// due badge and an "Assign inspector" CTA; an already-assigned job shows
+/// quote number, a short id tag and an "Assign inspector" CTA; an already-assigned job shows
 /// who it went to and when instead (mockup's mixed list); a job whose
 /// certificate the technical manager approved shows a "Send to client" CTA.
 class AssignmentCard extends StatelessWidget {
@@ -61,25 +60,57 @@ class AssignmentCard extends StatelessWidget {
   }
 }
 
-/// The request id above a card's title: plain, slightly spaced caps-weight
-/// text rather than monospace.
-class _RequestId extends StatelessWidget {
+/// The request's id as a small grey tag: the long UUID cut to its first eight
+/// characters, so the quote number is the first thing read.
+class _IdTag extends StatelessWidget {
   final String id;
 
-  const _RequestId(this.id);
+  const _IdTag(this.id);
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      id,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: AppTextStyles.caption.copyWith(
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.24,
-        height: 16 / 12,
-        fontSize: 12,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColours.surfaceMuted,
+        borderRadius: BorderRadius.circular(10),
       ),
+      child: Text(
+        '#${id.length > 8 ? id.substring(0, 8) : id}',
+        maxLines: 1,
+        style: AppTextStyles.caption.copyWith(
+          fontWeight: FontWeight.w600,
+          height: 16 / 13,
+          color: AppColours.inkSecondary,
+        ),
+      ),
+    );
+  }
+}
+
+/// The title line of a card: [title] with the [_IdTag] at its end.
+class _TitleRow extends StatelessWidget {
+  final String title;
+  final String id;
+
+  const _TitleRow({required this.title, required this.id});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: AppTextStyles.cardTitle.copyWith(fontSize: 17, height: 24 / 17),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 10),
+        _IdTag(id),
+      ],
     );
   }
 }
@@ -124,25 +155,13 @@ class _ReadyToSend extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            StatusChip(status: request.status),
-            const SizedBox(width: 8),
-            Flexible(child: _RequestId(request.id)),
-          ],
-        ),
+        StatusChip(status: request.status),
         const SizedBox(height: 12),
-        Text(
-          request.equipmentTitle,
-          style: AppTextStyles.cardTitle,
-          overflow: TextOverflow.ellipsis,
-        ),
+        _TitleRow(title: request.equipmentTitle, id: request.id),
         const SizedBox(height: 2),
         Text(
           [request.clientName, if (name != null) name].join(' · '),
           style: AppTextStyles.caption.copyWith(height: 18 / 13),
-          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 16),
         _CardCta(t.sendToClientAction),
@@ -159,34 +178,17 @@ class _ReadyToAssign extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final due = request.preferredDate;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            if (due != null)
-              _DueBadge(label: due.dueLabel(t))
-            else
-              const SizedBox.shrink(),
-            const SizedBox(width: 8),
-            Flexible(child: _RequestId(request.id)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Text(
-          request.equipmentTitle,
-          style: AppTextStyles.cardTitle,
-          overflow: TextOverflow.ellipsis,
-        ),
+        _TitleRow(title: request.equipmentTitle, id: request.id),
         const SizedBox(height: 2),
+        // Long client and site names wrap rather than being cut off.
         Text(
           '${request.clientName} · ${request.location}',
           style: AppTextStyles.caption.copyWith(height: 18 / 13),
-          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 16),
         _CardCta(t.assignInspectorAction),
@@ -250,21 +252,6 @@ class _Assigned extends StatelessWidget {
         const SizedBox(width: 8),
         StatusChip(status: request.status),
       ],
-    );
-  }
-}
-
-class _DueBadge extends StatelessWidget {
-  final String label;
-
-  const _DueBadge({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(color: AppColours.chipRedBackground, borderRadius: BorderRadius.circular(999)),
-      child: Text(label, style: AppTextStyles.badge.copyWith(color: AppColours.chipRedText)),
     );
   }
 }

@@ -58,7 +58,8 @@ class QuotationFooter extends StatelessWidget {
           if (state.isPriced && !state.priceInvalid) {
             totalText = Currency.format(cubit.totalPiastres!, code: state.currency);
           } else {
-            totalText = '—';
+            // No price yet: the currency it will be in, and a dash.
+            totalText = '${state.currency} —';
           }
 
           // A draft is the offer saved onto the request's quote, which a

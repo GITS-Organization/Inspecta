@@ -78,9 +78,18 @@ class RequestsListView extends StatelessWidget {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
                   sliver: SliverToBoxAdapter(
-                    child: Text(
-                      _heading(t, state.tab, requests.items.length, requests.hasMore),
-                      style: AppTextStyles.sectionTitle.copyWith(fontSize: 14),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _heading(t, state.tab),
+                            style: AppTextStyles.sectionTitle,
+                          ),
+                        ),
+                        // The count of what is loaded, with a plus when more
+                        // pages remain.
+                        _CountPill('${requests.items.length}${requests.hasMore ? '+' : ''}'),
+                      ],
                     ),
                   ),
                 ),
@@ -220,14 +229,37 @@ class RequestsListView extends StatelessWidget {
     );
   }
 
-  /// "Needs your reply · 20+": the count of what is loaded, with a plus when
-  /// more pages remain.
-  String _heading(AppLocalizations t, RequestsTab tab, int count, bool hasMore) {
-    final label = switch (tab) {
-      RequestsTab.newTab => t.needsYourReply,
-      RequestsTab.maybe => t.maybeRequestsHeading,
-    };
-    return '${t.tabCount(label, count)}${hasMore ? '+' : ''}';
+  String _heading(AppLocalizations t, RequestsTab tab) => switch (tab) {
+    RequestsTab.newTab => t.needsYourReply,
+    RequestsTab.maybe => t.maybeRequestsHeading,
+  };
+}
+
+/// The round count beside a section heading.
+class _CountPill extends StatelessWidget {
+  final String label;
+
+  const _CountPill(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 40),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColours.primaryTint,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.badge.copyWith(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: AppColours.primaryDark,
+        ),
+      ),
+    );
   }
 }
 

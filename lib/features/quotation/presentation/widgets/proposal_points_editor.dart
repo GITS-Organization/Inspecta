@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../l10n/app_localizations.dart';
+import 'quote_section_header.dart';
 
 /// A list of points printed on the proposal — the scope of work, or the notes
 /// under the budget table — as a card that can be folded away.
@@ -125,8 +126,8 @@ class _ProposalPointsEditorState extends State<ProposalPointsEditor> {
     final card = Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: hasError ? AppColours.errorIcon : AppColours.border, width: 1.5),
+        borderRadius: BorderRadius.circular(24),
+        border: hasError ? Border.all(color: AppColours.errorIcon, width: 1.5) : null,
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -136,44 +137,30 @@ class _ProposalPointsEditorState extends State<ProposalPointsEditor> {
           InkWell(
             onTap: () => setState(() => _expanded = !_expanded),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-              child: Row(
-                children: [
-                  Icon(widget.icon, size: 20, color: AppColours.primaryColor),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(widget.label, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.summaryOf(_points.length, _isStandard),
-                          style: AppTextStyles.caption,
-                        ),
-                      ],
-                    ),
-                  ),
-                  AnimatedRotation(
-                    turns: _expanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 180),
-                    child: const Icon(Icons.expand_more_rounded, color: AppColours.inkMuted),
-                  ),
-                ],
+              padding: const EdgeInsets.all(16),
+              child: QuoteSectionHeader(
+                icon: widget.icon,
+                title: widget.label,
+                summary: widget.summaryOf(_points.length, _isStandard),
+                trailing: AnimatedRotation(
+                  turns: _expanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 180),
+                  child: const Icon(Icons.expand_more_rounded, color: AppColours.inkMuted),
+                ),
               ),
             ),
           ),
           if (_expanded) ...[
-            const Divider(height: 1, color: AppColours.border),
+            const Divider(height: 1, indent: 16, endIndent: 16, color: AppColours.borderSubtle),
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-              child: Text(widget.help, style: AppTextStyles.caption),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: Text(widget.help, style: AppTextStyles.subtitle.copyWith(fontSize: 13.5)),
             ),
             ReorderableListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               buildDefaultDragHandles: false,
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
               itemCount: _points.length,
               onReorder: _reorder,
               itemBuilder: (context, index) {
@@ -192,13 +179,17 @@ class _ProposalPointsEditorState extends State<ProposalPointsEditor> {
               },
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
+              padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
               child: Row(
                 children: [
                   TextButton.icon(
                     onPressed: _add,
-                    icon: const Icon(Icons.add_rounded, size: 18),
+                    icon: const Icon(Icons.add_rounded, size: 20),
                     label: Text(widget.addLabel),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColours.chipBlueText,
+                      textStyle: AppTextStyles.link,
+                    ),
                   ),
                   const Spacer(),
                   if (widget.standard != null && !_isStandard)

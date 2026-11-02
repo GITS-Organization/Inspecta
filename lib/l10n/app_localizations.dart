@@ -1538,6 +1538,24 @@ abstract class AppLocalizations {
   /// **'Client\'s machines'**
   String get clientMachinesAction;
 
+  /// No description provided for @machinesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 machine} other{{count} machines}}'**
+  String machinesCount(int count);
+
+  /// No description provided for @machineSerialLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Serial {serial}'**
+  String machineSerialLine(String serial);
+
+  /// No description provided for @copyIdAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy ID'**
+  String get copyIdAction;
+
   /// No description provided for @itemsCount.
   ///
   /// In en, this message translates to:
@@ -1603,6 +1621,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'How do you want to reply?'**
   String get howDoYouWantToReply;
+
+  /// No description provided for @yourResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Your response'**
+  String get yourResponse;
+
+  /// No description provided for @replyOfferShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Send offer'**
+  String get replyOfferShort;
 
   /// No description provided for @replyAccept.
   ///
@@ -2383,6 +2413,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'3. Notes (optional)'**
   String get assignNotesLabel;
+
+  /// No description provided for @pickTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a time'**
+  String get pickTimeTitle;
+
+  /// No description provided for @chooseInspectorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose inspector'**
+  String get chooseInspectorTitle;
+
+  /// No description provided for @assignNotesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get assignNotesTitle;
+
+  /// No description provided for @optionalChipLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get optionalChipLabel;
+
+  /// No description provided for @assignNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note for the inspector'**
+  String get assignNotesHint;
+
+  /// No description provided for @idCopiedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'ID copied.'**
+  String get idCopiedMessage;
 
   /// No description provided for @noQualificationsListed.
   ///

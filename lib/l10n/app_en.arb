@@ -280,6 +280,23 @@
   "hideDetailsAction": "Hide details",
   "requestDetailsTitle": "Details",
   "clientMachinesAction": "Client's machines",
+  "machinesCount": "{count, plural, one{1 machine} other{{count} machines}}",
+  "@machinesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "machineSerialLine": "Serial {serial}",
+  "@machineSerialLine": {
+    "placeholders": {
+      "serial": {
+        "type": "String"
+      }
+    }
+  },
+  "copyIdAction": "Copy ID",
   "itemsCount": "{count, plural, one{1 item} other{{count} items}}",
   "@itemsCount": { "placeholders": { "count": { "type": "int" } } },
   "siteLocationLabel": "Site location",
@@ -297,6 +314,8 @@
   "comingSoon": "This isn't built yet.",
 
   "howDoYouWantToReply": "How do you want to reply?",
+  "yourResponse": "Your response",
+  "replyOfferShort": "Send offer",
   "replyAccept": "Accept",
   "replyAcceptSubtitle": "Use your standard rate",
   "replyOffer": "Send price offer",
@@ -465,6 +484,12 @@
   "startTimeLabel": "Start",
   "chooseInspectorStepLabel": "2. Choose inspector",
   "assignNotesLabel": "3. Notes (optional)",
+  "pickTimeTitle": "Pick a time",
+  "chooseInspectorTitle": "Choose inspector",
+  "assignNotesTitle": "Notes",
+  "optionalChipLabel": "Optional",
+  "assignNotesHint": "Add a note for the inspector",
+  "idCopiedMessage": "ID copied.",
   "noQualificationsListed": "No qualifications on file",
   "bestMatchTag": "Best match",
   "emptyInspectors": "No active inspectors yet.",

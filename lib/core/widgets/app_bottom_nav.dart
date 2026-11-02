@@ -11,10 +11,10 @@ class AppNavItem {
   const AppNavItem({required this.icon, required this.label});
 }
 
+/// The role shells' bottom bar: a white bar with a hairline on top, and every
+/// destination showing its icon and its label. The selected one sits in a
+/// pale-blue pill and reads in bold ink.
 class AppBottomNav extends StatelessWidget {
-  /// The selected tile's share of the bar's inner width.
-  static const _selectedShare = 0.44;
-
   final List<AppNavItem> items;
   final int selectedIndex;
   final ValueChanged<int> onSelect;
@@ -28,43 +28,28 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColours.navy,
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: [
-            BoxShadow(
-              color: AppColours.navy.withValues(alpha: 0.28),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // Every tile has an explicit width (so the change can animate):
-            // the selected one takes its share, the rest split what's left.
-            final selectedWidth = constraints.maxWidth * _selectedShare;
-            final otherWidth = items.length > 1
-                ? (constraints.maxWidth - selectedWidth) / (items.length - 1)
-                : constraints.maxWidth;
-            return Row(
-              children: [
-                for (var i = 0; i < items.length; i++)
-                  _NavTile(
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColours.borderSubtle)),
+      ),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.only(bottom: 8),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+          child: Row(
+            children: [
+              for (var i = 0; i < items.length; i++)
+                Expanded(
+                  child: _NavTile(
                     item: items[i],
                     selected: i == selectedIndex,
-                    width: i == selectedIndex ? selectedWidth : otherWidth,
                     onTap: () => onSelect(i),
                   ),
-              ],
-            );
-          },
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -72,89 +57,58 @@ class AppBottomNav extends StatelessWidget {
 }
 
 class _NavTile extends StatelessWidget {
-  static const _duration = Duration(milliseconds: 280);
-  static const _curve = Curves.easeOutCubic;
+  static const _duration = Duration(milliseconds: 200);
 
   final AppNavItem item;
   final bool selected;
-  final double width;
   final VoidCallback onTap;
 
-  const _NavTile({
-    required this.item,
-    required this.selected,
-    required this.width,
-    required this.onTap,
-  });
+  const _NavTile({required this.item, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final duration = MediaQuery.disableAnimationsOf(context) ? Duration.zero : _duration;
     return Semantics(
       button: true,
       selected: selected,
       label: item.label,
-      child: Tooltip(
-        message: selected ? '' : item.label,
+      child: ExcludeSemantics(
         child: GestureDetector(
           onTap: onTap,
           behavior: HitTestBehavior.opaque,
-          child: AnimatedContainer(
-            duration: _duration,
-            curve: _curve,
-            width: width,
-            height: 46,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: selected ? Colors.white : Colors.transparent,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            // Scales the icon + label down rather than overflowing, if a
-            // long label (or a larger system font) doesn't fit its tile.
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TweenAnimationBuilder<Color?>(
-                    tween: ColorTween(
-                      end: selected ? AppColours.navy : AppColours.onNavyMuted,
-                    ),
-                    duration: _duration,
-                    builder: (context, color, _) =>
-                        Icon(item.icon, size: 22, color: color),
-                  ),
-                  // The label's width animates from zero, so the pill grows
-                  // around it instead of the text popping in.
-                  ClipRect(
-                    child: AnimatedAlign(
-                      duration: _duration,
-                      curve: _curve,
-                      alignment: AlignmentDirectional.centerStart,
-                      widthFactor: selected ? 1 : 0,
-                      child: AnimatedOpacity(
-                        duration: _duration,
-                        curve: _curve,
-                        opacity: selected ? 1 : 0,
-                        child: Padding(
-                          padding: const EdgeInsetsDirectional.only(start: 8),
-                          child: Text(
-                            item.label,
-                            maxLines: 1,
-                            softWrap: false,
-                            style: AppTextStyles.caption.copyWith(
-                              fontSize: 14,
-                              height: 1,
-                              fontWeight: FontWeight.w700,
-                              color: AppColours.navy,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: duration,
+                curve: Curves.easeOutCubic,
+                width: 64,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: selected ? AppColours.primaryTint : Colors.transparent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Icon(
+                  item.icon,
+                  size: 24,
+                  color: selected ? AppColours.navy : AppColours.inkSecondary,
+                ),
               ),
-            ),
+              const SizedBox(height: 4),
+              Text(
+                item.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption.copyWith(
+                  fontSize: 12.5,
+                  height: 16 / 12.5,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  color: selected ? AppColours.ink : AppColours.inkSecondary,
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
           ),
         ),
       ),
