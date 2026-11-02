@@ -128,9 +128,11 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
                             text.Span("Mobile No: ").Bold();
                             text.Span(phones).Bold().FontColor(Green);
                         });
-                    foreach (var email in company is null
-                                 ? ["Ibrahim.ashraf@integrity-intl.com", "Hager.samy@integrity-intl.com"]
-                                 : company.Emails.Take(2))
+                    // The technical manager's email, then the coordinator's of the job.
+                    var contacts = model.ContactEmails();
+                    foreach (var email in contacts.Count > 0
+                                 ? contacts
+                                 : company is null ? ["Ibrahim.ashraf@integrity-intl.com", "Hager.samy@integrity-intl.com"] : company.Emails.Take(2).ToArray())
                         lines.Item().Element(content => Email(content, email));
                 });
                 if (Logo(model) is { Length: > 0 } headerLogo)

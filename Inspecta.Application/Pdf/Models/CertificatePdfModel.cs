@@ -4,6 +4,7 @@ namespace Inspecta.Application.Pdf.Models;
 /// Everything printed on one machine's Report of Thorough Examination. <c>QrData</c> is what the QR code opens; it is
 /// given when the inspector first submits, so the preview carries it, and empty before. <c>Conclusion</c> is the verdict,
 /// one word: Satisfactory or Unsatisfactory. <c>Company</c> is the identity of the team's company; empty means the built-in one.
+/// <c>ManagerEmail</c> and <c>CoordinatorEmail</c> are the emails printed in the header.
 /// </summary>
 public sealed record CertificatePdfModel(
     string? CertificateNumber,
@@ -29,7 +30,21 @@ public sealed record CertificatePdfModel(
     string? SignedBy,
     string? SignatureStrokesJson,
     string? QrData = null,
-    CompanyBranding? Company = null);
+    CompanyBranding? Company = null,
+    string? ManagerEmail = null,
+    string? CoordinatorEmail = null)
+{
+    /// <summary>
+    /// The emails printed under the company details: the technical manager's and the coordinator's of the job (once when they are the
+    /// same). Empty when neither is known.
+    /// </summary>
+    public IReadOnlyList<string> ContactEmails() =>
+        new[] { ManagerEmail, CoordinatorEmail }
+            .Where(email => !string.IsNullOrWhiteSpace(email))
+            .Select(email => email!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+}
 
 /// <summary>A label and its value; a missing value prints as a dash.</summary>
 public sealed record CertificatePdfField(string Label, string? Value);

@@ -216,7 +216,8 @@ public sealed class MachineInspectionService(
         var inspector = await userRepository.GetByIdAsync(certificate.InspectorId, cancellationToken);
         var previous = await PreviousCertificateAsync(certificate, cancellationToken);
         var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
-        var pdf = pdfGenerator.Generate(BuildPdfModel(request, item, certificate, template, match, equipment, client, inspector, previous, company));
+        var contacts = await ContactEmailsAsync(request, cancellationToken);
+        var pdf = pdfGenerator.Generate(BuildPdfModel(request, item, certificate, template, match, equipment, client, inspector, previous, company, contacts));
         var examined = certificate.DatesOf();
         await certificateFiles.AddAsync(
             IssuedCertificateFile.Create(
@@ -434,7 +435,8 @@ public sealed class MachineInspectionService(
         var inspector = await userRepository.GetByIdAsync(certificate.InspectorId, cancellationToken);
         var previous = await PreviousCertificateAsync(certificate, cancellationToken);
         var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
-        return pdfGenerator.Generate(BuildPdfModel(request, item, certificate, template, match, equipment, client, inspector, previous, company));
+        var contacts = await ContactEmailsAsync(request, cancellationToken);
+        return pdfGenerator.Generate(BuildPdfModel(request, item, certificate, template, match, equipment, client, inspector, previous, company, contacts));
     }
 
     public async Task<MachineListResponse> DeliverAsync(
@@ -763,7 +765,8 @@ public sealed class MachineInspectionService(
         Client? client,
         AppUser? inspector,
         IssuedCertificateSummary? previous,
-        CompanyBranding? company)
+        CompanyBranding? company,
+        (string? Manager, string? Coordinator) contacts)
     {
         var texts = MachineFormRules.WithDefaults(certificate.TextsOf());
         var dates = certificate.DatesOf();
@@ -835,7 +838,17 @@ public sealed class MachineInspectionService(
             certificate.ReviewerName,
             certificate.SignatureStrokesJson,
             certificate.QrData,
-            company);
+            company,
+            contacts.Manager,
+            contacts.Coordinator);
+    }
+
+    // The header of the certificate shows the technical manager's and the coordinator's email.
+    private async Task<(string? Manager, string? Coordinator)> ContactEmailsAsync(InspectionRequest request, CancellationToken cancellationToken)
+    {
+        var manager = request.ManagerId is Guid managerId ? await userRepository.GetByIdAsync(managerId, cancellationToken) : null;
+        var coordinator = request.CoordinatorId is Guid coordinatorId ? await userRepository.GetByIdAsync(coordinatorId, cancellationToken) : null;
+        return (manager?.Email, coordinator?.Email);
     }
 
     // ---- Helpers ------------------------------------------------------------------------------------------------

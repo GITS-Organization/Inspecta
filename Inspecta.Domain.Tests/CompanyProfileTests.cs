@@ -225,6 +225,17 @@ public sealed class CompanyProfileTests : IDisposable
     }
 
     [Fact]
+    public void TheHeaderEmailsAreTheManagersAndTheCoordinatorsOnceEach()
+    {
+        var model = Certificate(null);
+
+        Assert.Empty(model.ContactEmails());
+        Assert.Equal(["manager@acme.com", "coordinator@acme.com"], (model with { ManagerEmail = "manager@acme.com", CoordinatorEmail = " coordinator@acme.com " }).ContactEmails());
+        Assert.Equal(["manager@acme.com"], (model with { ManagerEmail = "manager@acme.com", CoordinatorEmail = "MANAGER@acme.com" }).ContactEmails());
+        Assert.Equal(["coordinator@acme.com"], (model with { ManagerEmail = null, CoordinatorEmail = "coordinator@acme.com" }).ContactEmails());
+    }
+
+    [Fact]
     public void ADomainProfileKeepsOnlyWhatIsValid()
     {
         var profile = CompanyProfile.Create(Guid.NewGuid());
