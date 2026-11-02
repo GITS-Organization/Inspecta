@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using Inspecta.Application.Interfaces;
+using Inspecta.Application.Pdf.Models;
 using Inspecta.Domain.Entities;
 using Inspecta.Domain.Enums;
 
@@ -79,6 +80,19 @@ public static class EmailLayout
 
     /// <summary>The address the logo is served from for a preview on screen (a real email carries it inside).</summary>
     public const string PreviewLogoPath = "/api/v1/branding/logo.png";
+
+    /// <summary>The company of the team signs the email; a team without a company profile uses the built-in one.</summary>
+    public static IEmailBranding? BrandingFor(CompanyBranding? company, IEmailBranding? builtIn) =>
+        company is null ? builtIn : new FixedBranding(new EmailBranding(company.Name, company.Address, company.Website, company.LogoPng));
+
+    /// <summary>The logo of the team's company as a preview on screen loads it.</summary>
+    public static string PreviewLogoFor(Guid? managerId, CompanyBranding? company) =>
+        company?.LogoPng is { Length: > 0 } && managerId is Guid id ? $"/api/v1/branding/{id}/logo.png" : PreviewLogoPath;
+
+    private sealed class FixedBranding(EmailBranding value) : IEmailBranding
+    {
+        public EmailBranding Get() => value;
+    }
 
     /// <summary>The email a reply answers: sender, date, recipients, subject and the beginning of its text.</summary>
     public static QuotedEmail? Quote(RequestEmail? source)

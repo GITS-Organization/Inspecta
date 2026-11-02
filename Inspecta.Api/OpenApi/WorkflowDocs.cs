@@ -308,6 +308,14 @@ public static class WorkflowDocs
             - Default (`permanent=false`): the client is **archived**: it leaves the lists and can no longer be edited.
             - `permanent=true`: the client and its contacts are **deleted for good**. Refused with `409 client_in_use` while requests or registered items still use the client; archive it instead.
             """),
+        [Key<AdminCompanyProfilesController>(nameof(AdminCompanyProfilesController.Get))] = new(6, "Admin 6 · Open the company profile of a team",
+            "**How:** `GET /admin/managers/{managerId}/company-profile` returns the identity printed for that team, or `404` when it has none (the built-in profile is used)."),
+        [Key<AdminCompanyProfilesController>(nameof(AdminCompanyProfilesController.Save))] = new(7, "Admin 7 · Set the company profile of a team",
+            """
+            **Who:** Admin only. Do this when a new company is set up, before its first certificate or quotation: without a profile its documents carry the built-in identity.
+            **How:** `PUT /admin/managers/{managerId}/company-profile` with `name`, `address` (required), `certificateTitle`, `issuerName`, `tagline`, `phones`, `emails`, `website`, `signerName`, `primaryColor` and `accentColor` (`#RRGGBB`), and the images `logoBase64` and `accreditationsBase64` (PNG, at most 1 MB; left out keeps the current one, an empty text removes it).
+            It then shows on the certificates (header, footer, logo, faded logo, bands, notes, signature box), on the signature of the emails and on the quotation. A quotation of such a team has no cover and leaves out the pages of texts it does not have. Documents already issued do not change.
+            """),
     };
 
     internal static string TalabatDescription =>

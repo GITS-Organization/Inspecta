@@ -26,17 +26,26 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
     private const float Line = 0.7f;
     private const float Pad = 2.4f;
     private const float Gap = 4f;
-    private const string CompanySigner = "Ahmed Khalil";
-    private const string Phones = "+201287374933 - 01035945426";
+    // The built-in identity: used by a team that has no company profile.
+    private const string BuiltInSigner = "Ahmed Khalil";
+    private const string BuiltInPhones = "+201287374933 - 01035945426";
+    private const string BuiltInTitle = "Integrity International Inspection";
+    private const string BuiltInIssuer = "Integrity for inspection and Engineering Solutions";
     private static readonly QrCodeRenderer QrCodes = new();
 
-    private static readonly string[] GeneralNotes =
+    private static string[] GeneralNotes(CertificatePdfModel model) =>
     [
         "This Certificate becomes invalid if any Repair/modification is done that affects strength or stability.",
         "Any holder of this document is advised that the information contained hereon is limited to the accessible portions of the item examined only.",
         "Equipment has been correctly installed and fit for the purpose",
-        "This Certificate should be signed, stamped and carries unique Integrity for inspection and Engineering Solutions certificate number"
+        $"This Certificate should be signed, stamped and carries unique {model.Company?.IssuerName ?? BuiltInIssuer} certificate number"
     ];
+
+    private static string HeaderTitle(CertificatePdfModel model) => model.Company?.CertificateTitle ?? BuiltInTitle;
+    private static byte[]? Logo(CertificatePdfModel model) => model.Company is null ? PdfAssets.CertificateLogo : model.Company.LogoPng;
+    private static byte[]? Accreditations(CertificatePdfModel model) => model.Company is null ? PdfAssets.Accreditations : model.Company.AccreditationsPng;
+    private static Color Blue(CertificatePdfModel model) => model.Company is null ? BandBlue : Color.FromHex(model.Company.PrimaryColor);
+    private static Color Accent(CertificatePdfModel model) => model.Company is null ? BandGreen : Color.FromHex(model.Company.AccentColor);
 
     private const string TickSvg =
         "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"11\" height=\"11\" viewBox=\"0 0 12 12\"><path d=\"M1.5 6.5 L4.8 10 L10.5 1.8\" fill=\"none\" stroke=\"#111111\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>";
@@ -54,7 +63,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
             page.Margin(20);
             page.DefaultTextStyle(style => style.FontFamily(PdfTheme.FontFamily).FontSize(8.4f).FontColor(Ink));
             // The frame, the faded logo and the bands of the company colours on every page.
-            page.Background().Element(ComposeBackground);
+            page.Background().Element(container => ComposeBackground(container, model));
             page.Header().PaddingHorizontal(10).PaddingTop(8).Element(container => ComposeHeader(container, model));
             page.Content().PaddingHorizontal(10).PaddingVertical(4).Element(container => ComposeBody(container, model));
             page.Footer().PaddingHorizontal(10).PaddingBottom(6).Element(container => ComposeFooter(container, model));
@@ -71,21 +80,26 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
 
     // One logo in the middle, faded by a nearly opaque white layer over it (the image is stored once in the file), and a band
     // at the top and the bottom of the page. All of it is behind the text, so nothing printed on the certificate is touched.
-    private static void ComposeBackground(IContainer container) =>
+    private static void ComposeBackground(IContainer container, CertificatePdfModel model) =>
         container.Layers(layers =>
         {
-            layers.Layer().AlignCenter().AlignMiddle().Width(360).Image(PdfAssets.CertificateLogo).FitWidth();
-            layers.Layer().Background(Colors.White.WithAlpha(232));
+            if (Logo(model) is { Length: > 0 } logo)
+            {
+                layers.Layer().AlignCenter().AlignMiddle().Width(360).Image(logo).FitWidth();
+                layers.Layer().Background(Colors.White.WithAlpha(232));
+            }
 
+            var blue = Blue(model);
+            var accent = Accent(model);
             layers.Layer().Unconstrained().Width(PageSizes.A4.Width).Height(BandHeight).Row(row =>
             {
-                row.RelativeItem(72).Background(BandBlue);
-                row.RelativeItem(28).Background(BandGreen);
+                row.RelativeItem(72).Background(blue);
+                row.RelativeItem(28).Background(accent);
             });
             layers.Layer().Unconstrained().TranslateY(PageSizes.A4.Height - BandHeight).Width(PageSizes.A4.Width).Height(BandHeight).Row(row =>
             {
-                row.RelativeItem(28).Background(BandGreen);
-                row.RelativeItem(72).Background(BandBlue);
+                row.RelativeItem(28).Background(accent);
+                row.RelativeItem(72).Background(blue);
             });
 
             layers.PrimaryLayer().Border(1).BorderColor(Ink);
@@ -100,18 +114,25 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
             {
                 row.RelativeItem().Column(lines =>
                 {
-                    lines.Item().Text("Integrity International Inspection").Bold();
-                    lines.Item().Text("Industrial & Energy Services.");
-                    lines.Item().Text("21 Nakib Sharif Ramzy st, Smouha, Alex., Egypt.");
-                    lines.Item().Text(text =>
-                    {
-                        text.Span("Mobile No: ").Bold();
-                        text.Span(Phones).Bold().FontColor(Green);
-                    });
-                    lines.Item().Element(content => Email(content, "Ibrahim.ashraf@integrity-intl.com"));
-                    lines.Item().Element(content => Email(content, "Hager.samy@integrity-intl.com"));
+                    var company = model.Company;
+                    lines.Item().Text(HeaderTitle(model)).Bold();
+                    var tagline = company is null ? "Industrial & Energy Services." : company.Tagline;
+                    if (!string.IsNullOrWhiteSpace(tagline)) lines.Item().Text(tagline);
+                    lines.Item().Text(company is null ? "21 Nakib Sharif Ramzy st, Smouha, Alex., Egypt." : company.Address);
+                    var phones = company is null ? BuiltInPhones : string.Join(" - ", company.Phones);
+                    if (phones.Length > 0)
+                        lines.Item().Text(text =>
+                        {
+                            text.Span("Mobile No: ").Bold();
+                            text.Span(phones).Bold().FontColor(Green);
+                        });
+                    foreach (var email in company is null
+                                 ? ["Ibrahim.ashraf@integrity-intl.com", "Hager.samy@integrity-intl.com"]
+                                 : company.Emails.Take(2))
+                        lines.Item().Element(content => Email(content, email));
                 });
-                row.ConstantItem(70).AlignRight().Height(62).Image(PdfAssets.CertificateLogo).FitArea();
+                if (Logo(model) is { Length: > 0 } headerLogo)
+                    row.ConstantItem(70).AlignRight().Height(62).Image(headerLogo).FitArea();
             });
             column.Item().AlignCenter().Text("REPORT OF THOROUGH EXAMINATION").Bold().FontSize(13.5f).FontColor(TitleBlue);
             column.Item().PaddingTop(2).Text(text =>
@@ -140,14 +161,18 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
             {
                 row.RelativeItem().AlignBottom().Column(lines =>
                 {
-                    lines.Item().Text("Integrity International Inspection. All rights reserved.").Bold().FontSize(6.8f);
-                    lines.Item().Text("Integrity International Inspection | 21 Nakib Sharif Ramzy St., Smouha, Alexandria, Egypt").Bold().FontSize(6.8f);
-                    lines.Item().Text("Tel: +201287374933 / 01035945426").Bold().FontSize(6.8f).FontColor(Green);
-                    lines.Item().Text("Email: Ibrahim.ashraf@integrity-intl.com / Info@integrity-intl.com").Bold().FontSize(6.8f).FontColor(Color.FromHex("#1565C0"));
+                    var company = model.Company;
+                    lines.Item().Text($"{HeaderTitle(model)}. All rights reserved.").Bold().FontSize(6.8f);
+                    lines.Item().Text($"{HeaderTitle(model)} | {(company is null ? "21 Nakib Sharif Ramzy St., Smouha, Alexandria, Egypt" : company.Address)}").Bold().FontSize(6.8f);
+                    var tel = company is null ? "+201287374933 / 01035945426" : string.Join(" / ", company.Phones);
+                    if (tel.Length > 0) lines.Item().Text($"Tel: {tel}").Bold().FontSize(6.8f).FontColor(Green);
+                    var emails = company is null ? "Ibrahim.ashraf@integrity-intl.com / Info@integrity-intl.com" : string.Join(" / ", company.Emails);
+                    if (emails.Length > 0) lines.Item().Text($"Email: {emails}").Bold().FontSize(6.8f).FontColor(Color.FromHex("#1565C0"));
                     lines.Item().Text("This Certificate is confidential and intended solely for the use of the client for whom it was prepared.").Bold().FontSize(6.8f);
                     lines.Item().Text("Unauthorized use, reproduction, or distribution is strictly prohibited.").Bold().FontSize(6.8f);
                 });
-                row.ConstantItem(150).AlignRight().AlignBottom().Height(46).Image(PdfAssets.Accreditations).FitArea();
+                if (Accreditations(model) is { Length: > 0 } accreditations)
+                    row.ConstantItem(150).AlignRight().AlignBottom().Height(46).Image(accreditations).FitArea();
             });
             column.Item().AlignCenter().Text(text =>
             {
@@ -172,7 +197,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
             // The notes and the signatures stay on one page.
             column.Item().ShowEntire().Column(closing =>
             {
-                closing.Item().Element(ComposeGeneralNotes);
+                closing.Item().Element(content => ComposeGeneralNotes(content, model));
                 closing.Item().Element(content => ComposeSignatures(content, model));
             });
             if (model.Checklist.Count > 0)
@@ -292,13 +317,13 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
             column.Item().Element(Cell).MinHeight(16).Text($"Note: {q.Note}");
         });
 
-    private static void ComposeGeneralNotes(IContainer container) =>
+    private static void ComposeGeneralNotes(IContainer container, CertificatePdfModel model) =>
         container.Row(row =>
         {
             row.RelativeItem(1).Element(Cell).AlignMiddle().AlignCenter().Text("General Notes and Recommendations").AlignCenter();
             row.RelativeItem(3).Element(Cell).Column(column =>
             {
-                foreach (var note in GeneralNotes)
+                foreach (var note in GeneralNotes(model))
                     column.Item().Row(line =>
                     {
                         line.ConstantItem(9).Text("•");
@@ -319,7 +344,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
             });
             Head(table, "Name & Qualifications of person making this report");
             Head(table, "Name of person signing or authenticating this report on behalf of the author");
-            Head(table, "For Integrity for inspection and Engineering Solutions");
+            Head(table, $"For {model.Company?.IssuerName ?? BuiltInIssuer}");
             Head(table, "QR Code");
 
             table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Column(column =>
@@ -335,7 +360,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
                 else column.Item().Height(34);
                 column.Item().AlignCenter().Text(model.SignedBy ?? "—").Bold();
             });
-            table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Text(CompanySigner).Bold();
+            table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Text(model.Company is null ? BuiltInSigner : model.Company.SignerName).Bold();
             // Filled from the first submit; once approved, scanning it opens the public check page with the PDF.
             table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Element(qr =>
             {

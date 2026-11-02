@@ -16,10 +16,39 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
     private const float PageWidth = 595f;
     private const float PageHeight = 842f;
 
-    private static readonly string[] ContentsTitles =
-    [
-        "Cover Letter", "About Us", "Our Vision", "Integrity Services", "Scope of Work", "Project Budget", "Terms and Conditions"
-    ];
+    /// <summary>
+    /// The sections of one quotation, numbered in order. A company without the text of a section (about us, vision, services, terms) has no
+    /// page for it, and the numbers close up.
+    /// </summary>
+    private sealed class Sections(QuotationCompanyProfile company)
+    {
+        public bool About => !string.IsNullOrWhiteSpace(company.AboutUs);
+        public bool Vision => !string.IsNullOrWhiteSpace(company.Vision);
+        public bool Services => company.Services.Count > 0;
+        public bool Terms => company.Terms.Count > 0;
+
+        private IReadOnlyList<(string Key, string Contents, string Band)> Included =>
+            new (string Key, string Contents, string Band, bool On)[]
+            {
+                ("cover", "Cover Letter", "Cover Letter", true),
+                ("about", "About Us", "About Us", About),
+                ("vision", "Our Vision", "Our Vision", Vision),
+                ("services", company.ServicesLabel, company.ServicesLabel, Services),
+                ("scope", "Scope of Work", "Scope of work", true),
+                ("budget", "Project Budget", "Project Budget", true),
+                ("terms", "Terms and Conditions", "Terms and conditions", Terms)
+            }.Where(section => section.On).Select(section => (section.Key, section.Contents, section.Band)).ToArray();
+
+        public IReadOnlyList<string> ContentsTitles => Included.Select(section => section.Contents).ToArray();
+
+        public string Band(string key)
+        {
+            var index = Included.ToList().FindIndex(section => section.Key == key);
+            return $"{index + 1}-{Included[index].Band}:";
+        }
+    }
+
+    private static byte[]? Logo(QuotationPdfModel model) => model.Branding is null ? PdfAssets.Logo : model.Branding.LogoPng;
 
     public override string FileName(QuotationPdfModel model) =>
         $"quotation-{SafeFileName(model.ProposalNumber)}.pdf";
@@ -30,17 +59,21 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
     protected override void ComposeDocument(IDocumentContainer document, QuotationPdfModel model)
     {
         var company = model.Company ?? DefaultCompanyProfile.Instance;
+        var sections = new Sections(company);
 
-        ComposeCover(document, model, company);
-        StandardPage(document, model, company, content => ComposeContents(content));
-        StandardPage(document, model, company, content => ComposeCoverLetter(content, model, company));
-        StandardPage(document, model, company, content => ComposeAboutAndVision(content, company));
+        // The cover is a drawing of the first customer; other companies start with the contents.
+        if (model.Branding is null) ComposeCover(document, model, company);
+        StandardPage(document, model, company, content => ComposeContents(content, sections));
+        StandardPage(document, model, company, content => ComposeCoverLetter(content, model, company, sections));
+        if (sections.About || sections.Vision)
+            StandardPage(document, model, company, content => ComposeAboutAndVision(content, company, sections));
         foreach (var section in company.Services)
-            StandardPage(document, model, company, content => ComposeServices(content, section));
-        StandardPage(document, model, company, content => ComposeScope(content, model));
-        StandardPage(document, model, company, content => ComposeBudget(content, model, company));
-        StandardPage(document, model, company, content => ComposeTerms(content, model, company));
-        ComposeThankYou(document, company);
+            StandardPage(document, model, company, content => ComposeServices(content, section, sections));
+        StandardPage(document, model, company, content => ComposeScope(content, model, sections));
+        StandardPage(document, model, company, content => ComposeBudget(content, model, company, sections));
+        if (sections.Terms)
+            StandardPage(document, model, company, content => ComposeTerms(content, model, company, sections));
+        ComposeThankYou(document, model, company);
     }
 
     // ---- Cover -------------------------------------------------------------------------------------------------
@@ -128,7 +161,8 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
         {
             column.Item().Row(row =>
             {
-                row.ConstantItem(70).Width(54).Height(50).Image(PdfAssets.Logo).FitArea();
+                if (Logo(model) is { Length: > 0 } logo) row.ConstantItem(70).Width(54).Height(50).Image(logo).FitArea();
+                else row.ConstantItem(70);
                 row.RelativeItem().PaddingTop(10).AlignCenter().Column(title =>
                 {
                     title.Item().AlignCenter().Text("TECHNICAL AND COMMERCIAL OFFER")
@@ -189,7 +223,7 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
 
     // ---- Sections ---------------------------------------------------------------------------------------------------
 
-    private static void ComposeContents(IContainer container) =>
+    private static void ComposeContents(IContainer container, Sections sections) =>
         container.Column(column =>
         {
             column.Spacing(11);
@@ -197,10 +231,11 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
             column.Item().PaddingTop(4).Column(items =>
             {
                 items.Spacing(10);
-                for (var index = 0; index < ContentsTitles.Length; index++)
+                var contents = sections.ContentsTitles;
+                for (var index = 0; index < contents.Count; index++)
                 {
                     var number = index + 1;
-                    var title = ContentsTitles[index];
+                    var title = contents[index];
                     items.Item().Border(1).BorderColor(PdfTheme.Line).CornerRadius(8)
                         .PaddingVertical(14).PaddingHorizontal(14).Row(row =>
                         {
@@ -211,11 +246,11 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
             });
         });
 
-    private static void ComposeCoverLetter(IContainer container, QuotationPdfModel model, QuotationCompanyProfile company) =>
+    private static void ComposeCoverLetter(IContainer container, QuotationPdfModel model, QuotationCompanyProfile company, Sections sections) =>
         container.Column(column =>
         {
             column.Spacing(11);
-            SectionBand(column, "1-Cover Letter:");
+            SectionBand(column, sections.Band("cover"));
             column.Item().PaddingTop(6).Text($"Dear {(string.IsNullOrWhiteSpace(model.ContactName) ? "Sir/Madam" : model.ContactName)},");
             column.Item().Text(text =>
             {
@@ -242,21 +277,28 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
             });
         });
 
-    private static void ComposeAboutAndVision(IContainer container, QuotationCompanyProfile company) =>
+    private static void ComposeAboutAndVision(IContainer container, QuotationCompanyProfile company, Sections sections) =>
         container.Column(column =>
         {
             column.Spacing(11);
-            SectionBand(column, "2-About Us:");
-            column.Item().PaddingBottom(14).Text(text => Rich(text, company.AboutUs));
-            SectionBand(column, "3-Our Vision:");
-            column.Item().Text(text => Rich(text, company.Vision));
+            if (sections.About)
+            {
+                SectionBand(column, sections.Band("about"));
+                column.Item().PaddingBottom(14).Text(text => Rich(text, company.AboutUs));
+            }
+
+            if (sections.Vision)
+            {
+                SectionBand(column, sections.Band("vision"));
+                column.Item().Text(text => Rich(text, company.Vision));
+            }
         });
 
-    private static void ComposeServices(IContainer container, QuotationServiceSection section) =>
+    private static void ComposeServices(IContainer container, QuotationServiceSection section, Sections sections) =>
         container.Column(column =>
         {
             column.Spacing(9);
-            SectionBand(column, "4-Integrity Services:");
+            SectionBand(column, sections.Band("services"));
             column.Item().Text(section.Title).Bold().FontSize(13).FontColor(PdfTheme.DarkGreen);
             column.Item().Table(table =>
             {
@@ -295,11 +337,11 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
             });
         });
 
-    private static void ComposeScope(IContainer container, QuotationPdfModel model) =>
+    private static void ComposeScope(IContainer container, QuotationPdfModel model, Sections sections) =>
         container.Column(column =>
         {
             column.Spacing(10);
-            SectionBand(column, "5-Scope of work:");
+            SectionBand(column, sections.Band("scope"));
             column.Item().PaddingTop(2).Column(list =>
             {
                 list.Spacing(7);
@@ -361,11 +403,11 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
             }
         });
 
-    private static void ComposeBudget(IContainer container, QuotationPdfModel model, QuotationCompanyProfile company) =>
+    private static void ComposeBudget(IContainer container, QuotationPdfModel model, QuotationCompanyProfile company, Sections sections) =>
         container.Column(column =>
         {
             column.Spacing(10);
-            SectionBand(column, "6-Project Budget:");
+            SectionBand(column, sections.Band("budget"));
             column.Item().PaddingTop(2).Table(table =>
             {
                 table.ColumnsDefinition(columns =>
@@ -438,11 +480,11 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
             }
         });
 
-    private static void ComposeTerms(IContainer container, QuotationPdfModel model, QuotationCompanyProfile company) =>
+    private static void ComposeTerms(IContainer container, QuotationPdfModel model, QuotationCompanyProfile company, Sections sections) =>
         container.Column(column =>
         {
             column.Spacing(8);
-            SectionBand(column, "7-Terms and conditions:");
+            SectionBand(column, sections.Band("terms"));
             foreach (var section in company.Terms)
             {
                 column.Item().PaddingTop(4).Column(block =>
@@ -493,7 +535,7 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
             }
         });
 
-    private static void ComposeThankYou(IDocumentContainer document, QuotationCompanyProfile company) =>
+    private static void ComposeThankYou(IDocumentContainer document, QuotationPdfModel model, QuotationCompanyProfile company) =>
         document.Page(page =>
         {
             page.Size(PageSizes.A4);
@@ -503,7 +545,7 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
             page.Background().Svg(PdfAssets.GridSvg(PageWidth, PageHeight));
             page.Content().PaddingTop(236).AlignCenter().Column(column =>
             {
-                column.Item().AlignCenter().Width(96).Image(PdfAssets.Logo).FitWidth();
+                if (Logo(model) is { Length: > 0 } logo) column.Item().AlignCenter().Width(96).Image(logo).FitWidth();
                 column.Item().PaddingTop(30).AlignCenter().Text("THANK YOU")
                     .Bold().FontSize(46).LetterSpacing(0.14f).FontColor(PdfTheme.Navy);
                 column.Item().PaddingTop(14).AlignCenter().Row(row =>

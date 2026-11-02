@@ -21,7 +21,8 @@ public sealed class MachineInspectionService(
     CertificateOptions? options = null,
     CertificateDeliveryService? deliveryService = null,
     IQrCodeRenderer? qrCodes = null,
-    ITransactionRunner? transactions = null) : IMachineInspectionService
+    ITransactionRunner? transactions = null,
+    ICompanyBrandingProvider? companyBranding = null) : IMachineInspectionService
 {
     private const int MaxTextLength = 4000;
 
@@ -214,7 +215,8 @@ public sealed class MachineInspectionService(
         var client = await FindClientAsync(request, cancellationToken);
         var inspector = await userRepository.GetByIdAsync(certificate.InspectorId, cancellationToken);
         var previous = await PreviousCertificateAsync(certificate, cancellationToken);
-        var pdf = pdfGenerator.Generate(BuildPdfModel(request, item, certificate, template, match, equipment, client, inspector, previous));
+        var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
+        var pdf = pdfGenerator.Generate(BuildPdfModel(request, item, certificate, template, match, equipment, client, inspector, previous, company));
         var examined = certificate.DatesOf();
         await certificateFiles.AddAsync(
             IssuedCertificateFile.Create(
@@ -431,7 +433,8 @@ public sealed class MachineInspectionService(
         var client = await FindClientAsync(request, cancellationToken);
         var inspector = await userRepository.GetByIdAsync(certificate.InspectorId, cancellationToken);
         var previous = await PreviousCertificateAsync(certificate, cancellationToken);
-        return pdfGenerator.Generate(BuildPdfModel(request, item, certificate, template, match, equipment, client, inspector, previous));
+        var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
+        return pdfGenerator.Generate(BuildPdfModel(request, item, certificate, template, match, equipment, client, inspector, previous, company));
     }
 
     public async Task<MachineListResponse> DeliverAsync(
@@ -759,7 +762,8 @@ public sealed class MachineInspectionService(
         Item? equipment,
         Client? client,
         AppUser? inspector,
-        IssuedCertificateSummary? previous)
+        IssuedCertificateSummary? previous,
+        CompanyBranding? company)
     {
         var texts = MachineFormRules.WithDefaults(certificate.TextsOf());
         var dates = certificate.DatesOf();
@@ -830,7 +834,8 @@ public sealed class MachineInspectionService(
             string.IsNullOrWhiteSpace(qualifications) ? null : qualifications,
             certificate.ReviewerName,
             certificate.SignatureStrokesJson,
-            certificate.QrData);
+            certificate.QrData,
+            company);
     }
 
     // ---- Helpers ------------------------------------------------------------------------------------------------

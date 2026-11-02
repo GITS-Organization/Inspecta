@@ -21,6 +21,7 @@ public sealed class InspectaDbContext(
     public DbSet<RequestItem> RequestItems => Set<RequestItem>();
     public DbSet<RequestEmail> RequestEmails => Set<RequestEmail>();
     public DbSet<ClientMailRule> ClientMailRules => Set<ClientMailRule>();
+    public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();
     public DbSet<OutboundEmail> OutboundEmails => Set<OutboundEmail>();
     public DbSet<JobStatusHistory> JobStatusHistory => Set<JobStatusHistory>();
     public DbSet<Quote> Quotes => Set<Quote>();
@@ -249,6 +250,25 @@ public sealed class InspectaDbContext(
         mailRule.HasOne<AppUser>().WithMany().HasForeignKey(item => item.ManagerId).OnDelete(DeleteBehavior.Restrict);
         mailRule.HasOne<AppUser>().WithMany().HasForeignKey(item => item.CreatedById).OnDelete(DeleteBehavior.Restrict);
         mailRule.HasOne<Client>().WithMany().HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.SetNull);
+
+        // No query filter: the profile is always read by the manager id, and its logo is public (it is in the emails).
+        var companyProfile = modelBuilder.Entity<CompanyProfile>();
+        companyProfile.HasKey(item => item.Id);
+        companyProfile.HasIndex(item => item.ManagerId).IsUnique();
+        companyProfile.Ignore(item => item.Phones);
+        companyProfile.Ignore(item => item.Emails);
+        companyProfile.Property(item => item.Name).HasMaxLength(200).IsRequired();
+        companyProfile.Property(item => item.CertificateTitle).HasMaxLength(200);
+        companyProfile.Property(item => item.IssuerName).HasMaxLength(200);
+        companyProfile.Property(item => item.Tagline).HasMaxLength(200);
+        companyProfile.Property(item => item.Address).HasMaxLength(500).IsRequired();
+        companyProfile.Property(item => item.PhonesJson).IsRequired();
+        companyProfile.Property(item => item.EmailsJson).IsRequired();
+        companyProfile.Property(item => item.Website).HasMaxLength(200).IsRequired();
+        companyProfile.Property(item => item.SignerName).HasMaxLength(200);
+        companyProfile.Property(item => item.PrimaryColor).HasMaxLength(7).IsRequired();
+        companyProfile.Property(item => item.AccentColor).HasMaxLength(7).IsRequired();
+        companyProfile.HasOne<AppUser>().WithMany().HasForeignKey(item => item.ManagerId).OnDelete(DeleteBehavior.Restrict);
 
         var outboundEmail = modelBuilder.Entity<OutboundEmail>();
         outboundEmail.HasKey(item => item.Id);

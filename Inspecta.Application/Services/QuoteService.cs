@@ -15,7 +15,8 @@ public sealed class QuoteService(
     IQuoteDeliveryService deliveryService,
     IOutboundEmailRepository outboundEmailRepository,
     IUserRepository userRepository,
-    IRequestEquipmentRegistrar? equipmentRegistrar = null) : IQuoteService
+    IRequestEquipmentRegistrar? equipmentRegistrar = null,
+    ICompanyBrandingProvider? companyBranding = null) : IQuoteService
 {
     public async Task<IReadOnlyList<QuoteResponse>> ListAsync(
         Guid requestId,
@@ -387,8 +388,9 @@ public sealed class QuoteService(
         var coordinator = request.CoordinatorId is Guid coordinatorId
             ? await userRepository.GetByIdAsync(coordinatorId, cancellationToken)
             : null;
+        var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
         return pdfGenerator.Generate(QuotationPdfModelFactory.Create(
-            quote, request, coordinator?.FullName ?? string.Empty, DateTimeOffset.UtcNow));
+            quote, request, coordinator?.FullName ?? string.Empty, DateTimeOffset.UtcNow, company));
     }
 
     /// <summary>

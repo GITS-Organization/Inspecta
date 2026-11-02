@@ -365,6 +365,29 @@ Content-Type: application/json
 
 { "sentTo": "quality@client.com", "cc": ["boss@client.com"], "subject": "Our offer", "message": "Dear team, our offer is attached." }
 
+### Admin: set the company identity printed on a team's certificates, quotations and emails (the images are base64 PNGs, at most 1 MB)
+PUT {{baseUrl}}/api/v1/admin/managers/{{managerId}}/company-profile
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Acme Inspection Co.",
+  "certificateTitle": "Acme Inspection",
+  "issuerName": "Acme Inspection Services",
+  "tagline": "Safety & Quality Services.",
+  "address": "5 Industrial Zone, Cairo, Egypt",
+  "phones": ["+20 100 111 2222"],
+  "emails": ["info@acme.com", "certs@acme.com"],
+  "website": "www.acme.com",
+  "signerName": "Mona Hassan",
+  "primaryColor": "#6E2896",
+  "accentColor": "#F28C28"
+}
+
+### Admin: read it back (404 = the team uses the built-in identity)
+GET {{baseUrl}}/api/v1/admin/managers/{{managerId}}/company-profile
+Authorization: Bearer {{accessToken}}
+
 ### Send the offer with an extra file of the coordinator (base64; at most 5 files, 15 MB together). It goes after the quotation PDF
 POST {{baseUrl}}/api/v1/requests/{{requestId}}/quotes/{{quoteId}}/send
 Authorization: Bearer {{accessToken}}

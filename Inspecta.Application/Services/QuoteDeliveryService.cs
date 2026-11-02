@@ -17,7 +17,8 @@ public sealed class QuoteDeliveryService(
     IPdfGenerator pdfGenerator,
     IEmailSender emailSender,
     QuoteDeliveryOptions? options = null,
-    IEmailBranding? branding = null) : IQuoteDeliveryService
+    IEmailBranding? branding = null,
+    ICompanyBrandingProvider? companyBranding = null) : IQuoteDeliveryService
 {
     public async Task<QuoteEmailPlan> PlanAsync(
         InspectionRequest request,
@@ -41,7 +42,8 @@ public sealed class QuoteDeliveryService(
         if (body.Length > CertificateDeliveryService.MaxBodyLength)
             throw new ArgumentException($"The email text is longer than {CertificateDeliveryService.MaxBodyLength} characters.");
         var fromAddress = config is null || coordinator is null ? null : ResolveFromAddress(config, coordinator);
-        var pdfName = pdfGenerator.Generate(QuotationPdfModelFactory.Create(quote, request, coordinator?.FullName ?? string.Empty, DateTimeOffset.UtcNow)).FileName;
+        var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
+        var pdfName = pdfGenerator.Generate(QuotationPdfModelFactory.Create(quote, request, coordinator?.FullName ?? string.Empty, DateTimeOffset.UtcNow, company)).FileName;
 
         // While emailing is off nothing is sent, so nothing about the address or the mailbox can stop the Send button.
         var blockers = new List<string>();
@@ -51,7 +53,8 @@ public sealed class QuoteDeliveryService(
             if (config is null) blockers.Add("The coordinator mailbox is not configured.");
         }
 
-        var preview = EmailLayout.ForCoordinator(body, coordinator, fromAddress, source, branding, EmailLayout.PreviewLogoPath);
+        var preview = EmailLayout.ForCoordinator(
+            body, coordinator, fromAddress, source, EmailLayout.BrandingFor(company, branding), EmailLayout.PreviewLogoFor(request.ManagerId, company));
         return new QuoteEmailPlan(
             options is not { Enabled: false }, toAddress, toName, copies, subject, body, pdfName, fromAddress, coordinator?.FullName, replies, blockers, preview.Html,
             draft?.Extra is { Count: > 0 } extra ? extra.Select(file => file.FileName).ToArray() : null);
@@ -90,7 +93,8 @@ public sealed class QuoteDeliveryService(
         var fromAddress = ResolveFromAddress(config, coordinator);
         var plan = await PlanAsync(request, quote, kind, draft, cancellationToken);
 
-        var pdf = pdfGenerator.Generate(QuotationPdfModelFactory.Create(quote, request, coordinator.FullName, DateTimeOffset.UtcNow));
+        var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
+        var pdf = pdfGenerator.Generate(QuotationPdfModelFactory.Create(quote, request, coordinator.FullName, DateTimeOffset.UtcNow, company));
         var row = existing;
         if (row is null)
             row = OutboundEmail.Create(managerId, request.Id, quote.Id, kind, DomainOf(fromAddress));
@@ -110,7 +114,7 @@ public sealed class QuoteDeliveryService(
         if (existing is null) await outboundEmailRepository.AddAsync(row, cancellationToken);
         else await outboundEmailRepository.SaveAsync(cancellationToken);
 
-        var laidOut = EmailLayout.ForCoordinator(row.BodyText, coordinator, fromAddress, source, branding);
+        var laidOut = EmailLayout.ForCoordinator(row.BodyText, coordinator, fromAddress, source, EmailLayout.BrandingFor(company, branding));
         var smtp = config.ResolveSmtp();
         try
         {

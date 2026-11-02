@@ -130,5 +130,6 @@ public static class DefaultCompanyProfile
             new QuotationBankAccount(
                 "Integrity International for Inspection", "Commercial International Bank (CIB)", "USD",
                 "100072840806", "EG570010008900000100072840806", "CIBEEGCX089")
-        ]);
+        ],
+        ServicesLabel: "Integrity Services");
 }

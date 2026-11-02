@@ -3,7 +3,7 @@ namespace Inspecta.Application.Pdf.Models;
 /// <summary>
 /// Everything printed on one machine's Report of Thorough Examination. <c>QrData</c> is what the QR code opens; it is
 /// given when the inspector first submits, so the preview carries it, and empty before. <c>Conclusion</c> is the verdict,
-/// one word: Satisfactory or Unsatisfactory.
+/// one word: Satisfactory or Unsatisfactory. <c>Company</c> is the identity of the team's company; empty means the built-in one.
 /// </summary>
 public sealed record CertificatePdfModel(
     string? CertificateNumber,
@@ -28,7 +28,8 @@ public sealed record CertificatePdfModel(
     string? PreparedByQualifications,
     string? SignedBy,
     string? SignatureStrokesJson,
-    string? QrData = null);
+    string? QrData = null,
+    CompanyBranding? Company = null);
 
 /// <summary>A label and its value; a missing value prints as a dash.</summary>
 public sealed record CertificatePdfField(string Label, string? Value);

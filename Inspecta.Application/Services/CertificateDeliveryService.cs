@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using Inspecta.Application.Contracts.Certificates;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
+using Inspecta.Application.Pdf.Models;
 using Inspecta.Domain.Entities;
 
 namespace Inspecta.Application.Services;
@@ -61,7 +62,8 @@ public sealed class CertificateDeliveryService(
     ISecretProtector secretProtector,
     IEmailSender emailSender,
     CertificateDeliveryOptions? options = null,
-    IEmailBranding? branding = null)
+    IEmailBranding? branding = null,
+    ICompanyBrandingProvider? companyBranding = null)
 {
     // Above this many bytes the PDFs travel as one ZIP: mail servers refuse very large messages.
     private const int MaxAttachedBytes = 18 * 1024 * 1024;
@@ -91,6 +93,7 @@ public sealed class CertificateDeliveryService(
         else if (!string.IsNullOrWhiteSpace(client?.CertificatesEmail)) toAddress = client.CertificatesEmail;
 
         var copies = NormalizeCopies(draft?.Cc, toAddress);
+        var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
         var coordinator = request.CoordinatorId is Guid coordinatorId ? await userRepository.GetByIdAsync(coordinatorId, cancellationToken) : null;
         var config = request.CoordinatorId is Guid configOwner ? await configRepository.GetByCoordinatorAsync(configOwner, cancellationToken) : null;
 
@@ -115,7 +118,7 @@ public sealed class CertificateDeliveryService(
             config is not null,
             EmailLayout.ForCoordinator(
                 body, coordinator, config is not null && coordinator is not null ? QuoteDeliveryService.ResolveFromAddress(config, coordinator) : null,
-                source, branding, EmailLayout.PreviewLogoPath).Html);
+                source, EmailLayout.BrandingFor(company, branding), EmailLayout.PreviewLogoFor(request.ManagerId, company)).Html);
     }
 
     public async Task<CertificateDeliveryResult> DeliverAsync(
@@ -163,7 +166,7 @@ public sealed class CertificateDeliveryService(
 
         try
         {
-            await SendAsync(config, coordinator, fromAddress, plan.ToAddress, plan.ToName, plan.Cc, plan.Subject, plan.Body, row.MessageId, source, attachments, cancellationToken);
+            await SendAsync(config, coordinator, fromAddress, plan.ToAddress, plan.ToName, plan.Cc, plan.Subject, plan.Body, row.MessageId, source, attachments, await CompanyAsync(request, cancellationToken), cancellationToken);
         }
         catch (Exception exception)
         {
@@ -200,7 +203,7 @@ public sealed class CertificateDeliveryService(
         var messageId = $"<{Guid.NewGuid():N}@{QuoteDeliveryService.DomainOf(fromAddress)}>";
         try
         {
-            await SendAsync(config, coordinator, fromAddress, toAddress, toName, [], subject, plan.Body, messageId, null, BuildAttachments(files).Concat(draft?.Extra ?? []).ToArray(), cancellationToken);
+            await SendAsync(config, coordinator, fromAddress, toAddress, toName, [], subject, plan.Body, messageId, null, BuildAttachments(files).Concat(draft?.Extra ?? []).ToArray(), await CompanyAsync(request, cancellationToken), cancellationToken);
         }
         catch (Exception exception)
         {
@@ -213,6 +216,9 @@ public sealed class CertificateDeliveryService(
     /// <summary>The email that carried this job's certificates, when one was sent.</summary>
     public Task<CertificateDelivery?> GetSentAsync(Guid requestId, CancellationToken cancellationToken = default) =>
         deliveryRepository.GetSentAsync(requestId, cancellationToken);
+
+    private async Task<CompanyBranding?> CompanyAsync(InspectionRequest request, CancellationToken cancellationToken) =>
+        companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
 
     private async Task<(CoordinatorEmailConfig Config, AppUser Coordinator, string FromAddress)> MailboxAsync(Guid coordinatorId, CancellationToken cancellationToken)
     {
@@ -235,9 +241,10 @@ public sealed class CertificateDeliveryService(
         string messageId,
         RequestEmail? source,
         IReadOnlyList<EmailAttachment> attachments,
+        CompanyBranding? company,
         CancellationToken cancellationToken)
     {
-        var laidOut = EmailLayout.ForCoordinator(body, coordinator, fromAddress, source, branding);
+        var laidOut = EmailLayout.ForCoordinator(body, coordinator, fromAddress, source, EmailLayout.BrandingFor(company, branding));
         var smtp = config.ResolveSmtp();
         await emailSender.SendAsync(
             new SmtpSettings(smtp.Server, smtp.Port, smtp.UseSsl, config.EmailUsername, secretProtector.Unprotect(config.EncryptedPassword)),

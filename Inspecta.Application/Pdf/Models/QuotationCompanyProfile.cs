@@ -14,7 +14,8 @@ public sealed record QuotationCompanyProfile(
     string Vision,
     IReadOnlyList<QuotationServiceSection> Services,
     IReadOnlyList<QuotationTermsSection> Terms,
-    IReadOnlyList<QuotationBankAccount> BankAccounts);
+    IReadOnlyList<QuotationBankAccount> BankAccounts,
+    string ServicesLabel = "Our Services");
 
 /// <summary>A titled table of services, for example "4-1 Industrial Services".</summary>
 public sealed record QuotationServiceSection(
