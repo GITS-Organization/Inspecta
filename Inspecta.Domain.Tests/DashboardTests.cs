@@ -169,7 +169,8 @@ public sealed class DashboardTests : IDisposable
         // Every status is listed; maybe emails and the other team's requests are not counted.
         Assert.Equal(Enum.GetValues<JobStatus>().Length, overview.Pipeline.Count);
         int Count(JobStatus status) => overview.Pipeline.Single(item => item.Status == status).Count;
-        Assert.Equal(2, Count(JobStatus.RequestReceived));
+        // request_received is the total of the requests that reached the offer stage or went on (the two new ones and the drafts are not in it).
+        Assert.Equal(3, Count(JobStatus.RequestReceived));
         Assert.Equal(1, Count(JobStatus.CertificateSubmitted));
         Assert.Equal(1, Count(JobStatus.InProgress));
         Assert.Equal(1, Count(JobStatus.SentToClient));
@@ -189,6 +190,40 @@ public sealed class DashboardTests : IDisposable
         Assert.Equal(10, overview.EquipmentDue.Items[1].DaysUntilDue);
         Assert.False(overview.EquipmentDue.Items[1].Overdue);
         Assert.Equal("Delta Steel", overview.EquipmentDue.Items[0].ClientName);
+    }
+
+    [Fact]
+    public async Task TheFirstTileCountsEveryRequestThatReachedTheOfferStageOrWentOn()
+    {
+        await using var db = Context();
+        db.Requests.AddRange(
+            Request(alNoor, manager.Id),
+            Request(alNoor, manager.Id, JobStatus.QuoteDraft),
+            Request(alNoor, manager.Id, JobStatus.QuoteSent),
+            Request(alNoor, manager.Id, JobStatus.ClientCountered),
+            Request(alNoor, manager.Id, JobStatus.QuoteRejected),
+            Request(alNoor, manager.Id, JobStatus.ClientDeclined),
+            Request(alNoor, manager.Id, JobStatus.Unassigned),
+            Request(alNoor, manager.Id, JobStatus.Assigned),
+            Request(alNoor, manager.Id, JobStatus.TaskAccepted),
+            Request(alNoor, manager.Id, JobStatus.InProgress),
+            Request(alNoor, manager.Id, JobStatus.CertificateSubmitted),
+            Request(alNoor, manager.Id, JobStatus.CertificateReturned),
+            Request(alNoor, manager.Id, JobStatus.CertificateApproved),
+            Request(alNoor, manager.Id, JobStatus.SentToClient),
+            Request(foreign, otherManager.Id, JobStatus.SentToClient));
+        await db.SaveChangesAsync();
+
+        var overview = await Service(db, new Repository(db)).GetOverviewAsync(manager.Id, null, null, null, null);
+
+        int Count(JobStatus status) => overview.Pipeline.Single(item => item.Status == status).Count;
+        // Everything after the draft, except the rejected offer: 11 of the 14 requests.
+        Assert.Equal(11, Count(JobStatus.RequestReceived));
+        // The other tiles are the jobs in each status now, as before.
+        Assert.Equal(1, Count(JobStatus.QuoteSent));
+        Assert.Equal(1, Count(JobStatus.QuoteDraft));
+        Assert.Equal(1, Count(JobStatus.QuoteRejected));
+        Assert.Equal(1, Count(JobStatus.SentToClient));
     }
 
     [Fact]
@@ -236,7 +271,8 @@ public sealed class DashboardTests : IDisposable
         Assert.Equal([0], onlyMohamed.InspectorWorkload.Select(item => item.QuotationsDone));
         Assert.Equal(1, onlyDelta.InspectorWorkload.Single(item => item.Name == "Ragab Nasr").QuotationsDone);
         Assert.Equal(1, onlyMohamed.Pipeline.Single(item => item.Status == JobStatus.InProgress).Count);
-        Assert.Equal(0, onlyMohamed.Pipeline.Single(item => item.Status == JobStatus.RequestReceived).Count);
+        // Only Mohamed's job in progress has reached the offer stage; the new requests have no inspector.
+        Assert.Equal(1, onlyMohamed.Pipeline.Single(item => item.Status == JobStatus.RequestReceived).Count);
         // The items due have no inspector, so that filter leaves them as they are.
         Assert.Equal(2, onlyMohamed.EquipmentDue.Total);
     }

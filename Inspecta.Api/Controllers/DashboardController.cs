@@ -14,7 +14,8 @@ public sealed class DashboardController(IDashboardService dashboard) : Controlle
 {
     /// <summary>Everything the overview screen shows, in one call.</summary>
     /// <remarks>
-    /// <c>pipeline</c>: the real requests of the team by status (all statuses, as of today). <c>attention</c>: items overdue or due in the next 30 days,
+    /// <c>pipeline</c>: the real requests of the team by status (all statuses, as of today); the entry <c>request_received</c> is the total of the requests that reached
+    /// the offer stage or went on after it (every status from <c>quote_sent</c> to <c>sent_to_client</c>, except <c>quote_rejected</c>), not the ones still being received. <c>attention</c>: items overdue or due in the next 30 days,
     /// and jobs waiting for the manager's review. <c>certificates</c>: certificates approved (issued) this month, last month and per month for the chart
     /// (default: the last 7 months), split by verdict. <c>equipmentDue</c>: the first 10 items overdue or due in 30 days, overdue first.
     /// <c>inspectorWorkload</c>: for each active inspector in the period (default: the last 30 days), <c>certificates</c> approved and <c>quotationsDone</c> (the jobs

@@ -287,7 +287,7 @@ public static class WorkflowDocs
         [Key<DashboardController>(nameof(DashboardController.Overview))] = new(8, "Dashboard · The manager's overview",
             """
             **Who:** the technical manager (Admin may pass `managerId`). **How:** `GET /dashboard/overview` returns the whole overview screen in one call:
-            - `pipeline`: the team's real requests by status (every status listed, as of today).
+            - `pipeline`: the team's real requests by status (every status listed, as of today). The entry `request_received` is the **total of the requests that reached the offer stage or went on after it** (`quote_sent` up to `sent_to_client`, without `quote_rejected`); the other entries are the jobs in that status now.
             - `attention`: `equipmentOverdue`, `equipmentDueSoon` (next 30 days) and `jobsAwaitingReview` (`certificate_submitted`), with a `total`.
             - `certificates`: approved (issued) certificates `thisMonth`, `previousMonth` and `byMonth` (default the last 7 months) split into `safe`, `withConditions`, `notSafe`.
             - `equipmentDue`: the first 10 items overdue or due in 30 days, overdue first, with `total` and `overdue`.

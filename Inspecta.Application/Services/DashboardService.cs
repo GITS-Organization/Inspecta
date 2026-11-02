@@ -64,12 +64,24 @@ public sealed class DashboardService(
         return new DashboardPeriod(today.AddDays(-(DefaultWorkloadDays - 1)), today, firstMonth);
     }
 
-    // Every status is listed, in the order of the workflow, so the screen can draw its tiles without gaps.
+    // The statuses of a job that reached the offer stage or went on after it. A request still being received or drafted, and a rejected offer, are not among them.
+    private static readonly JobStatus[] ReachedTheOffer =
+    [
+        JobStatus.QuoteSent, JobStatus.ClientCountered, JobStatus.ClientDeclined, JobStatus.Unassigned, JobStatus.Assigned,
+        JobStatus.TaskAccepted, JobStatus.InProgress, JobStatus.CertificateSubmitted, JobStatus.CertificateReturned,
+        JobStatus.CertificateApproved, JobStatus.SentToClient
+    ];
+
+    // Every status is listed, in the order of the workflow, so the screen can draw its tiles without gaps. The first tile, request_received, is the
+    // total of the requests that reached the offer stage or went on after it (the rest are the jobs in each status now).
     private async Task<IReadOnlyList<RequestStatusCount>> PipelineAsync(DashboardFilter filter, CancellationToken cancellationToken)
     {
         var counts = (await dashboardRepository.CountRequestsByStatusAsync(filter, cancellationToken))
             .ToDictionary(item => item.Status, item => item.Count);
-        return Enum.GetValues<JobStatus>().Select(status => new RequestStatusCount(status, counts.GetValueOrDefault(status))).ToArray();
+        var reached = ReachedTheOffer.Sum(status => counts.GetValueOrDefault(status));
+        return Enum.GetValues<JobStatus>()
+            .Select(status => new RequestStatusCount(status, status == JobStatus.RequestReceived ? reached : counts.GetValueOrDefault(status)))
+            .ToArray();
     }
 
     private static DashboardCertificates Certificates(
