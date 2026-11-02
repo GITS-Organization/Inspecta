@@ -46,6 +46,12 @@ public sealed class CompanyProfile
     public string AccentColor { get; private set; } = DefaultAccentColor;
     public DateTimeOffset UpdatedAt { get; private set; }
 
+    /// <summary>
+    /// True when the profile only sets images and colours: the name, address and contacts printed are those of the built-in company
+    /// (the first customer), and the text fields here are empty.
+    /// </summary>
+    public bool UsesBuiltInDetails { get; private set; }
+
     public IReadOnlyList<string> Phones => Read(PhonesJson);
     public IReadOnlyList<string> Emails => Read(EmailsJson);
 
@@ -55,13 +61,16 @@ public sealed class CompanyProfile
         return new CompanyProfile { Id = Guid.NewGuid(), ManagerId = managerId, UpdatedAt = DateTimeOffset.UtcNow };
     }
 
-    /// <summary>Replaces the text details. Images and the rest are changed with their own methods.</summary>
+    /// <summary>
+    /// Replaces the text details. Without a name and an address the built-in company details are kept and only the colours are set.
+    /// Images are changed with their own methods.
+    /// </summary>
     public void Update(
-        string name,
+        string? name,
         string? certificateTitle,
         string? issuerName,
         string? tagline,
-        string address,
+        string? address,
         IReadOnlyList<string>? phones,
         IReadOnlyList<string>? emails,
         string? website,
@@ -69,6 +78,21 @@ public sealed class CompanyProfile
         string? primaryColor,
         string? accentColor)
     {
+        var hasName = !string.IsNullOrWhiteSpace(name);
+        var hasAddress = !string.IsNullOrWhiteSpace(address);
+        if (hasName != hasAddress) throw new ArgumentException("The name and the address go together: give both, or neither to keep the built-in company details.");
+
+        PrimaryColor = ColorOrDefault(primaryColor, DefaultPrimaryColor, "Primary colour");
+        AccentColor = ColorOrDefault(accentColor, DefaultAccentColor, "Accent colour");
+        UpdatedAt = DateTimeOffset.UtcNow;
+        UsesBuiltInDetails = !hasName;
+        if (UsesBuiltInDetails)
+        {
+            (Name, CertificateTitle, IssuerName, Tagline, Address, PhonesJson, EmailsJson, Website, SignerName) =
+                (string.Empty, null, null, null, string.Empty, "[]", "[]", string.Empty, null);
+            return;
+        }
+
         Name = Required(name, "Name", 200);
         CertificateTitle = Optional(certificateTitle, "Certificate title", 200);
         IssuerName = Optional(issuerName, "Issuer name", 200);
@@ -78,9 +102,6 @@ public sealed class CompanyProfile
         EmailsJson = Write(emails, "email", 320);
         Website = Optional(website, "Website", 200) ?? string.Empty;
         SignerName = Optional(signerName, "Signer name", 200);
-        PrimaryColor = ColorOrDefault(primaryColor, DefaultPrimaryColor, "Primary colour");
-        AccentColor = ColorOrDefault(accentColor, DefaultAccentColor, "Accent colour");
-        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     /// <summary>Sets the logo (a PNG of at most 1 MB) or removes it with <c>null</c>.</summary>

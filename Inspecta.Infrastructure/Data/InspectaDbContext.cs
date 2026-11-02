@@ -266,6 +266,7 @@ public sealed class InspectaDbContext(
         companyProfile.Property(item => item.EmailsJson).IsRequired();
         companyProfile.Property(item => item.Website).HasMaxLength(200).IsRequired();
         companyProfile.Property(item => item.SignerName).HasMaxLength(200);
+        companyProfile.Property(item => item.UsesBuiltInDetails).HasDefaultValue(false);
         companyProfile.Property(item => item.PrimaryColor).HasMaxLength(7).IsRequired();
         companyProfile.Property(item => item.AccentColor).HasMaxLength(7).IsRequired();
         companyProfile.HasOne<AppUser>().WithMany().HasForeignKey(item => item.ManagerId).OnDelete(DeleteBehavior.Restrict);

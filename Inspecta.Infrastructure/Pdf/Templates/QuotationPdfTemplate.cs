@@ -48,7 +48,7 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
         }
     }
 
-    private static byte[]? Logo(QuotationPdfModel model) => model.Branding is null ? PdfAssets.Logo : model.Branding.LogoPng;
+    private static byte[]? Logo(QuotationPdfModel model) => model.Branding?.LogoPng ?? PdfAssets.Logo;
 
     public override string FileName(QuotationPdfModel model) =>
         $"quotation-{SafeFileName(model.ProposalNumber)}.pdf";

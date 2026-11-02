@@ -178,6 +178,40 @@ public sealed class UserManagementTests
     }
 
     [Fact]
+    public async Task ATechnicalManagerIsCreatedTogetherWithItsCompanyProfile()
+    {
+        var users = new MemoryUserRepository();
+        var profiles = new RecordingProfiles();
+        var service = new UserManagementService(users, new FakePasswordService(), new FakeSecretProtector(), profiles);
+        var profile = new Inspecta.Application.Contracts.Company.SaveCompanyProfileRequest { Name = "Acme", Address = "Cairo" };
+
+        var created = await service.CreateTechnicalManagerAsync(new CreateTechnicalManagerRequest
+        {
+            Email = "manager@acme.com", FullName = "Acme Manager", Password = "StrongPassword123!", CompanyProfile = profile
+        });
+
+        Assert.Equal(created.Id, profiles.SavedFor);
+        Assert.Same(profile, profiles.Saved);
+    }
+
+    [Fact]
+    public async Task AMistakeInTheCompanyProfileCreatesNoAccount()
+    {
+        var users = new MemoryUserRepository();
+        var profiles = new RecordingProfiles { Fail = true };
+        var service = new UserManagementService(users, new FakePasswordService(), new FakeSecretProtector(), profiles);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateTechnicalManagerAsync(new CreateTechnicalManagerRequest
+        {
+            Email = "manager@acme.com", FullName = "Acme Manager", Password = "StrongPassword123!",
+            CompanyProfile = new Inspecta.Application.Contracts.Company.SaveCompanyProfileRequest { Name = "Acme", Address = "Cairo" }
+        }));
+
+        Assert.Empty(await users.ListAsync(role: UserRole.TechnicalManager));
+        Assert.Null(profiles.Saved);
+    }
+
+    [Fact]
     public async Task DeletedUsersAreSoftDeletedAndExcludedFromNormalQueries()
     {
         var user = AppUser.Create("staff@example.com", "Staff Member", UserRole.Inspector);
@@ -283,6 +317,30 @@ public sealed class UserManagementTests
 
     private static UserManagementService CreateService(MemoryUserRepository users) =>
         new(users, new FakePasswordService(), new FakeSecretProtector());
+
+    private sealed class RecordingProfiles : ICompanyProfileService
+    {
+        public bool Fail { get; init; }
+        public Guid? SavedFor { get; private set; }
+        public Inspecta.Application.Contracts.Company.SaveCompanyProfileRequest? Saved { get; private set; }
+
+        public void Validate(Inspecta.Application.Contracts.Company.SaveCompanyProfileRequest request)
+        {
+            if (Fail) throw new ArgumentException("bad profile");
+        }
+
+        public Task<Inspecta.Application.Contracts.Company.CompanyProfileResponse> SaveAsync(
+            Guid managerId, Inspecta.Application.Contracts.Company.SaveCompanyProfileRequest request, CancellationToken cancellationToken = default)
+        {
+            (SavedFor, Saved) = (managerId, request);
+            return Task.FromResult<Inspecta.Application.Contracts.Company.CompanyProfileResponse>(null!);
+        }
+
+        public Task<Inspecta.Application.Contracts.Company.CompanyProfileResponse?> GetAsync(Guid managerId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<Inspecta.Application.Contracts.Company.CompanyProfileResponse?>(null);
+
+        public Task<byte[]?> GetLogoAsync(Guid managerId, CancellationToken cancellationToken = default) => Task.FromResult<byte[]?>(null);
+    }
 
     private sealed class FakePasswordService : IPasswordService
     {

@@ -370,6 +370,11 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("UsesBuiltInDetails")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Website")
                         .IsRequired()
                         .HasMaxLength(200)

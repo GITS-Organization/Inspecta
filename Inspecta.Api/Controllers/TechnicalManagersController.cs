@@ -12,7 +12,13 @@ namespace Inspecta.Api.Controllers;
 [Route("api/v1/technical-managers")]
 public sealed class TechnicalManagersController(IUserManagementService userManagementService) : ControllerBase
 {
-    /// <summary>Create a technical manager account with an initial subscription.</summary>
+    /// <summary>Create a technical manager account with an initial subscription, and optionally its company identity.</summary>
+    /// <remarks>
+    /// <c>companyProfile</c> (same fields as <c>PUT /admin/managers/{managerId}/company-profile</c>: name, address, contacts, logo, accreditations, colours)
+    /// sets the identity printed on the team's certificates, quotations and emails. It is checked first, so a mistake in it (<c>400</c>) creates no account.
+    /// A profile with only <c>logoBase64</c>, <c>accreditationsBase64</c> or colours keeps the built-in company details (the first customer's) and changes just those.
+    /// Left out, the team uses the built-in identity until a profile is set. A profile without its own logo or accreditation marks gets the built-in ones.
+    /// </remarks>
     [HttpPost]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]

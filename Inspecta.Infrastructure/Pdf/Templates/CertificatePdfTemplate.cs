@@ -38,12 +38,16 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
         "This Certificate becomes invalid if any Repair/modification is done that affects strength or stability.",
         "Any holder of this document is advised that the information contained hereon is limited to the accessible portions of the item examined only.",
         "Equipment has been correctly installed and fit for the purpose",
-        $"This Certificate should be signed, stamped and carries unique {model.Company?.IssuerName ?? BuiltInIssuer} certificate number"
+        $"This Certificate should be signed, stamped and carries unique {Details(model)?.IssuerName ?? BuiltInIssuer} certificate number"
     ];
 
-    private static string HeaderTitle(CertificatePdfModel model) => model.Company?.CertificateTitle ?? BuiltInTitle;
-    private static byte[]? Logo(CertificatePdfModel model) => model.Company is null ? PdfAssets.CertificateLogo : model.Company.LogoPng;
-    private static byte[]? Accreditations(CertificatePdfModel model) => model.Company is null ? PdfAssets.Accreditations : model.Company.AccreditationsPng;
+    // The company details of the profile; none when the team has no profile or keeps the built-in details.
+    private static CompanyBranding? Details(CertificatePdfModel model) => model.Company is { UsesBuiltInDetails: false } ? model.Company : null;
+
+    private static string HeaderTitle(CertificatePdfModel model) => Details(model)?.CertificateTitle ?? BuiltInTitle;
+    // A company that has not set its own logo or accreditation marks gets the built-in ones.
+    private static byte[]? Logo(CertificatePdfModel model) => model.Company?.LogoPng ?? PdfAssets.CertificateLogo;
+    private static byte[]? Accreditations(CertificatePdfModel model) => model.Company?.AccreditationsPng ?? PdfAssets.Accreditations;
     private static Color Blue(CertificatePdfModel model) => model.Company is null ? BandBlue : Color.FromHex(model.Company.PrimaryColor);
     private static Color Accent(CertificatePdfModel model) => model.Company is null ? BandGreen : Color.FromHex(model.Company.AccentColor);
 
@@ -114,7 +118,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
             {
                 row.RelativeItem().Column(lines =>
                 {
-                    var company = model.Company;
+                    var company = Details(model);
                     lines.Item().Text(HeaderTitle(model)).Bold();
                     var tagline = company is null ? "Industrial & Energy Services." : company.Tagline;
                     if (!string.IsNullOrWhiteSpace(tagline)) lines.Item().Text(tagline);
@@ -161,7 +165,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
             {
                 row.RelativeItem().AlignBottom().Column(lines =>
                 {
-                    var company = model.Company;
+                    var company = Details(model);
                     lines.Item().Text($"{HeaderTitle(model)}. All rights reserved.").Bold().FontSize(6.8f);
                     lines.Item().Text($"{HeaderTitle(model)} | {(company is null ? "21 Nakib Sharif Ramzy St., Smouha, Alexandria, Egypt" : company.Address)}").Bold().FontSize(6.8f);
                     var tel = company is null ? "+201287374933 / 01035945426" : string.Join(" / ", company.Phones);
@@ -344,7 +348,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
             });
             Head(table, "Name & Qualifications of person making this report");
             Head(table, "Name of person signing or authenticating this report on behalf of the author");
-            Head(table, $"For {model.Company?.IssuerName ?? BuiltInIssuer}");
+            Head(table, $"For {Details(model)?.IssuerName ?? BuiltInIssuer}");
             Head(table, "QR Code");
 
             table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Column(column =>
@@ -360,7 +364,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
                 else column.Item().Height(34);
                 column.Item().AlignCenter().Text(model.SignedBy ?? "—").Bold();
             });
-            table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Text(model.Company is null ? BuiltInSigner : model.Company.SignerName).Bold();
+            table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Text(Details(model) is { } details ? details.SignerName : BuiltInSigner).Bold();
             // Filled from the first submit; once approved, scanning it opens the public check page with the PDF.
             table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Element(qr =>
             {

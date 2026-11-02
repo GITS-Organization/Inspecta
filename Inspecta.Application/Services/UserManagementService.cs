@@ -10,7 +10,8 @@ namespace Inspecta.Application.Services;
 public sealed class UserManagementService(
     IUserRepository userRepository,
     IPasswordService passwordService,
-    ISecretProtector secretProtector) : IUserManagementService
+    ISecretProtector secretProtector,
+    ICompanyProfileService? companyProfiles = null) : IUserManagementService
 {
     public async Task<AuthUserResponse> CreateAsync(
         CreateStaffUserRequest request,
@@ -68,6 +69,13 @@ public sealed class UserManagementService(
         if (request.SubscriptionMonths is < 1 or > 120)
             throw new ArgumentOutOfRangeException(nameof(request.SubscriptionMonths));
 
+        // The identity is checked first: a mistake in it must not leave an account without it.
+        if (request.CompanyProfile is not null)
+        {
+            if (companyProfiles is null) throw new InvalidOperationException("Company profiles are not available.");
+            companyProfiles.Validate(request.CompanyProfile);
+        }
+
         var email = request.Email.Trim().ToLowerInvariant();
         await EnsureEmailAvailableAsync(email, cancellationToken);
         var manager = CreateUser(
@@ -78,6 +86,8 @@ public sealed class UserManagementService(
             [],
             subscriptionEndDate: DateTimeOffset.UtcNow.AddMonths(request.SubscriptionMonths));
         await userRepository.AddAsync(manager, cancellationToken);
+        if (request.CompanyProfile is not null)
+            await companyProfiles!.SaveAsync(manager.Id, request.CompanyProfile, cancellationToken);
         return ToResponse(manager);
     }
 

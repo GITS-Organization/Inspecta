@@ -40,6 +40,16 @@ public sealed class CompanyProfileService(
         return Map(profile);
     }
 
+    public void Validate(SaveCompanyProfileRequest request)
+    {
+        var profile = CompanyProfile.Create(Guid.NewGuid());
+        profile.Update(
+            request.Name, request.CertificateTitle, request.IssuerName, request.Tagline, request.Address, request.Phones,
+            request.Emails, request.Website, request.SignerName, request.PrimaryColor, request.AccentColor);
+        profile.SetLogo(Decode(request.LogoBase64, "logo").Content);
+        profile.SetAccreditations(Decode(request.AccreditationsBase64, "accreditations image").Content);
+    }
+
     public async Task<byte[]?> GetLogoAsync(Guid managerId, CancellationToken cancellationToken = default) =>
         (await profileRepository.GetByManagerAsync(managerId, tracking: false, cancellationToken))?.LogoPng;
 
@@ -62,7 +72,8 @@ public sealed class CompanyProfileService(
         profile.LogoPng,
         profile.AccreditationsPng,
         profile.PrimaryColor,
-        profile.AccentColor);
+        profile.AccentColor,
+        profile.UsesBuiltInDetails);
 
     private static CompanyProfileResponse Map(CompanyProfile profile) => new(
         profile.ManagerId,
@@ -80,7 +91,8 @@ public sealed class CompanyProfileService(
         profile.LogoPng is { Length: > 0 },
         profile.AccreditationsPng is { Length: > 0 },
         profile.LogoPng is { Length: > 0 } ? $"/api/v1/branding/{profile.ManagerId}/logo.png" : null,
-        profile.UpdatedAt);
+        profile.UpdatedAt,
+        profile.UsesBuiltInDetails);
 
     // Left out: unchanged. Empty: removed. Otherwise the image.
     private static (bool Changed, byte[]? Content) Decode(string? base64, string what)

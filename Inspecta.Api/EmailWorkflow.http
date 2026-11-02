@@ -365,6 +365,37 @@ Content-Type: application/json
 
 { "sentTo": "quality@client.com", "cc": ["boss@client.com"], "subject": "Our offer", "message": "Dear team, our offer is attached." }
 
+### Admin: create a technical manager together with its company identity (the logo and accreditations are optional: the built-in ones are used when left out)
+POST {{baseUrl}}/api/v1/technical-managers
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "email": "manager@acme.com",
+  "fullName": "Acme Manager",
+  "password": "ChangeMe-StrongPassword1",
+  "subscriptionMonths": 12,
+  "companyProfile": {
+    "name": "Acme Inspection Co.",
+    "address": "5 Industrial Zone, Cairo, Egypt",
+    "phones": ["+20 100 111 2222"],
+    "emails": ["info@acme.com"],
+    "website": "www.acme.com"
+  }
+}
+
+### Admin: create a technical manager that keeps the built-in (Integrity) details and only changes the logo (no name and address)
+POST {{baseUrl}}/api/v1/technical-managers
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "email": "manager2@example.com",
+  "fullName": "Second Manager",
+  "password": "ChangeMe-StrongPassword1",
+  "companyProfile": { "logoBase64": "iVBORw0KGgo..." }
+}
+
 ### Admin: set the company identity printed on a team's certificates, quotations and emails (the images are base64 PNGs, at most 1 MB)
 PUT {{baseUrl}}/api/v1/admin/managers/{{managerId}}/company-profile
 Authorization: Bearer {{accessToken}}

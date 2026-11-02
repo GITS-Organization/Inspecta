@@ -17,13 +17,14 @@ public sealed record CompanyBranding(
     byte[]? LogoPng,
     byte[]? AccreditationsPng,
     string PrimaryColor,
-    string AccentColor)
+    string AccentColor,
+    bool UsesBuiltInDetails = false)
 {
     /// <summary>
-    /// The company details of a quotation. Its long texts (about us, services, terms, bank accounts) are not part of the profile yet, so
+    /// The company details of a quotation, or <c>null</c> when the profile keeps the built-in company details. Its long texts (about us, services, terms, bank accounts) are not part of the profile yet, so
     /// they are empty and the pages that would carry them are left out of the quotation.
     /// </summary>
-    public QuotationCompanyProfile ToQuotationProfile() =>
-        new(Name, Address, Phones, Emails.FirstOrDefault() ?? string.Empty, Website, AboutUs: string.Empty, Vision: string.Empty,
+    public QuotationCompanyProfile? ToQuotationProfile() =>
+        UsesBuiltInDetails ? null : new(Name, Address, Phones, Emails.FirstOrDefault() ?? string.Empty, Website, AboutUs: string.Empty, Vision: string.Empty,
             Services: [], Terms: [], BankAccounts: [], ServicesLabel: "Our Services");
 }

@@ -25,8 +25,9 @@ public sealed class AdminCompanyProfilesController(ICompanyProfileService profil
 
     /// <summary>Create or replace the company profile of a team.</summary>
     /// <remarks>
-    /// The text fields are replaced by what is sent. <c>logoBase64</c> and <c>accreditationsBase64</c> (PNG, at most 1 MB each) are kept when left
-    /// out and removed when empty. From then on the team's certificates, quotations and the signature of its emails carry this identity; the ones
+    /// <c>name</c> and <c>address</c> go together: give both to set the company's own details, or leave both out to keep the built-in details (the first
+    /// customer's) and change only the images and colours (<c>usesBuiltInDetails</c> is then true). The text fields are replaced by what is sent. <c>logoBase64</c> and <c>accreditationsBase64</c> (PNG, at most 1 MB each) are kept when left
+    /// out and removed when empty; a company without its own logo or accreditation marks gets the built-in ones. From then on the team's certificates, quotations and the signature of its emails carry this identity; the ones
     /// already issued do not change. A quotation of a team with a profile has no cover page and leaves out the pages of texts it does not have
     /// (about us, services, terms).
     /// </remarks>

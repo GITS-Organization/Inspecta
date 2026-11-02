@@ -114,6 +114,40 @@ public sealed class CompanyProfileTests : IDisposable
     }
 
     [Fact]
+    public async Task AProfileWithOnlyImagesAndColoursKeepsTheBuiltInCompanyDetails()
+    {
+        await using var db = Context();
+        var service = new CompanyProfileService(new EfCompanyProfileRepository(db), new EfUserRepository(db));
+
+        var saved = await service.SaveAsync(manager.Id, new SaveCompanyProfileRequest
+        {
+            LogoBase64 = Convert.ToBase64String(Png), PrimaryColor = "#112233"
+        });
+
+        Assert.True(saved.UsesBuiltInDetails);
+        Assert.True(saved.HasLogo);
+        Assert.Equal(string.Empty, saved.Name);
+        var branding = (await ((ICompanyBrandingProvider)service).GetAsync(manager.Id))!;
+        Assert.True(branding.UsesBuiltInDetails);
+        Assert.Null(branding.ToQuotationProfile());
+        Assert.Equal("#112233", branding.PrimaryColor);
+
+        // The email signature keeps the built-in company and only takes the new logo.
+        var builtIn = new FixedBranding(new EmailBranding("Integrity", "Alexandria", "www.integrity-intl.com", [9]));
+        var signature = EmailLayout.BrandingFor(branding, builtIn)!.Get();
+        Assert.Equal("Integrity", signature.CompanyName);
+        Assert.Equal(Png, signature.LogoPng);
+        Assert.Equal([9], EmailLayout.BrandingFor(branding with { LogoPng = null }, builtIn)!.Get().LogoPng);
+
+        // Giving the details later replaces them, and a name without an address is refused.
+        var detailed = await service.SaveAsync(manager.Id, Request() with { LogoBase64 = null });
+        Assert.False(detailed.UsesBuiltInDetails);
+        Assert.True(detailed.HasLogo);
+        await Assert.ThrowsAsync<ArgumentException>(() => service.SaveAsync(manager.Id, new SaveCompanyProfileRequest { Name = "Only a name" }));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.SaveAsync(manager.Id, new SaveCompanyProfileRequest { Address = "Only an address" }));
+    }
+
+    [Fact]
     public async Task ATeamWithAProfileGetsItsBrandingAndATeamWithoutOneGetsNone()
     {
         await using var db = Context();
@@ -124,8 +158,8 @@ public sealed class CompanyProfileTests : IDisposable
         Assert.Equal("Acme Inspection Services", branding!.IssuerName);
         Assert.Equal("Acme Inspection", branding.CertificateTitle);
         Assert.Equal("Mona Hassan", branding.SignerName);
-        Assert.Equal("info@acme.com", branding.ToQuotationProfile().Email);
-        Assert.Empty(branding.ToQuotationProfile().Services);
+        Assert.Equal("info@acme.com", branding.ToQuotationProfile()!.Email);
+        Assert.Empty(branding.ToQuotationProfile()!.Services);
 
         Assert.Null(await ((ICompanyBrandingProvider)service).GetAsync(Guid.NewGuid()));
         Assert.Null(await ((ICompanyBrandingProvider)service).GetAsync(null));
@@ -152,6 +186,11 @@ public sealed class CompanyProfileTests : IDisposable
         Assert.Equal($"/api/v1/branding/{team}/logo.png", EmailLayout.PreviewLogoFor(team, company));
         Assert.Equal(EmailLayout.PreviewLogoPath, EmailLayout.PreviewLogoFor(team, null));
         Assert.Equal(EmailLayout.PreviewLogoPath, EmailLayout.PreviewLogoFor(team, company with { LogoPng = null }));
+
+        // A company without a logo of its own signs with the built-in one.
+        var builtInWithLogo = new FixedBranding(new EmailBranding("Integrity", "Alexandria", "www.integrity-intl.com", [1, 2, 3]));
+        Assert.Equal(Png, EmailLayout.BrandingFor(company, builtInWithLogo)!.Get().LogoPng);
+        Assert.Equal([1, 2, 3], EmailLayout.BrandingFor(company with { LogoPng = null }, builtInWithLogo)!.Get().LogoPng);
     }
 
     [Fact]
@@ -170,7 +209,14 @@ public sealed class CompanyProfileTests : IDisposable
         var quotation = Quotation(company);
 
         Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(generator.Generate(certificate).Content, 0, 5));
-        Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(generator.Generate(certificate with { Company = company with { LogoPng = null } }).Content, 0, 5));
+        // Without a logo or accreditation marks of its own, the built-in ones are drawn: the file is as large as the built-in one is.
+        var withoutImages = generator.Generate(certificate with { Company = company with { LogoPng = null } }).Content.Length;
+        Assert.True(withoutImages > generator.Generate(certificate).Content.Length, "the built-in logo is bigger than the 1 pixel test logo");
+
+        // The built-in company details with a logo of their own are drawn too (the built-in texts, no cover).
+        var imagesOnly = company with { UsesBuiltInDetails = true };
+        Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(generator.Generate(Certificate(imagesOnly)).Content, 0, 5));
+        Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(generator.Generate(Quotation(imagesOnly) with { Company = null }).Content, 0, 5));
 
         // Without the first customer's cover and texts, the quotation is a smaller document.
         var own = generator.Generate(quotation).Content.Length;

@@ -5,9 +5,12 @@ namespace Inspecta.Application.Contracts.Company;
 /// <summary>The identity of a company: what its certificates, quotations and emails print. Every field is replaced by what is sent.</summary>
 public sealed record SaveCompanyProfileRequest
 {
-    /// <summary>The name on quotations and in the signature of the emails.</summary>
-    [Required, MaxLength(200)]
-    public string Name { get; init; } = string.Empty;
+    /// <summary>
+    /// The name on quotations and in the signature of the emails. Give the name and the address together; leave both out to keep the
+    /// built-in company details (the first customer's) and set only the images and colours.
+    /// </summary>
+    [MaxLength(200)]
+    public string? Name { get; init; }
 
     /// <summary>The name in the header and footer of a certificate (the name when left out).</summary>
     [MaxLength(200)]
@@ -21,8 +24,8 @@ public sealed record SaveCompanyProfileRequest
     [MaxLength(200)]
     public string? Tagline { get; init; }
 
-    [Required, MaxLength(500)]
-    public string Address { get; init; } = string.Empty;
+    [MaxLength(500)]
+    public string? Address { get; init; }
 
     /// <summary>At most 5.</summary>
     public IReadOnlyList<string>? Phones { get; init; }
@@ -43,10 +46,10 @@ public sealed record SaveCompanyProfileRequest
     /// <summary><c>#RRGGBB</c>; the green of the page bands (the default when left out).</summary>
     public string? AccentColor { get; init; }
 
-    /// <summary>The logo as base64 of a PNG (at most 1 MB). Left out keeps the current one; an empty text removes it.</summary>
+    /// <summary>The logo as base64 of a PNG (at most 1 MB). Left out keeps the current one; an empty text removes it. A company without its own logo gets the built-in one.</summary>
     public string? LogoBase64 { get; init; }
 
-    /// <summary>The accreditation marks of the foot of a certificate, as base64 of a PNG (at most 1 MB). Left out keeps the current ones; an empty text removes them.</summary>
+    /// <summary>The accreditation marks of the foot of a certificate, as base64 of a PNG (at most 1 MB). Left out keeps the current ones; an empty text removes them. A company without its own gets the built-in ones.</summary>
     public string? AccreditationsBase64 { get; init; }
 }
 
@@ -66,4 +69,5 @@ public sealed record CompanyProfileResponse(
     bool HasLogo,
     bool HasAccreditations,
     string? LogoUrl,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    bool UsesBuiltInDetails = false);

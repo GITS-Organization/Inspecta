@@ -10,6 +10,9 @@ public interface ICompanyProfileService
     /// <summary>Creates or replaces the profile of a team (a technical manager).</summary>
     Task<CompanyProfileResponse> SaveAsync(Guid managerId, SaveCompanyProfileRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>Checks a profile the way saving does, without saving anything. Throws <see cref="ArgumentException"/> naming what is wrong.</summary>
+    void Validate(SaveCompanyProfileRequest request);
+
     /// <summary>The logo of the team's company, or <c>null</c> when it has none.</summary>
     Task<byte[]?> GetLogoAsync(Guid managerId, CancellationToken cancellationToken = default);
 }

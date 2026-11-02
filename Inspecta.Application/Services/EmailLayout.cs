@@ -82,8 +82,15 @@ public static class EmailLayout
     public const string PreviewLogoPath = "/api/v1/branding/logo.png";
 
     /// <summary>The company of the team signs the email; a team without a company profile uses the built-in one.</summary>
-    public static IEmailBranding? BrandingFor(CompanyBranding? company, IEmailBranding? builtIn) =>
-        company is null ? builtIn : new FixedBranding(new EmailBranding(company.Name, company.Address, company.Website, company.LogoPng));
+    public static IEmailBranding? BrandingFor(CompanyBranding? company, IEmailBranding? builtIn)
+    {
+        if (company is null) return builtIn;
+
+        // A profile that keeps the built-in details only changes the logo; otherwise it is the company's own details.
+        if (company.UsesBuiltInDetails)
+            return builtIn is null ? null : new FixedBranding(builtIn.Get() with { LogoPng = company.LogoPng ?? builtIn.Get().LogoPng });
+        return new FixedBranding(new EmailBranding(company.Name, company.Address, company.Website, company.LogoPng ?? builtIn?.Get().LogoPng));
+    }
 
     /// <summary>The logo of the team's company as a preview on screen loads it.</summary>
     public static string PreviewLogoFor(Guid? managerId, CompanyBranding? company) =>
