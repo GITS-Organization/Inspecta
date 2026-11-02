@@ -67,7 +67,7 @@ public sealed class DashboardService(
     // The statuses of a job that reached the offer stage or went on after it. A request still being received or drafted, and a rejected offer, are not among them.
     private static readonly JobStatus[] ReachedTheOffer =
     [
-        JobStatus.QuoteSent, JobStatus.ClientCountered, JobStatus.ClientDeclined, JobStatus.Unassigned, JobStatus.Assigned,
+        JobStatus.QuoteSent, JobStatus.CounterOfferSent, JobStatus.ClientCountered, JobStatus.ClientDeclined, JobStatus.Unassigned, JobStatus.Assigned,
         JobStatus.TaskAccepted, JobStatus.InProgress, JobStatus.CertificateSubmitted, JobStatus.CertificateReturned,
         JobStatus.CertificateApproved, JobStatus.SentToClient
     ];

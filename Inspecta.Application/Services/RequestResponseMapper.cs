@@ -33,7 +33,8 @@ internal static class RequestResponseMapper
         request.MaybeExpiresAt,
         Client: request.Client is { } client && client.Id == request.ClientId
             ? new RequestClientResponse(client.Id, client.Name, client.Location ?? string.Empty, client.HasContract)
-            : null);
+            : null,
+        HasUnreadClientReply: request.HasUnreadClientReply);
 
     public static RequestItemResponse MapItem(RequestItem item) => new(
         item.Id, item.EquipmentId, item.Name, item.Type, item.Capacity, item.Quantity,

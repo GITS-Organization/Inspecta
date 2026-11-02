@@ -27,6 +27,9 @@ public sealed partial class EmailSyncBackgroundService
             var protector = services.GetRequiredService<ISecretProtector>();
             var repository = services.GetRequiredService<IEmailSyncRepository>();
             var machineSuggestions = services.GetRequiredService<IMachineSuggestionService>();
+            var replyService = services.GetRequiredService<IClientReplyService>();
+            // An email from the mailbox itself is ours, not the client's.
+            IReadOnlyList<string> ownAddresses = config.EmailUsername.Contains('@') ? [config.EmailUsername] : [];
             var password = protector.Unprotect(config.EncryptedPassword);
 
             using var client = new ImapClient();
@@ -89,6 +92,19 @@ public sealed partial class EmailSyncBackgroundService
                     {
                         var message = await inbox.GetMessageAsync(uid, cancellationToken);
                         var incoming = ToIncomingEmail(message, uidValidity, uid.Id);
+
+                        // An answer to a quotation we sent is kept with its request, not imported as a new request.
+                        var outcome = await replyService.TryAttachAsync(incoming, config.TenantId, config.CoordinatorId, ownAddresses, cancellationToken);
+                        if (outcome != ClientReplyOutcome.NotAReply)
+                        {
+                            logger.LogInformation(
+                                "Message UID {Uid} from {Sender} answers a quotation of coordinator {CoordinatorId}: {Outcome}.",
+                                uid.Id, incoming.FromAddress, config.CoordinatorId, outcome);
+                            FailedImports.TryRemove((config.CoordinatorId, uid.Id), out _);
+                            if (!blocked) advanceTo = uid.Id;
+                            continue;
+                        }
+
                         var rule = ClientMailRule.FindMatch(rules.Select(item => item.Rule), incoming.FromAddress);
                         var sender = rule is null ? null : rules.First(item => item.Rule.Id == rule.Id);
                         var clientName = sender?.ClientName;

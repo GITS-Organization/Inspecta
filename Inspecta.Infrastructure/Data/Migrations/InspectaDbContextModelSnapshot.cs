@@ -309,6 +309,65 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.ToTable("ClientMailRules");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.ClientReply", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AttachmentMetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FromAddress")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("FromName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("HtmlBody")
+                        .HasColumnType("text");
+
+                    b.Property<string>("InReplyTo")
+                        .HasMaxLength(998)
+                        .HasColumnType("character varying(998)");
+
+                    b.Property<Guid>("ManagerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MessageId")
+                        .HasMaxLength(998)
+                        .HasColumnType("character varying(998)");
+
+                    b.Property<Guid?>("QuoteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(998)
+                        .HasColumnType("character varying(998)");
+
+                    b.Property<string>("TextBody")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestId");
+
+                    b.HasIndex("ManagerId", "MessageId")
+                        .IsUnique();
+
+                    b.ToTable("ClientReplies");
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.CompanyProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1458,6 +1517,15 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .WithMany()
                         .HasForeignKey("ManagerId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.ClientReply", b =>
+                {
+                    b.HasOne("Inspecta.Domain.Entities.InspectionRequest", null)
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

@@ -155,4 +155,5 @@ public sealed record IncomingEmail(
     string? MessageId,
     string? InReplyTo,
     string? References,
-    DateTimeOffset? SentAt);
+    DateTimeOffset? SentAt,
+    bool IsAutomatic = false);

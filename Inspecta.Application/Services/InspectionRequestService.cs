@@ -215,7 +215,7 @@ public sealed class InspectionRequestService(
 
     // Once a quotation is open the work continues in the quotation list, so these requests leave the default request list.
     // They stay reachable with an explicit status filter.
-    private static readonly JobStatus[] InQuotation = [JobStatus.QuoteDraft, JobStatus.QuoteSent, JobStatus.ClientCountered];
+    private static readonly JobStatus[] InQuotation = [JobStatus.QuoteDraft, JobStatus.QuoteSent, JobStatus.CounterOfferSent, JobStatus.ClientCountered];
 
     private static RequestListFilter ScopeFor(Guid actorId, string role, Guid? managerId) => new(
         InspectorId: IsInspector(role) ? actorId : null,
@@ -425,7 +425,7 @@ public sealed class InspectionRequestService(
     {
         // Quotation steps and the inspector assignment have their own endpoints that keep the quotation, the email and
         // the inspector in step with the request. Moving the status directly would leave them out of sync.
-        if (target is JobStatus.QuoteDraft or JobStatus.QuoteSent or JobStatus.ClientCountered or JobStatus.QuoteRejected
+        if (target is JobStatus.QuoteDraft or JobStatus.QuoteSent or JobStatus.CounterOfferSent or JobStatus.ClientCountered or JobStatus.QuoteRejected
             or JobStatus.ClientDeclined or JobStatus.Unassigned)
             throw new AuthException(
                 "quote_flow",

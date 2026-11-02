@@ -22,6 +22,7 @@ public sealed class InspectaDbContext(
     public DbSet<RequestEmail> RequestEmails => Set<RequestEmail>();
     public DbSet<ClientMailRule> ClientMailRules => Set<ClientMailRule>();
     public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();
+    public DbSet<ClientReply> ClientReplies => Set<ClientReply>();
     public DbSet<OutboundEmail> OutboundEmails => Set<OutboundEmail>();
     public DbSet<JobStatusHistory> JobStatusHistory => Set<JobStatusHistory>();
     public DbSet<Quote> Quotes => Set<Quote>();
@@ -270,6 +271,18 @@ public sealed class InspectaDbContext(
         companyProfile.Property(item => item.PrimaryColor).HasMaxLength(7).IsRequired();
         companyProfile.Property(item => item.AccentColor).HasMaxLength(7).IsRequired();
         companyProfile.HasOne<AppUser>().WithMany().HasForeignKey(item => item.ManagerId).OnDelete(DeleteBehavior.Restrict);
+
+        var clientReply = modelBuilder.Entity<ClientReply>();
+        clientReply.HasKey(item => item.Id);
+        clientReply.HasIndex(item => item.RequestId);
+        clientReply.HasIndex(item => new { item.ManagerId, item.MessageId }).IsUnique();
+        clientReply.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
+        clientReply.Property(item => item.MessageId).HasMaxLength(998);
+        clientReply.Property(item => item.InReplyTo).HasMaxLength(998);
+        clientReply.Property(item => item.FromAddress).HasMaxLength(320);
+        clientReply.Property(item => item.FromName).HasMaxLength(500);
+        clientReply.Property(item => item.Subject).HasMaxLength(998);
+        clientReply.HasOne<InspectionRequest>().WithMany().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
 
         var outboundEmail = modelBuilder.Entity<OutboundEmail>();
         outboundEmail.HasKey(item => item.Id);

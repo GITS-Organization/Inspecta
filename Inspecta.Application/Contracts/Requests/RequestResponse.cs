@@ -33,7 +33,8 @@ public sealed record RequestResponse(
     RequestTriage Triage = RequestTriage.Request,
     DateTimeOffset? MaybeExpiresAt = null,
     Quotations.QuoteResponse? Quotation = null,
-    RequestClientResponse? Client = null);
+    RequestClientResponse? Client = null,
+    bool HasUnreadClientReply = false);
 
 /// <summary>The client the request belongs to; null while the request has no client yet.</summary>
 public sealed record RequestClientResponse(Guid Id, string Name, string Location, bool HasContract);

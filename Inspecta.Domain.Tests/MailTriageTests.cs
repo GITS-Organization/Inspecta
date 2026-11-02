@@ -107,7 +107,7 @@ public sealed class MailTriageTests
         Assert.Equal(Application.Contracts.Requests.RequestListQuery.MaxPageSize, repository.LastFilter.Take);
         Assert.Equal(2 * Application.Contracts.Requests.RequestListQuery.MaxPageSize, repository.LastFilter.Skip);
         Assert.Equal("noor", repository.LastFilter.Search);
-        Assert.Equal([JobStatus.QuoteDraft, JobStatus.QuoteSent, JobStatus.ClientCountered], repository.LastFilter.ExcludeStatuses);
+        Assert.Equal([JobStatus.QuoteDraft, JobStatus.QuoteSent, JobStatus.CounterOfferSent, JobStatus.ClientCountered], repository.LastFilter.ExcludeStatuses);
 
         await service.ListVisibleAsync(CoordinatorId, "technical_manager", new Application.Contracts.Requests.RequestListQuery(Triage: RequestTriage.Maybe, Page: 0, PageSize: 0));
 

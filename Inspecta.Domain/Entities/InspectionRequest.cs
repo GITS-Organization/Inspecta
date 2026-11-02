@@ -8,9 +8,12 @@ public sealed class InspectionRequest
         new Dictionary<JobStatus, JobStatus[]>
         {
             [JobStatus.RequestReceived] = [JobStatus.QuoteDraft, JobStatus.QuoteRejected],
-            [JobStatus.QuoteDraft] = [JobStatus.QuoteSent, JobStatus.QuoteRejected],
+            [JobStatus.QuoteDraft] = [JobStatus.QuoteSent, JobStatus.CounterOfferSent, JobStatus.QuoteRejected],
             [JobStatus.QuoteSent] = [JobStatus.ClientCountered, JobStatus.QuoteRejected, JobStatus.Unassigned, JobStatus.ClientDeclined, JobStatus.QuoteDraft],
-            [JobStatus.ClientCountered] = [JobStatus.QuoteDraft],
+            // A counter offer waits for the client like the first offer, and a new revision can follow it.
+            [JobStatus.CounterOfferSent] = [JobStatus.ClientCountered, JobStatus.QuoteRejected, JobStatus.Unassigned, JobStatus.ClientDeclined, JobStatus.QuoteDraft],
+            // The client answered: the coordinator can revise the offer, accept it, turn it down, or dismiss the reply and keep waiting.
+            [JobStatus.ClientCountered] = [JobStatus.QuoteDraft, JobStatus.QuoteRejected, JobStatus.Unassigned, JobStatus.ClientDeclined, JobStatus.QuoteSent, JobStatus.CounterOfferSent],
             [JobStatus.Unassigned] = [JobStatus.Assigned],
             // Handing the job to another inspector keeps it in Assigned (and puts an accepted task back to it).
             [JobStatus.Assigned] = [JobStatus.TaskAccepted, JobStatus.Assigned],
@@ -407,7 +410,7 @@ public sealed class InspectionRequest
         if (nextStatus == JobStatus.QuoteDraft && GetMissingFields() is { Count: > 0 } missing)
             throw new InvalidOperationException(
                 $"Complete the request before drafting a quote. Missing: {string.Join(", ", missing)}.");
-        if (nextStatus == JobStatus.QuoteSent && (Items.Count == 0 || string.IsNullOrWhiteSpace(Location)))
+        if (nextStatus is JobStatus.QuoteSent or JobStatus.CounterOfferSent && (Items.Count == 0 || string.IsNullOrWhiteSpace(Location)))
             throw new InvalidOperationException("At least one item and a location are required before quoting.");
         if (nextStatus == JobStatus.CertificateSubmitted && InspectorId is null)
             throw new InvalidOperationException("An assigned inspector is required before certificate submission.");
@@ -427,6 +430,30 @@ public sealed class InspectionRequest
     {
         HasUnreadClientReply = false;
         UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// The client answered a quotation by email. A request that was waiting for the client goes to <c>client_countered</c>, so it is back in front
+    /// of the coordinator; in any other stage the reply is only flagged as unread.
+    /// </summary>
+    public void ReceiveClientReply(Guid actorId)
+    {
+        if (Status is JobStatus.QuoteSent or JobStatus.CounterOfferSent)
+            TransitionTo(JobStatus.ClientCountered, actorId, "The client replied by email.");
+        RecordClientReplyReceived();
+    }
+
+    /// <summary>
+    /// The reply needs nothing from the coordinator: a request that was waiting on it goes back to waiting for the client (<paramref name="waitingStatus"/>,
+    /// <c>quote_sent</c> or <c>counter_offer_sent</c>), and the reply is no longer unread.
+    /// </summary>
+    public void DismissClientReply(Guid actorId, JobStatus waitingStatus)
+    {
+        if (waitingStatus is not (JobStatus.QuoteSent or JobStatus.CounterOfferSent))
+            throw new ArgumentOutOfRangeException(nameof(waitingStatus));
+        if (Status == JobStatus.ClientCountered)
+            TransitionTo(waitingStatus, actorId, "The client's reply was dismissed.");
+        MarkClientReplyRead();
     }
 
     public void RecordClientReplyReceived()

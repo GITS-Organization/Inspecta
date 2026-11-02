@@ -78,21 +78,33 @@ public static class WorkflowDocs
             """),
         [Key<QuotesController>(nameof(QuotesController.Send))] = new(9, "Step 9 · Send the offer",
             """
-            **When:** every machine is priced and the preview looks right. Use it for the first offer and for a counter offer.
+            **When:** every machine is priced and the preview looks right. Use it for the first offer and for a counter offer. The request becomes `quote_sent` for the first offer and **`counter_offer_sent`** for a revision (the second or later), so the coordinator can tell them apart. Sending an offer clears what the client wrote back about the previous one.
             **How:** the body is **optional** (without one it sends the suggestion of step 8b): `{ "sentTo": "client@mail.com", "cc": ["boss@mail.com"], "subject": "...", "message": "the whole text" }`, each field replaces the suggestion. The PDF is emailed as a reply to the sender of the original email (to `sentTo` when it is given; a request that did not come from an email is only marked sent unless `sentTo` is given). Wrong addresses answer `400` and nothing is sent. The quotation becomes sent and the request `quote_sent` only after the mail server accepted the message; on `502` nothing changed and you can retry.
-            **Then the client answers:** accept (step 10), ask for different prices (step 11) or refuse (step 12).
+            **Then the client answers:** accept (step 10), ask for different prices (step 11, or step 11b by hand) or refuse (step 12).
             """),
         [Key<QuotesController>(nameof(QuotesController.Accept))] = new(10, "Step 10 · Accept",
             """
-            **When:** the offer is agreed. Works on a draft (it is sent at the same time, so every machine needs a price) and on a sent quotation.
+            **When:** the offer is agreed. Works on a draft (it is sent at the same time, so every machine needs a price) and on a sent quotation (`quote_sent`, `counter_offer_sent` or `client_countered`).
             **How:** the same optional body as step 9 (`sentTo`, `cc`, `subject`, `message`; preview it with `?action=accept` in step 8b). The quotation is closed as `accepted`, the request becomes `unassigned` and the PDF is emailed to the client.
             **Next:** the quotation appears in the **Quotation queue** section, where it is given to an inspector.
             """),
         [Key<QuotesController>(nameof(QuotesController.Create))] = new(11, "Step 11 · Counter offer",
             """
-            **When:** the client answered a sent offer with other prices.
-            **How:** `POST /requests/{requestId}/quotes` (optional `validForDays`). It creates the next revision with the previous prices and replaces the old one in the lists. Change the prices with step 7, preview with step 8 and send it with step 9.
+            **When:** the client answered a sent offer with other prices (the request is `quote_sent`, `counter_offer_sent` or `client_countered`).
+            **How:** `POST /requests/{requestId}/quotes` (optional `validForDays`). It creates the next revision with the previous prices and replaces the old one in the lists. Change the prices with step 7, preview with step 8 and send it with step 9: the request then becomes `counter_offer_sent`.
             Also used to open a quotation by hand, but step 4 with `prepareQuotation` already does that.
+            """),
+        [Key<QuotesController>(nameof(QuotesController.Reopen))] = new(11.1, "Step 11b · Take a sent quotation back (reopen)",
+            """
+            **When:** the price was talked over by phone, or the coordinator just wants to change a quotation that was sent, without waiting for the client's mail.
+            **How:** `POST /requests/{requestId}/quotes/{quoteId}/reopen` on the sent quotation (no body). It opens a new revision (`rev02`, `rev03`...) with the same prices, marks the sent one as replaced (it stays as history) and the request goes back to `quote_draft`: the quotation shows again with the quotations being prepared (`GET /quotations?stage=draft`). Works while the request is `quote_sent`, `counter_offer_sent` or `client_countered`; `409` otherwise (never sent, already accepted or rejected, or already replaced).
+            **Next:** change the prices (step 7), preview (step 8) and send it (step 9): it goes out as a counter offer and the request becomes `counter_offer_sent`.
+            """),
+        [Key<QuotesController>(nameof(QuotesController.DismissReply))] = new(11.2, "Step 11c · Dismiss the client's reply",
+            """
+            **When:** the client answered a sent quotation by email (the request is `client_countered`) but the answer changes nothing: a thank-you, a question already answered.
+            **How:** `POST /requests/{requestId}/quotes/{quoteId}/dismiss-reply` (no body). The replies are cleared, marked read, and the request goes back to waiting for the client: `quote_sent` (`counter_offer_sent` for a revision). `409` when there is no reply to dismiss. Accepting, rejecting or sending the next offer clears the replies too.
+            **How the replies arrive:** an email that **replies to a quotation email we sent** is not imported as a new request or maybe. It is kept with the request and shows in `clientReplies` of the current quotation (`GET /requests/{requestId}/quotes/{quoteId}`: `fromAddress`, `fromName`, `subject`, `receivedAt`, the new `text`, the `html` and the attachments' names). The request goes to `client_countered` (any other stage only gets `hasUnreadClientReply: true`). Out-of-office replies and bounces are ignored. Then: take the quotation back (step 11b), accept (step 10), reject (step 12) or dismiss it (this step).
             """),
         [Key<RequestsController>(nameof(RequestsController.Reject))] = new(12, "Step 12 · Reject",
             """

@@ -1075,6 +1075,7 @@ public sealed class QuotationTests
             Message = "First offer"
         });
         await fixture.Service.SendAsync(fixture.Request.Id, first.Id, CoordinatorId, "coordinator");
+        Assert.Equal(JobStatus.QuoteSent, fixture.Request.Status);
 
         var second = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
 
@@ -1098,9 +1099,192 @@ public sealed class QuotationTests
 
         Assert.NotNull(resent.SentAt);
         Assert.Equal(2, fixture.Sender.Sent.Count);
-        Assert.Equal(JobStatus.QuoteSent, fixture.Request.Status);
+        // A revision that was sent is a counter offer, not the first offer.
+        Assert.Equal(JobStatus.CounterOfferSent, fixture.Request.Status);
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.RecordDecisionAsync(
             fixture.Request.Id, first.Id, CoordinatorId, "coordinator", new QuoteDecisionRequest { Decision = QuoteStatus.Accepted }));
+    }
+
+    private static async Task<QuoteResponse> SentOfferAsync(Fixture fixture)
+    {
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+        return await fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+    }
+
+    private static async Task<QuoteResponse> SentCounterOfferAsync(Fixture fixture)
+    {
+        await SentOfferAsync(fixture);
+        var second = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, second.Id, CoordinatorId, "coordinator", Update(fixture, 1_100_000, 800_000));
+        return await fixture.Service.SendAsync(fixture.Request.Id, second.Id, CoordinatorId, "coordinator");
+    }
+
+    [Fact]
+    public async Task ACounterOfferThatWasSentCanBeAcceptedOrRejectedByTheCoordinator()
+    {
+        var accepted = new Fixture();
+        var counter = await SentCounterOfferAsync(accepted);
+        Assert.Equal(JobStatus.CounterOfferSent, accepted.Request.Status);
+
+        var done = await accepted.Service.AcceptAsync(accepted.Request.Id, counter.Id, CoordinatorId, "coordinator");
+
+        Assert.Equal(QuoteStatus.Accepted, done.Status);
+        Assert.Equal(JobStatus.Unassigned, accepted.Request.Status);
+
+        var rejected = new Fixture();
+        await SentCounterOfferAsync(rejected);
+        await rejected.Service.RejectRequestAsync(
+            rejected.Request.Id, CoordinatorId, "coordinator", new RejectRequestRequest { Reason = "The client went elsewhere" });
+        Assert.Equal(JobStatus.QuoteRejected, rejected.Request.Status);
+    }
+
+    [Fact]
+    public async Task AQuotationThatWasSentCanBeTakenBackByHandAndGoesOutAgainAsACounterOffer()
+    {
+        var fixture = new Fixture();
+        var first = await SentOfferAsync(fixture);
+        Assert.Equal(JobStatus.QuoteSent, fixture.Request.Status);
+
+        // The price was talked over by phone: take it back, change it, send it again.
+        var reopened = await fixture.Service.ReopenAsync(fixture.Request.Id, first.Id, CoordinatorId, "coordinator");
+
+        Assert.Equal(2, reopened.Version);
+        Assert.True(reopened.CanEdit);
+        Assert.Equal(JobStatus.QuoteDraft, fixture.Request.Status);
+        Assert.Equal(850_000, reopened.Items!.Single(item => item.RequestItemId == fixture.Receiver.Id).UnitPricePiastres);
+        var before = await fixture.Service.GetAsync(fixture.Request.Id, first.Id, CoordinatorId, "coordinator");
+        Assert.NotNull(before.SupersededAt);
+        Assert.NotNull(before.SentAt);
+
+        // It cannot be taken back twice, and the replaced one is out of reach.
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.ReopenAsync(fixture.Request.Id, first.Id, CoordinatorId, "coordinator"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.ReopenAsync(fixture.Request.Id, reopened.Id, CoordinatorId, "coordinator"));
+
+        await fixture.Service.UpdateAsync(fixture.Request.Id, reopened.Id, CoordinatorId, "coordinator", Update(fixture, 1_000_000, 700_000));
+        await fixture.Service.SendAsync(fixture.Request.Id, reopened.Id, CoordinatorId, "coordinator");
+        Assert.Equal(JobStatus.CounterOfferSent, fixture.Request.Status);
+
+        // And again from the counter offer.
+        var again = await fixture.Service.ReopenAsync(fixture.Request.Id, reopened.Id, CoordinatorId, "coordinator");
+        Assert.Equal(3, again.Version);
+        Assert.Equal(JobStatus.QuoteDraft, fixture.Request.Status);
+        Assert.Equal(700_000, again.Items!.Single(item => item.RequestItemId == fixture.Receiver.Id).UnitPricePiastres);
+    }
+
+    [Fact]
+    public async Task AQuotationCanBeTakenBackAfterTheClientAnsweredAndNotWhenItWasNeverSentOrAlreadyAccepted()
+    {
+        var fixture = new Fixture();
+        var first = await SentOfferAsync(fixture);
+        fixture.Request.TransitionTo(JobStatus.ClientCountered, CoordinatorId);
+
+        var reopened = await fixture.Service.ReopenAsync(fixture.Request.Id, first.Id, CoordinatorId, "coordinator");
+        Assert.Equal(JobStatus.QuoteDraft, fixture.Request.Status);
+        Assert.Equal(2, reopened.Version);
+
+        // A draft was never sent.
+        var neverSent = new Fixture();
+        var draft = await neverSent.Service.CreateAsync(neverSent.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => neverSent.Service.ReopenAsync(neverSent.Request.Id, draft.Id, CoordinatorId, "coordinator"));
+
+        // An accepted one is closed.
+        var accepted = new Fixture();
+        var offer = await SentOfferAsync(accepted);
+        await accepted.Service.AcceptAsync(accepted.Request.Id, offer.Id, CoordinatorId, "coordinator");
+        await Assert.ThrowsAsync<InvalidOperationException>(() => accepted.Service.ReopenAsync(accepted.Request.Id, offer.Id, CoordinatorId, "coordinator"));
+    }
+
+    [Fact]
+    public async Task AnAnswerOfTheClientShowsOnTheQuotationAndTheNextOfferClearsIt()
+    {
+        var fixture = new Fixture();
+        var first = await SentOfferAsync(fixture);
+        Assert.Empty((await fixture.Service.GetAsync(fixture.Request.Id, first.Id, CoordinatorId, "coordinator")).ClientReplies!);
+
+        fixture.ClientAnswers("We need a better price.\n\nOn Monday, Eng. Ahmed wrote:\n> Dears, our offer is attached.", first.Id);
+
+        Assert.Equal(JobStatus.ClientCountered, fixture.Request.Status);
+        Assert.True(fixture.Request.HasUnreadClientReply);
+        var shown = await fixture.Service.GetAsync(fixture.Request.Id, first.Id, CoordinatorId, "coordinator");
+        var reply = Assert.Single(shown.ClientReplies!);
+        Assert.Equal("buyer@alnoor.com", reply.FromAddress);
+        Assert.Equal("We need a better price.", reply.Text);
+
+        // The coordinator takes the quotation back: the answer stays in front of them while they change it.
+        var draft = await fixture.Service.ReopenAsync(fixture.Request.Id, first.Id, CoordinatorId, "coordinator");
+        Assert.Single(draft.ClientReplies!);
+        Assert.Empty((await fixture.Service.GetAsync(fixture.Request.Id, first.Id, CoordinatorId, "coordinator")).ClientReplies!);
+
+        // The next offer goes out: the old answer is cleared.
+        await fixture.Service.UpdateAsync(fixture.Request.Id, draft.Id, CoordinatorId, "coordinator", Update(fixture, 1_000_000, 700_000));
+        var sent = await fixture.Service.SendAsync(fixture.Request.Id, draft.Id, CoordinatorId, "coordinator");
+        Assert.Equal(JobStatus.CounterOfferSent, fixture.Request.Status);
+        Assert.False(fixture.Request.HasUnreadClientReply);
+        Assert.Empty(sent.ClientReplies!);
+        Assert.Empty(fixture.Replies.Items);
+
+        // And the cycle starts again with the answer to the counter offer.
+        fixture.ClientAnswers("Better, but not yet.", draft.Id);
+        Assert.Equal(JobStatus.ClientCountered, fixture.Request.Status);
+        Assert.Equal("Better, but not yet.", Assert.Single((await fixture.Service.GetAsync(fixture.Request.Id, draft.Id, CoordinatorId, "coordinator")).ClientReplies!).Text);
+    }
+
+    [Fact]
+    public async Task ADismissedAnswerGoesAwayAndTheRequestKeepsWaitingForTheClient()
+    {
+        var fixture = new Fixture();
+        var first = await SentOfferAsync(fixture);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.DismissClientReplyAsync(fixture.Request.Id, first.Id, CoordinatorId, "coordinator"));
+
+        fixture.ClientAnswers("Thank you, we will look at it.", first.Id);
+        var dismissed = await fixture.Service.DismissClientReplyAsync(fixture.Request.Id, first.Id, CoordinatorId, "coordinator");
+
+        Assert.Equal(JobStatus.QuoteSent, fixture.Request.Status);
+        Assert.False(fixture.Request.HasUnreadClientReply);
+        Assert.Empty(dismissed.ClientReplies!);
+        Assert.Empty(fixture.Replies.Items);
+
+        // A counter offer goes back to counter_offer_sent.
+        var revised = new Fixture();
+        var offer = await SentOfferAsync(revised);
+        var second = await revised.Service.ReopenAsync(revised.Request.Id, offer.Id, CoordinatorId, "coordinator");
+        await revised.Service.UpdateAsync(revised.Request.Id, second.Id, CoordinatorId, "coordinator", Update(revised, 1_000_000, 700_000));
+        await revised.Service.SendAsync(revised.Request.Id, second.Id, CoordinatorId, "coordinator");
+        revised.ClientAnswers("Ok.", second.Id);
+        await revised.Service.DismissClientReplyAsync(revised.Request.Id, second.Id, CoordinatorId, "coordinator");
+        Assert.Equal(JobStatus.CounterOfferSent, revised.Request.Status);
+    }
+
+    [Fact]
+    public async Task AnAnswerIsClearedWhenTheOfferIsAcceptedOrRejected()
+    {
+        var accepted = new Fixture();
+        var offer = await SentOfferAsync(accepted);
+        accepted.ClientAnswers("Fine, we accept.", offer.Id);
+        await accepted.Service.AcceptAsync(accepted.Request.Id, offer.Id, CoordinatorId, "coordinator");
+        Assert.Empty(accepted.Replies.Items);
+        Assert.False(accepted.Request.HasUnreadClientReply);
+
+        var rejected = new Fixture();
+        await SentOfferAsync(rejected);
+        rejected.ClientAnswers("No thanks.");
+        await rejected.Service.RejectRequestAsync(rejected.Request.Id, CoordinatorId, "coordinator", new RejectRequestRequest { Reason = "Declined" });
+        Assert.Empty(rejected.Replies.Items);
+        Assert.False(rejected.Request.HasUnreadClientReply);
+    }
+
+    [Fact]
+    public async Task ARequestWhoseClientAnsweredCanBeAcceptedOrRevised()
+    {
+        var fixture = new Fixture();
+        var offer = await SentOfferAsync(fixture);
+        fixture.Request.TransitionTo(JobStatus.ClientCountered, CoordinatorId);
+
+        var accepted = await fixture.Service.AcceptAsync(fixture.Request.Id, offer.Id, CoordinatorId, "coordinator");
+
+        Assert.Equal(QuoteStatus.Accepted, accepted.Status);
+        Assert.Equal(JobStatus.Unassigned, fixture.Request.Status);
     }
 
     [Fact]
@@ -1208,7 +1392,23 @@ public sealed class QuotationTests
                 Pdf,
                 Sender,
                 delivery);
-            Service = new QuoteService(Quotes, Requests, Pdf, Delivery, Outbox, new IncomingEmailRequestTests.FakeUserRepository([Coordinator, .. extraUsers]), registrar);
+            Replies = new FakeReplies();
+            Service = new QuoteService(
+                Quotes, Requests, Pdf, Delivery, Outbox, new IncomingEmailRequestTests.FakeUserRepository([Coordinator, .. extraUsers]), registrar,
+                clientReplies: Replies);
+        }
+
+        public FakeReplies Replies { get; }
+
+        /// <summary>The client answers the quotation email: the reply is kept and the request reacts, as the mailbox import does.</summary>
+        public void ClientAnswers(string text, Guid? quoteId = null)
+        {
+            Replies.Items.Add(ClientReply.Create(
+                ManagerId, Request.Id, quoteId,
+                new IncomingEmail("1", Replies.Items.Count + 1, text, null, "buyer@alnoor.com", "Al Noor", "Re: Quotation", [], [], [], [], [],
+                    $"<reply{Replies.Items.Count}@alnoor.com>", "offer@example.com", null, DateTimeOffset.UtcNow),
+                DateTimeOffset.UtcNow));
+            Request.ReceiveClientReply(CoordinatorId);
         }
 
         public InspectionRequest Request { get; }
@@ -1221,6 +1421,28 @@ public sealed class QuotationTests
         public FakeSender Sender { get; }
         public QuoteDeliveryService Delivery { get; }
         public QuoteService Service { get; }
+    }
+
+    internal sealed class FakeReplies : IClientReplyRepository
+    {
+        public List<ClientReply> Items { get; } = [];
+
+        public Task<ReplyTarget?> FindTargetAsync(Guid managerId, IReadOnlyList<string> messageIds, CancellationToken cancellationToken = default) =>
+            Task.FromResult<ReplyTarget?>(null);
+
+        public Task<bool> IsOwnEmailAsync(Guid managerId, string messageId, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<bool> ExistsAsync(Guid managerId, string messageId, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<InspectionRequest?> GetRequestAsync(Guid managerId, Guid requestId, CancellationToken cancellationToken = default) => Task.FromResult<InspectionRequest?>(null);
+        public Task AddAsync(ClientReply reply, InspectionRequest request, CancellationToken cancellationToken = default) { Items.Add(reply); return Task.CompletedTask; }
+
+        public Task<IReadOnlyList<ClientReply>> ListForRequestAsync(Guid requestId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ClientReply>>(Items.Where(reply => reply.RequestId == requestId).ToArray());
+
+        public Task RemoveForRequestAsync(Guid requestId, CancellationToken cancellationToken = default)
+        {
+            Items.RemoveAll(reply => reply.RequestId == requestId);
+            return Task.CompletedTask;
+        }
     }
 
     internal sealed class FakeSender : IEmailSender

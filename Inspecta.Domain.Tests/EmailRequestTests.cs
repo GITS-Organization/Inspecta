@@ -184,7 +184,7 @@ public sealed class EmailRequestTests
         var request = new RequestListFilter(Triage: RequestTriage.Request, Take: RequestListQuery.DefaultPageSize);
 
         await service.ListVisibleAsync(actorId, "coordinator", query);
-        Assert.Equal([JobStatus.QuoteDraft, JobStatus.QuoteSent, JobStatus.ClientCountered], repository.LastFilter!.ExcludeStatuses);
+        Assert.Equal([JobStatus.QuoteDraft, JobStatus.QuoteSent, JobStatus.CounterOfferSent, JobStatus.ClientCountered], repository.LastFilter!.ExcludeStatuses);
         request = request with { ExcludeStatuses = repository.LastFilter.ExcludeStatuses };
         Assert.Equal(request with { CoordinatorId = actorId }, repository.LastFilter);
 

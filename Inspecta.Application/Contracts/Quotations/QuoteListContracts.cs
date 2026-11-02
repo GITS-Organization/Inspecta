@@ -66,4 +66,5 @@ public sealed record QuoteSummaryResponse(
     string? InspectorName = null,
     DateTimeOffset? ScheduledAt = null,
     QuotationQueue? Queue = null,
-    Inspecta.Application.Contracts.Certificates.MachineProgress? Certificates = null);
+    Inspecta.Application.Contracts.Certificates.MachineProgress? Certificates = null,
+    bool HasUnreadClientReply = false);

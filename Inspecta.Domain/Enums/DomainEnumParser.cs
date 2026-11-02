@@ -8,6 +8,7 @@ public static class DomainEnumParser
             ["request_received"] = JobStatus.RequestReceived,
             ["quote_draft"] = JobStatus.QuoteDraft,
             ["quote_sent"] = JobStatus.QuoteSent,
+            ["counter_offer_sent"] = JobStatus.CounterOfferSent,
             ["client_countered"] = JobStatus.ClientCountered,
             ["quote_rejected"] = JobStatus.QuoteRejected,
             ["client_declined"] = JobStatus.ClientDeclined,

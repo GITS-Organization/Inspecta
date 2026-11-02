@@ -57,6 +57,13 @@ public sealed class PostgresQueryTranslationTests
                 .SelectMany(
                     item => item.History.Where(entry => entry.ToStatus == JobStatus.CertificateApproved && entry.OccurredAt >= DateTimeOffset.UtcNow && entry.OccurredAt <= DateTimeOffset.UtcNow),
                     (item, entry) => new { item.Id, Inspector = item.InspectorId!.Value, entry.OccurredAt }).ToQueryString(),
+            // Client replies: the same lookups as EfClientReplyRepository.
+            db.OutboundEmails.AsNoTracking().Where(email => email.ManagerId == manager && new[] { "a@b.c" }.Contains(email.MessageId.ToLower()))
+                .Select(email => new { email.RequestId, email.QuoteId, email.CreatedAt }).ToQueryString(),
+            db.RequestEmails.AsNoTracking()
+                .Where(email => email.MessageId != null && new[] { "a@b.c" }.Contains(email.MessageId.ToLower()) && email.Request!.ManagerId == manager)
+                .Select(email => (Guid?)email.RequestId).ToQueryString(),
+            db.ClientReplies.AsNoTracking().Where(reply => reply.ManagerId == manager && reply.MessageId != null && reply.MessageId.ToLower() == "a@b.c").ToQueryString(),
             db.Items.AsNoTracking()
                 .Where(item => item.NextInspectionDueAt != null && item.NextInspectionDueAt <= DateTimeOffset.UtcNow && item.Status == EquipmentStatus.Active &&
                                !item.IsArchived && item.ArchivedAt == null && item.Client!.ArchivedAt == null)

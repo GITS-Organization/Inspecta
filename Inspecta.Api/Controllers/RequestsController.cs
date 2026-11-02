@@ -19,7 +19,7 @@ public sealed class RequestsController(IInspectionRequestService requestService,
     /// <c>triage</c> is <c>request</c> (default) for real requests or <c>maybe</c> for emails from unknown senders
     /// that wait for the coordinator. <c>status</c> filters by workflow status (for example <c>quote_draft</c>),
     /// <c>q</c> searches client, location, subject and sender. <c>pageSize</c> defaults to 50 (max 100).
-    /// Requests whose quotation is open (<c>quote_draft</c>, <c>quote_sent</c>, <c>client_countered</c>) are not in the default list: they
+    /// Requests whose quotation is open (<c>quote_draft</c>, <c>quote_sent</c>, <c>counter_offer_sent</c>, <c>client_countered</c>) are not in the default list: they
     /// are worked on in <c>GET /quotations</c>. Ask for them with an explicit <c>status</c>.
     /// Admin may narrow the global view with <c>managerId</c>. Use <c>GET /requests/summary</c> for tab counts.
     /// </remarks>

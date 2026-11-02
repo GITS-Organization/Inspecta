@@ -7,7 +7,8 @@ namespace Inspecta.Application.Contracts.Quotations;
 /// <c>status</c> is <c>open</c>, <c>accepted</c> or <c>rejected</c>. An open quotation is still being prepared
 /// while <c>sentAt</c> is empty, and waits for the client once it is set. <c>missingPrices</c> lists the items
 /// that block sending. <c>supersededAt</c> is set on a sent revision that a newer one (a counter offer) replaced.
-/// <c>emails</c> shows the PDF emails sent for it and whether they were delivered.
+/// <c>emails</c> shows the PDF emails sent for it and whether they were delivered. <c>clientReplies</c> are the emails the client sent back to
+/// the current quotation since the last offer went out (they are cleared when the next one is sent).
 /// </remarks>
 public sealed record QuoteResponse(
     Guid Id,
@@ -34,7 +35,25 @@ public sealed record QuoteResponse(
     DateTimeOffset? SupersededAt = null,
     IReadOnlyList<QuoteEmailResponse>? Emails = null,
     string? ContactName = null,
-    string? QuotationNumber = null);
+    string? QuotationNumber = null,
+    IReadOnlyList<ClientReplyResponse>? ClientReplies = null);
+
+/// <summary>An email the client sent back as an answer to the quotation (it replies to the email we sent).</summary>
+/// <param name="Text">What the client wrote, without the quoted earlier mails and signatures.</param>
+/// <param name="Html">The email as the client sent it. Untrusted: sanitize it or show <c>text</c>.</param>
+public sealed record ClientReplyResponse(
+    Guid Id,
+    Guid? QuoteId,
+    string? FromAddress,
+    string? FromName,
+    string? Subject,
+    DateTimeOffset ReceivedAt,
+    string Text,
+    string? Html,
+    IReadOnlyList<ClientReplyAttachmentResponse> Attachments);
+
+/// <summary>Name, type and size of a file attached to a reply; the content is not kept.</summary>
+public sealed record ClientReplyAttachmentResponse(string FileName, string ContentType, long Size);
 
 /// <summary>One priced line of a quotation.</summary>
 public sealed record QuoteItemResponse(

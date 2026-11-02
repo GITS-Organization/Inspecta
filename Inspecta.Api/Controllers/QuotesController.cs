@@ -53,6 +53,47 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
         return CreatedAtAction(nameof(Get), new { requestId, quoteId = quote.Id }, quote);
     }
 
+    /// <summary>The client's reply needs nothing from the coordinator: clear it and keep waiting for the client.</summary>
+    /// <remarks>
+    /// When the client answers one of our quotation emails (it replies to it), the email does not become a new request: it is kept with the request, shown in
+    /// <c>clientReplies</c> of the current quotation, and the request goes to <c>client_countered</c> (back in front of the coordinator). For an answer that
+    /// changes nothing (a thank-you, a question already answered) this clears the replies, marks them read and puts the request back to <c>quote_sent</c>
+    /// (<c>counter_offer_sent</c> for a revision). <c>409</c> when there is no reply to dismiss. Accepting, rejecting or sending the next offer clears the replies too.
+    /// </remarks>
+    [HttpPost("{quoteId:guid}/dismiss-reply")]
+    [ProducesResponseType<QuoteResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<QuoteResponse>> DismissReply(Guid requestId, Guid quoteId, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await quoteService.DismissClientReplyAsync(requestId, quoteId, actorId, role, cancellationToken));
+    }
+
+    /// <summary>
+    /// Take a sent quotation back to the quotations being prepared, by hand: for example when the price was talked over by phone and the
+    /// offer has to change before it is sent again.
+    /// </summary>
+    /// <remarks>
+    /// Works on the current sent quotation while the client has not accepted or rejected it (the request is <c>quote_sent</c>, <c>counter_offer_sent</c>
+    /// or <c>client_countered</c>). It opens a new revision (<c>rev02</c>, <c>rev03</c>...) that starts with the prices of the sent one, which stays
+    /// as it was and is marked as replaced, and the request goes back to <c>quote_draft</c>. Edit it with <c>PUT</c> and send it with <c>send</c>:
+    /// from the second revision on the request becomes <c>counter_offer_sent</c>. The same as <c>POST .../quotes</c> on a sent request, for the
+    /// quotation on the screen. <c>409</c> when the quotation cannot be taken back (not sent, already answered, or already replaced).
+    /// </remarks>
+    [HttpPost("{quoteId:guid}/reopen")]
+    [ProducesResponseType<QuoteResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<QuoteResponse>> Reopen(Guid requestId, Guid quoteId, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        var quote = await quoteService.ReopenAsync(requestId, quoteId, actorId, role, cancellationToken);
+        return CreatedAtAction(nameof(Get), new { requestId, quoteId = quote.Id }, quote);
+    }
+
     /// <summary>
     /// Save the draft: a price for every item of the request (each exactly once, prices may stay empty),
     /// validity, scope of work, notes and message. Only while the quotation is open and not sent.
@@ -84,7 +125,7 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     /// <summary>
     /// Reply with the offer (a first offer or a counter offer). The quotation PDF is generated and emailed, as a reply,
     /// to the sender of the original request using the coordinator mailbox. Only after the mail server accepted it
-    /// is the quotation marked as sent and the request moved to <c>quote_sent</c>; if sending fails (<c>502</c>)
+    /// is the quotation marked as sent and the request moved to <c>quote_sent</c> (the first offer) or <c>counter_offer_sent</c> (a revision, the second or later); if sending fails (<c>502</c>)
     /// nothing changes and it can be retried. Every item needs a price. Requests without a source email are only marked, unless a
     /// <c>sentTo</c> is given.
     /// </summary>

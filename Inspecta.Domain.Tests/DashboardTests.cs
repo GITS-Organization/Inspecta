@@ -200,6 +200,7 @@ public sealed class DashboardTests : IDisposable
             Request(alNoor, manager.Id),
             Request(alNoor, manager.Id, JobStatus.QuoteDraft),
             Request(alNoor, manager.Id, JobStatus.QuoteSent),
+            Request(alNoor, manager.Id, JobStatus.CounterOfferSent),
             Request(alNoor, manager.Id, JobStatus.ClientCountered),
             Request(alNoor, manager.Id, JobStatus.QuoteRejected),
             Request(alNoor, manager.Id, JobStatus.ClientDeclined),
@@ -217,8 +218,9 @@ public sealed class DashboardTests : IDisposable
         var overview = await Service(db, new Repository(db)).GetOverviewAsync(manager.Id, null, null, null, null);
 
         int Count(JobStatus status) => overview.Pipeline.Single(item => item.Status == status).Count;
-        // Everything after the draft, except the rejected offer: 11 of the 14 requests.
-        Assert.Equal(11, Count(JobStatus.RequestReceived));
+        // Everything after the draft, except the rejected offer: 12 of the 15 requests.
+        Assert.Equal(12, Count(JobStatus.RequestReceived));
+        Assert.Equal(1, Count(JobStatus.CounterOfferSent));
         // The other tiles are the jobs in each status now, as before.
         Assert.Equal(1, Count(JobStatus.QuoteSent));
         Assert.Equal(1, Count(JobStatus.QuoteDraft));

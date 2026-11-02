@@ -16,7 +16,8 @@ public sealed class QuoteService(
     IOutboundEmailRepository outboundEmailRepository,
     IUserRepository userRepository,
     IRequestEquipmentRegistrar? equipmentRegistrar = null,
-    ICompanyBrandingProvider? companyBranding = null) : IQuoteService
+    ICompanyBrandingProvider? companyBranding = null,
+    IClientReplyRepository? clientReplies = null) : IQuoteService
 {
     public async Task<IReadOnlyList<QuoteResponse>> ListAsync(
         Guid requestId,
@@ -27,8 +28,9 @@ public sealed class QuoteService(
         var request = await LoadRequestAsync(requestId, actorId, role, tracking: false, manage: false, cancellationToken);
         var canManage = RequestAccess.CanManageQuotes(request, actorId, role);
         var emails = await outboundEmailRepository.ListForRequestAsync(requestId, cancellationToken);
+        var replies = await RepliesAsync(requestId, canManage, cancellationToken);
         return (await quoteRepository.ListForRequestAsync(requestId, cancellationToken))
-            .Select(quote => Map(quote, canManage, emails))
+            .Select(quote => Map(quote, canManage, emails, quote.IsCurrent ? replies : null))
             .ToArray();
     }
 
@@ -185,7 +187,8 @@ public sealed class QuoteService(
             inspectorName,
             request.ScheduledAt,
             QuotationQueues.Of(request.Status),
-            CertificateProgressOf(request));
+            CertificateProgressOf(request),
+            request.HasUnreadClientReply);
     }
 
     public async Task<QuoteResponse> GetAsync(
@@ -200,6 +203,13 @@ public sealed class QuoteService(
         return await MapAsync(quote, RequestAccess.CanManageQuotes(request, actorId, role), cancellationToken);
     }
 
+    // A sent quotation waits for the client in one of these: the first offer, a counter offer, or after the client answered.
+    private static bool IsWaitingForClient(JobStatus status) =>
+        status is JobStatus.QuoteSent or JobStatus.CounterOfferSent or JobStatus.ClientCountered;
+
+    // The first offer is quote_sent; a revision (the second or later) is a counter offer.
+    private static JobStatus SentStatusOf(Quote quote) => quote.Version > 1 ? JobStatus.CounterOfferSent : JobStatus.QuoteSent;
+
     /// <summary>
     /// Opens a quotation. From a sent, still open quotation this is a counter offer: a new revision that starts with
     /// the previous prices and replaces it.
@@ -212,7 +222,7 @@ public sealed class QuoteService(
         CancellationToken cancellationToken = default)
     {
         var request = await LoadRequestAsync(requestId, actorId, role, tracking: true, manage: true, cancellationToken);
-        if (request.Status is not (JobStatus.RequestReceived or JobStatus.QuoteDraft or JobStatus.ClientCountered or JobStatus.QuoteSent))
+        if (request.Status is not (JobStatus.RequestReceived or JobStatus.QuoteDraft) && !IsWaitingForClient(request.Status))
             throw new InvalidOperationException("A quote can only be prepared for a new request, or revised while the client has not answered.");
 
         var existingQuotes = await quoteRepository.ListForRequestAsync(requestId, cancellationToken);
@@ -220,7 +230,7 @@ public sealed class QuoteService(
             throw new InvalidOperationException("This request already has a quotation being prepared.");
 
         Quote? previous = null;
-        if (request.Status == JobStatus.QuoteSent)
+        if (IsWaitingForClient(request.Status))
         {
             var latest = existingQuotes.OrderBy(quote => quote.Version).LastOrDefault();
             previous = latest is null ? null : await quoteRepository.GetByIdAsync(latest.Id, cancellationToken);
@@ -233,6 +243,50 @@ public sealed class QuoteService(
             request.TransitionTo(JobStatus.QuoteDraft, actorId);
 
         var quote = await BuildNewDraftAsync(request, existingQuotes, previous, createRequest.ValidForDays, actorId, cancellationToken);
+        await quoteRepository.AddAsync(quote, cancellationToken);
+        return await MapAsync(quote, canManage: true, cancellationToken);
+    }
+
+    /// <summary>
+    /// The client's reply needs nothing from the coordinator (a thank-you, a question already answered): it is cleared and the request goes back
+    /// to waiting for the client (<c>quote_sent</c>, or <c>counter_offer_sent</c> for a revision).
+    /// </summary>
+    public async Task<QuoteResponse> DismissClientReplyAsync(Guid requestId, Guid quoteId, Guid actorId, string role, CancellationToken cancellationToken = default)
+    {
+        var request = await LoadRequestAsync(requestId, actorId, role, tracking: true, manage: true, cancellationToken);
+        var quote = await LoadQuoteAsync(requestId, quoteId, cancellationToken);
+        var pending = clientReplies is null ? [] : await clientReplies.ListForRequestAsync(requestId, cancellationToken);
+        if (request.Status != JobStatus.ClientCountered && !request.HasUnreadClientReply && pending.Count == 0)
+            throw new InvalidOperationException("There is no reply from the client to dismiss.");
+
+        var current = (await quoteRepository.ListForRequestAsync(requestId, cancellationToken))
+            .Where(item => item.IsSent && item.IsCurrent && item.Status == QuoteStatus.Open)
+            .OrderBy(item => item.Version)
+            .LastOrDefault();
+        request.DismissClientReply(actorId, current is null ? JobStatus.QuoteSent : SentStatusOf(current));
+        await ClearRepliesAsync(request, cancellationToken);
+        await quoteRepository.SaveAsync(cancellationToken);
+        return await MapAsync(quote, canManage: true, cancellationToken);
+    }
+
+    /// <summary>
+    /// Takes a sent quotation back to the quotations being prepared, by hand (for example after the price was talked over by phone): a new
+    /// revision that starts with its prices and replaces it, and the request goes back to <c>quote_draft</c>. The revision that was sent stays as it was.
+    /// </summary>
+    public async Task<QuoteResponse> ReopenAsync(Guid requestId, Guid quoteId, Guid actorId, string role, CancellationToken cancellationToken = default)
+    {
+        var request = await LoadRequestAsync(requestId, actorId, role, tracking: true, manage: true, cancellationToken);
+        var sent = await LoadQuoteAsync(requestId, quoteId, cancellationToken);
+        if (!IsWaitingForClient(request.Status) || sent.Status != QuoteStatus.Open || !sent.IsSent || !sent.IsCurrent)
+            throw new InvalidOperationException("Only the current sent quotation, while the client has not accepted or rejected it, can be taken back.");
+
+        var existingQuotes = await quoteRepository.ListForRequestAsync(requestId, cancellationToken);
+        if (existingQuotes.Any(quote => quote.IsEditable))
+            throw new InvalidOperationException("This request already has a quotation being prepared.");
+
+        sent.Supersede();
+        request.TransitionTo(JobStatus.QuoteDraft, actorId);
+        var quote = await BuildNewDraftAsync(request, existingQuotes, sent, null, actorId, cancellationToken);
         await quoteRepository.AddAsync(quote, cancellationToken);
         return await MapAsync(quote, canManage: true, cancellationToken);
     }
@@ -417,7 +471,10 @@ public sealed class QuoteService(
         await deliveryService.DeliverAsync(request, quote, OutboundEmailKind.Offer, ToDraft(email), cancellationToken);
 
         quote.Send();
-        request.TransitionTo(JobStatus.QuoteSent, actorId);
+        request.TransitionTo(SentStatusOf(quote), actorId);
+
+        // A new offer is out: what the client wrote about the previous one is cleared.
+        await ClearRepliesAsync(request, cancellationToken);
         await quoteRepository.SaveAsync(cancellationToken);
         return await MapAsync(quote, canManage: true, cancellationToken);
     }
@@ -445,7 +502,7 @@ public sealed class QuoteService(
         if (accepting)
         {
             if (quote.Status != QuoteStatus.Open || !quote.IsCurrent) blockers.Add("Only the current open quote can be accepted.");
-            else if (request.Status != (quote.IsSent ? JobStatus.QuoteSent : JobStatus.QuoteDraft)) blockers.Add("The request is not in the right stage to accept this quote.");
+            else if (quote.IsSent ? !IsWaitingForClient(request.Status) : request.Status != JobStatus.QuoteDraft) blockers.Add("The request is not in the right stage to accept this quote.");
             else if (!quote.IsSent) AddUnpriced(quote, blockers);
         }
         else
@@ -503,6 +560,7 @@ public sealed class QuoteService(
 
         // The request transition validates the stage (and that the email was confirmed) before anything else changes.
         request.TransitionTo(JobStatus.QuoteRejected, actorId, rejection.Reason);
+        await ClearRepliesAsync(request, cancellationToken);
         var open = (await quoteRepository.ListForRequestAsync(requestId, cancellationToken))
             .FirstOrDefault(quote => quote.Status == QuoteStatus.Open && quote.IsCurrent);
         if (open is not null)
@@ -528,8 +586,7 @@ public sealed class QuoteService(
         var quote = await LoadQuoteAsync(requestId, quoteId, cancellationToken);
         if (quote.Status != QuoteStatus.Open || !quote.IsCurrent)
             throw new InvalidOperationException("Only the current open quote can be accepted.");
-        var expectedStatus = quote.IsSent ? JobStatus.QuoteSent : JobStatus.QuoteDraft;
-        if (request.Status != expectedStatus)
+        if (quote.IsSent ? !IsWaitingForClient(request.Status) : request.Status != JobStatus.QuoteDraft)
             throw new InvalidOperationException("The request is not in the right stage to accept this quote.");
         if (!quote.IsSent) EnsureAllItemsPriced(quote);
 
@@ -538,11 +595,12 @@ public sealed class QuoteService(
         if (!quote.IsSent)
         {
             quote.Send();
-            request.TransitionTo(JobStatus.QuoteSent, actorId);
+            request.TransitionTo(SentStatusOf(quote), actorId);
         }
 
         quote.RecordClientDecision(QuoteStatus.Accepted);
         request.TransitionTo(JobStatus.Unassigned, actorId);
+        await ClearRepliesAsync(request, cancellationToken);
         await quoteRepository.SaveAsync(cancellationToken);
         return await MapAsync(quote, canManage: true, cancellationToken);
     }
@@ -566,6 +624,7 @@ public sealed class QuoteService(
             _ => throw new ArgumentException("Decision must be accepted or rejected.", nameof(decision))
         };
         request.TransitionTo(status, actorId, decision.Note);
+        await ClearRepliesAsync(request, cancellationToken);
         await quoteRepository.SaveAsync(cancellationToken);
         return await MapAsync(quote, canManage: true, cancellationToken);
     }
@@ -640,9 +699,39 @@ public sealed class QuoteService(
         string.Join(", ", items.Select(item => $"{item.Name} x {item.Quantity}"));
 
     private async Task<QuoteResponse> MapAsync(Quote quote, bool canManage, CancellationToken cancellationToken) =>
-        Map(quote, canManage, await outboundEmailRepository.ListForRequestAsync(quote.RequestId, cancellationToken));
+        Map(
+            quote,
+            canManage,
+            await outboundEmailRepository.ListForRequestAsync(quote.RequestId, cancellationToken),
+            quote.IsCurrent ? await RepliesAsync(quote.RequestId, canManage, cancellationToken) : null);
 
-    private static QuoteResponse Map(Quote quote, bool canManage, IReadOnlyList<OutboundEmailSummary> emails)
+    // What the client wrote back since the last offer went out; only the people who manage the quotations see it.
+    private async Task<IReadOnlyList<ClientReplyResponse>> RepliesAsync(Guid requestId, bool canManage, CancellationToken cancellationToken)
+    {
+        if (!canManage || clientReplies is null) return [];
+        return (await clientReplies.ListForRequestAsync(requestId, cancellationToken)).Select(MapReply).ToArray();
+    }
+
+    private static ClientReplyResponse MapReply(ClientReply reply) => new(
+        reply.Id,
+        reply.QuoteId,
+        reply.FromAddress,
+        reply.FromName,
+        reply.Subject,
+        reply.SentAt ?? reply.ReceivedAt,
+        EmailTextCleaner.NewText(null, reply.TextBody, reply.HtmlBody),
+        reply.HtmlBody,
+        reply.GetAttachments().Select(file => new ClientReplyAttachmentResponse(file.FileName, file.ContentType, file.Size)).ToArray());
+
+    // The replies end with the exchange they belong to: the next offer, an acceptance or a rejection.
+    private async Task ClearRepliesAsync(InspectionRequest request, CancellationToken cancellationToken)
+    {
+        if (clientReplies is not null) await clientReplies.RemoveForRequestAsync(request.Id, cancellationToken);
+        request.MarkClientReplyRead();
+    }
+
+    private static QuoteResponse Map(
+        Quote quote, bool canManage, IReadOnlyList<OutboundEmailSummary> emails, IReadOnlyList<ClientReplyResponse>? replies = null)
     {
         var items = quote.GetItems();
         return new QuoteResponse(
@@ -683,6 +772,7 @@ public sealed class QuoteService(
                     email.Cc?.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [], email.Subject))
                 .ToArray(),
             quote.ContactName,
-            quote.QuotationNumber);
+            quote.QuotationNumber,
+            replies ?? []);
     }
 }
