@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.Text;
-using System.Text.Json;
 using Inspecta.Application.Pdf.Models;
 using Inspecta.Infrastructure.Services;
 using QuestPDF.Fluent;
@@ -357,13 +355,8 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
                 if (!string.IsNullOrWhiteSpace(model.PreparedByQualifications))
                     column.Item().AlignCenter().Text(model.PreparedByQualifications).FontSize(6.2f);
             });
-            table.Cell().Element(Cell).Height(54).Column(column =>
-            {
-                if (!string.IsNullOrWhiteSpace(model.SignatureStrokesJson))
-                    column.Item().Height(34).Svg(size => SignatureSvg(model.SignatureStrokesJson, size.Width, size.Height));
-                else column.Item().Height(34);
-                column.Item().AlignCenter().Text(model.SignedBy ?? "—").Bold();
-            });
+            // The technical manager is named in the middle of the box; the hand-drawn signature is not printed.
+            table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Text(model.SignedBy ?? "—").Bold();
             table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Text(Details(model) is { } details ? details.SignerName : BuiltInSigner).Bold();
             // Filled from the first submit; once approved, scanning it opens the public check page with the PDF.
             table.Cell().Element(Cell).Height(54).AlignMiddle().AlignCenter().Element(qr =>
@@ -504,37 +497,6 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
         {
             if (ticked) box.Svg(TickSvg);
         });
-    }
-
-    /// <summary>The signature strokes (normalised x/y numbers) drawn into a box of the given size; blank when they cannot be read.</summary>
-    private static string SignatureSvg(string strokesJson, double width, double height)
-    {
-        var empty = string.Create(CultureInfo.InvariantCulture, $"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\"/>");
-        try
-        {
-            using var document = JsonDocument.Parse(strokesJson);
-            if (document.RootElement.ValueKind != JsonValueKind.Array) return empty;
-            var svg = new StringBuilder();
-            svg.Append(CultureInfo.InvariantCulture, $"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\">");
-            foreach (var stroke in document.RootElement.EnumerateArray())
-            {
-                var points = stroke.ValueKind == JsonValueKind.Object && stroke.TryGetProperty("p", out var encoded) ? encoded : stroke;
-                if (points.ValueKind != JsonValueKind.Array) continue;
-                var numbers = points.EnumerateArray().Where(value => value.ValueKind == JsonValueKind.Number).Select(value => value.GetDouble()).ToArray();
-                if (numbers.Length < 4) continue;
-                svg.Append("<polyline fill=\"none\" stroke=\"#1B2433\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" points=\"");
-                for (var index = 0; index + 1 < numbers.Length; index += 2)
-                    svg.Append(CultureInfo.InvariantCulture, $"{numbers[index] * width:0.##},{numbers[index + 1] * height:0.##} ");
-                svg.Append("\"/>");
-            }
-
-            svg.Append("</svg>");
-            return svg.ToString();
-        }
-        catch (JsonException)
-        {
-            return empty;
-        }
     }
 
     private static string Format(DateTimeOffset value) => value.UtcDateTime.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
