@@ -57,8 +57,8 @@ public sealed record DashboardDueItem(
 
 /// <summary>What an inspector did in the period (every active inspector is listed, even with 0).</summary>
 /// <param name="Certificates">Certificates of theirs that were approved in the period.</param>
-/// <param name="DaysWorked">
-/// Different days, in the period, of the jobs assigned to them that they carried out (their certificates were submitted): the day a job was
-/// scheduled for. Two jobs on the same day count once. Days are counted in UTC.
+/// <param name="QuotationsDone">
+/// Jobs (quotations) of theirs that the technical manager approved in the period. A job counts at the moment it is approved, not while it is
+/// only assigned, in progress, submitted or returned.
 /// </param>
-public sealed record DashboardInspectorWorkload(Guid InspectorId, string Name, int Certificates, int DaysWorked = 0);
+public sealed record DashboardInspectorWorkload(Guid InspectorId, string Name, int Certificates, int QuotationsDone = 0);

@@ -40,19 +40,19 @@ public sealed class EfDashboardRepository(InspectaDbContext dbContext) : IDashbo
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<WorkedJobRow>> ListWorkedJobsAsync(
+    public async Task<IReadOnlyList<ApprovedJobRow>> ListApprovedJobsAsync(
         DashboardFilter filter, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default)
     {
-        JobStatus[] carriedOut = [JobStatus.CertificateSubmitted, JobStatus.CertificateReturned, JobStatus.CertificateApproved, JobStatus.SentToClient];
-        var jobs = dbContext.Requests.AsNoTracking()
-            .Where(request => request.Triage == RequestTriage.Request && request.InspectorId != null && request.ScheduledAt != null &&
-                              request.ScheduledAt >= from && request.ScheduledAt <= to && carriedOut.Contains(request.Status));
+        var jobs = dbContext.Requests.AsNoTracking().Where(request => request.Triage == RequestTriage.Request && request.InspectorId != null);
         if (filter.ManagerId is Guid managerId) jobs = jobs.Where(request => request.ManagerId == managerId);
         if (filter.ClientId is Guid clientId) jobs = jobs.Where(request => request.ClientId == clientId);
         if (filter.InspectorId is Guid inspectorId) jobs = jobs.Where(request => request.InspectorId == inspectorId);
 
+        // The moment the job reached "certificate approved" is in its history.
         return await jobs
-            .Select(request => new WorkedJobRow(request.InspectorId!.Value, request.ScheduledAt!.Value))
+            .SelectMany(
+                request => request.History.Where(entry => entry.ToStatus == JobStatus.CertificateApproved && entry.OccurredAt >= from && entry.OccurredAt <= to),
+                (request, entry) => new ApprovedJobRow(request.Id, request.InspectorId!.Value, entry.OccurredAt))
             .ToListAsync(cancellationToken);
     }
 

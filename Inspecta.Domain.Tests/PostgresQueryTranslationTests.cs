@@ -52,12 +52,11 @@ public sealed class PostgresQueryTranslationTests
                 .Where(item => item.ReviewedAt != null && item.CertificateNumber != null && item.ReviewedAt >= DateTimeOffset.UtcNow && item.ReviewedAt <= DateTimeOffset.UtcNow)
                 .Where(item => item.Request!.ManagerId == manager).Where(item => item.Request!.ClientId == client).Where(item => item.InspectorId == client)
                 .Select(item => new { item.InspectorId, At = item.ReviewedAt!.Value, item.FinalResult }).ToQueryString(),
-            db.Requests.AsNoTracking()
-                .Where(item => item.Triage == RequestTriage.Request && item.InspectorId != null && item.ScheduledAt != null &&
-                               item.ScheduledAt >= DateTimeOffset.UtcNow && item.ScheduledAt <= DateTimeOffset.UtcNow &&
-                               new[] { JobStatus.CertificateSubmitted, JobStatus.SentToClient }.Contains(item.Status))
+            db.Requests.AsNoTracking().Where(item => item.Triage == RequestTriage.Request && item.InspectorId != null)
                 .Where(item => item.ManagerId == manager).Where(item => item.ClientId == client).Where(item => item.InspectorId == client)
-                .Select(item => new { Inspector = item.InspectorId!.Value, At = item.ScheduledAt!.Value }).ToQueryString(),
+                .SelectMany(
+                    item => item.History.Where(entry => entry.ToStatus == JobStatus.CertificateApproved && entry.OccurredAt >= DateTimeOffset.UtcNow && entry.OccurredAt <= DateTimeOffset.UtcNow),
+                    (item, entry) => new { item.Id, Inspector = item.InspectorId!.Value, entry.OccurredAt }).ToQueryString(),
             db.Items.AsNoTracking()
                 .Where(item => item.NextInspectionDueAt != null && item.NextInspectionDueAt <= DateTimeOffset.UtcNow && item.Status == EquipmentStatus.Active &&
                                !item.IsArchived && item.ArchivedAt == null && item.Client!.ArchivedAt == null)

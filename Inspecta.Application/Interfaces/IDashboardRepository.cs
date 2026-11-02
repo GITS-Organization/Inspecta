@@ -8,8 +8,8 @@ public sealed record DashboardFilter(Guid? ManagerId, Guid? ClientId, Guid? Insp
 
 public sealed record ApprovedCertificateRow(Guid InspectorId, DateTimeOffset ApprovedAt, CertificateResult? Result);
 
-/// <summary>A job assigned to an inspector that they carried out, and the day it was scheduled for.</summary>
-public sealed record WorkedJobRow(Guid InspectorId, DateTimeOffset ScheduledAt);
+/// <summary>A job assigned to an inspector, and the moment the technical manager approved it.</summary>
+public sealed record ApprovedJobRow(Guid RequestId, Guid InspectorId, DateTimeOffset ApprovedAt);
 
 public sealed record DueEquipmentRow(Guid Id, string Name, string? SerialNumber, Guid ClientId, string ClientName, DateTimeOffset DueAt);
 
@@ -23,10 +23,9 @@ public interface IDashboardRepository
         DashboardFilter filter, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// The jobs scheduled between the two moments that were assigned to an inspector and carried out (their certificates were submitted:
-    /// <c>certificate_submitted</c>, <c>certificate_returned</c>, <c>certificate_approved</c> or <c>sent_to_client</c>).
+    /// The jobs assigned to an inspector that the technical manager approved (the job reached <c>certificate_approved</c>) between the two moments.
     /// </summary>
-    Task<IReadOnlyList<WorkedJobRow>> ListWorkedJobsAsync(
+    Task<IReadOnlyList<ApprovedJobRow>> ListApprovedJobsAsync(
         DashboardFilter filter, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default);
 
     /// <summary>Active items (of clients that are not archived) whose next inspection is due on or before the cutoff. The inspector filter does not apply.</summary>

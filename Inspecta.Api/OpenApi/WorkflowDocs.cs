@@ -323,7 +323,7 @@ public static class WorkflowDocs
             - `attention`: `equipmentOverdue`, `equipmentDueSoon` (next 30 days) and `jobsAwaitingReview` (`certificate_submitted`), with a `total`.
             - `certificates`: approved (issued) certificates `thisMonth`, `previousMonth` and `byMonth` (default the last 7 months) split into `safe`, `withConditions`, `notSafe`.
             - `equipmentDue`: the first 10 items overdue or due in 30 days, overdue first, with `total` and `overdue`.
-            - `inspectorWorkload`: per active inspector in the period (default the last 30 days): `certificates` approved and `daysWorked` (different days of the jobs assigned to them that they carried out; two jobs on one day count once), most certificates first.
+            - `inspectorWorkload`: per active inspector in the period (default the last 30 days): `certificates` approved and `quotationsDone` (the jobs assigned to them that the technical manager approved in the period; a job counts when it is approved), most certificates first.
             Filters: `clientId`, `inspectorId` (not for equipment), and `from`+`to` (`yyyy-MM-dd`, both or neither, at most two years) for the workload and the chart. Months are counted in UTC.
             """),
     };
