@@ -32,6 +32,7 @@ public sealed class DashboardService(
         var readTo = new[] { period.To, today }.Max();
         var approved = await dashboardRepository.ListApprovedCertificatesAsync(filter, StartOf(readFrom), EndOf(readTo), cancellationToken);
 
+        var worked = await dashboardRepository.ListWorkedJobsAsync(filter, StartOf(period.From), EndOf(period.To), cancellationToken);
         var pipeline = await PipelineAsync(filter, cancellationToken);
         var due = await dashboardRepository.ListEquipmentDueAsync(filter, EndOf(today.AddDays(DueSoonDays)), cancellationToken);
         var inspectors = await userRepository.ListAsync(managerId, UserRole.Inspector, isActive: true, cancellationToken);
@@ -45,7 +46,7 @@ public sealed class DashboardService(
             pipeline,
             Certificates(approved, period, thisMonth, previousMonth),
             EquipmentDue(due, today),
-            Workload(approved, inspectors, inspectorId, period));
+            Workload(approved, worked, inspectors, inspectorId, period));
     }
 
     private static DashboardPeriod ResolvePeriod(DateOnly today, DateOnly? from, DateOnly? to)
@@ -109,15 +110,25 @@ public sealed class DashboardService(
     }
 
     private static IReadOnlyList<DashboardInspectorWorkload> Workload(
-        IReadOnlyList<ApprovedCertificateRow> approved, IReadOnlyList<AppUser> inspectors, Guid? inspectorId, DashboardPeriod period)
+        IReadOnlyList<ApprovedCertificateRow> approved,
+        IReadOnlyList<WorkedJobRow> worked,
+        IReadOnlyList<AppUser> inspectors,
+        Guid? inspectorId,
+        DashboardPeriod period)
     {
+        // Two jobs on the same day are one day of work.
+        var days = worked
+            .Where(row => DateOf(row.ScheduledAt) >= period.From && DateOf(row.ScheduledAt) <= period.To)
+            .GroupBy(row => row.InspectorId)
+            .ToDictionary(group => group.Key, group => group.Select(row => DateOf(row.ScheduledAt)).Distinct().Count());
         var counts = approved
             .Where(row => DateOf(row.ApprovedAt) >= period.From && DateOf(row.ApprovedAt) <= period.To)
             .GroupBy(row => row.InspectorId)
             .ToDictionary(group => group.Key, group => group.Count());
         return inspectors
             .Where(inspector => inspectorId is null || inspector.Id == inspectorId)
-            .Select(inspector => new DashboardInspectorWorkload(inspector.Id, inspector.FullName, counts.GetValueOrDefault(inspector.Id)))
+            .Select(inspector => new DashboardInspectorWorkload(
+                inspector.Id, inspector.FullName, counts.GetValueOrDefault(inspector.Id), days.GetValueOrDefault(inspector.Id)))
             .OrderByDescending(item => item.Certificates)
             .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();

@@ -52,6 +52,12 @@ public sealed class PostgresQueryTranslationTests
                 .Where(item => item.ReviewedAt != null && item.CertificateNumber != null && item.ReviewedAt >= DateTimeOffset.UtcNow && item.ReviewedAt <= DateTimeOffset.UtcNow)
                 .Where(item => item.Request!.ManagerId == manager).Where(item => item.Request!.ClientId == client).Where(item => item.InspectorId == client)
                 .Select(item => new { item.InspectorId, At = item.ReviewedAt!.Value, item.FinalResult }).ToQueryString(),
+            db.Requests.AsNoTracking()
+                .Where(item => item.Triage == RequestTriage.Request && item.InspectorId != null && item.ScheduledAt != null &&
+                               item.ScheduledAt >= DateTimeOffset.UtcNow && item.ScheduledAt <= DateTimeOffset.UtcNow &&
+                               new[] { JobStatus.CertificateSubmitted, JobStatus.SentToClient }.Contains(item.Status))
+                .Where(item => item.ManagerId == manager).Where(item => item.ClientId == client).Where(item => item.InspectorId == client)
+                .Select(item => new { Inspector = item.InspectorId!.Value, At = item.ScheduledAt!.Value }).ToQueryString(),
             db.Items.AsNoTracking()
                 .Where(item => item.NextInspectionDueAt != null && item.NextInspectionDueAt <= DateTimeOffset.UtcNow && item.Status == EquipmentStatus.Active &&
                                !item.IsArchived && item.ArchivedAt == null && item.Client!.ArchivedAt == null)

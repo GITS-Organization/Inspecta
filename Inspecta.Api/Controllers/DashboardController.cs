@@ -17,7 +17,8 @@ public sealed class DashboardController(IDashboardService dashboard) : Controlle
     /// <c>pipeline</c>: the real requests of the team by status (all statuses, as of today). <c>attention</c>: items overdue or due in the next 30 days,
     /// and jobs waiting for the manager's review. <c>certificates</c>: certificates approved (issued) this month, last month and per month for the chart
     /// (default: the last 7 months), split by verdict. <c>equipmentDue</c>: the first 10 items overdue or due in 30 days, overdue first.
-    /// <c>inspectorWorkload</c>: certificates each active inspector had approved in the period (default: the last 30 days), most first.
+    /// <c>inspectorWorkload</c>: for each active inspector in the period (default: the last 30 days), <c>certificates</c> approved and <c>daysWorked</c> (the different days
+    /// of the jobs assigned to them that they carried out, i.e. their certificates were submitted; two jobs on the same day count once), most certificates first.
     /// <para>
     /// <c>clientId</c> and <c>inspectorId</c> narrow every figure they apply to (the inspector filter does not apply to equipment). <c>from</c> and <c>to</c>
     /// (<c>yyyy-MM-dd</c>, both or neither, at most two years) set the period of the workload and the chart; the pipeline, the attention counts and the

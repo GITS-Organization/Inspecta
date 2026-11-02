@@ -40,6 +40,22 @@ public sealed class EfDashboardRepository(InspectaDbContext dbContext) : IDashbo
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<WorkedJobRow>> ListWorkedJobsAsync(
+        DashboardFilter filter, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default)
+    {
+        JobStatus[] carriedOut = [JobStatus.CertificateSubmitted, JobStatus.CertificateReturned, JobStatus.CertificateApproved, JobStatus.SentToClient];
+        var jobs = dbContext.Requests.AsNoTracking()
+            .Where(request => request.Triage == RequestTriage.Request && request.InspectorId != null && request.ScheduledAt != null &&
+                              request.ScheduledAt >= from && request.ScheduledAt <= to && carriedOut.Contains(request.Status));
+        if (filter.ManagerId is Guid managerId) jobs = jobs.Where(request => request.ManagerId == managerId);
+        if (filter.ClientId is Guid clientId) jobs = jobs.Where(request => request.ClientId == clientId);
+        if (filter.InspectorId is Guid inspectorId) jobs = jobs.Where(request => request.InspectorId == inspectorId);
+
+        return await jobs
+            .Select(request => new WorkedJobRow(request.InspectorId!.Value, request.ScheduledAt!.Value))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<DueEquipmentRow>> ListEquipmentDueAsync(
         DashboardFilter filter, DateTimeOffset cutoff, CancellationToken cancellationToken = default)
     {

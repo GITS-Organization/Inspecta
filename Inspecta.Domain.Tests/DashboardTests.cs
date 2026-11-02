@@ -32,6 +32,7 @@ public sealed class DashboardTests : IDisposable
     {
         public List<Certificate> Certificates { get; } = [];
         public List<Equipment> Items { get; } = [];
+        public List<(Guid Team, Guid Client, WorkedJobRow Row)> Jobs { get; } = [];
 
         public Task<IReadOnlyList<RequestStatusCount>> CountRequestsByStatusAsync(DashboardFilter filter, CancellationToken cancellationToken = default) =>
             new EfDashboardRepository(db).CountRequestsByStatusAsync(filter, cancellationToken);
@@ -43,6 +44,16 @@ public sealed class DashboardTests : IDisposable
                                (filter.ClientId is null || item.Client == filter.ClientId) &&
                                (filter.InspectorId is null || item.Row.InspectorId == filter.InspectorId) &&
                                item.Row.ApprovedAt >= from && item.Row.ApprovedAt <= to)
+                .Select(item => item.Row)
+                .ToArray());
+
+        public Task<IReadOnlyList<WorkedJobRow>> ListWorkedJobsAsync(
+            DashboardFilter filter, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<WorkedJobRow>>(Jobs
+                .Where(item => (filter.ManagerId is null || item.Team == filter.ManagerId) &&
+                               (filter.ClientId is null || item.Client == filter.ClientId) &&
+                               (filter.InspectorId is null || item.Row.InspectorId == filter.InspectorId) &&
+                               item.Row.ScheduledAt >= from && item.Row.ScheduledAt <= to)
                 .Select(item => item.Row)
                 .ToArray());
 
@@ -128,6 +139,13 @@ public sealed class DashboardTests : IDisposable
             // Mohamed's one is 40 days old: in last month's count and in the chart, outside the 30 days of the workload.
             new Certificate(manager.Id, alNoor.Id, new ApprovedCertificateRow(mohamed.Id, now.AddDays(-40), CertificateResult.SafeWithConditions)),
             new Certificate(otherManager.Id, foreign.Id, new ApprovedCertificateRow(ragab.Id, now.AddHours(-1), CertificateResult.SafeToOperate))]);
+        // Ragab did three jobs on two different days; Mohamed's one is 40 days ago.
+        repository.Jobs.AddRange([
+            (manager.Id, alNoor.Id, new WorkedJobRow(ragab.Id, now.AddDays(-3))),
+            (manager.Id, alNoor.Id, new WorkedJobRow(ragab.Id, now.AddDays(-3).AddHours(2))),
+            (manager.Id, delta.Id, new WorkedJobRow(ragab.Id, now.AddDays(-5))),
+            (manager.Id, alNoor.Id, new WorkedJobRow(mohamed.Id, now.AddDays(-40))),
+            (otherManager.Id, foreign.Id, new WorkedJobRow(ragab.Id, now.AddDays(-1)))]);
         repository.Items.AddRange([
             new Equipment(manager.Id, alNoor.Id, new DueEquipmentRow(Guid.NewGuid(), "Soon forklift", "FK-1", alNoor.Id, "Al Noor", now.AddDays(10))),
             new Equipment(manager.Id, delta.Id, new DueEquipmentRow(Guid.NewGuid(), "Overdue crane", null, delta.Id, "Delta Steel", now.AddDays(-3))),
@@ -194,6 +212,8 @@ public sealed class DashboardTests : IDisposable
         Assert.Equal(new DateOnly(2026, 10, 17), overview.Period.From);
         Assert.Equal(["Ragab Nasr", "Mohamed Ali"], overview.InspectorWorkload.Select(item => item.Name));
         Assert.Equal([4, 0], overview.InspectorWorkload.Select(item => item.Certificates));
+        // Days worked: the two jobs of the same day count once.
+        Assert.Equal([2, 0], overview.InspectorWorkload.Select(item => item.DaysWorked));
     }
 
     [Fact]
@@ -211,6 +231,8 @@ public sealed class DashboardTests : IDisposable
         var onlyMohamed = await service.GetOverviewAsync(manager.Id, null, mohamed.Id, null, null);
         Assert.Equal([mohamed.FullName], onlyMohamed.InspectorWorkload.Select(item => item.Name));
         Assert.Equal(1, onlyMohamed.Certificates.ByMonth.Sum(month => month.Total));
+        Assert.Equal([0], onlyMohamed.InspectorWorkload.Select(item => item.DaysWorked));
+        Assert.Equal(1, (await service.GetOverviewAsync(manager.Id, delta.Id, null, null, null)).InspectorWorkload.Single(item => item.Name == "Ragab Nasr").DaysWorked);
         Assert.Equal(1, onlyMohamed.Pipeline.Single(item => item.Status == JobStatus.InProgress).Count);
         Assert.Equal(0, onlyMohamed.Pipeline.Single(item => item.Status == JobStatus.RequestReceived).Count);
         // The items due have no inspector, so that filter leaves them as they are.
@@ -227,6 +249,7 @@ public sealed class DashboardTests : IDisposable
         var wide = await service.GetOverviewAsync(manager.Id, null, null, today.AddDays(-60), today);
         Assert.Equal(today.AddDays(-60), wide.Period.From);
         Assert.Equal([4, 1], wide.InspectorWorkload.Select(item => item.Certificates));
+        Assert.Equal([2, 1], wide.InspectorWorkload.Select(item => item.DaysWorked));
         Assert.Equal(["2026-09", "2026-10", "2026-11"], wide.Certificates.ByMonth.Select(month => month.Month));
 
         var old = await service.GetOverviewAsync(manager.Id, null, null, today.AddDays(-400), today.AddDays(-300));
