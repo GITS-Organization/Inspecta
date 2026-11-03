@@ -21,21 +21,24 @@ import '../../../requests/domain/usecases/get_request_detail.dart';
 import '../../../requests/presentation/pages/request_detail_page.dart';
 import '../../../requests/presentation/widgets/job_stepper.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
-import '../../domain/entities/client_response_outcome.dart';
 import '../../domain/entities/quotation.dart';
+import '../../domain/entities/quotation_failure.dart';
 import '../../domain/entities/quotation_status.dart';
 import '../../domain/entities/reply_type.dart';
+import '../../domain/usecases/get_quote_email.dart';
 import '../../domain/usecases/get_quote_pdf.dart';
 import '../bloc/quotation_detail_cubit.dart';
 import '../bloc/quotation_form_cubit.dart';
-import '../widgets/log_client_reply_sheet.dart';
+import '../widgets/client_replies_card.dart';
 import '../widgets/quotation_footer.dart';
 import '../widgets/quotation_reply_card.dart';
 import '../widgets/quote_board_status_chip.dart';
 import '../widgets/quote_detail_info_card.dart';
 import '../widgets/quote_history_timeline.dart';
 import '../widgets/quote_respond_section.dart';
+import '../widgets/reject_reason_dialog.dart';
 import '../widgets/send_new_price_sheet.dart';
+import 'quote_email_page.dart';
 import '../widgets/quotation_labels.dart';
 
 /// The quote detail screen: quote + client identity up top, the full
@@ -108,16 +111,56 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
     }
   }
 
-  void _logOtherReply(QuotationDetailCubit cubit) {
-    LogClientReplySheet.show(
+  /// Runs one of the cubit's actions and says how it went. `true` when it
+  /// went through.
+  Future<bool> _run(Future<QuotationFailureCode?> Function() action, String success) async {
+    final t = AppLocalizations.of(context)!;
+    final failure = await action();
+    if (!mounted) return false;
+    if (failure != null) {
+      MToast.showError(message: failure.message(t));
+      return false;
+    }
+    MToast.showSuccess(message: success);
+    return true;
+  }
+
+  /// Whether the client can still be answered: the request is waiting on them
+  /// (or has their reply). Anything else — accepted, rejected, assigned — is
+  /// past it, and the API would refuse.
+  bool _canRespond(QuotationDetailState state, Quotation current) {
+    final status = state.request?.status;
+    if (status != null) {
+      return status == JobStatus.quoteSent ||
+          status == JobStatus.counterOfferSent ||
+          status == JobStatus.clientCountered;
+    }
+    return current.status == QuotationStatus.sent || current.status == QuotationStatus.countered;
+  }
+
+  /// Accepting emails the client the PDF: the email is shown first, to read and
+  /// edit, and goes out with the accept.
+  Future<void> _accept(QuotationDetailCubit cubit, Quotation quote) async {
+    final t = AppLocalizations.of(context)!;
+    final email = await QuoteEmailPage.open(
       context,
-      currency: cubit.state.current?.currency ?? Currency.egp,
-      onSubmit: ({required outcome, clientPricePiastres, note}) => cubit.logResponse(
-        outcome: outcome,
-        clientPricePiastres: clientPricePiastres,
-        note: note,
-      ),
+      clientName: quote.clientName,
+      accept: true,
+      load: () => getIt<GetQuoteEmail>()(requestId: cubit.requestId, quotationId: quote.id, accept: true),
+      loadPdf: () => getIt<GetQuotePdf>()(requestId: cubit.requestId, quotationId: quote.id),
     );
+    if (email == null || !mounted) return;
+    final done = await _run(() => cubit.accept(email: email), t.quotationAcceptedMessage);
+    // The request moved on: back to the screen behind, which reloads on `true`.
+    if (done && mounted) Navigator.of(context).pop(true);
+  }
+
+  Future<void> _reject(QuotationDetailCubit cubit) async {
+    final t = AppLocalizations.of(context)!;
+    final reason = await showRejectReasonDialog(context);
+    if (reason == null || !mounted) return;
+    final done = await _run(() => cubit.reject(reason), t.requestRejected);
+    if (done && mounted) Navigator.of(context).pop(true);
   }
 
   @override
@@ -184,7 +227,7 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
                             ),
                             if (current != null) ...[
                               const SizedBox(width: 8),
-                              current.status == QuotationStatus.countered
+                              current.status == QuotationStatus.countered || current.hasClientReply
                                   ? _YourTurnChip(label: t.yourTurnBadge)
                                   : QuoteBoardStatusChip(quotation: current),
                             ],
@@ -235,6 +278,11 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
                               onOpenRequest: () => _openRequest(state.request),
                             ),
                             const SizedBox(height: 12),
+                            // The client's emails in answer to this quote.
+                            if (current.clientReplies.isNotEmpty) ...[
+                              ClientRepliesCard(replies: current.clientReplies),
+                              const SizedBox(height: 12),
+                            ],
                             QuoteHistoryTimeline(request: state.request, versions: state.versions),
                             const SizedBox(height: 12),
                             if (current.type == ReplyType.offer) ...[
@@ -275,24 +323,22 @@ class _QuotationDetailViewState extends State<_QuotationDetailView> {
                                 message: t.readOnlyAcceptedNotice,
                                 title: t.acceptedVersionLabel(t.quoteVersionLabel(current.version ?? 0)),
                               )
-                            else
+                            else if (_canRespond(state, current))
                               QuoteRespondSection(
                                 current: current,
+                                busy: state.isSubmitting,
+                                onReopen: () => _run(cubit.reopen, t.quotationReopened),
                                 onSendNewPrice: () => SendNewPriceSheet.show(
                                   context,
                                   nextVersion: (current.version ?? 0) + 1,
                                   currency: current.currency,
                                   onSubmit: cubit.sendNewPrice,
                                 ),
-                                onAcceptClientPrice: current.clientCounterPricePiastres == null
-                                    ? null
-                                    : () => cubit.logResponse(
-                                        outcome: ClientResponseOutcome.accepted,
-                                        clientPricePiastres: current.clientCounterPricePiastres,
-                                      ),
-                                onLogOtherReply: () => _logOtherReply(cubit),
-                                onMarkDeclined: () =>
-                                    cubit.logResponse(outcome: ClientResponseOutcome.declined),
+                                onAccept: () => _accept(cubit, current),
+                                onReject: () => _reject(cubit),
+                                onDismissReply: current.hasClientReply
+                                    ? () => _run(cubit.dismissReply, t.replyDismissed)
+                                    : null,
                               ),
                           ],
                         );
@@ -383,9 +429,27 @@ class _DraftBody extends StatelessWidget {
 
     return BlocProvider(
       key: ValueKey(request.id),
-      // A draft keeps the currency it was started in.
-      create: (_) => getIt<QuotationFormCubit>(param1: request, param2: quote?.id)
-        ..changeCurrency(quote?.currency ?? Currency.egp),
+      // A draft keeps the currency it was started in, and a reopened revision
+      // comes with the prices, scope, notes and message of the one it replaces.
+      create: (_) {
+        final form = getIt<QuotationFormCubit>(param1: request, param2: quote?.id)
+          ..changeCurrency(quote?.currency ?? Currency.egp);
+        if (quote != null) {
+          for (final item in quote.items) {
+            final price = item.unitPricePiastres;
+            if (price <= 0) continue;
+            form.changeLinePrice(
+              item.requestItemId,
+              price % 100 == 0 ? '${price ~/ 100}' : (price / 100).toStringAsFixed(2),
+            );
+          }
+          if (quote.scopeOfWork.isNotEmpty) form.changeScopeOfWork(quote.scopeOfWork);
+          if (quote.notes.isNotEmpty) form.changeNotes(quote.notes);
+          final message = quote.message;
+          if (message != null && message.isNotEmpty) form.changeMessage(message);
+        }
+        return form;
+      },
       child: Column(
         children: [
           Expanded(

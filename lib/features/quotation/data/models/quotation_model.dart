@@ -1,4 +1,6 @@
 import '../../../../core/utils/currency.dart';
+import '../../../../core/enums/job_status.dart';
+import '../../domain/entities/client_reply.dart';
 import '../../domain/entities/client_response_outcome.dart';
 import '../../domain/entities/quotation.dart';
 import '../../domain/entities/quotation_status.dart';
@@ -36,6 +38,9 @@ class QuotationModel {
   final String? clientResponseNote;
   final DateTime? clientRespondedAt;
   final DateTime? lastReminderAt;
+  final List<ClientReply> clientReplies;
+  final bool hasUnreadClientReply;
+  final String? requestStatus;
 
   const QuotationModel({
     required this.id,
@@ -65,7 +70,36 @@ class QuotationModel {
     this.clientResponseNote,
     this.clientRespondedAt,
     this.lastReminderAt,
+    this.clientReplies = const [],
+    this.hasUnreadClientReply = false,
+    this.requestStatus,
   });
+
+  /// The client's emails on a quote. The `html` of each is deliberately not
+  /// read: it is the email as it arrived and can't be trusted.
+  static List<ClientReply> _replies(Object? value) {
+    if (value is! List) return const [];
+    return [
+      for (final json in value.whereType<Map<String, dynamic>>())
+        ClientReply(
+          id: json['id'] as String? ?? '',
+          quoteId: json['quoteId'] as String? ?? '',
+          fromAddress: json['fromAddress'] as String? ?? '',
+          fromName: json['fromName'] as String? ?? '',
+          subject: json['subject'] as String? ?? '',
+          receivedAt: DateTime.tryParse(json['receivedAt'] as String? ?? ''),
+          text: (json['text'] as String? ?? '').trim(),
+          attachments: [
+            for (final file in (json['attachments'] as List<dynamic>? ?? const []).whereType<Map<String, dynamic>>())
+              ReplyAttachment(
+                fileName: file['fileName'] as String? ?? '',
+                contentType: file['contentType'] as String? ?? '',
+                sizeBytes: (file['size'] as num?)?.toInt() ?? 0,
+              ),
+          ],
+        ),
+    ];
+  }
 
   /// A quote as the Inspecta API returns it. The API has no reply type (every
   /// quote is a priced offer), calls the number `proposalNumber`, and calls a
@@ -111,6 +145,9 @@ class QuotationModel {
       createdBy: '',
       createdAt: date('createdAt') ?? DateTime.now(),
       clientResponseNote: json['clientReply'] as String?,
+      clientReplies: _replies(json['clientReplies']),
+      hasUnreadClientReply: json['hasUnreadClientReply'] == true,
+      requestStatus: json['requestStatus'] as String?,
     );
   }
 
@@ -152,6 +189,8 @@ class QuotationModel {
       sentAt: date('sentAt'),
       createdBy: '',
       createdAt: date('createdAt') ?? DateTime.now(),
+      hasUnreadClientReply: json['hasUnreadClientReply'] == true,
+      requestStatus: json['requestStatus'] as String?,
     );
   }
 
@@ -199,6 +238,9 @@ class QuotationModel {
       clientResponseNote: clientResponseNote,
       clientRespondedAt: clientRespondedAt,
       lastReminderAt: lastReminderAt,
+      clientReplies: clientReplies,
+      hasUnreadClientReply: hasUnreadClientReply,
+      requestStatus: JobStatus.fromValue(requestStatus),
     );
   }
 }

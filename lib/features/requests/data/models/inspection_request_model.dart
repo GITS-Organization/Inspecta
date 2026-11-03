@@ -33,6 +33,9 @@ class InspectionRequestModel {
   /// Id of the request's `quotation` while it can still be priced.
   final String? draftQuoteId;
 
+  /// A client reply to a quotation that has not been dealt with.
+  final bool hasUnreadClientReply;
+
   const InspectionRequestModel({
     required this.id,
     required this.source,
@@ -56,6 +59,7 @@ class InspectionRequestModel {
     this.certificateSubmittedAt,
     this.updatedAt,
     this.draftQuoteId,
+    this.hasUnreadClientReply = false,
   });
 
   /// Dates are ISO-8601 strings, and the id is inside the object.
@@ -95,6 +99,7 @@ class InspectionRequestModel {
       scheduledAt: date('scheduledAt'),
       updatedAt: date('updatedAt'),
       draftQuoteId: draftQuoteId,
+      hasUnreadClientReply: json['hasUnreadClientReply'] == true,
     );
   }
 
@@ -126,6 +131,7 @@ class InspectionRequestModel {
       certificateSubmittedAt: certificateSubmittedAt,
       updatedAt: updatedAt,
       draftQuoteId: draftQuoteId,
+      hasUnreadClientReply: hasUnreadClientReply,
     );
   }
 }

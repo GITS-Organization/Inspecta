@@ -361,6 +361,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get statusQuoteSent => 'تم الإرسال';
 
   @override
+  String get statusCounterOfferSent => 'تم إرسال عرض معدّل';
+
+  @override
   String get statusClientCountered => 'عرض مضاد';
 
   @override
@@ -1264,6 +1267,56 @@ class AppLocalizationsAr extends AppLocalizations {
   String get respondToClientTitle => 'الرد على العميل';
 
   @override
+  String get clientRepliesTitle => 'ردود العميل';
+
+  @override
+  String get clientRepliedBadge => 'رد العميل';
+
+  @override
+  String get clientRepliesHint =>
+      'نص رسالته فقط، دون الرسائل المقتبسة والتوقيع.';
+
+  @override
+  String replyFromLine(String name, String time) {
+    return '$name · $time';
+  }
+
+  @override
+  String get reopenQuotation => 'إعادة فتح للتعديل';
+
+  @override
+  String get reopenQuotationHint =>
+      'يفتح نسخة جديدة بنفس الأسعار لتعديلها بعد مكالمة أو رد.';
+
+  @override
+  String get quotationReopened => 'تمت إعادة الفتح للتعديل.';
+
+  @override
+  String get dismissReply => 'تجاهل الرد';
+
+  @override
+  String get dismissReplyHint => 'غير مهم: العودة لانتظار العميل.';
+
+  @override
+  String get replyDismissed => 'تم تجاهل الرد.';
+
+  @override
+  String get acceptOfferAction => 'قبول العرض';
+
+  @override
+  String get rejectRequestAction => 'رفض الطلب';
+
+  @override
+  String get rejectRequestTitle => 'رفض هذا الطلب؟';
+
+  @override
+  String get quotationAcceptedMessage => 'تم قبول عرض السعر.';
+
+  @override
+  String get quotationConflictMessage =>
+      'لم يعد الطلب في حالة تسمح بهذا الإجراء. أعد التحميل وحاول مرة أخرى.';
+
+  @override
   String get errorLocationRequired => 'أدخل الموقع.';
 
   @override
@@ -1437,6 +1490,34 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get tomorrowLabel => 'غدًا';
+
+  @override
+  String get todayLabel => 'اليوم';
+
+  @override
+  String get directionsAction => 'الاتجاهات';
+
+  @override
+  String get certificatesLabel => 'الشهادات';
+
+  @override
+  String get checklistLabel => 'قائمة الفحص';
+
+  @override
+  String get machineAvailableAfterStart => 'متاحة بعد بدء الفحص';
+
+  @override
+  String get startInspectionHint => 'يُبلغ المنسق بأنك في الموقع';
+
+  @override
+  String machineSerialTag(String serial) {
+    return 'الرقم التسلسلي $serial';
+  }
+
+  @override
+  String machineQtyTag(int count) {
+    return 'الكمية $count';
+  }
 
   @override
   String get emptyTasksToday => 'لا توجد مهام مجدولة لليوم.';
@@ -1991,6 +2072,31 @@ class AppLocalizationsAr extends AppLocalizations {
   String get quoteEmailAttachmentLabel => 'عرض السعر المرفق';
 
   @override
+  String get emailFilesTitle => 'ملفات إضافية';
+
+  @override
+  String get emailFilesHint => 'تُرسل مع عرض السعر بعد ملف العرض PDF.';
+
+  @override
+  String get emailAddFileAction => 'إضافة ملف';
+
+  @override
+  String get emailRemoveFileAction => 'إزالة الملف';
+
+  @override
+  String emailFilesLimit(int count) {
+    return 'يمكنك إرفاق $count ملفات كحد أقصى.';
+  }
+
+  @override
+  String emailFilesTooLarge(int mb) {
+    return 'الحد الأقصى لحجم الملفات معًا $mb ميجابايت.';
+  }
+
+  @override
+  String get emailFileReadFailed => 'تعذّرت قراءة هذا الملف.';
+
+  @override
   String get quoteEmailStandardSubtitle => 'عاينه وعدّله قبل الإرسال.';
 
   @override
@@ -2322,7 +2428,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get replyToRequestAction => 'الرد على الطلب';
 
   @override
-  String get machinesTitle => 'الماكينات';
+  String get machinesTitle => 'العناصر';
 
   @override
   String machinesProgress(int submitted, int total) {
@@ -2330,7 +2436,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get machinesEmpty => 'لا توجد ماكينات في هذه المهمة.';
+  String get machinesEmpty => 'لا توجد عناصر في هذه المهمة.';
 
   @override
   String get startInspectionAction => 'بدء الفحص';
@@ -2345,7 +2451,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get inspectionStepStartHint => 'أعلم المنسق أنك في الموقع.';
 
   @override
-  String get inspectionStepFillTitle => 'املأ قائمة الفحص لكل ماكينة';
+  String get inspectionStepFillTitle => 'املأ قائمة الفحص لكل عنصر';
 
   @override
   String get inspectionStepFillHint => 'تُفتح بعد بدء الفحص.';

@@ -66,7 +66,10 @@ import 'features/quotation/data/datasources/quotation_api_client_services.dart';
 import 'features/quotation/data/repositories/quotation_repository_impl.dart';
 import 'features/quotation/domain/entities/quotation.dart';
 import 'features/quotation/domain/repositories/quotation_repository.dart';
+import 'features/quotation/domain/usecases/dismiss_client_reply.dart';
 import 'features/quotation/domain/usecases/get_quotation_board.dart';
+import 'features/quotation/domain/usecases/get_request_quotes.dart';
+import 'features/quotation/domain/usecases/reopen_quotation.dart';
 import 'features/quotation/domain/usecases/get_quote_email.dart';
 import 'features/quotation/domain/usecases/get_quote_pdf.dart';
 import 'features/quotation/domain/usecases/get_quotations.dart';
@@ -192,6 +195,9 @@ void _registerQuotation() {
     ..registerLazySingleton(() => SendQuotation(getIt(), getIt()))
     ..registerLazySingleton(() => LogClientResponse(getIt()))
     ..registerLazySingleton(() => SendNewPrice(getIt()))
+    ..registerLazySingleton(() => GetRequestQuotes(getIt()))
+    ..registerLazySingleton(() => ReopenQuotation(getIt()))
+    ..registerLazySingleton(() => DismissClientReply(getIt()))
     ..registerLazySingleton(() => GetQuotationBoard(getIt()))
     ..registerFactory(() => QuotationsListCubit(getIt()))
     ..registerLazySingleton(() => UpdateOffer(getIt()))
@@ -219,6 +225,11 @@ void _registerQuotation() {
         request: seed.request,
         logClientResponse: getIt(),
         sendNewPrice: getIt(),
+        sendQuotation: getIt(),
+        getRequestQuotes: getIt(),
+        getRequestDetail: getIt(),
+        reopenQuotation: getIt(),
+        dismissClientReply: getIt(),
       ),
     );
 }

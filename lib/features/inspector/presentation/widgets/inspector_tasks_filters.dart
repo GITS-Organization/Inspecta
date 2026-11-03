@@ -23,7 +23,9 @@ class InspectorTasksFilters extends StatelessWidget {
           alert: filter == TasksFilter.overdue,
         );
 
+        // Sits inside the header banner, which already has its own gutter.
         return AppSegmentedFilter<TasksFilter>(
+          margin: EdgeInsets.zero,
           segments: [
             segment(TasksFilter.today, t.tasksFilterToday),
             segment(TasksFilter.upcoming, t.tasksFilterUpcoming),

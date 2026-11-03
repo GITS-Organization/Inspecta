@@ -7,6 +7,7 @@ import 'package:skeletonizer/skeletonizer.dart';
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_layout.dart';
 import '../../../../core/consts/app_text_styles.dart';
+import '../../../../core/enums/job_status.dart';
 import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/m_card.dart';
 import '../../../../core/shared/m_notice.dart';
@@ -31,12 +32,27 @@ import '../widgets/machine_widgets.dart';
 /// What the skeleton cards are drawn from; only its shape matters.
 const _placeholder = MachineSummary(
   requestItemId: 'placeholder',
-  name: 'Overhead crane — 10 t',
+  name: 'Overhead crane',
   quantity: 1,
   status: MachineStatus.draft,
   serialNumber: 'SN-000000',
+  capacity: '10 Tons',
+  manufacturer: 'Manufacturer',
+  model: 'Model',
   checklistTotal: 20,
   checklistAnswered: 8,
+  inspectionStandards: ['BS EN ISO 0000:2011', 'BS ISO 0000:2002'],
+);
+
+/// What the skeleton's summary card is drawn from; only its shape matters.
+final _placeholderJob = JobMachines(
+  requestId: 'placeholder',
+  requestStatus: 'assigned',
+  clientName: 'Client name',
+  location: 'Location of the site',
+  scheduledAt: DateTime(2026, 1, 1, 9, 30),
+  progress: const MachineProgress(total: 1),
+  machines: const [_placeholder],
 );
 
 /// A job's machines: the progress of their certificates, a "Start inspection"
@@ -136,7 +152,9 @@ class _Body extends StatelessWidget {
         final job = state.machines;
         if (state.status == JobMachinesStatus.loading || job == null) {
           if (state.status == JobMachinesStatus.error) return _ErrorState(failure: state.failure!);
-          return const _Skeleton();
+          // Until the job is read, the steps show as they will when it has not
+          // been started: its status tells, so the skeleton is the right shape.
+          return _Skeleton(showSteps: !pdfOnly && request.status != JobStatus.inProgress);
         }
 
         return Column(
@@ -196,10 +214,21 @@ class _Body extends StatelessWidget {
                 child: SafeArea(
                   top: false,
                   minimum: const EdgeInsets.only(bottom: 6),
-                  child: MPrimaryButton(
-                    label: t.startInspectionAction,
-                    loading: state.isStarting,
-                    onPressed: () => _start(context),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      MPrimaryButton(
+                        label: t.startInspectionAction,
+                        loading: state.isStarting,
+                        onPressed: () => _start(context),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        t.startInspectionHint,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.caption.copyWith(fontSize: 12),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -264,20 +293,22 @@ class _Step extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 28,
-          height: 28,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: active ? AppColours.primaryColor : AppColours.surfaceMuted,
-            shape: BoxShape.circle,
+        Skeleton.leaf(
+          child: Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: active ? AppColours.primaryColor : AppColours.surfaceMuted,
+              shape: BoxShape.circle,
+            ),
+            child: active
+                ? Text(
+                    '$number',
+                    style: AppTextStyles.badge.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+                  )
+                : const Icon(Icons.lock_outline_rounded, size: 15, color: AppColours.inkMuted),
           ),
-          child: active
-              ? Text(
-                  '$number',
-                  style: AppTextStyles.badge.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
-                )
-              : const Icon(Icons.lock_outline_rounded, size: 15, color: AppColours.inkMuted),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -333,39 +364,69 @@ class _Summary extends StatelessWidget {
             Text(client, style: AppTextStyles.cardTitle),
             const SizedBox(height: 4),
           ],
-          if (location.isNotEmpty)
-            Row(
+          // Where and when, on one line.
+          if (location.isNotEmpty || scheduledAt != null)
+            Wrap(
+              spacing: 16,
+              runSpacing: 6,
               children: [
-                const Icon(Icons.location_on_outlined, size: 16, color: AppColours.inkMuted),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    location,
-                    style: AppTextStyles.subtitle.copyWith(color: AppColours.inkBody),
-                    overflow: TextOverflow.ellipsis,
+                if (location.isNotEmpty)
+                  _MetaItem(icon: Icons.location_on_outlined, label: location),
+                if (scheduledAt != null)
+                  _MetaItem(
+                    icon: Icons.event_outlined,
+                    label: DateFormat('EEE, d MMM · HH:mm', locale).format(scheduledAt),
                   ),
-                ),
               ],
             ),
-          if (scheduledAt != null) ...[
-            if (location.isNotEmpty) const SizedBox(height: 6),
-            Row(
-              children: [
-                const Icon(Icons.event_outlined, size: 16, color: AppColours.inkMuted),
-                const SizedBox(width: 6),
-                Text(
-                  DateFormat('EEE, d MMM · HH:mm', locale).format(scheduledAt),
-                  style: AppTextStyles.subtitle.copyWith(color: AppColours.inkBody),
+          if (hasDetails) const SizedBox(height: 12),
+          Row(
+            children: [
+              Text(
+                t.certificatesLabel,
+                style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600, color: AppColours.inkSecondary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  t.machinesProgress(progress.submitted, progress.total),
+                  style: AppTextStyles.caption,
+                  textAlign: TextAlign.end,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
-          ],
-          if (hasDetails) const SizedBox(height: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
           _ProgressSegments(machines: job.machines, progress: progress),
-          const SizedBox(height: 8),
-          Text(t.machinesProgress(progress.submitted, progress.total), style: AppTextStyles.caption),
         ],
       ),
+    );
+  }
+}
+
+/// An icon and a short line of the summary card's meta row.
+class _MetaItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _MetaItem({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: AppColours.inkMuted),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            label,
+            style: AppTextStyles.subtitle.copyWith(fontSize: 14, color: AppColours.inkBody),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -392,7 +453,12 @@ class _ProgressSegments extends StatelessWidget {
   };
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => Skeleton.replace(
+    replacement: const Bone(width: double.infinity, height: 8, uniRadius: 4),
+    child: _bar(),
+  );
+
+  Widget _bar() {
     if (machines.isEmpty || machines.length > _maxSegments) {
       final value = progress.total == 0 ? 0.0 : (progress.submitted / progress.total).clamp(0.0, 1.0);
       return ClipRRect(
@@ -421,9 +487,13 @@ class _ProgressSegments extends StatelessWidget {
   }
 }
 
-/// The loading state: machine cards drawn from [_placeholder], shimmering.
+/// The loading state, in the shape of the screen: the summary card, the two
+/// steps (while the inspection hasn't started — [showSteps]) and item cards,
+/// all drawn by the real widgets from placeholders, shimmering.
 class _Skeleton extends StatelessWidget {
-  const _Skeleton();
+  final bool showSteps;
+
+  const _Skeleton({required this.showSteps});
 
   @override
   Widget build(BuildContext context) {
@@ -432,8 +502,14 @@ class _Skeleton extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
         children: [
-          for (var i = 0; i < 3; i++) ...[
-            MachineCard(machine: _placeholder, onTap: () {}),
+          _Summary(job: _placeholderJob, fallbackLocation: '', showClient: false),
+          const SizedBox(height: 12),
+          if (showSteps) ...[
+            const _StartSteps(),
+            const SizedBox(height: 12),
+          ],
+          for (var i = 0; i < 2; i++) ...[
+            MachineCard(machine: _placeholder, locked: showSteps, onTap: () {}),
             const SizedBox(height: 12),
           ],
         ],

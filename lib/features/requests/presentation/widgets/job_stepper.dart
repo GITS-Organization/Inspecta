@@ -23,6 +23,7 @@ class JobStepper extends StatelessWidget {
     JobStatus.requestReceived => 0,
     JobStatus.quoteDraft ||
     JobStatus.quoteSent ||
+    JobStatus.counterOfferSent ||
     JobStatus.clientCountered ||
     JobStatus.quoteRejected ||
     JobStatus.clientDeclined ||

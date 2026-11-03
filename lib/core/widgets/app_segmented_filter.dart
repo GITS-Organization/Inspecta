@@ -12,8 +12,8 @@ class AppSegment<T> {
   final String label;
   final int count;
 
-  /// Red count while it's above 0: something here needs the user. Ignored on
-  /// the selected segment, whose count is white on the fill.
+  /// Red count while it's above 0: something here needs the user. Stays red
+  /// when the segment is selected.
   final bool alert;
 
   const AppSegment({required this.value, required this.label, this.count = 0, this.alert = false});
@@ -165,11 +165,13 @@ class _Segment extends StatelessWidget {
     final foreground = selected ? Colors.white : AppColours.ink;
     final Color countBackground;
     final Color countForeground;
-    if (selected) {
-      countBackground = Colors.white.withValues(alpha: 0.2);
-      countForeground = Colors.white;
-    } else if (alert) {
+    if (alert) {
+      // Red even on the selected segment, so the alarm never disappears when
+      // another tab is chosen or this one is.
       countBackground = AppColours.errorIcon;
+      countForeground = Colors.white;
+    } else if (selected) {
+      countBackground = Colors.white.withValues(alpha: 0.2);
       countForeground = Colors.white;
     } else {
       countBackground = AppColours.primaryTint;

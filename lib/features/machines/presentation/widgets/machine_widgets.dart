@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
@@ -83,8 +84,8 @@ class MachineStatusChip extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     final (background, textColor, label) = switch (status) {
       MachineStatus.notStarted => (
-        AppColours.chipGreyBackground,
-        AppColours.chipGreyText,
+        AppColours.surfaceMuted,
+        AppColours.inkSecondary,
         t.machineStatusNotStarted,
       ),
       MachineStatus.draft => (
@@ -116,13 +117,16 @@ class MachineStatusChip extends StatelessWidget {
 
     final text = Text(
       label,
-      style: AppTextStyles.badge.copyWith(color: textColor),
+      style: AppTextStyles.badge.copyWith(fontSize: 13, height: 16 / 13, color: textColor),
     );
     return Container(
       padding: EdgeInsetsDirectional.fromSTEB(icon == null ? 12 : 9, 6, 12, 6),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(999),
+        // An idle machine is outlined rather than filled: it is waiting, not
+        // flagged.
+        border: status == MachineStatus.notStarted ? Border.all(color: AppColours.border) : null,
       ),
       child: icon == null
           ? text
@@ -138,11 +142,16 @@ class MachineStatusChip extends StatelessWidget {
   }
 }
 
-/// One machine of a job, built for the inspector's next move: what the
-/// machine is (its name, then the capacity, make, model and serial that
-/// identify it), how far its checklist is, any return note or certificate
-/// number, and a footer with where the certificate stands and what tapping
-/// the card does next.
+/// One machine of a job, built for the inspector's next move: an icon tile,
+/// what the machine is (its name, then the capacity, make and model), where
+/// its certificate stands as a chip, tags for what identifies the unit on site
+/// (serial number, quantity and the standards), how far its checklist is, any
+/// return note or certificate number, and a footer with what tapping the card
+/// does next — or, before the inspection has started, one quiet line saying
+/// why it can't be opened yet.
+///
+/// A locked card keeps full contrast: dimming it made it hard to read in
+/// sunlight.
 class MachineCard extends StatelessWidget {
   final MachineSummary machine;
   final VoidCallback onTap;
@@ -163,18 +172,11 @@ class MachineCard extends StatelessWidget {
     this.locked = false,
   });
 
-  /// What identifies the machine on site, in the order an inspector reads it.
-  String get _facts =>
-      [
-            machine.capacity,
-            machine.manufacturer,
-            machine.model,
-            machine.serialNumber,
-          ]
-          .whereType<String>()
-          .map((part) => part.trim())
-          .where((part) => part.isNotEmpty)
-          .join(' · ');
+  static String _join(Iterable<String?> parts, String separator) => parts
+      .whereType<String>()
+      .map((part) => part.trim())
+      .where((part) => part.isNotEmpty)
+      .join(separator);
 
   /// The label of what tapping the card leads to, or null when there's no
   /// step to name.
@@ -197,16 +199,23 @@ class MachineCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final facts = _facts;
+    final facts = _join([machine.capacity, machine.manufacturer, machine.model], ' · ');
+    final serial = machine.serialNumber?.trim() ?? '';
     final next = _next(t);
     final progress = machine.checklistTotal == 0
         ? 0.0
         : (machine.checklistAnswered / machine.checklistTotal).clamp(0.0, 1.0);
+    final tags = [
+      if (serial.isNotEmpty) t.machineSerialTag(serial),
+      t.machineQtyTag(machine.quantity),
+      ...machine.inspectionStandards.map((s) => s.trim()).where((s) => s.isNotEmpty),
+    ];
 
-    final card = Container(
+    return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColours.borderSubtle),
       ),
       clipBehavior: Clip.antiAlias,
       child: Material(
@@ -214,7 +223,7 @@ class MachineCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -222,50 +231,87 @@ class MachineCard extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        machine.name,
-                        style: AppTextStyles.cardTitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    // `Skeleton.leaf` on the coloured parts: while loading they
+                    // are one grey shape each, not their own colour.
+                    Skeleton.leaf(
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColours.primaryTint,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.build_outlined, size: 22, color: AppColours.primaryColor),
                       ),
                     ),
-                    if (machine.quantity > 1) ...[
-                      const SizedBox(width: 12),
-                      Text(
-                        t.machineQuantityLabel(machine.quantity),
-                        style: AppTextStyles.caption,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            machine.name,
+                            style: AppTextStyles.sectionTitle.copyWith(fontSize: 17, height: 24 / 17),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (facts.isNotEmpty)
+                            Text(
+                              facts,
+                              style: AppTextStyles.caption.copyWith(height: 18 / 13, color: AppColours.inkSecondary),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 8),
+                    Skeleton.leaf(child: MachineStatusChip(status: machine.status)),
                   ],
                 ),
-                if (facts.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    facts,
-                    style: AppTextStyles.caption.copyWith(height: 18 / 13),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                if (tags.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [for (final tag in tags) Skeleton.leaf(child: _Tag(tag))],
                   ),
                 ],
                 if (machine.checklistTotal > 0) ...[
-                  const SizedBox(height: 14),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 6,
-                      color: AppColours.primaryColor,
-                      backgroundColor: AppColours.primaryTint,
-                    ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Text(
+                        t.checklistLabel,
+                        style: AppTextStyles.caption.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColours.inkSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          t.machineChecklistProgress(machine.checklistAnswered, machine.checklistTotal),
+                          style: AppTextStyles.caption,
+                          textAlign: TextAlign.end,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    t.machineChecklistProgress(
-                      machine.checklistAnswered,
-                      machine.checklistTotal,
+                  Skeleton.replace(
+                    replacement: const Bone(width: double.infinity, height: 6, uniRadius: 3),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 6,
+                        color: AppColours.successIcon,
+                        backgroundColor: AppColours.border,
+                      ),
                     ),
-                    style: AppTextStyles.caption,
                   ),
                 ],
                 if (machine.certificateNumber != null) ...[
@@ -282,48 +328,58 @@ class MachineCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   ReviewNote(note: machine.reviewNote!),
                 ],
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    MachineStatusChip(status: machine.status),
-                    const Spacer(),
-                    if (next != null)
-                      _NextStep(label: next)
-                    else if (locked)
+                if (locked) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.lock_outline_rounded, size: 14, color: AppColours.inkMuted),
+                      const SizedBox(width: 6),
                       Flexible(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.lock_outline_rounded,
-                              size: 15,
-                              color: AppColours.inkMuted,
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                t.machineStartFirstHint,
-                                style: AppTextStyles.caption.copyWith(
-                                  fontSize: 12,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          t.machineAvailableAfterStart,
+                          style: AppTextStyles.caption.copyWith(height: 18 / 13),
                         ),
                       ),
-                  ],
-                ),
+                    ],
+                  ),
+                ] else if (next != null) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: _NextStep(label: next),
+                  ),
+                ],
               ],
             ),
           ),
         ),
       ),
     );
-    // A locked card is dimmed: its checklist opens only after the inspection
-    // has been started.
-    return locked ? Opacity(opacity: 0.6, child: card) : card;
+  }
+}
+
+/// A small outlined tag: a serial number, a quantity, a standard.
+class _Tag extends StatelessWidget {
+  final String label;
+
+  const _Tag(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    // No alignment or fixed height: either would make the tag fill the row
+    // instead of hugging its text.
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColours.surfaceMuted,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColours.borderSubtle),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.badge.copyWith(fontWeight: FontWeight.w500, color: AppColours.inkSecondary),
+      ),
+    );
   }
 }
 

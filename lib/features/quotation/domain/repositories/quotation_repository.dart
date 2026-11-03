@@ -18,6 +18,21 @@ abstract interface class QuotationRepository {
     bool includeSuperseded = false,
   });
 
+  /// Every quote of [requestId], newest first (a draft on top), with the
+  /// client's replies to the current one. Throws [QuotationFailure].
+  Future<List<Quotation>> listForRequest(String requestId);
+
+  /// Opens a new revision of the sent quote [quotationId], with the same
+  /// prices, to edit and send again; the request goes back to a draft quote.
+  /// Returns the new quote. Throws a [QuotationFailure] — `conflict` when the
+  /// request has no sent quote to reopen.
+  Future<Quotation> reopen({required String requestId, required String quotationId});
+
+  /// Ignores the client's reply to [quotationId]: the replies are cleared and
+  /// the request goes back to waiting for the client. Returns the quote.
+  /// Throws a [QuotationFailure] — `conflict` when there is no reply.
+  Future<Quotation> dismissReply({required String requestId, required String quotationId});
+
   /// BR-03.4/03.5: turns the request's quote into its next immutable,
   /// numbered version and marks it sent. Returns the assigned version. A
   /// [ReplyType.reject] is not a quote: it goes through

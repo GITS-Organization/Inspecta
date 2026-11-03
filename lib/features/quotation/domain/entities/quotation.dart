@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../../core/utils/currency.dart';
+import '../../../../core/enums/job_status.dart';
+import 'client_reply.dart';
 import 'client_response_outcome.dart';
 import 'quote_line_item.dart';
 import 'quotation_status.dart';
@@ -72,6 +74,18 @@ class Quotation extends Equatable {
   /// this app — see the quotation feature's known gaps).
   final DateTime? lastReminderAt;
 
+  /// The emails the client sent in answer to this quotation, oldest first —
+  /// those that came after the last offer was sent (a new send, accept or
+  /// reject clears them). Only on a quote read on its own, not on list rows.
+  final List<ClientReply> clientReplies;
+
+  /// A reply the coordinator has not dealt with yet.
+  final bool hasUnreadClientReply;
+
+  /// The request's status as the list row reports it, so a row can say
+  /// whether the client got a first offer or a counter offer.
+  final JobStatus? requestStatus;
+
   const Quotation({
     required this.id,
     required this.requestId,
@@ -100,7 +114,13 @@ class Quotation extends Equatable {
     this.clientResponseNote,
     this.clientRespondedAt,
     this.lastReminderAt,
+    this.clientReplies = const [],
+    this.hasUnreadClientReply = false,
+    this.requestStatus,
   });
+
+  /// The client has answered and the coordinator still has to respond.
+  bool get hasClientReply => hasUnreadClientReply || clientReplies.isNotEmpty;
 
   bool get isDraft => status == QuotationStatus.draft;
 
@@ -153,5 +173,8 @@ class Quotation extends Equatable {
     clientResponseNote,
     clientRespondedAt,
     lastReminderAt,
+    clientReplies,
+    hasUnreadClientReply,
+    requestStatus,
   ];
 }

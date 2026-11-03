@@ -10,6 +10,10 @@ enum QuotationFailureCode {
   /// 502 on sending: the mail server refused the email; nothing changed, so
   /// sending again is safe.
   mailRefused,
+
+  /// 409: the request is not in a state that allows this (reopening a quote
+  /// that was not sent, ignoring a reply that is not there).
+  conflict,
   unknown,
 }
 

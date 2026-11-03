@@ -710,6 +710,12 @@ abstract class AppLocalizations {
   /// **'Sent'**
   String get statusQuoteSent;
 
+  /// No description provided for @statusCounterOfferSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter offer sent'**
+  String get statusCounterOfferSent;
+
   /// No description provided for @statusClientCountered.
   ///
   /// In en, this message translates to:
@@ -2288,6 +2294,96 @@ abstract class AppLocalizations {
   /// **'Respond to client'**
   String get respondToClientTitle;
 
+  /// No description provided for @clientRepliesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Client replies'**
+  String get clientRepliesTitle;
+
+  /// No description provided for @clientRepliedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Client replied'**
+  String get clientRepliedBadge;
+
+  /// No description provided for @clientRepliesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Their email, without the quoted messages and signature.'**
+  String get clientRepliesHint;
+
+  /// No description provided for @replyFromLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · {time}'**
+  String replyFromLine(String name, String time);
+
+  /// No description provided for @reopenQuotation.
+  ///
+  /// In en, this message translates to:
+  /// **'Reopen to edit'**
+  String get reopenQuotation;
+
+  /// No description provided for @reopenQuotationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens a new revision with the same prices, for changes after a call or a reply.'**
+  String get reopenQuotationHint;
+
+  /// No description provided for @quotationReopened.
+  ///
+  /// In en, this message translates to:
+  /// **'Reopened for editing.'**
+  String get quotationReopened;
+
+  /// No description provided for @dismissReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Ignore reply'**
+  String get dismissReply;
+
+  /// No description provided for @dismissReplyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Not important: go back to waiting for the client.'**
+  String get dismissReplyHint;
+
+  /// No description provided for @replyDismissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply ignored.'**
+  String get replyDismissed;
+
+  /// No description provided for @acceptOfferAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept the offer'**
+  String get acceptOfferAction;
+
+  /// No description provided for @rejectRequestAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject the request'**
+  String get rejectRequestAction;
+
+  /// No description provided for @rejectRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject this request?'**
+  String get rejectRequestTitle;
+
+  /// No description provided for @quotationAcceptedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Quotation accepted.'**
+  String get quotationAcceptedMessage;
+
+  /// No description provided for @quotationConflictMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The request is no longer in a state where this can be done. Reload and try again.'**
+  String get quotationConflictMessage;
+
   /// No description provided for @errorLocationRequired.
   ///
   /// In en, this message translates to:
@@ -2617,6 +2713,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tomorrow'**
   String get tomorrowLabel;
+
+  /// No description provided for @todayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get todayLabel;
+
+  /// No description provided for @directionsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Directions'**
+  String get directionsAction;
+
+  /// No description provided for @certificatesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificates'**
+  String get certificatesLabel;
+
+  /// No description provided for @checklistLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Checklist'**
+  String get checklistLabel;
+
+  /// No description provided for @machineAvailableAfterStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Available after you start the inspection'**
+  String get machineAvailableAfterStart;
+
+  /// No description provided for @startInspectionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifies the coordinator that you\'re on site'**
+  String get startInspectionHint;
+
+  /// No description provided for @machineSerialTag.
+  ///
+  /// In en, this message translates to:
+  /// **'S/N {serial}'**
+  String machineSerialTag(String serial);
+
+  /// No description provided for @machineQtyTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Qty {count}'**
+  String machineQtyTag(int count);
 
   /// No description provided for @emptyTasksToday.
   ///
@@ -3608,6 +3752,48 @@ abstract class AppLocalizations {
   /// **'Attached quotation'**
   String get quoteEmailAttachmentLabel;
 
+  /// No description provided for @emailFilesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'More files'**
+  String get emailFilesTitle;
+
+  /// No description provided for @emailFilesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent with the quotation, after the proposal PDF.'**
+  String get emailFilesHint;
+
+  /// No description provided for @emailAddFileAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a file'**
+  String get emailAddFileAction;
+
+  /// No description provided for @emailRemoveFileAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove file'**
+  String get emailRemoveFileAction;
+
+  /// No description provided for @emailFilesLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'You can attach up to {count} files.'**
+  String emailFilesLimit(int count);
+
+  /// No description provided for @emailFilesTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'The files can weigh {mb} MB in all.'**
+  String emailFilesTooLarge(int mb);
+
+  /// No description provided for @emailFileReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That file could not be read.'**
+  String get emailFileReadFailed;
+
   /// No description provided for @quoteEmailStandardSubtitle.
   ///
   /// In en, this message translates to:
@@ -4193,7 +4379,7 @@ abstract class AppLocalizations {
   /// No description provided for @machinesTitle.
   ///
   /// In en, this message translates to:
-  /// **'Machines'**
+  /// **'Items'**
   String get machinesTitle;
 
   /// No description provided for @machinesProgress.
@@ -4205,7 +4391,7 @@ abstract class AppLocalizations {
   /// No description provided for @machinesEmpty.
   ///
   /// In en, this message translates to:
-  /// **'No machines on this job.'**
+  /// **'No items on this job.'**
   String get machinesEmpty;
 
   /// No description provided for @startInspectionAction.
@@ -4235,7 +4421,7 @@ abstract class AppLocalizations {
   /// No description provided for @inspectionStepFillTitle.
   ///
   /// In en, this message translates to:
-  /// **'Fill in each machine\'s checklist'**
+  /// **'Fill in each item\'s checklist'**
   String get inspectionStepFillTitle;
 
   /// No description provided for @inspectionStepFillHint.
@@ -4307,7 +4493,7 @@ abstract class AppLocalizations {
   /// No description provided for @machineChecklistProgress.
   ///
   /// In en, this message translates to:
-  /// **'{answered} of {total} checklist rows'**
+  /// **'{answered} of {total} rows'**
   String machineChecklistProgress(int answered, int total);
 
   /// No description provided for @machineQuantityLabel.

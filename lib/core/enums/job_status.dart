@@ -6,6 +6,9 @@ enum JobStatus {
   requestReceived('request_received'),
   quoteDraft('quote_draft'),
   quoteSent('quote_sent'),
+  /// A revised offer (the second revision on) has been sent; the first offer
+  /// is [quoteSent].
+  counterOfferSent('counter_offer_sent'),
   clientCountered('client_countered'),
   quoteRejected('quote_rejected'),
   clientDeclined('client_declined'),

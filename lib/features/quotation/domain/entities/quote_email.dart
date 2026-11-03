@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:equatable/equatable.dart';
 
 /// The email that would carry a quotation's PDF to the client
@@ -70,11 +72,42 @@ class QuoteEmailEdits extends Equatable {
   /// The whole text of the email.
   final String? message;
 
-  const QuoteEmailEdits({this.sentTo, this.cc, this.subject, this.message});
+  /// Files the coordinator added, sent with the quotation's own PDF.
+  final List<QuoteAttachment> attachments;
+
+  const QuoteEmailEdits({
+    this.sentTo,
+    this.cc,
+    this.subject,
+    this.message,
+    this.attachments = const [],
+  });
 
   /// Nothing was changed: the suggestion goes out as it is.
-  bool get isEmpty => sentTo == null && cc == null && subject == null && message == null;
+  bool get isEmpty =>
+      sentTo == null && cc == null && subject == null && message == null && attachments.isEmpty;
 
   @override
-  List<Object?> get props => [sentTo, cc, subject, message];
+  List<Object?> get props => [sentTo, cc, subject, message, attachments];
+}
+
+/// A file the coordinator adds to the email that carries a quotation. It goes
+/// to the API in the body of Send or Accept, its content as Base64.
+class QuoteAttachment extends Equatable {
+  /// The most files an email can carry.
+  static const maxCount = 10;
+
+  /// The most all the files can weigh together. The API's own limit is not
+  /// known; Base64 makes the request a third larger than the files.
+  static const maxTotalBytes = 15 * 1024 * 1024;
+
+  final String fileName;
+  final Uint8List bytes;
+
+  const QuoteAttachment({required this.fileName, required this.bytes});
+
+  int get size => bytes.length;
+
+  @override
+  List<Object?> get props => [fileName, size];
 }

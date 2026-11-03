@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
+import '../../../../core/enums/job_status.dart';
 import '../../../../core/utils/relative_time.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/quotation.dart';
@@ -44,7 +45,10 @@ class QuoteBoardStatusChip extends StatelessWidget {
         QuoteBoardTab.accepted => (AppColours.chipGreenBackground, AppColours.chipGreenText),
         QuoteBoardTab.rejected => (AppColours.chipRedBackground, AppColours.chipRedText),
       };
-      label = tab.label(t);
+      // A revised offer says so, apart from a first offer.
+      label = tab == QuoteBoardTab.open && quotation.requestStatus == JobStatus.counterOfferSent
+          ? t.statusCounterOfferSent
+          : tab.label(t);
     }
 
     return Container(

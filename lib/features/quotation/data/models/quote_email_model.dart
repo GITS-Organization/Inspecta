@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../../domain/entities/quote_email.dart';
 
 /// Reads the quote email API's JSON (`GET …/quotes/{id}/email`) into entities
@@ -29,11 +31,17 @@ class QuoteEmailModel {
   }
 
   /// The body of `POST …/send` and `POST …/accept`: only what was edited;
-  /// empty when the suggestion goes out as it is.
+  /// empty when the suggestion goes out as it is. Files the coordinator added
+  /// go in `attachments`, each with its name and its content in Base64.
   static Map<String, dynamic> toBody(QuoteEmailEdits? edits) => {
     if (edits?.sentTo case final to?) 'sentTo': to,
     if (edits?.cc case final cc?) 'cc': cc,
     if (edits?.subject case final subject?) 'subject': subject,
     if (edits?.message case final message?) 'message': message,
+    if (edits != null && edits.attachments.isNotEmpty)
+      'attachments': [
+        for (final file in edits.attachments)
+          {'fileName': file.fileName, 'contentBase64': base64Encode(file.bytes)},
+      ],
   };
 }

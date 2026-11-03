@@ -287,7 +287,7 @@ class _MovedOnNotice extends StatelessWidget {
     JobStatus.quoteRejected ||
     JobStatus.clientDeclined ||
     JobStatus.certificateReturned => MNoticeType.error,
-    JobStatus.quoteSent || JobStatus.clientCountered => MNoticeType.info,
+    JobStatus.quoteSent || JobStatus.counterOfferSent || JobStatus.clientCountered => MNoticeType.info,
     _ => MNoticeType.success,
   };
 

@@ -78,6 +78,10 @@ class InspectionRequest extends Equatable {
   /// complete. Null before that, and once the quote has gone out.
   final String? draftQuoteId;
 
+  /// The client answered a quotation by email and nobody has dealt with it
+  /// yet.
+  final bool hasUnreadClientReply;
+
   /// Per-stage counts of the job's machine certificates; only the queue rows
   /// carry them.
   final CertificateCounts? certificates;
@@ -106,6 +110,7 @@ class InspectionRequest extends Equatable {
     this.certificateSubmittedAt,
     this.updatedAt,
     this.draftQuoteId,
+    this.hasUnreadClientReply = false,
     this.certificates,
   });
 
@@ -186,6 +191,7 @@ class InspectionRequest extends Equatable {
     certificateSubmittedAt,
     updatedAt,
     draftQuoteId,
+    hasUnreadClientReply,
     certificates,
   ];
 }

@@ -48,6 +48,40 @@ class QuotationRepositoryImpl implements QuotationRepository {
   }
 
   @override
+  Future<List<Quotation>> listForRequest(String requestId) async {
+    final result = await _safeApi(() async {
+      final data = await _api.getRequestQuotes(requestId);
+      final rows = data is Map<String, dynamic> ? data['items'] : data;
+      return [
+        for (final json in (rows as List).whereType<Map<String, dynamic>>())
+          QuotationModel.fromApiJson(json),
+      ];
+    });
+    final quotes = _toEntities(result.fold((data) => data, (f) => throw _mapError(f)));
+    // Newest first: a draft (no version yet) on top, then the highest version.
+    quotes.sort((a, b) => (b.version ?? 1 << 30).compareTo(a.version ?? 1 << 30));
+    return quotes;
+  }
+
+  @override
+  Future<Quotation> reopen({required String requestId, required String quotationId}) =>
+      _quoteFrom(() => _api.reopenQuote(requestId, quotationId));
+
+  @override
+  Future<Quotation> dismissReply({required String requestId, required String quotationId}) =>
+      _quoteFrom(() => _api.dismissReply(requestId, quotationId));
+
+  /// The quote an action's response carries.
+  Future<Quotation> _quoteFrom(Future<dynamic> Function() call) async {
+    final result = await _safeApi(
+      () async => QuotationModel.fromApiJson(await call() as Map<String, dynamic>),
+    );
+    final quotation = result.fold((data) => data, (f) => throw _mapError(f)).toEntity();
+    if (quotation == null) throw const QuotationFailure(QuotationFailureCode.unknown);
+    return quotation;
+  }
+
+  @override
   Future<int> send({
     required String requestId,
     required ReplyType type,
@@ -227,6 +261,7 @@ class QuotationRepositoryImpl implements QuotationRepository {
     if (error is ApiErrorModel) {
       return QuotationFailure(switch (error.code) {
         401 || 403 => QuotationFailureCode.permissionDenied,
+        409 => QuotationFailureCode.conflict,
         null => switch (error.dioException?.type) {
           DioExceptionType.connectionError ||
           DioExceptionType.connectionTimeout ||

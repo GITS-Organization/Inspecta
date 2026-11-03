@@ -356,6 +356,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusQuoteSent => 'Sent';
 
   @override
+  String get statusCounterOfferSent => 'Counter offer sent';
+
+  @override
   String get statusClientCountered => 'Countered';
 
   @override
@@ -1257,6 +1260,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String get respondToClientTitle => 'Respond to client';
 
   @override
+  String get clientRepliesTitle => 'Client replies';
+
+  @override
+  String get clientRepliedBadge => 'Client replied';
+
+  @override
+  String get clientRepliesHint =>
+      'Their email, without the quoted messages and signature.';
+
+  @override
+  String replyFromLine(String name, String time) {
+    return '$name · $time';
+  }
+
+  @override
+  String get reopenQuotation => 'Reopen to edit';
+
+  @override
+  String get reopenQuotationHint =>
+      'Opens a new revision with the same prices, for changes after a call or a reply.';
+
+  @override
+  String get quotationReopened => 'Reopened for editing.';
+
+  @override
+  String get dismissReply => 'Ignore reply';
+
+  @override
+  String get dismissReplyHint =>
+      'Not important: go back to waiting for the client.';
+
+  @override
+  String get replyDismissed => 'Reply ignored.';
+
+  @override
+  String get acceptOfferAction => 'Accept the offer';
+
+  @override
+  String get rejectRequestAction => 'Reject the request';
+
+  @override
+  String get rejectRequestTitle => 'Reject this request?';
+
+  @override
+  String get quotationAcceptedMessage => 'Quotation accepted.';
+
+  @override
+  String get quotationConflictMessage =>
+      'The request is no longer in a state where this can be done. Reload and try again.';
+
+  @override
   String get errorLocationRequired => 'Enter the location.';
 
   @override
@@ -1430,6 +1484,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tomorrowLabel => 'Tomorrow';
+
+  @override
+  String get todayLabel => 'Today';
+
+  @override
+  String get directionsAction => 'Directions';
+
+  @override
+  String get certificatesLabel => 'Certificates';
+
+  @override
+  String get checklistLabel => 'Checklist';
+
+  @override
+  String get machineAvailableAfterStart =>
+      'Available after you start the inspection';
+
+  @override
+  String get startInspectionHint =>
+      'Notifies the coordinator that you\'re on site';
+
+  @override
+  String machineSerialTag(String serial) {
+    return 'S/N $serial';
+  }
+
+  @override
+  String machineQtyTag(int count) {
+    return 'Qty $count';
+  }
 
   @override
   String get emptyTasksToday => 'Nothing scheduled for today.';
@@ -1987,6 +2071,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quoteEmailAttachmentLabel => 'Attached quotation';
 
   @override
+  String get emailFilesTitle => 'More files';
+
+  @override
+  String get emailFilesHint =>
+      'Sent with the quotation, after the proposal PDF.';
+
+  @override
+  String get emailAddFileAction => 'Add a file';
+
+  @override
+  String get emailRemoveFileAction => 'Remove file';
+
+  @override
+  String emailFilesLimit(int count) {
+    return 'You can attach up to $count files.';
+  }
+
+  @override
+  String emailFilesTooLarge(int mb) {
+    return 'The files can weigh $mb MB in all.';
+  }
+
+  @override
+  String get emailFileReadFailed => 'That file could not be read.';
+
+  @override
   String get quoteEmailStandardSubtitle =>
       'Preview and edit it before sending.';
 
@@ -2323,7 +2433,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get replyToRequestAction => 'Reply to request';
 
   @override
-  String get machinesTitle => 'Machines';
+  String get machinesTitle => 'Items';
 
   @override
   String machinesProgress(int submitted, int total) {
@@ -2331,7 +2441,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get machinesEmpty => 'No machines on this job.';
+  String get machinesEmpty => 'No items on this job.';
 
   @override
   String get startInspectionAction => 'Start inspection';
@@ -2347,7 +2457,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Let the coordinator know you\'re on site.';
 
   @override
-  String get inspectionStepFillTitle => 'Fill in each machine\'s checklist';
+  String get inspectionStepFillTitle => 'Fill in each item\'s checklist';
 
   @override
   String get inspectionStepFillHint =>
@@ -2385,7 +2495,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String machineChecklistProgress(int answered, int total) {
-    return '$answered of $total checklist rows';
+    return '$answered of $total rows';
   }
 
   @override

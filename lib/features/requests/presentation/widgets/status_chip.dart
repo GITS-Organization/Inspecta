@@ -10,6 +10,7 @@ extension JobStatusChipStyle on JobStatus {
     JobStatus.requestReceived => t.statusRequestReceived,
     JobStatus.quoteDraft => t.statusQuoteDraft,
     JobStatus.quoteSent => t.statusQuoteSent,
+    JobStatus.counterOfferSent => t.statusCounterOfferSent,
     JobStatus.clientCountered => t.statusClientCountered,
     JobStatus.quoteRejected => t.statusQuoteRejected,
     JobStatus.clientDeclined => t.statusClientDeclined,
@@ -25,7 +26,7 @@ extension JobStatusChipStyle on JobStatus {
 
   Color get chipBackground => switch (this) {
     JobStatus.requestReceived || JobStatus.quoteDraft => AppColours.chipAmberBackground,
-    JobStatus.quoteSent || JobStatus.clientCountered => AppColours.chipBlueBackground,
+    JobStatus.quoteSent || JobStatus.counterOfferSent || JobStatus.clientCountered => AppColours.chipBlueBackground,
     JobStatus.quoteRejected || JobStatus.clientDeclined => AppColours.chipRedBackground,
     JobStatus.certificateReturned => AppColours.chipRedBackground,
     _ => AppColours.chipGreenBackground,
@@ -33,7 +34,7 @@ extension JobStatusChipStyle on JobStatus {
 
   Color get chipText => switch (this) {
     JobStatus.requestReceived || JobStatus.quoteDraft => AppColours.chipAmberText,
-    JobStatus.quoteSent || JobStatus.clientCountered => AppColours.chipBlueText,
+    JobStatus.quoteSent || JobStatus.counterOfferSent || JobStatus.clientCountered => AppColours.chipBlueText,
     JobStatus.quoteRejected || JobStatus.clientDeclined => AppColours.chipRedText,
     JobStatus.certificateReturned => AppColours.chipRedText,
     _ => AppColours.chipGreenText,

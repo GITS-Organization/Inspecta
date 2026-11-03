@@ -1,11 +1,13 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
+import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/m_card.dart';
 import '../../../../core/shared/m_notice.dart';
 import '../../../../core/shared/m_primary_button.dart';
@@ -92,6 +94,9 @@ class _QuoteEmailPageState extends State<QuoteEmailPage> {
   String _subject = '';
   String _body = '';
 
+  /// The files added to the email, on top of the quotation's own PDF.
+  List<QuoteAttachment> _files = const [];
+
   @override
   void initState() {
     super.initState();
@@ -113,6 +118,7 @@ class _QuoteEmailPageState extends State<QuoteEmailPage> {
         _cc = edits?.cc ?? preview.cc;
         _subject = edits?.subject ?? preview.subject;
         _body = edits?.message ?? preview.body;
+        _files = edits?.attachments ?? const [];
       });
     } catch (error) {
       if (!mounted) return;
@@ -142,7 +148,52 @@ class _QuoteEmailPageState extends State<QuoteEmailPage> {
       cc: _cc,
       subject: _subject.trim(),
       message: _body.trim(),
+      attachments: _files,
     );
+  }
+
+  int get _filesSize => _files.fold(0, (total, file) => total + file.size);
+
+  /// Lets the coordinator pick files, keeping within the number and the total
+  /// size an email can carry; a file that would go over is left out and the
+  /// limit is said.
+  Future<void> _addFiles() async {
+    final t = AppLocalizations.of(context)!;
+    final FilePickerResult? picked;
+    try {
+      picked = await FilePicker.platform.pickFiles(allowMultiple: true, withData: true);
+    } catch (_) {
+      MToast.showError(message: t.emailFileReadFailed);
+      return;
+    }
+    if (picked == null || !mounted) return;
+
+    final files = [..._files];
+    var size = _filesSize;
+    String? problem;
+    for (final file in picked.files) {
+      final bytes = file.bytes;
+      if (bytes == null) {
+        problem = t.emailFileReadFailed;
+      } else if (files.length >= QuoteAttachment.maxCount) {
+        problem = t.emailFilesLimit(QuoteAttachment.maxCount);
+      } else if (size + bytes.length > QuoteAttachment.maxTotalBytes) {
+        problem = t.emailFilesTooLarge(QuoteAttachment.maxTotalBytes ~/ (1024 * 1024));
+      } else {
+        files.add(QuoteAttachment(fileName: file.name, bytes: bytes));
+        size += bytes.length;
+      }
+    }
+    setState(() => _files = files);
+    if (problem != null) MToast.showError(message: problem);
+  }
+
+  void _removeFile(QuoteAttachment file) => setState(() => _files = [..._files]..remove(file));
+
+  static String _sizeLabel(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
   Future<void> _previewPdf(QuoteEmailPreview preview) {
@@ -297,6 +348,70 @@ class _QuoteEmailPageState extends State<QuoteEmailPage> {
               ),
             ),
           ],
+          // More files for the client, sent after the proposal.
+          const SizedBox(height: 12),
+          MCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(t.emailFilesTitle, style: AppTextStyles.sectionTitle),
+                const SizedBox(height: 2),
+                Text(t.emailFilesHint, style: AppTextStyles.caption),
+                for (final file in _files) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 4, 4),
+                    decoration: BoxDecoration(
+                      color: AppColours.surfaceMuted,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.attach_file_rounded, size: 20, color: AppColours.primaryColor),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                file.fileName,
+                                style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, fontSize: 14),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(_sizeLabel(file.size), style: AppTextStyles.caption.copyWith(fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => _removeFile(file),
+                          tooltip: t.emailRemoveFileAction,
+                          icon: const Icon(Icons.close_rounded, size: 20),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: loading ? null : _addFiles,
+                    icon: const Icon(Icons.add_rounded, size: 20),
+                    label: Text(t.emailAddFileAction),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColours.ink,
+                      side: const BorderSide(color: AppColours.border),
+                      textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 14, letterSpacing: 0),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
+import '../../../../core/enums/job_status.dart';
 import '../../../../core/utils/currency.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/quotation.dart';
@@ -37,8 +38,11 @@ class QuoteBoardCard extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     final tab = QuoteBoardTabX.of(quotation) ?? QuoteBoardTab.open;
     final expired = quotation.isExpired();
+    // The client answered: logged as a counter by the coordinator, or an email
+    // the API tied to this quote.
     final replied =
-        quotation.status == QuotationStatus.countered && QuoteReplyBadge.appliesTo(quotation);
+        (quotation.status == QuotationStatus.countered && QuoteReplyBadge.appliesTo(quotation)) ||
+        quotation.hasUnreadClientReply;
     final hasCounter = quotation.clientCounterPricePiastres != null;
     final note = quotation.clientResponseNote?.trim();
     final hasNote = !hasCounter && note != null && note.isNotEmpty;
@@ -161,7 +165,7 @@ class QuoteBoardCard extends StatelessWidget {
   ({String label, bool primary})? _action(AppLocalizations t, QuoteBoardTab tab, bool expired) {
     if (quotation.isDraft) return (label: t.actionContinueDraft, primary: false);
     return switch (tab) {
-      QuoteBoardTab.open when quotation.status == QuotationStatus.countered =>
+      QuoteBoardTab.open when quotation.status == QuotationStatus.countered || quotation.hasUnreadClientReply =>
         (label: t.actionRespond, primary: true),
       QuoteBoardTab.open =>
         quotation.isExpiringSoon() ? (label: t.actionExtendOrResend, primary: false) : null,
@@ -181,13 +185,20 @@ class QuoteBoardCard extends StatelessWidget {
       return _Status(
         AppColours.primaryColor,
         AppColours.chipBlueText,
-        quotation.clientCounterPricePiastres != null ? t.quoteBadgeCounterOffer : t.quoteBadgeQuestion,
+        quotation.hasUnreadClientReply
+            ? t.clientRepliedBadge
+            : quotation.clientCounterPricePiastres != null
+            ? t.quoteBadgeCounterOffer
+            : t.quoteBadgeQuestion,
       );
     }
     if (quotation.isExpiringSoon()) {
       return _Status(AppColours.chipAmberText, AppColours.chipAmberText, tab.label(t));
     }
     return switch (tab) {
+      // A revised offer says so, so a first offer and a counter offer differ.
+      QuoteBoardTab.open when quotation.requestStatus == JobStatus.counterOfferSent =>
+        _Status(AppColours.primaryColor, AppColours.chipBlueText, t.statusCounterOfferSent),
       QuoteBoardTab.open => _Status(AppColours.primaryColor, AppColours.chipBlueText, tab.label(t)),
       QuoteBoardTab.accepted => _Status(AppColours.successIcon, AppColours.chipGreenText, tab.label(t)),
       QuoteBoardTab.rejected => _Status(AppColours.errorIcon, AppColours.chipRedText, tab.label(t)),

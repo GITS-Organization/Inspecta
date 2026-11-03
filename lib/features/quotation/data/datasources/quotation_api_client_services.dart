@@ -65,6 +65,29 @@ abstract class QuotationApiClientServices {
     @Body() UpdateQuoteBody body,
   );
 
+  /// Every quote of the request, with the client's replies to the current one
+  /// (`clientReplies`).
+  @GET('${ApiUrls.requests}/{requestId}/quotes')
+  Future<dynamic> getRequestQuotes(@Path('requestId') String requestId);
+
+  /// Opens a new revision of a sent quote with the same prices, to edit and
+  /// send again; the request goes back to `quote_draft`. 201 with the new
+  /// quote; 409 unless the request is `quote_sent`, `counter_offer_sent` or
+  /// `client_countered`.
+  @POST('${ApiUrls.requests}/{requestId}/quotes/{quoteId}/reopen')
+  Future<dynamic> reopenQuote(
+    @Path('requestId') String requestId,
+    @Path('quoteId') String quoteId,
+  );
+
+  /// Clears the client's replies and marks them read; the request goes back to
+  /// waiting for the client. 200 with the quote; 409 when there is no reply.
+  @POST('${ApiUrls.requests}/{requestId}/quotes/{quoteId}/dismiss-reply')
+  Future<dynamic> dismissReply(
+    @Path('requestId') String requestId,
+    @Path('quoteId') String quoteId,
+  );
+
   /// The proposal PDF the API generates for the quote.
   @GET('${ApiUrls.requests}/{requestId}/quotes/{quoteId}/pdf')
   @DioResponseType(ResponseType.bytes)

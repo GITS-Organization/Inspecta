@@ -7,6 +7,7 @@ extension QuotationFailureMessage on QuotationFailureCode {
     QuotationFailureCode.network => t.errorNetwork,
     QuotationFailureCode.invalidAddress => t.deliveryErrorInvalidAddress,
     QuotationFailureCode.mailRefused => t.deliveryErrorMailRefused,
+    QuotationFailureCode.conflict => t.quotationConflictMessage,
     QuotationFailureCode.unknown => t.actionFailed,
   };
 }
