@@ -49,8 +49,8 @@ export class CoordinatorApi {
   }
 
   // ---- requests
-  requests(f: { triage?: Triage; status?: string; q?: string }): Observable<RequestDetails[]> {
-    return this.http.get<RequestDetails[]>(`${this.b}/requests`, { params: params({ ...f, pageSize: 100 }) });
+  requests(f: { triage?: Triage; status?: string; q?: string; page?: number; pageSize?: number }): Observable<RequestDetails[]> {
+    return this.http.get<RequestDetails[]>(`${this.b}/requests`, { params: params({ pageSize: 100, ...f }) });
   }
   requestSummary(): Observable<RequestSummary> {
     return this.http.get<RequestSummary>(`${this.b}/requests/summary`);

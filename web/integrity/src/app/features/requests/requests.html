@@ -1,0 +1,113 @@
+<div class="head">
+  <div>
+    <h1>Requests</h1>
+    <p class="muted">What your clients asked for, from the first email to the accepted job</p>
+  </div>
+  <a class="btn go" routerLink="/requests/new">New request</a>
+</div>
+
+<div class="tabwrap">
+  <div class="tablist" role="tablist" aria-label="Request status">
+    @for (t of tabs; track t.id; let i = $index) {
+      <button
+        type="button"
+        role="tab"
+        class="tab"
+        [id]="'tab-' + t.id"
+        [attr.aria-selected]="t.id === active().id"
+        [attr.aria-controls]="'panel'"
+        [attr.tabindex]="t.id === active().id ? 0 : -1"
+        [class.amber]="(t.id === 'maybe' || t.id === 'details') && (counts()[t.id] ?? 0) > 0"
+        (click)="select(t.id)"
+        (keydown)="key($event, i)"
+      >
+        <span class="n">{{ counts()[t.id] ?? '·' }}</span>
+        <span class="l">{{ t.label }}</span>
+      </button>
+    }
+  </div>
+</div>
+
+<div class="toolbar2">
+  <div class="search">
+    <label for="rq" class="sr">Search requests</label>
+    <input id="rq" type="search" placeholder="Search client, location, subject or sender" autocomplete="off" [value]="search()" (input)="typing($any($event.target).value)" />
+    @if (search()) {
+      <button type="button" class="x" aria-label="Clear the search" (click)="clear()">×</button>
+    }
+  </div>
+  @if (active().id !== 'maybe') {
+    <p class="muted note">Requests with an open quotation are worked on in <a routerLink="/quotations">Quotations</a>.</p>
+  }
+</div>
+
+<div id="panel" role="tabpanel" [attr.aria-labelledby]="'tab-' + active().id" [attr.aria-busy]="loading()">
+  @if (error(); as msg) {
+    <div class="error" role="alert">{{ msg }}</div>
+  } @else if (loading()) {
+    <div class="list" aria-hidden="true">
+      @for (s of skeleton; track s) {
+        <div class="row sk"><div class="skl w1"></div><div class="skl w2"></div></div>
+      }
+    </div>
+    <p class="sr" role="status">Loading requests…</p>
+  } @else if (!rows().length) {
+    <div class="emptystate">
+      <h2>{{ search() ? 'Nothing matches “' + search() + '”.' : active().empty.title }}</h2>
+      <p class="muted">{{ search() ? 'Check the spelling, or search the “All” tab.' : active().empty.hint }}</p>
+      <div class="rowline">
+        @if (search()) {
+          <button type="button" class="btn ghost" (click)="clear()">Clear the search</button>
+        } @else if (active().id === 'progress') {
+          <a class="btn" routerLink="/queue">Open Jobs</a>
+        } @else if (active().id === 'maybe') {
+          <a class="btn" routerLink="/clients">Open Clients</a>
+        } @else {
+          <a class="btn" routerLink="/requests/new">New request</a>
+          <a class="btn ghost" routerLink="/quotations">Open Quotations</a>
+        }
+      </div>
+    </div>
+  } @else {
+    <ul class="list">
+      @for (r of rows(); track r.id) {
+        @let d = describe(r);
+        <li class="row" [attr.data-edge]="d.edge">
+          <div class="main">
+            <div class="title">
+              <b>{{ r.clientName || r.emailFromName || r.emailFrom || 'No client yet' }}</b>
+              @if (r.hasUnreadClientReply) { <span class="reply"><i aria-hidden="true"></i>Client replied</span> }
+            </div>
+            <div class="sub">{{ r.subject || 'No subject' }}</div>
+            <div class="meta muted">
+              @if (r.emailFrom) { <span>{{ r.emailFromName ? r.emailFromName + ' · ' : '' }}{{ r.emailFrom }}</span> }
+              <time [attr.datetime]="r.receivedAt" [title]="full(r.receivedAt)">{{ relative(r.receivedAt) }}</time>
+              @if (r.items.length) { <span>{{ plural(r.items.length, 'item') }}</span> }
+              @if (r.location) { <span>{{ r.location }}</span> }
+            </div>
+            @if (r.triage === 'request' && r.missingFields.length) {
+              <div class="miss">Missing: {{ r.missingFields.join(', ') }}</div>
+            }
+            @if (rowError(); as e) {
+              @if (e.id === r.id) { <div class="rowerr" role="alert">{{ e.text }}</div> }
+            }
+          </div>
+          <span class="chip" [class]="d.chip">{{ d.label }}</span>
+          <div class="act">
+            @if (r.triage === 'maybe') {
+              <button type="button" class="btn go" [disabled]="busyId() !== null" (click)="confirm(r)">{{ busyId() === r.id ? 'Confirming…' : 'Confirm' }}</button>
+              <a class="lnk" [routerLink]="['/requests', r.id]">Open</a>
+            } @else {
+              <a class="btn" [class.ghost]="d.edge !== 'amber'" [routerLink]="['/requests', r.id]">Open</a>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+    <nav class="pager" aria-label="Pages">
+      <button type="button" class="btn ghost small" [disabled]="pageNo() === 1" (click)="turn(-1)">Previous</button>
+      <span class="muted">Page {{ pageNo() }}</span>
+      <button type="button" class="btn ghost small" [disabled]="!hasNext()" (click)="turn(1)">Next</button>
+    </nav>
+  }
+</div>

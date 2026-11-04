@@ -1,143 +1,239 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { CoordinatorApi } from '../../api/coordinator.api';
-import { RequestDetails, RequestSummary, Triage } from '../../api/coordinator.models';
+import { RequestDetails, RequestSummary } from '../../api/coordinator.models';
 import { JobStatus } from '../../core/models';
 import { problemMessage } from '../../core/problem';
-import { STAGE_LABEL, formatDate, plural } from '../../shared/format';
+import { ToastService } from '../../core/toast.service';
+import { formatDate, formatDateTime, plural, relativeTime } from '../../shared/format';
 
-const STATUS_FILTERS: { value: string; label: string }[] = [
-  { value: '', label: 'New requests' },
-  { value: 'quote_draft', label: 'Quotation being prepared' },
-  { value: 'quote_sent', label: 'Quotation sent' },
-  { value: 'client_countered', label: 'Client replied' },
-  { value: 'quote_rejected', label: 'Rejected' },
+export type TabId = 'new' | 'details' | 'progress' | 'closed' | 'maybe' | 'all';
+
+/** Statuses of a request that was accepted: the work goes on in Jobs, the request stays here for reference. */
+export const IN_PROGRESS: JobStatus[] = [
+  'unassigned', 'assigned', 'task_accepted', 'in_progress', 'certificate_submitted', 'certificate_returned', 'certificate_approved', 'sent_to_client',
+];
+export const CLOSED: JobStatus[] = ['quote_rejected', 'client_declined'];
+
+export interface TabDef {
+  id: TabId;
+  label: string;
+  triage: 'request' | 'maybe';
+  /** Sent to the API as `status` when the tab is one status. */
+  status?: JobStatus;
+  /** A tab the API cannot filter by itself: the list is loaded (up to 100) and filtered here. */
+  derived?: (r: RequestDetails) => boolean;
+  empty: { title: string; hint: string };
+  // A "Man days" tab fits here later, for example { id: 'man_day', triage: 'request', kind: 'man_day' } once the API can filter by kind.
+}
+
+export const TABS: TabDef[] = [
+  { id: 'new', label: 'New requests', triage: 'request', status: 'request_received', empty: { title: 'No new requests.', hint: 'When a client emails you, the request appears here. You can also enter one yourself.' } },
+  { id: 'details', label: 'Needs details', triage: 'request', status: 'request_received', derived: (r) => r.status === 'request_received' && r.missingFields.length > 0, empty: { title: 'Every new request is complete.', hint: 'Requests that miss a client, a location or an item wait here until you fill them in.' } },
+  { id: 'progress', label: 'Accepted', triage: 'request', derived: (r) => IN_PROGRESS.includes(r.status), empty: { title: 'No accepted request yet.', hint: 'Accepted requests are worked on under Jobs.' } },
+  { id: 'closed', label: 'Closed', triage: 'request', derived: (r) => CLOSED.includes(r.status), empty: { title: 'No closed requests.', hint: 'Requests you turned down, or that the client declined, end up here.' } },
+  { id: 'maybe', label: 'Unknown senders', triage: 'maybe', empty: { title: 'No email is waiting for a decision.', hint: 'Emails from senders that belong to no client wait here. Add the sender to a client and they become requests.' } },
+  { id: 'all', label: 'All', triage: 'request', empty: { title: 'No request matches.', hint: 'Try another search, or clear it.' } },
 ];
 
-/** The request inbox: new requests, and the emails from unknown senders that wait for a decision. */
+const PAGE = 20;
+const STORE = 'integrity.requests.tab';
+const isTab = (v: string | undefined | null): v is TabId => !!v && TABS.some((t) => t.id === v);
+
+/** Counts for the tab badges: from the summary where the API knows them, otherwise unknown (null). */
+export function tabCounts(s: RequestSummary | null, needsDetails: number | null): Record<TabId, number | null> {
+  const by = (...st: JobStatus[]) => (s ? s.byStatus.filter((x) => st.includes(x.status)).reduce((a, x) => a + x.count, 0) : null);
+  return { new: by('request_received'), details: needsDetails, progress: by(...IN_PROGRESS), closed: by(...CLOSED), maybe: s ? s.maybe : null, all: s ? s.requests : null };
+}
+
+/** What a request needs next: one chip, and the colour of the edge of its row. */
+export function describe(r: RequestDetails): { label: string; chip: string; edge: string } {
+  if (r.triage === 'maybe') return { label: 'Unknown sender', chip: 'a', edge: 'amber' };
+  switch (r.status) {
+    case 'request_received':
+      return r.missingFields.length ? { label: 'Needs details', chip: 'a', edge: 'amber' } : { label: 'New request', chip: '', edge: 'ink' };
+    case 'quote_draft':
+      return { label: 'Quotation being prepared', chip: '', edge: 'ink' };
+    case 'quote_sent':
+    case 'counter_offer_sent':
+      return { label: 'Waiting for the client', chip: '', edge: 'ink' };
+    case 'client_countered':
+      return { label: 'Client replied', chip: 'a', edge: 'amber' };
+    case 'quote_rejected':
+    case 'client_declined':
+      return { label: 'Closed', chip: '', edge: 'grey' };
+    case 'certificate_approved':
+      return { label: 'Certificates ready', chip: 'g', edge: 'green' };
+    case 'sent_to_client':
+      return { label: 'Delivered', chip: 'g', edge: 'green' };
+    default:
+      return { label: 'Accepted', chip: 'g', edge: 'teal' };
+  }
+}
+
+/** The request inbox: the status is the navigation. Tab, search and page live in the URL (`?tab=&q=&page=`). */
 @Component({
   selector: 'app-requests',
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <div class="head">
-      <div>
-        <h1>Requests</h1>
-        <p class="muted">Inspection requests from your clients' emails and the ones you enter yourself</p>
-      </div>
-      <a class="btn go" routerLink="/requests/new">New request</a>
-    </div>
-
-    <div class="tabs" role="tablist" aria-label="Request lists">
-      <button type="button" role="tab" [attr.aria-selected]="triage() === 'request'" (click)="setTriage('request')">
-        Requests @if (summary(); as s) { <span class="chip">{{ s.requests }}</span> }
-      </button>
-      <button type="button" role="tab" [attr.aria-selected]="triage() === 'maybe'" (click)="setTriage('maybe')">
-        Unknown senders @if (summary(); as s) { <span class="chip" [class.a]="s.maybe > 0">{{ s.maybe }}</span> }
-      </button>
-    </div>
-
-    <div class="toolbar">
-      <div class="field">
-        <label for="rq">Search</label>
-        <input id="rq" type="text" placeholder="Client, location, subject or sender" [value]="query()" (input)="query.set($any($event.target).value)" (keydown.enter)="load()" />
-      </div>
-      @if (triage() === 'request') {
-        <div class="field">
-          <label for="rs">Show</label>
-          <select id="rs" (change)="setStatus($any($event.target).value)">
-            @for (f of filters; track f.value) {
-              <option [value]="f.value" [selected]="f.value === status()">{{ f.label }}</option>
-            }
-          </select>
-        </div>
-      }
-      <button type="button" class="btn ghost" (click)="load()">Search</button>
-    </div>
-
-    @if (triage() === 'maybe') {
-      <p class="muted">These emails came from senders that are not yet attached to a client. Add the sender to a client under Clients and the email becomes a request by itself, or delete it. Unanswered ones are deleted after 7 days.</p>
-    }
-
-    <div aria-live="polite">
-      @if (error(); as msg) {
-        <div class="error" role="alert">{{ msg }}</div>
-      } @else if (loading()) {
-        <p class="muted empty">Loading requests…</p>
-      } @else if (!rows().length) {
-        <p class="empty">{{ triage() === 'maybe' ? 'No emails are waiting for a decision.' : 'No requests match. New requests appear here when a client emails you.' }}</p>
-      } @else {
-        @for (r of rows(); track r.id) {
-          <div class="job">
-            <div>
-              <b>{{ r.clientName || r.emailFromName || r.emailFrom || 'No client yet' }}</b>
-              <div class="muted">
-                {{ r.subject || 'No subject' }} · {{ formatDate(r.receivedAt) }}
-                @if (r.items.length) { · {{ plural(r.items.length, 'item') }} }
-                @if (r.location) { · {{ r.location }} }
-              </div>
-              @if (r.missingFields.length && r.triage === 'request') {
-                <div class="miss">Missing: {{ r.missingFields.join(', ') }}</div>
-              }
-            </div>
-            <span class="rowline">
-              @if (r.hasUnreadClientReply) { <span class="chip a">Client replied</span> }
-              @if (r.triage === 'maybe') { <span class="chip a">Unknown sender</span> } @else { <span class="chip">{{ stage(r.status) }}</span> }
-            </span>
-            <a class="btn ghost" [routerLink]="['/requests', r.id]">Open</a>
-          </div>
-        }
-      }
-    </div>
-  `,
-  styles: `
-    .miss {
-      color: var(--amber);
-      font-size: 13px;
-    }
-  `,
+  templateUrl: './requests.html',
+  styleUrl: './requests.scss',
 })
 export class Requests {
+  // Bound from the query string by withComponentInputBinding.
+  readonly tab = input<string>();
+  readonly q = input<string>();
+  readonly page = input<string>();
+
   private readonly api = inject(CoordinatorApi);
-  protected readonly filters = STATUS_FILTERS;
+  private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
+  protected readonly tabs = TABS;
+  protected readonly describe = describe;
+  protected readonly relative = relativeTime;
+  protected readonly full = formatDateTime;
   protected readonly formatDate = formatDate;
   protected readonly plural = plural;
+  protected readonly skeleton = [1, 2, 3, 4, 5];
 
-  protected readonly triage = signal<Triage>('request');
-  protected readonly status = signal('');
-  protected readonly query = signal('');
-  protected readonly rows = signal<RequestDetails[]>([]);
   protected readonly summary = signal<RequestSummary | null>(null);
+  protected readonly needsDetails = signal<number | null>(null);
+  protected readonly fetched = signal<RequestDetails[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
-  protected readonly stage = (s: JobStatus) => (s === 'request_received' ? 'New request' : (STAGE_LABEL[s] ?? s));
+  protected readonly rowError = signal<{ id: string; text: string } | null>(null);
+  protected readonly busyId = signal<string | null>(null);
+  protected readonly search = signal('');
+  private timer: ReturnType<typeof setTimeout> | undefined;
+  private latest = '';
+
+  protected readonly active = computed<TabDef>(() => TABS.find((t) => t.id === this.tab()) ?? TABS[0]);
+  protected readonly pageNo = computed(() => Math.max(1, parseInt(this.page() ?? '1', 10) || 1));
+  protected readonly query = computed(() => (this.q() ?? '').trim());
+  protected readonly counts = computed(() => tabCounts(this.summary(), this.needsDetails()));
+  private readonly matching = computed(() => {
+    const d = this.active().derived;
+    return d ? this.fetched().filter(d) : this.fetched();
+  });
+  protected readonly rows = computed(() => (this.active().derived ? this.matching().slice((this.pageNo() - 1) * PAGE, this.pageNo() * PAGE) : this.matching()));
+  protected readonly hasNext = computed(() => (this.active().derived ? this.matching().length > this.pageNo() * PAGE : this.fetched().length >= PAGE));
 
   constructor() {
+    this.loadSummary();
+    effect(() => {
+      // Nothing in the URL: open the tab used last time.
+      if (this.tab()) return;
+      const last = this.read();
+      if (isTab(last) && last !== 'new') untracked(() => void this.go({ tab: last }, true));
+    });
+    effect(() => {
+      const t = this.active();
+      const q = this.query();
+      const p = this.pageNo();
+      untracked(() => {
+        this.search.set(q);
+        this.remember(t.id);
+        // On a phone the active tab may sit outside the visible part of the strip.
+        setTimeout(() => document.getElementById('tab-' + t.id)?.scrollIntoView({ inline: 'center', block: 'nearest' }));
+        this.load(t, q, p);
+      });
+    });
+  }
+
+  private read(): string | null {
+    try {
+      return localStorage.getItem(STORE);
+    } catch {
+      return null;
+    }
+  }
+  private remember(id: TabId): void {
+    try {
+      localStorage.setItem(STORE, id);
+    } catch {
+      /* storage unavailable */
+    }
+  }
+
+  private loadSummary(): void {
     this.api.requestSummary().subscribe({ next: (s) => this.summary.set(s), error: () => undefined });
-    this.load();
   }
 
-  protected setTriage(t: Triage): void {
-    this.triage.set(t);
-    this.status.set('');
-    this.load();
-  }
-  protected setStatus(v: string): void {
-    this.status.set(v);
-    this.load();
-  }
-
-  protected load(): void {
+  private load(t: TabDef, q: string, page: number): void {
     this.loading.set(true);
     this.error.set(null);
-    this.api.requests({ triage: this.triage(), status: this.status(), q: this.query().trim() }).subscribe({
+    const key = `${t.id}|${q}|${page}`;
+    this.latest = key;
+    // Tabs the API cannot filter load the whole default list once and are paged here; the others page on the server.
+    const query = t.derived
+      ? { triage: t.triage, status: t.status, q, pageSize: 100 }
+      : { triage: t.triage, status: t.status, q, page, pageSize: PAGE };
+    this.api.requests(query).subscribe({
       next: (r) => {
-        this.rows.set(r);
+        if (key !== this.latest) return;
+        this.fetched.set(r);
         this.loading.set(false);
+        if (t.id === 'details' && !q) this.needsDetails.set(r.filter((x) => x.missingFields.length > 0).length);
       },
       error: (e: unknown) => {
+        if (key !== this.latest) return;
         this.error.set(problemMessage(e, 'The requests could not be loaded.'));
         this.loading.set(false);
+      },
+    });
+  }
+
+  // ---- navigation: all state goes through the URL
+  private go(p: { tab?: string; q?: string | null; page?: number | null }, replace = false): Promise<boolean> {
+    const queryParams: Record<string, string | null> = {};
+    if (p.tab !== undefined) queryParams['tab'] = p.tab === 'new' ? null : p.tab;
+    if (p.q !== undefined) queryParams['q'] = p.q || null;
+    queryParams['page'] = p.page && p.page > 1 ? String(p.page) : null;
+    return this.router.navigate([], { queryParams, queryParamsHandling: 'merge', replaceUrl: replace });
+  }
+
+  protected select(id: TabId): void {
+    void this.go({ tab: id, page: 1 });
+  }
+
+  /** Roving tabindex: arrows, Home and End move the focus and the selection together. */
+  protected key(e: KeyboardEvent, i: number): void {
+    const n = TABS.length;
+    const to = e.key === 'ArrowRight' ? (i + 1) % n : e.key === 'ArrowLeft' ? (i - 1 + n) % n : e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : -1;
+    if (to < 0) return;
+    e.preventDefault();
+    this.select(TABS[to].id);
+    queueMicrotask(() => document.getElementById('tab-' + TABS[to].id)?.focus());
+  }
+
+  protected typing(v: string): void {
+    this.search.set(v);
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => void this.go({ q: v.trim(), page: 1 }, true), 300);
+  }
+  protected clear(): void {
+    clearTimeout(this.timer);
+    this.search.set('');
+    void this.go({ q: '', page: 1 }, true);
+  }
+  protected turn(d: number): void {
+    void this.go({ page: Math.max(1, this.pageNo() + d) });
+  }
+
+  protected confirm(r: RequestDetails): void {
+    if (this.busyId()) return;
+    this.busyId.set(r.id);
+    this.rowError.set(null);
+    this.api.confirmMaybe(r.id).subscribe({
+      next: (x) => {
+        this.busyId.set(null);
+        this.toast.show('It is now a request.');
+        this.loadSummary();
+        void this.router.navigate(['/requests', x.id]);
+      },
+      error: (e: unknown) => {
+        this.busyId.set(null);
+        this.rowError.set({ id: r.id, text: problemMessage(e) });
       },
     });
   }

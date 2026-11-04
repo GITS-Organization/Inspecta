@@ -58,3 +58,27 @@ export function egpToPiastres(text: string): number | null {
 
 /** Splits a textarea into its non-empty lines. */
 export const lines = (text: string): string[] => text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+
+/** `2026-11-04T09:00:00Z` -> `2 hours ago`, `yesterday`, `3 days ago`; falls back to the date after a month. */
+export function relativeTime(iso: string | null | undefined, now: Date = new Date()): string {
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  if (isNaN(t)) return '';
+  const s = Math.round((now.getTime() - t) / 1000);
+  if (s < 60) return 'just now';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m === 1 ? '1 minute ago' : `${m} minutes ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return h === 1 ? '1 hour ago' : `${h} hours ago`;
+  const d = Math.floor(h / 24);
+  if (d === 1) return 'yesterday';
+  if (d < 31) return `${d} days ago`;
+  return formatDate(iso);
+}
+
+/** The full date and time, for a tooltip. */
+export function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? '' : d.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
