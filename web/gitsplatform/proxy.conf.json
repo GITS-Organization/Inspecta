@@ -1,0 +1,7 @@
+{
+  "/api": {
+    "target": "https://api.gitsplatform.com",
+    "secure": true,
+    "changeOrigin": true
+  }
+}
