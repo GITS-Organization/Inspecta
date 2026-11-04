@@ -6,6 +6,7 @@ import { JobStatus } from '../../core/models';
 import { problemMessage } from '../../core/problem';
 import { ToastService } from '../../core/toast.service';
 import { formatDate, formatDateTime, plural, relativeTime } from '../../shared/format';
+import { AssignDialog } from '../../shared/assign-dialog';
 import { KindBadge } from '../../shared/kind-badge';
 
 export type TabId = 'new' | 'details' | 'progress' | 'man_day' | 'closed' | 'maybe' | 'all';
@@ -75,7 +76,7 @@ export function describe(r: RequestDetails): { label: string; chip: string; edge
 /** The request inbox: the status is the navigation. Tab, search and page live in the URL (`?tab=&q=&page=`). */
 @Component({
   selector: 'app-requests',
-  imports: [RouterLink, KindBadge],
+  imports: [RouterLink, KindBadge, AssignDialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './requests.html',
   styleUrl: './requests.scss',
@@ -104,6 +105,7 @@ export class Requests {
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
   protected readonly rowError = signal<{ id: string; text: string } | null>(null);
+  protected readonly assignFor = signal<RequestDetails | null>(null);
   protected readonly busyId = signal<string | null>(null);
   protected readonly search = signal('');
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -221,6 +223,13 @@ export class Requests {
   }
   protected turn(d: number): void {
     void this.go({ page: Math.max(1, this.pageNo() + d) });
+  }
+
+  protected assigned(r: RequestDetails): void {
+    this.assignFor.set(null);
+    this.toast.show('The job was given to the inspector. No quotation is needed.');
+    this.loadSummary();
+    void this.router.navigate(['/jobs', r.id]);
   }
 
   protected confirm(r: RequestDetails): void {

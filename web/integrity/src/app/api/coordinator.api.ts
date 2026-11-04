@@ -93,6 +93,10 @@ export class CoordinatorApi {
   inspectors(managerId?: string): Observable<Inspector[]> {
     return this.http.get<Inspector[]>(`${this.b}/inspectors`, { params: params({ managerId }) });
   }
+  /** Contract clients: gives the request to an inspector at once, with no quotation. */
+  assignWithoutQuotation(id: string, inspectorId: string, scheduledAt: string, note?: string): Observable<RequestDetails> {
+    return this.http.post<RequestDetails>(`${this.b}/requests/${id}/assign-without-quotation`, { inspectorId, scheduledAt, note: note || null });
+  }
   createManDay(body: CreateManDay): Observable<RequestDetails> {
     return this.http.post<RequestDetails>(`${this.b}/requests/man-day`, body);
   }

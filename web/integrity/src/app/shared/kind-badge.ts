@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RequestKind } from '../core/models';
 
-export const KIND_LABEL: Record<RequestKind, string> = { standard: 'Standard', man_day: 'Man day', direct: 'Direct certificate' };
+export const KIND_LABEL: Record<RequestKind, string> = { standard: 'Standard', man_day: 'Man day', direct: 'Direct certificate', contract: 'Contract' };
 
 /** True for the kinds that have no quotation of their own: the price 0 of their placeholder is not money. */
-export const hasNoPrice = (k: RequestKind | null | undefined): boolean => k === 'man_day' || k === 'direct';
+export const hasNoPrice = (k: RequestKind | null | undefined): boolean => k === 'man_day' || k === 'direct' || k === 'contract';
 
 /** A small tag that tells a job apart from a standard one. Nothing is drawn for a standard job. */
 @Component({

@@ -104,12 +104,18 @@
               <button type="button" class="btn go" [disabled]="busyId() !== null" (click)="confirm(r)">{{ busyId() === r.id ? 'Confirming…' : 'Confirm' }}</button>
               <a class="lnk" [routerLink]="['/requests', r.id]">Open</a>
             } @else {
+              @if (r.canAssignWithoutQuotation) {
+                <button type="button" class="btn ghost small" (click)="assignFor.set(r)">Assign an inspector (contract client)</button>
+              }
               <a class="btn" [class.ghost]="d.edge !== 'amber'" [routerLink]="['/requests', r.id]">Open</a>
             }
           </div>
         </li>
       }
     </ul>
+    @if (assignFor(); as a) {
+      <app-assign-dialog [requestId]="a.id" [clientName]="a.clientName" (done)="assigned($event)" (closed)="assignFor.set(null)" />
+    }
     <nav class="pager" aria-label="Pages">
       <button type="button" class="btn ghost small" [disabled]="pageNo() === 1" (click)="turn(-1)">Previous</button>
       <span class="muted">Page {{ pageNo() }}</span>

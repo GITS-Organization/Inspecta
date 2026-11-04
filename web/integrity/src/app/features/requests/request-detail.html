@@ -17,11 +17,18 @@
       @if (r.quotation && (!r.kind || r.kind === 'standard')) {
         <a class="btn" [routerLink]="['/quotations', r.id, r.quotation.id]">Open the quotation</a>
       }
+      @if (r.canAssignWithoutQuotation) {
+        <button type="button" class="btn ghost" [disabled]="busy()" (click)="assigning.set(true)">Assign an inspector (contract client)</button>
+      }
       @if (r.status === 'unassigned' || r.status === 'assigned' || r.status === 'task_accepted' || r.status === 'in_progress' || r.status === 'certificate_submitted' || r.status === 'certificate_returned' || r.status === 'certificate_approved' || r.status === 'sent_to_client') {
         <a class="btn ghost" routerLink="/queue">Open in the job queue</a>
       }
     </div>
   </div>
+
+  @if (assigning()) {
+    <app-assign-dialog [requestId]="r.id" [clientName]="r.clientName" (done)="assigned($event)" (closed)="assigning.set(false)" />
+  }
 
   @if (r.hasUnreadClientReply) {
     <div class="callout"><b>The client replied to your quotation.</b> Open the quotation to read the reply.</div>

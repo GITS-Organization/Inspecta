@@ -101,6 +101,8 @@ export interface Quote {
 export interface RequestDetails {
   id: string;
   kind?: RequestKind;
+  /** A client with a contract may go straight to an inspector: only then is the option offered. */
+  canAssignWithoutQuotation?: boolean;
   clientId: string | null;
   clientName: string;
   location: string;
