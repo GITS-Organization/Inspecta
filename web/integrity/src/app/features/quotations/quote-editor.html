@@ -1,0 +1,187 @@
+<a class="back" routerLink="/quotations">Back to quotations</a>
+@if (error(); as msg) {
+  <div class="error" role="alert">{{ msg }}</div>
+}
+@if (quote(); as q) {
+  <div class="head">
+    <div>
+      <span class="chip" [class.g]="q.status === 'accepted'" [class.r]="q.status === 'rejected'" [class.a]="q.canEdit">
+        {{ q.status === 'accepted' ? 'Accepted' : q.status === 'rejected' ? 'Rejected' : q.sentAt ? (q.supersededAt ? 'Replaced by a newer revision' : 'Sent, waiting for the client') : 'Being prepared' }}
+      </span>
+      <h1 class="title">{{ q.clientName || 'Quotation' }}</h1>
+      <p class="muted">
+        {{ q.quotationNumber || q.proposalNumber }} · revision {{ q.version }}
+        @if (q.sentAt) { · sent {{ formatDate(q.sentAt) }} · valid until {{ formatDate(q.validUntil) }} }
+        <a [routerLink]="['/requests', q.requestId]" class="lnk">See the request</a>
+      </p>
+    </div>
+    <div class="rowline">
+      <button type="button" class="btn ghost" [disabled]="busy()" (click)="pdf()">Preview the PDF</button>
+    </div>
+  </div>
+
+  @if (q.isExpired && q.status === 'open') {
+    <div class="callout"><b>This quotation has expired.</b> Reopen it to send a new revision with a new validity.</div>
+  }
+
+  @if (replies().length) {
+    <section class="panel first" aria-labelledby="rp">
+      <header>
+        <h2 id="rp">The client replied</h2>
+        @if (isSent()) {
+          <button type="button" class="btn ghost small" [disabled]="busy()" (click)="dismiss()">Nothing to do: clear the reply</button>
+        }
+      </header>
+      @for (r of replies(); track r.id) {
+        <article class="reply">
+          <div class="muted sm">{{ r.fromName || r.fromAddress }} · {{ formatDate(r.receivedAt) }}@if (r.subject) { · {{ r.subject }} }</div>
+          <pre class="mail">{{ r.text }}</pre>
+          @if (r.attachments.length) {
+            <div class="muted sm">Attachments: @for (a of r.attachments; track a.fileName) { {{ a.fileName }}; }</div>
+          }
+        </article>
+      }
+      @if (isSent()) {
+        <p class="muted sm">Answer it by reopening the quotation (counter offer), accepting it, or recording a rejection below.</p>
+      }
+    </section>
+  }
+
+  <div class="two">
+    <div>
+      <section class="panel" [class.first]="!replies().length">
+        <h2>Prices</h2>
+        <table class="prices">
+          <thead>
+            <tr><th>Item</th><th class="num">Qty</th><th class="num">Price per visit (EGP)</th><th class="num">Total</th></tr>
+          </thead>
+          <tbody>
+            @for (it of q.items ?? []; track $index) {
+              <tr>
+                <td><b>{{ it.description }}</b>@if (it.type) { <div class="muted sm">{{ it.type }}</div> }</td>
+                <td class="num">{{ it.quantity }}</td>
+                <td class="num">
+                  @if (editable() && it.requestItemId) {
+                    <label class="sr" [for]="'p' + $index">Price for {{ it.description }}</label>
+                    <input [id]="'p' + $index" class="price" type="text" inputmode="decimal" [value]="prices()[it.requestItemId] ?? ''" (input)="setPrice(it.requestItemId, $any($event.target).value)" />
+                  } @else {
+                    {{ egp(it.unitPricePiastres) || '—' }}
+                  }
+                </td>
+                <td class="num">{{ editable() ? lineTotal(it) : egp(it.totalPiastres) }}</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr><td colspan="3" class="num"><b>Total</b></td><td class="num"><b>{{ editable() ? egp(total()) : egp(q.amountPiastres) }}</b></td></tr>
+          </tfoot>
+        </table>
+        @if (editable() && missing()) {
+          <p class="miss">{{ missing() }} {{ missing() === 1 ? 'item has' : 'items have' }} no price yet. Every item needs a price before you can send.</p>
+        }
+      </section>
+
+      <section class="panel">
+        <h2>The offer</h2>
+        <div class="row3">
+          <div class="field">
+            <label for="vd">Valid for (days)</label>
+            <input id="vd" type="number" min="1" max="365" [disabled]="!editable()" [value]="validFor()" (input)="validFor.set(+$any($event.target).value || 14)" />
+          </div>
+          <div class="field">
+            <label for="pn">Quotation reference</label>
+            <input id="pn" type="text" [disabled]="!editable()" [value]="proposalNumber()" (input)="proposalNumber.set($any($event.target).value)" />
+          </div>
+          <div class="field">
+            <label for="ct">Attention (contact)</label>
+            <input id="ct" type="text" [disabled]="!editable()" [value]="contact()" (input)="contact.set($any($event.target).value)" />
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="sc">Scope of work</label>
+            <textarea id="sc" [disabled]="!editable()" [value]="scope()" (input)="scope.set($any($event.target).value)"></textarea>
+            <small>One line for each point.</small>
+          </div>
+          <div class="field">
+            <label for="no">Notes printed on the quotation</label>
+            <textarea id="no" [disabled]="!editable()" [value]="notes()" (input)="notes.set($any($event.target).value)"></textarea>
+            <small>One line for each note.</small>
+          </div>
+        </div>
+        <div class="field">
+          <label for="ms">Message to the client</label>
+          <textarea id="ms" [disabled]="!editable()" [value]="message()" (input)="message.set($any($event.target).value)"></textarea>
+        </div>
+      </section>
+
+      @if (editable()) {
+        <div class="actions">
+          <button type="button" class="btn ghost" [disabled]="busy()" (click)="save()">Save the draft</button>
+          <button type="button" class="btn go" [disabled]="busy() || missing() > 0" (click)="compose('send')">{{ q.version > 1 ? 'Send the counter offer' : 'Prepare the email' }}</button>
+          <button type="button" class="btn ghost" [disabled]="busy() || missing() > 0" (click)="compose('accept')">The client already accepted</button>
+        </div>
+      } @else if (isSent()) {
+        <div class="actions">
+          <button type="button" class="btn" [disabled]="busy()" (click)="reopen()">Reopen to change the offer</button>
+          <button type="button" class="btn go" [disabled]="busy()" (click)="compose('accept')">Accept and email the client</button>
+          <button type="button" class="btn ghost" [disabled]="busy()" (click)="mode.set('decide')">Record the client's answer</button>
+        </div>
+      }
+
+      @if (mode() === 'decide') {
+        <section class="panel" aria-labelledby="dc">
+          <h2 id="dc">Record the client's answer</h2>
+          <p class="muted">For an answer you got another way, for example by phone. No email is sent.</p>
+          <div class="seg" role="group" aria-label="Answer">
+            <button type="button" [attr.aria-pressed]="decision() === 'accepted'" (click)="decision.set('accepted')">Accepted</button>
+            <button type="button" [attr.aria-pressed]="decision() === 'rejected'" (click)="decision.set('rejected')">Rejected</button>
+          </div>
+          <div class="field">
+            <label for="dn">{{ decision() === 'rejected' ? 'Reason (required)' : 'Note (optional)' }}</label>
+            <textarea id="dn" [value]="decisionNote()" (input)="decisionNote.set($any($event.target).value); noteMissing.set(false)" [attr.aria-invalid]="noteMissing()"></textarea>
+            @if (noteMissing()) { <small class="bad">Write why the client rejected the offer.</small> }
+          </div>
+          <div class="rowline">
+            <button type="button" class="btn" [disabled]="busy()" (click)="record()">Record the answer</button>
+            <button type="button" class="btn ghost" (click)="mode.set(null)">Cancel</button>
+          </div>
+        </section>
+      }
+
+      @if (mode() === 'send' || mode() === 'accept') {
+        <section class="panel" aria-labelledby="em">
+          <h2 id="em">{{ mode() === 'accept' ? 'Email that confirms the acceptance' : q.version > 1 ? 'Email with the counter offer' : 'Email with the quotation' }}</h2>
+          <app-email-composer [preview]="preview()" [busy]="busy()" [sendLabel]="mode() === 'accept' ? 'Accept and send' : 'Send to the client'" (send)="sendEmail($event)">
+            <button type="button" class="btn ghost" (click)="mode.set(null)">Cancel</button>
+          </app-email-composer>
+        </section>
+      }
+
+      @if (q.status !== 'open') {
+        <div class="callout" [class.ok]="q.status === 'accepted'">
+          <b>{{ q.status === 'accepted' ? 'The client accepted this quotation.' : 'This quotation was rejected.' }}</b>
+          @if (q.clientReply) { <p>{{ q.clientReply }}</p> }
+        </div>
+      }
+    </div>
+
+    <aside class="stick">
+      <section class="panel first">
+        <h2>Emails sent</h2>
+        @for (m of q.emails ?? []; track $index) {
+          <div class="mail-row">
+            <div><b>{{ m.kind === 'accept' ? 'Acceptance' : 'Offer' }}</b> to {{ m.toAddress }}</div>
+            <div class="muted sm">{{ m.subject }}</div>
+            <span class="chip" [class.g]="m.status === 'sent'" [class.r]="m.status === 'failed'" [class.a]="m.status === 'pending'">{{ m.status === 'sent' ? 'Delivered' : m.status === 'failed' ? 'Failed' : 'Waiting' }}</span>
+            @if (m.lastError) { <div class="bad sm">{{ m.lastError }}</div> }
+          </div>
+        } @empty {
+          <p class="muted">Nothing was emailed for this quotation yet.</p>
+        }
+      </section>
+    </aside>
+  </div>
+} @else if (loading()) {
+  <p class="muted empty" role="status">Loading the quotation…</p>
+}

@@ -42,3 +42,19 @@ export const STAGE_LABEL: Partial<Record<JobStatus, string>> = {
 export function plural(n: number, one: string, many = one + 's'): string {
   return `${n} ${n === 1 ? one : many}`;
 }
+
+/** `120000` piastres -> `EGP 1,200.00`; empty when there is no amount. */
+export function formatEgp(piastres: number | null | undefined): string {
+  return piastres === null || piastres === undefined ? '' : 'EGP ' + (piastres / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** `"1,250.5"` or `"1250"` (pounds) -> piastres; null when empty or not a number. */
+export function egpToPiastres(text: string): number | null {
+  const t = text.replace(/[,\s]/g, '');
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : null;
+}
+
+/** Splits a textarea into its non-empty lines. */
+export const lines = (text: string): string[] => text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);

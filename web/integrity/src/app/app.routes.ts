@@ -55,6 +55,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/requests/request-detail').then((m) => m.RequestDetail),
       },
       {
+        path: 'quotations',
+        canActivate: [ops],
+        title: 'Quotations · Integrity',
+        loadComponent: () => import('./features/quotations/quotations').then((m) => m.Quotations),
+      },
+      {
+        path: 'quotations/:requestId/:quoteId',
+        canActivate: [ops],
+        title: 'Quotation · Integrity',
+        loadComponent: () => import('./features/quotations/quote-editor').then((m) => m.QuoteEditor),
+      },
+      {
         path: 'review',
         canActivate: [managers],
         title: 'To review · Integrity',
