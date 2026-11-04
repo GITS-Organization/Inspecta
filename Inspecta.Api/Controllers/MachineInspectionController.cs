@@ -15,7 +15,7 @@ namespace Inspecta.Api.Controllers;
 [ApiController]
 [Authorize(Policy = AuthorizationPolicies.TeamAccess)]
 [Route("api/v1/quotation-queue/{requestId:guid}")]
-public sealed class MachineInspectionController(IMachineInspectionService inspectionService) : ControllerBase
+public sealed class MachineInspectionController(IMachineInspectionService inspectionService, IJobMachineService jobMachines) : ControllerBase
 {
     /// <summary>Start the inspection of an assigned job and get its machines.</summary>
     /// <remarks>
@@ -68,6 +68,59 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     }
 
     /// <summary>Submit a machine's certificate to the technical manager.</summary>
+    /// <summary>The client's registered machines that are not in this job yet, to pick one to add.</summary>
+    [HttpGet("available-machines")]
+    [ProducesResponseType<IReadOnlyList<Inspecta.Application.Contracts.Equipment.EquipmentResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<Inspecta.Application.Contracts.Equipment.EquipmentResponse>>> AvailableMachines(Guid requestId, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await jobMachines.AvailableAsync(requestId, actorId, role, cancellationToken));
+    }
+
+    /// <summary>Add a machine to a job that is under way.</summary>
+    /// <remarks>
+    /// A registered machine of the client (<c>equipmentId</c>) or a new one by its details. A new machine is registered for the client at
+    /// once (gears are not), so it is in the client's list and can be certified. The inspector of the job, its coordinator, the technical
+    /// manager and the admin can do it, from the assignment until the job is submitted.
+    /// </remarks>
+    [HttpPost("machines")]
+    [ProducesResponseType<MachineListResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<MachineListResponse>> AddMachine(Guid requestId, AddMachineRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        var list = await jobMachines.AddAsync(requestId, actorId, role, request, cancellationToken);
+        return Created($"/api/v1/quotation-queue/{requestId}/machines", list);
+    }
+
+    /// <summary>Change the details of a machine of the job (name, quantity, serial numbers...).</summary>
+    [HttpPut("machines/{requestItemId:guid}/details")]
+    [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<MachineListResponse>> EditMachine(Guid requestId, Guid requestItemId, EditMachineRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await jobMachines.EditAsync(requestId, requestItemId, actorId, role, request, cancellationToken));
+    }
+
+    /// <summary>Take a machine out of the job; only before its certificate was started.</summary>
+    [HttpDelete("machines/{requestItemId:guid}")]
+    [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<MachineListResponse>> RemoveMachine(Guid requestId, Guid requestItemId, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await jobMachines.RemoveAsync(requestId, requestItemId, actorId, role, cancellationToken));
+    }
+
     [HttpPost("machines/{requestItemId:guid}/split")]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

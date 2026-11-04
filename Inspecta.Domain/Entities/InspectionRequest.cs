@@ -40,6 +40,7 @@ public sealed class InspectionRequest
     public string? EmailFromName { get; private set; }
     public string? EmailPreview { get; private set; }
     public RequestSource Source { get; private set; } = RequestSource.Manual;
+    public RequestKind Kind { get; private set; } = RequestKind.Standard;
     public RequestTriage Triage { get; private set; } = RequestTriage.Request;
     public bool HasUnreadClientReply { get; private set; }
     public string? SeededBy { get; private set; }
@@ -117,6 +118,55 @@ public sealed class InspectionRequest
         };
         request.Items.AddRange(requestItems);
         request.History.Add(JobStatusHistory.Create(request.Id, null, JobStatus.RequestReceived, coordinatorId, now, null));
+        return request;
+    }
+
+    /// <summary>
+    /// A man day: a client asked for an inspector on a day. There are no machines yet and no quotation; the job goes straight to the
+    /// inspector, who adds the machines found on site and certifies them.
+    /// </summary>
+    public static InspectionRequest CreateManDay(
+        string clientName,
+        string location,
+        Guid clientId,
+        Guid managerId,
+        Guid coordinatorId,
+        Guid inspectorId,
+        DateTimeOffset scheduledAt,
+        string? note = null)
+    {
+        if (string.IsNullOrWhiteSpace(clientName)) throw new ArgumentException("Client name is required.", nameof(clientName));
+        if (string.IsNullOrWhiteSpace(location)) throw new ArgumentException("Location is required.", nameof(location));
+        if (clientId == Guid.Empty) throw new ArgumentException("Client is required.", nameof(clientId));
+        if (managerId == Guid.Empty) throw new ArgumentException("Manager is required.", nameof(managerId));
+        if (coordinatorId == Guid.Empty) throw new ArgumentException("Coordinator is required.", nameof(coordinatorId));
+        if (inspectorId == Guid.Empty) throw new ArgumentException("Inspector is required.", nameof(inspectorId));
+
+        var now = DateTimeOffset.UtcNow;
+        var cleanNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        var request = new InspectionRequest
+        {
+            Id = Guid.NewGuid(),
+            ManagerId = managerId,
+            ClientName = clientName.Trim(),
+            ClientId = clientId,
+            Location = location.Trim(),
+            Subject = "Man day",
+            Source = RequestSource.Manual,
+            Kind = RequestKind.ManDay,
+            ReceivedAt = now,
+            PreferredDate = scheduledAt,
+            AccessNotes = cleanNote,
+            CoordinatorId = coordinatorId,
+            InspectorId = inspectorId,
+            ScheduledAt = scheduledAt,
+            AssignmentNote = cleanNote,
+            Status = JobStatus.Assigned,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        request.History.Add(JobStatusHistory.Create(request.Id, null, JobStatus.RequestReceived, coordinatorId, now, "Man day requested."));
+        request.History.Add(JobStatusHistory.Create(request.Id, JobStatus.RequestReceived, JobStatus.Assigned, coordinatorId, now, cleanNote));
         return request;
     }
 
@@ -366,6 +416,57 @@ public sealed class InspectionRequest
         return threadId is { Length: > 256 } ? threadId[..256] : threadId;
     }
 
+    /// <summary>True while machines can still be added, changed or removed: from the assignment until the job is submitted.</summary>
+    public bool CanChangeMachines =>
+        Status is JobStatus.Assigned or JobStatus.TaskAccepted or JobStatus.InProgress or JobStatus.CertificateReturned;
+
+    private void EnsureMachinesCanChange()
+    {
+        if (!CanChangeMachines)
+            throw new InvalidOperationException("Machines can be changed from the assignment until the inspector submits the job.");
+    }
+
+    /// <summary>Adds a machine to a job that is under way (the inspector found one on site, or the coordinator added one).</summary>
+    public RequestItem AddMachine(RequestItem item, Guid actorId)
+    {
+        EnsureMachinesCanChange();
+        ArgumentNullException.ThrowIfNull(item);
+        if (item.EquipmentId is Guid equipmentId && Items.Any(value => value.EquipmentId == equipmentId))
+            throw new InvalidOperationException("This machine is already in the job.");
+
+        Items.Add(item);
+        UpdatedAt = DateTimeOffset.UtcNow;
+        History.Add(JobStatusHistory.Create(Id, Status, Status, actorId, UpdatedAt, $"Machine added: {item.Name}."));
+        return item;
+    }
+
+    /// <summary>Changes the details of one machine of a job that is under way.</summary>
+    public RequestItem EditMachine(
+        Guid itemId, string name, int quantity, string? type, string? capacity, string? serialNumber,
+        string? manufacturer, string? model, string? location, string? issueDescription, Guid actorId)
+    {
+        EnsureMachinesCanChange();
+        var item = FindItem(itemId);
+        item.Edit(name, quantity, type, capacity, serialNumber, manufacturer, model, location, issueDescription);
+        UpdatedAt = DateTimeOffset.UtcNow;
+        History.Add(JobStatusHistory.Create(Id, Status, Status, actorId, UpdatedAt, $"Machine changed: {item.Name}."));
+        return item;
+    }
+
+    /// <summary>Takes a machine out of a job that is under way. A standard job keeps at least one machine.</summary>
+    public RequestItem RemoveMachine(Guid itemId, Guid actorId)
+    {
+        EnsureMachinesCanChange();
+        var item = FindItem(itemId);
+        if (Kind != RequestKind.ManDay && Items.Count == 1)
+            throw new InvalidOperationException("The job needs at least one machine.");
+
+        Items.Remove(item);
+        UpdatedAt = DateTimeOffset.UtcNow;
+        History.Add(JobStatusHistory.Create(Id, Status, Status, actorId, UpdatedAt, $"Machine removed: {item.Name}."));
+        return item;
+    }
+
     /// <summary>
     /// Starts the inspection of a request that never had a quotation: a certificate created directly by the person who inspects.
     /// The job goes from <c>request_received</c> straight to <c>in_progress</c> with that person as its inspector.
@@ -377,6 +478,7 @@ public sealed class InspectionRequest
             throw new InvalidOperationException("Only a new request with at least one machine can start directly.");
 
         var previous = Status;
+        Kind = RequestKind.Direct;
         InspectorId = actorId;
         Status = JobStatus.InProgress;
         UpdatedAt = DateTimeOffset.UtcNow;

@@ -56,6 +56,10 @@ public interface IRequestRepository
         CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyDictionary<Guid, int>>(new Dictionary<Guid, int>());
 
+    /// <summary>The clients of the jobs this inspector still has in hand (assigned, accepted, in progress or returned).</summary>
+    Task<IReadOnlyList<Guid>> ListClientIdsInHandAsync(Guid inspectorId, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Guid>>([]);
+
     Task<bool> ClientExistsAsync(Guid clientId, CancellationToken cancellationToken = default);
     Task<Guid?> GetClientManagerIdAsync(Guid clientId, CancellationToken cancellationToken = default);
 }

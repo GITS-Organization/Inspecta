@@ -10,4 +10,11 @@ public interface IRequestEquipmentRegistrar
     /// Nothing is saved here; the caller saves the request and the staged records together.
     /// </summary>
     Task RegisterAsync(InspectionRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Registers these machines of a job that is already under way (found on site) under the job's client, so they are in the client's
+    /// list at once and can be certified, and links each to its record. Gears are left alone. Nothing is saved here.
+    /// </summary>
+    Task RegisterMachinesAsync(InspectionRequest request, IReadOnlyCollection<RequestItem> machines, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
 }

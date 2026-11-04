@@ -67,4 +67,5 @@ public sealed record QuoteSummaryResponse(
     DateTimeOffset? ScheduledAt = null,
     QuotationQueue? Queue = null,
     Inspecta.Application.Contracts.Certificates.MachineProgress? Certificates = null,
-    bool HasUnreadClientReply = false);
+    bool HasUnreadClientReply = false,
+    Domain.Enums.RequestKind Kind = Domain.Enums.RequestKind.Standard);

@@ -34,7 +34,8 @@ internal static class RequestResponseMapper
         Client: request.Client is { } client && client.Id == request.ClientId
             ? new RequestClientResponse(client.Id, client.Name, client.Location ?? string.Empty, client.HasContract)
             : null,
-        HasUnreadClientReply: request.HasUnreadClientReply);
+        HasUnreadClientReply: request.HasUnreadClientReply,
+        Kind: request.Kind);
 
     public static RequestItemResponse MapItem(RequestItem item) => new(
         item.Id, item.EquipmentId, item.Name, item.Type, item.Capacity, item.Quantity,

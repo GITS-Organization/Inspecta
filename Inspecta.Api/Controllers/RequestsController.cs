@@ -114,6 +114,25 @@ public sealed class RequestsController(IInspectionRequestService requestService,
         return CreatedAtAction(nameof(GetById), new { requestId = created.Id }, created);
     }
 
+    /// <summary>Create a man day: a day of an inspector's time that a client asked for.</summary>
+    /// <remarks>
+    /// For a client that phones or emails asking for an inspector on a day, with no list of machines. The job has no quotation: it is
+    /// given to the inspector straight away (<c>assigned</c>, <c>kind: man_day</c>) and the inspector adds the machines found on site
+    /// (<c>POST /quotation-queue/{requestId}/machines</c>) and certifies them. Coordinator, technical manager and Admin.
+    /// </remarks>
+    [HttpPost("man-day")]
+    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
+    [ProducesResponseType<RequestResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<RequestResponse>> CreateManDay(CreateManDayRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        var created = await requestService.CreateManDayAsync(request, actorId, role, User.GetTenantId(), cancellationToken);
+        return CreatedAtAction(nameof(GetById), new { requestId = created.Id }, created);
+    }
+
     /// <summary>The client's machines that the request's email seems to ask about.</summary>
     /// <remarks>
     /// Only machines of the request's client are considered, and those already on the request are left out. Each one has

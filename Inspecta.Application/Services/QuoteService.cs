@@ -188,7 +188,8 @@ public sealed class QuoteService(
             request.ScheduledAt,
             QuotationQueues.Of(request.Status),
             CertificateProgressOf(request),
-            request.HasUnreadClientReply);
+            request.HasUnreadClientReply,
+            request.Kind);
     }
 
     public async Task<QuoteResponse> GetAsync(

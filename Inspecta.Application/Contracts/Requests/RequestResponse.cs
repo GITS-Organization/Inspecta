@@ -34,7 +34,8 @@ public sealed record RequestResponse(
     DateTimeOffset? MaybeExpiresAt = null,
     Quotations.QuoteResponse? Quotation = null,
     RequestClientResponse? Client = null,
-    bool HasUnreadClientReply = false);
+    bool HasUnreadClientReply = false,
+    RequestKind Kind = RequestKind.Standard);
 
 /// <summary>The client the request belongs to; null while the request has no client yet.</summary>
 public sealed record RequestClientResponse(Guid Id, string Name, string Location, bool HasContract);

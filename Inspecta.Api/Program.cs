@@ -120,6 +120,7 @@ builder.Services.AddSingleton<IQrCodeRenderer, QrCodeRenderer>();
 builder.Services.AddScoped<ITransactionRunner, EfTransactionRunner>();
 builder.Services.AddScoped<IMachineInspectionService, MachineInspectionService>();
 builder.Services.AddScoped<IDirectCertificationService, DirectCertificationService>();
+builder.Services.AddScoped<IJobMachineService, JobMachineService>();
 builder.Services.AddScoped<Inspecta.Application.Services.ClientCertificateService>();
 builder.Services.AddSingleton(new Inspecta.Application.Services.CertificateDeliveryOptions(builder.Configuration.GetValue("CertificateDelivery:Enabled", false)));
 builder.Services.AddScoped<Inspecta.Application.Services.CertificateDeliveryService>();

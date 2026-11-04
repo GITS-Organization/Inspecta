@@ -117,6 +117,7 @@ public sealed class InspectaDbContext(
         request.Property(item => item.Status).HasConversion<string>().HasMaxLength(32);
         request.Property(item => item.Source).HasConversion<string>().HasMaxLength(24);
         request.Property(item => item.Triage).HasConversion<string>().HasMaxLength(16);
+        request.Property(item => item.Kind).HasConversion<string>().HasMaxLength(16).HasDefaultValue(RequestKind.Standard);
         request.HasIndex(item => new { item.Triage, item.CreatedAt });
         request.HasMany(item => item.Items).WithOne(item => item.Request).HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
         request.HasMany(item => item.Certificates).WithOne(item => item.Request)

@@ -91,6 +91,32 @@ public sealed class RequestItem
         IssueDescription = string.IsNullOrWhiteSpace(issueDescription) ? null : issueDescription.Trim();
     }
 
+    /// <summary>Changes the machine's own details while the job is under way; the link to the registered item stays as it is.</summary>
+    public void Edit(
+        string name,
+        int quantity,
+        string? type,
+        string? capacity,
+        string? serialNumber,
+        string? manufacturer,
+        string? model,
+        string? location,
+        string? issueDescription)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Item name is required.", nameof(name));
+        if (quantity < 1) throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be at least one.");
+
+        Name = name.Trim();
+        Quantity = quantity;
+        Type = type?.Trim();
+        Capacity = capacity?.Trim();
+        SerialNumber = serialNumber?.Trim();
+        Manufacturer = manufacturer?.Trim();
+        Model = model?.Trim();
+        Location = location?.Trim();
+        IssueDescription = string.IsNullOrWhiteSpace(issueDescription) ? null : issueDescription.Trim();
+    }
+
     /// <summary>The same machine with another quantity and serial numbers: one share of a gear that is split over several certificates.</summary>
     public RequestItem CopyWith(int quantity, string? serialNumber)
     {

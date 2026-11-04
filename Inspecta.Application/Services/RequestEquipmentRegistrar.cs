@@ -43,6 +43,17 @@ public sealed class RequestEquipmentRegistrar(IEquipmentCatalog catalog, bool cr
         }
     }
 
+    public async Task RegisterMachinesAsync(InspectionRequest request, IReadOnlyCollection<RequestItem> machines, CancellationToken cancellationToken = default)
+    {
+        if (request.ClientId is not Guid clientId) return;
+        foreach (var item in machines.Where(value => value.EquipmentId is null && Certificates.CertificateTemplateCatalog.Resolve(value.Name).Item?.Gear != true))
+        {
+            var equipment = await catalog.FindEquipmentAsync(clientId, item.Name, item.SerialNumber, item.Capacity, cancellationToken)
+                ?? (createMissing ? CreateEquipment(clientId, item) : null);
+            if (equipment is not null) item.MatchEquipment(equipment.Id);
+        }
+    }
+
     private async Task EnsureMachinesBelongToTheClientAsync(InspectionRequest request, CancellationToken cancellationToken)
     {
         var picked = request.Items.Where(item => item.EquipmentId is not null).Select(item => item.EquipmentId!.Value).Distinct().ToList();

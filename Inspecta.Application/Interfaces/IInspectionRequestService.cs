@@ -5,6 +5,8 @@ namespace Inspecta.Application.Interfaces;
 public interface IInspectionRequestService
 {
     Task<RequestResponse> CreateAsync(CreateInspectionRequest request, Guid coordinatorId, Guid? managerId, CancellationToken cancellationToken = default);
+    /// <summary>Creates a man day request and gives it to an inspector straight away (no machines, no quotation).</summary>
+    Task<RequestResponse> CreateManDayAsync(CreateManDayRequest request, Guid actorId, string role, Guid? managerId, CancellationToken cancellationToken = default);
     Task<RequestResponse> CreateFromEmailAsync(CreateInspectionRequest request, string senderEmail, string emailBody, Guid coordinatorId, Guid? managerId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RequestResponse>> ListVisibleAsync(Guid actorId, string role, RequestListQuery query, CancellationToken cancellationToken = default);
     Task<RequestSummaryResponse> GetSummaryAsync(Guid actorId, string role, Guid? managerId = null, CancellationToken cancellationToken = default);

@@ -33,6 +33,9 @@ public sealed record CreateCertificationRequest
     public IReadOnlyList<CreateRequestItem> Machines { get; init; } = [];
 }
 
+/// <summary>A client a certificate can be created for: for an inspector, only the clients whose jobs are with them now.</summary>
+public sealed record CertificationClientResponse(Guid Id, string Name, string? Location);
+
 /// <summary>One kind of machine the catalogue knows, so the screen can offer it when a new machine is added.</summary>
 public sealed record MachineTypeResponse(
     string Name,

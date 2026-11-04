@@ -32,6 +32,11 @@ public static class WorkflowDocs
             **When:** a request did not come by email. It is then visible to the whole team.
             **How:** send the client, location and equipment items. Email requests are created automatically; you do not call this for them.
             """),
+        [Key<RequestsController>(nameof(RequestsController.CreateManDay))] = new(1.15, "Step 1b2 · Create a man day",
+            """
+            **When:** a client phones or emails asking for an inspector on a day, with no list of machines. **Who:** the coordinator (the technical manager and Admin too).
+            **How:** `POST /requests/man-day` with `clientId` (a registered client), `inspectorId`, `scheduledAt` (the day), an optional `location` (the client's when left out) and `note`. There is **no quotation**: the job is created `assigned` with `kind: man_day` and no machines, and shows in the Quotation queue for the inspector and the coordinator. The inspector starts it (queue step 5), adds the machines found on site (queue step 8c; new ones are registered for the client at once) and certifies them. The inspector must belong to the client's team and not be on leave.
+            """),
         [Key<RequestsController>(nameof(RequestsController.Summary))] = new(1.2, "Step 1c · Tab counts",
             "**How:** `GET /requests/summary` returns the number of requests, maybe emails and requests per status, for the tab badges."),
         [Key<RequestsController>(nameof(RequestsController.Confirm))] = new(2, "Step 2 · Confirm a maybe email",
@@ -165,10 +170,25 @@ public static class WorkflowDocs
             **How:** `POST /certifications` with `clientId`, an optional `location` (the client's when left out) and `machines`: each one a registered machine (`equipmentId`) or a new one (`name`, `quantity`, `capacity`, `serialNumber`... like a request item). New machines are registered for the client, except **gears** (slings, shackles, hooks...: see `GET /certifications/machine-types`), which are not. Admin may pass `managerId`.
             The answer is the job's machine list (like `start-inspection`): the job is already `in_progress` with the caller as its inspector. Continue with steps 7 to 9 (open, save, submit each machine); when all are submitted the technical manager reviews it in the usual way (step 12). Coordinators get `403`.
             """),
+        [Key<CertificationsController>(nameof(CertificationsController.Clients))] = new(4.55, "Queue 4a · Clients a certificate can be created for",
+            "**How:** `GET /certifications/clients` (`id`, `name`, `location`). The technical manager and the admin get every client of their team; an **inspector** gets only the clients of the jobs assigned to them that are not finished (`assigned`, `task_accepted`, `in_progress`, `certificate_returned`). `POST /certifications` refuses any other client for an inspector with `403`. Coordinators get `403`."),
+        [Key<CertificationsController>(nameof(CertificationsController.ClientMachines))] = new(4.56, "Queue 4a2 · Registered machines of that client",
+            "**How:** `GET /certifications/clients/{clientId}/machines` lists the client's registered items (like `GET /equipment?clientId=`, which an inspector cannot call). `404` for a client that is not in the list of step 4a."),
         [Key<CertificationsController>(nameof(CertificationsController.MachineTypes))] = new(4.7, "Queue 4c · The machine kinds the catalogue knows",
             "**How:** `GET /certifications/machine-types` lists each kind (`name`, `aliases`, `standards`, `templateKey`, `templateName`) and `isGear`: a gear is inspected in numbers (a quantity and many serial numbers) and is not registered as an item. Offer it when a new machine is added."),
         [Key<CertificationsController>(nameof(CertificationsController.SerialLimits))] = new(4.8, "Queue 4d · How many serial numbers a certificate takes",
             "**How:** `GET /certifications/serial-limits`: `maxCharactersPerCertificate` (the printed serial box), `maxLengthPerSerialNumber` and `maxSerialNumbers` (for one division). A certificate whose `serialNumber` is longer is refused on save, so divide the machine first (step 8b)."),
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.AvailableMachines))] = new(8.6, "Queue 8c · The client's machines not in the job yet",
+            "**How:** `GET /quotation-queue/{requestId}/available-machines` lists the client's registered machines that are not in the job yet (same shape as `GET /equipment`). Offer them when someone adds a machine to the job."),
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.AddMachine))] = new(8.7, "Queue 8d · Add a machine to the job",
+            """
+            **When:** the inspector finds another machine on site (or the coordinator adds one) while the job is under way: from `assigned` until the inspector submits (`assigned`, `task_accepted`, `in_progress`, `certificate_returned`). Also the way to fill a man day. **Who:** the inspector of the job, its coordinator, the technical manager, Admin.
+            **How:** `POST /quotation-queue/{requestId}/machines` with either `equipmentId` (a registered machine of the client from step 8c) or the new machine's details (`name`, `quantity`, `type`, `capacity`, `serialNumber`, `manufacturer`, `model`, `location`, `issueDescription`). A **new machine is registered for the client at once** (gears are not), so it is in the client's list for good and can be certified. The answer is the machine list (`201`); fill and submit the new machine like any other. `400` for a machine of another client, `409` for one already in the job or a job that is not open.
+            """),
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.EditMachine))] = new(8.8, "Queue 8e · Change a machine of the job",
+            "**How:** `PUT /quotation-queue/{requestId}/machines/{requestItemId}/details` with `name`, `quantity`, `type`, `capacity`, `serialNumber`, `manufacturer`, `model`, `location`, `issueDescription`. Same people and window as step 8d. `409 certificate_locked` once its certificate is submitted. Values the inspector already saved in the certificate form are not overwritten."),
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.RemoveMachine))] = new(8.9, "Queue 8f · Remove a machine from the job",
+            "**How:** `DELETE /quotation-queue/{requestId}/machines/{requestItemId}`. Only before its certificate was started (`409 machine_already_started` after); a standard job keeps at least one machine. Same people and window as step 8d."),
         [Key<MachineInspectionController>(nameof(MachineInspectionController.Split))] = new(8.5, "Queue 8b · Divide a machine into several certificates",
             """
             **When:** a gear is inspected in numbers (for example 1000 slings with their serial numbers) and one certificate cannot list them all. **Who:** the assigned inspector, before the machine's certificate is started.

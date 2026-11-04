@@ -57,6 +57,10 @@ public sealed class PostgresQueryTranslationTests
                 .SelectMany(
                     item => item.History.Where(entry => entry.ToStatus == JobStatus.CertificateApproved && entry.OccurredAt >= DateTimeOffset.UtcNow && entry.OccurredAt <= DateTimeOffset.UtcNow),
                     (item, entry) => new { item.Id, Inspector = item.InspectorId!.Value, entry.OccurredAt }).ToQueryString(),
+            // The clients of the jobs an inspector still has in hand (EfRequestRepository.ListClientIdsInHandAsync).
+            db.Requests.AsNoTracking()
+                .Where(item => item.InspectorId == manager && item.ClientId != null && new[] { JobStatus.Assigned, JobStatus.InProgress }.Contains(item.Status))
+                .Select(item => item.ClientId!.Value).Distinct().ToQueryString(),
             // Client replies: the same lookups as EfClientReplyRepository.
             db.OutboundEmails.AsNoTracking().Where(email => email.ManagerId == manager && new[] { "a@b.c" }.Contains(email.MessageId.ToLower()))
                 .Select(email => new { email.RequestId, email.QuoteId, email.CreatedAt }).ToQueryString(),

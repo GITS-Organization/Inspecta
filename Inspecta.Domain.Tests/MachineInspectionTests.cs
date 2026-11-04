@@ -943,6 +943,139 @@ public sealed class MachineInspectionTests : IDisposable
         Assert.StartsWith("%PDF", Encoding.ASCII.GetString(pdf.Content, 0, 4));
     }
 
+    // ---- Man day, and machines added to a job on site ---------------------------------------------------------------
+
+    private async Task<T> Machines<T>(Func<JobMachineService, Task<T>> action)
+    {
+        await using var db = CreateContext();
+        var inspection = new MachineInspectionService(
+            new EfCertificateRepository(db), new EfRequestRepository(db), new EfUserRepository(db), new EfEquipmentRepository(db),
+            new EfClientRepository(db), pdfServices.GetRequiredService<IPdfGenerator>(), new EfCertificateFileRepository(db),
+            qrCodes: new Inspecta.Infrastructure.Services.QrCodeRenderer(), transactions: new EfTransactionRunner(db));
+        var catalog = new EfEquipmentCatalog(db);
+        return await action(new JobMachineService(
+            new EfRequestRepository(db), new EfCertificateRepository(db), catalog, new RequestEquipmentRegistrar(catalog),
+            new EquipmentService(new EfEquipmentRepository(db)), inspection));
+    }
+
+    private async Task<Inspecta.Application.Contracts.Requests.RequestResponse> RequestManDay(Guid inspectorId, string role = "coordinator", Guid? actor = null)
+    {
+        await using var db = CreateContext();
+        var service = new InspectionRequestService(
+            new EfRequestRepository(db), new EfUserRepository(db), clientRepository: new EfClientRepository(db),
+            quoteRepository: new EfQuoteRepository(db), transactions: new EfTransactionRunner(db));
+        return await service.CreateManDayAsync(
+            new Inspecta.Application.Contracts.Requests.CreateManDayRequest { ClientId = clientId, InspectorId = inspectorId, ScheduledAt = DateTimeOffset.UtcNow.AddDays(1), Note = "Check the new workshop." },
+            actor ?? coordinator.Id, role, manager.Id);
+    }
+
+    [Fact]
+    public async Task AManDayGoesStraightToTheInspectorWhoAddsAndCertifiesTheMachinesFoundOnSite()
+    {
+        var manDay = await RequestManDay(inspector.Id);
+
+        Assert.Equal(Inspecta.Domain.Enums.RequestKind.ManDay, manDay.Kind);
+        Assert.Equal(JobStatus.Assigned, manDay.Status);
+        Assert.Equal(inspector.Id, manDay.InspectorId);
+        Assert.Empty(manDay.Items);
+        Assert.Equal("Cairo, Industrial City", manDay.Location);
+        await using (var db = CreateContext())
+        {
+            // A placeholder accepted quotation, so the job shows in the quotation queue.
+            var quote = db.Quotes.Single(value => value.RequestId == manDay.Id);
+            Assert.Equal(QuoteStatus.Accepted, quote.Status);
+            Assert.StartsWith("MD-", quote.QuotationNumber);
+            Assert.Equal(0, quote.AmountPiastres);
+        }
+
+        var started = await Run(service => service.StartInspectionAsync(manDay.Id, inspector.Id, "inspector"));
+        Assert.Equal(JobStatus.InProgress, started.RequestStatus);
+        Assert.Empty(started.Machines);
+
+        // The registered forklift is on offer; a machine found on site is registered for the client at once.
+        var offered = await Machines(service => service.AvailableAsync(manDay.Id, inspector.Id, "inspector"));
+        Assert.Equal("Forklift Truck", offered.Single().Name);
+        var withForklift = await Machines(service => service.AddAsync(manDay.Id, inspector.Id, "inspector", new AddMachineRequest { EquipmentId = forkliftEquipmentId }));
+        var list = await Machines(service => service.AddAsync(manDay.Id, inspector.Id, "inspector",
+            new AddMachineRequest { Name = "Scissor Lift", SerialNumber = "SL-77", Capacity = "500 kg" }));
+        await Machines(service => service.AddAsync(manDay.Id, inspector.Id, "inspector", new AddMachineRequest { Name = "Chain Sling grade 4", Quantity = 12 }));
+        Assert.Single(withForklift.Machines);
+        Assert.Equal(2, list.Machines.Count);
+
+        await using (var db = CreateContext())
+        {
+            var registered = db.Items.Where(item => item.ClientId == clientId).Select(item => item.Name).ToList();
+            Assert.Contains("Scissor Lift", registered);
+            Assert.DoesNotContain("Chain Sling grade 4", registered);
+            Assert.NotNull(db.Requests.Include(value => value.Items).Single(value => value.Id == manDay.Id).Items.Single(item => item.Name == "Scissor Lift").EquipmentId);
+        }
+
+        Assert.Empty(await Machines(service => service.AvailableAsync(manDay.Id, inspector.Id, "inspector")));
+        var all = await Run(service => service.ListMachinesAsync(manDay.Id, inspector.Id, "inspector"));
+        Assert.Equal(3, all.Machines.Count);
+        foreach (var machine in all.Machines)
+        {
+            var key = machine.TemplateKey;
+            await Run(service => service.SaveFormAsync(manDay.Id, machine.RequestItemId, inspector.Id, "inspector", CompleteForm(key)));
+            await Run(service => service.SubmitAsync(manDay.Id, machine.RequestItemId, inspector.Id, "inspector"));
+        }
+
+        var review = await Run(service => service.ListMachinesAsync(manDay.Id, manager.Id, "technical_manager"));
+        Assert.Equal(JobStatus.CertificateSubmitted, review.RequestStatus);
+        Assert.True(review.CanApprove);
+    }
+
+    [Fact]
+    public async Task OnlyThePeopleOfTheJobChangeItsMachinesAndOnlyUntilItIsSubmitted()
+    {
+        await Start();
+        var item = new AddMachineRequest { Name = "Scissor Lift", SerialNumber = "SL-1" };
+
+        // The coordinator and the technical manager can; an inspector without the job cannot even see it.
+        var byCoordinator = await Machines(service => service.AddAsync(requestId, coordinator.Id, "coordinator", item));
+        Assert.Equal(3, byCoordinator.Machines.Count);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Machines(service => service.AddAsync(requestId, otherInspector.Id, "inspector", item)));
+        await Machines(service => service.AddAsync(requestId, manager.Id, "technical_manager", new AddMachineRequest { Name = "Hydraulic Jack" }));
+
+        // A registered machine already in the job, or one of another client, is refused.
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Machines(service => service.AddAsync(
+            requestId, inspector.Id, "inspector", new AddMachineRequest { EquipmentId = forkliftEquipmentId })));
+        await Assert.ThrowsAsync<ArgumentException>(() => Machines(service => service.AddAsync(
+            requestId, inspector.Id, "inspector", new AddMachineRequest { EquipmentId = Guid.NewGuid() })));
+        await Assert.ThrowsAsync<ArgumentException>(() => Machines(service => service.AddAsync(requestId, inspector.Id, "inspector", new AddMachineRequest())));
+
+        // Edit and remove: before the certificate starts both work; after it starts the machine stays; once submitted it is locked.
+        var scissor = byCoordinator.Machines.Single(machine => machine.Name == "Scissor Lift").RequestItemId;
+        var edited = await Machines(service => service.EditAsync(requestId, scissor, inspector.Id, "inspector",
+            new EditMachineRequest { Name = "Scissor Lift", Quantity = 2, SerialNumber = "SL-1, SL-2", Capacity = "300 kg" }));
+        Assert.Equal(2, edited.Machines.Single(machine => machine.RequestItemId == scissor).Quantity);
+        await Run(service => service.SaveFormAsync(requestId, scissor, inspector.Id, "inspector", CompleteForm("basic")));
+        var started = await Assert.ThrowsAsync<AuthException>(() => Machines(service => service.RemoveAsync(requestId, scissor, inspector.Id, "inspector")));
+        Assert.Equal("machine_already_started", started.Code);
+        await Run(service => service.SubmitAsync(requestId, scissor, inspector.Id, "inspector"));
+        var locked = await Assert.ThrowsAsync<AuthException>(() => Machines(service => service.EditAsync(requestId, scissor, inspector.Id, "inspector",
+            new EditMachineRequest { Name = "Scissor Lift", Quantity = 3 })));
+        Assert.Equal("certificate_locked", locked.Code);
+
+        var jack = (await Run(service => service.ListMachinesAsync(requestId, inspector.Id, "inspector"))).Machines.Single(machine => machine.Name == "Hydraulic Jack").RequestItemId;
+        var removed = await Machines(service => service.RemoveAsync(requestId, jack, coordinator.Id, "coordinator"));
+        Assert.DoesNotContain(removed.Machines, machine => machine.Name == "Hydraulic Jack");
+    }
+
+    [Fact]
+    public async Task AManDayIsRequestedByTheTeamForItsOwnInspectorsOnly()
+    {
+        var byInspector = await Assert.ThrowsAsync<AuthException>(() => RequestManDay(inspector.Id, "inspector", inspector.Id));
+        Assert.Equal(403, byInspector.StatusCode);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => RequestManDay(coordinator.Id));
+
+        var otherManager = AppUser.Create("other-manager@example.com", "Other Manager", UserRole.TechnicalManager);
+        var stranger = AppUser.Create("outsider@example.com", "Outsider", UserRole.Inspector, managerId: otherManager.Id);
+        await using (var db = CreateContext()) { db.Users.AddRange(otherManager, stranger); await db.SaveChangesAsync(); }
+        var foreign = await Assert.ThrowsAsync<AuthException>(() => RequestManDay(stranger.Id));
+        Assert.Equal(403, foreign.StatusCode);
+    }
+
     // ---- A certificate without a quotation ------------------------------------------------------------------------
 
     private async Task<T> Direct<T>(Func<DirectCertificationService, Task<T>> action)
@@ -954,7 +1087,8 @@ public sealed class MachineInspectionTests : IDisposable
             qrCodes: new Inspecta.Infrastructure.Services.QrCodeRenderer(), transactions: new EfTransactionRunner(db));
         var requests = new InspectionRequestService(new EfRequestRepository(db), new EfUserRepository(db), new RequestEquipmentRegistrar(new EfEquipmentCatalog(db)));
         return await action(new DirectCertificationService(
-            requests, new EfRequestRepository(db), new EfClientRepository(db), inspection, new RequestEquipmentRegistrar(new EfEquipmentCatalog(db))));
+            requests, new EfRequestRepository(db), new EfClientRepository(db), inspection, new RequestEquipmentRegistrar(new EfEquipmentCatalog(db)),
+            new EquipmentService(new EfEquipmentRepository(db)), new EfQuoteRepository(db), new EfTransactionRunner(db)));
     }
 
     [Fact]
@@ -984,6 +1118,8 @@ public sealed class MachineInspectionTests : IDisposable
             Assert.Equal(inspector.Id, stored.InspectorId);
             Assert.Equal(manager.Id, stored.ManagerId);
             Assert.Equal("Direct certificate", stored.Subject);
+            Assert.Equal(Inspecta.Domain.Enums.RequestKind.Direct, stored.Kind);
+            Assert.StartsWith("DC-", db.Quotes.Single(value => value.RequestId == job.RequestId).QuotationNumber);
             Assert.Equal(JobStatus.InProgress, stored.History.OrderBy(entry => entry.OccurredAt).Last().ToStatus);
             // The new machine is registered for the client; the gear is not.
             Assert.NotNull(stored.Items.Single(item => item.Name == "Scissor Lift").EquipmentId);
@@ -1013,6 +1149,36 @@ public sealed class MachineInspectionTests : IDisposable
         Assert.Equal(403, denied.StatusCode);
         await Assert.ThrowsAsync<KeyNotFoundException>(() => Direct(service => service.CreateAsync(
             new CreateCertificationRequest { ClientId = Guid.NewGuid(), Machines = [item] }, inspector.Id, "inspector", manager.Id)));
+    }
+
+    [Fact]
+    public async Task AnInspectorCertifiesOnlyTheClientsOfTheJobsInTheirHands()
+    {
+        var mine = await Direct(service => service.ClientsAsync(inspector.Id, "inspector"));
+        Assert.Equal(["Al Noor Industries"], mine.Select(client => client.Name).ToArray());
+        Assert.Equal(forkliftEquipmentId, (await Direct(service => service.MachinesOfAsync(clientId, inspector.Id, "inspector"))).Single().Id);
+
+        // Another inspector has no job for this client: it is not listed, its machines are not found, and no certificate can be created for it.
+        Assert.Empty(await Direct(service => service.ClientsAsync(otherInspector.Id, "inspector")));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Direct(service => service.MachinesOfAsync(clientId, otherInspector.Id, "inspector")));
+        var denied = await Assert.ThrowsAsync<AuthException>(() => Direct(service => service.CreateAsync(new CreateCertificationRequest
+        {
+            ClientId = clientId,
+            Machines = [new Inspecta.Application.Contracts.Requests.CreateRequestItem { Name = "Scissor Lift" }]
+        }, otherInspector.Id, "inspector", manager.Id)));
+        Assert.Equal(403, denied.StatusCode);
+
+        // The technical manager can certify for any client of the team; a coordinator cannot use it at all.
+        Assert.Single(await Direct(service => service.ClientsAsync(manager.Id, "technical_manager")));
+        await Assert.ThrowsAsync<AuthException>(() => Direct(service => service.ClientsAsync(coordinator.Id, "coordinator")));
+    }
+
+    [Fact]
+    public async Task OnceTheJobIsSubmittedTheClientNoLongerCountsAsInTheInspectorsHands()
+    {
+        await SubmitBothMachines();
+
+        Assert.Empty(await Direct(service => service.ClientsAsync(inspector.Id, "inspector")));
     }
 
     [Fact]

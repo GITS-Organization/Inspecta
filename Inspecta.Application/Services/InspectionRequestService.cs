@@ -11,7 +11,10 @@ public sealed class InspectionRequestService(
     IUserRepository userRepository,
     IRequestEquipmentRegistrar? equipmentRegistrar = null,
     IEmailSyncRepository? senderRules = null,
-    IMachineSuggestionService? suggestions = null) : IInspectionRequestService
+    IMachineSuggestionService? suggestions = null,
+    IClientRepository? clientRepository = null,
+    IQuoteRepository? quoteRepository = null,
+    ITransactionRunner? transactions = null) : IInspectionRequestService
 {
     public async Task<RequestResponse> CreateAsync(
         CreateInspectionRequest request,
@@ -19,6 +22,52 @@ public sealed class InspectionRequestService(
         Guid? managerId,
         CancellationToken cancellationToken = default)
         => await CreateCoreAsync(request, coordinatorId, managerId, RequestSource.Manual, null, null, cancellationToken);
+
+    public async Task<RequestResponse> CreateManDayAsync(
+        CreateManDayRequest request, Guid actorId, string role, Guid? managerId, CancellationToken cancellationToken = default)
+    {
+        if (role is not ("admin" or "technical_manager" or "coordinator"))
+            throw new AuthException("forbidden", "Only the coordinator, the technical manager or the admin can request a man day.", 403);
+        if (clientRepository is null) throw new InvalidOperationException("Clients are not available.");
+
+        var client = await clientRepository.GetByIdAsync(request.ClientId, tracking: false, cancellationToken)
+            ?? throw new KeyNotFoundException("Client was not found.");
+        if (client.ArchivedAt is not null) throw new KeyNotFoundException("Client was not found.");
+        var teamId = (role == "admin" ? request.ManagerId ?? client.ManagerId : managerId)
+            ?? throw new ArgumentException("The client does not belong to a team.");
+        if (client.ManagerId != teamId)
+            throw new AuthException("forbidden", "The client does not belong to the selected team.", 403);
+
+        var inspector = await userRepository.GetByIdAsync(request.InspectorId, cancellationToken);
+        if (inspector is null || !inspector.IsActive || inspector.Role != UserRole.Inspector)
+            throw new InvalidOperationException("The selected inspector is unavailable.");
+        if (inspector.ManagerId != teamId)
+            throw new AuthException("forbidden", "The selected inspector does not belong to the client's team.", 403);
+        if (inspector.IsOnLeave && (inspector.LeaveUntil is null || inspector.LeaveUntil >= request.ScheduledAt))
+            throw new InvalidOperationException("The selected inspector is on leave at the scheduled time.");
+
+        var manDay = InspectionRequest.CreateManDay(
+            client.Name,
+            string.IsNullOrWhiteSpace(request.Location) ? client.Location ?? client.Name : request.Location,
+            client.Id,
+            teamId,
+            actorId,
+            inspector.Id,
+            request.ScheduledAt,
+            request.Note);
+        async Task<bool> Save()
+        {
+            await requestRepository.AddAsync(manDay, cancellationToken);
+            // The placeholder quotation puts the job in the quotation queue, where the inspector and the coordinator find it.
+            if (quoteRepository is not null)
+                await quoteRepository.AddAsync(Quote.CreateAccepted(manDay.Id, actorId, "MD", client.Name, "Man day"), cancellationToken);
+            return true;
+        }
+
+        if (transactions is null) await Save();
+        else await transactions.RunAsync(Save, cancellationToken);
+        return RequestResponseMapper.Map(await requestRepository.GetByIdAsync(manDay.Id, tracking: false, cancellationToken) ?? manDay);
+    }
 
     public async Task<RequestResponse> CreateFromEmailAsync(
         CreateInspectionRequest request,

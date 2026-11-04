@@ -34,6 +34,28 @@ public sealed class CertificationsController(IDirectCertificationService directC
         return Created($"/api/v1/quotation-queue/{job.RequestId}/machines", job);
     }
 
+    /// <summary>The clients a certificate can be created for: the team's for the technical manager and the admin, the clients of their current jobs for an inspector.</summary>
+    [HttpGet("clients")]
+    [ProducesResponseType<IReadOnlyList<CertificationClientResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<IReadOnlyList<CertificationClientResponse>>> Clients(CancellationToken cancellationToken)
+    {
+        var role = User.FindFirst("role")?.Value ?? string.Empty;
+        if (!Guid.TryParse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value, out var actorId)) return Unauthorized();
+        return Ok(await directCertification.ClientsAsync(actorId, role, cancellationToken));
+    }
+
+    /// <summary>The registered machines of one of those clients, to pick one for the certificate.</summary>
+    [HttpGet("clients/{clientId:guid}/machines")]
+    [ProducesResponseType<IReadOnlyList<Inspecta.Application.Contracts.Equipment.EquipmentResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<Inspecta.Application.Contracts.Equipment.EquipmentResponse>>> ClientMachines(Guid clientId, CancellationToken cancellationToken)
+    {
+        var role = User.FindFirst("role")?.Value ?? string.Empty;
+        if (!Guid.TryParse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value, out var actorId)) return Unauthorized();
+        return Ok(await directCertification.MachinesOfAsync(clientId, actorId, role, cancellationToken));
+    }
+
     /// <summary>The kinds of machine the catalogue knows, with their standards and whether they are gears.</summary>
     [HttpGet("machine-types")]
     [ProducesResponseType<IReadOnlyList<MachineTypeResponse>>(StatusCodes.Status200OK)]

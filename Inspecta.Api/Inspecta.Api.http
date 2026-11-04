@@ -402,6 +402,43 @@ Content-Type: application/json
 
 { "name": "Test client (renamed)" }
 
+### Man day: a client asked for an inspector on a day (no quotation, no machines yet)
+POST {{baseUrl}}/api/v1/requests/man-day
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "clientId": "{{clientId}}", "inspectorId": "{{inspectorId}}", "scheduledAt": "2026-11-10T08:00:00Z", "note": "Check the new workshop." }
+
+### Job: the client's machines that are not in the job yet
+GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/available-machines
+Authorization: Bearer {{token}}
+
+### Job: add a machine found on site (a registered one with equipmentId, or a new one; a new one is registered for the client)
+POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Scissor Lift", "serialNumber": "SL-77", "capacity": "500 kg" }
+
+### Job: change a machine's details
+PUT {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{requestItemId}}/details
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Scissor Lift", "quantity": 1, "serialNumber": "SL-78" }
+
+### Job: remove a machine (before its certificate starts)
+DELETE {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{requestItemId}}
+Authorization: Bearer {{token}}
+
+### Certification: the clients a certificate can be created for (an inspector sees only the clients of their current jobs)
+GET {{baseUrl}}/api/v1/certifications/clients
+Authorization: Bearer {{token}}
+
+### Certification: that client's registered machines
+GET {{baseUrl}}/api/v1/certifications/clients/{{clientId}}/machines
+Authorization: Bearer {{token}}
+
 ### Certification: the machine kinds the catalogue knows (isGear marks the gears)
 GET {{baseUrl}}/api/v1/certifications/machine-types
 Authorization: Bearer {{token}}

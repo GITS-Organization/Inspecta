@@ -136,6 +136,38 @@ public sealed class Quote
         };
     }
 
+    /// <summary>
+    /// The placeholder quotation of a job that never had one (a man day, or a certificate created directly): already accepted, with no
+    /// items and no price, so the job shows in the quotation queue like any other. <paramref name="prefix"/> starts its number (MD, DC).
+    /// </summary>
+    public static Quote CreateAccepted(Guid requestId, Guid createdBy, string prefix, string? clientName = null, string? summary = null)
+    {
+        if (requestId == Guid.Empty || createdBy == Guid.Empty) throw new ArgumentException("Request and creator are required.");
+        var now = DateTimeOffset.UtcNow;
+        var id = Guid.NewGuid();
+        var number = $"{prefix.Trim().ToUpperInvariant()}-{now.Year}-{id.ToString("N")[..6].ToUpperInvariant()}";
+        return new Quote
+        {
+            Id = id,
+            RequestId = requestId,
+            Version = 1,
+            QuotationNumber = number,
+            RequestNumber = $"{number} rev01",
+            AmountPiastres = 0,
+            SubtotalPiastres = 0,
+            ValidUntil = now.AddDays(DefaultValidForDays),
+            Type = QuoteType.Offer,
+            Status = QuoteStatus.Accepted,
+            ClientName = clientName?.Trim(),
+            EquipmentSummary = summary?.Trim(),
+            SentAt = now,
+            ClientRespondedAt = now,
+            CreatedBy = createdBy,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+    }
+
     public void SetDraftDetails(
         IEnumerable<QuoteItem> items,
         string? message,
