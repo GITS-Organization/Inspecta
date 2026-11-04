@@ -1,0 +1,96 @@
+<div class="head">
+  <div>
+    <h1>Jobs</h1>
+    <p class="muted">From an accepted quotation to the certificates in the client's hands</p>
+  </div>
+</div>
+
+<div class="tabs scroll" role="tablist" aria-label="Job lists">
+  @for (t of tabs; track t.filter) {
+    <button type="button" role="tab" [attr.aria-selected]="t.filter === filter()" (click)="select(t.filter)">{{ t.label }}</button>
+  }
+</div>
+
+<div aria-live="polite">
+  @if (error(); as msg) {
+    <div class="error" role="alert">{{ msg }}</div>
+  } @else if (loading()) {
+    <p class="muted empty">Loading jobs…</p>
+  } @else if (!rows().length) {
+    <p class="empty">{{ empty() }}</p>
+  } @else {
+    @for (r of rows(); track r.id) {
+      <div class="jobwrap">
+        <div class="job">
+          <div>
+            <b>{{ r.clientName || 'Client' }}</b>
+            <div class="muted">
+              {{ r.quotationNumber || r.proposalNumber }} · {{ r.location }} · {{ r.totalUnits }} {{ r.totalUnits === 1 ? 'unit' : 'units' }}
+              @if (r.inspectorName) { · {{ r.inspectorName }} }
+              @if (r.scheduledAt) { · {{ formatDate(r.scheduledAt) }} }
+            </div>
+          </div>
+          <span class="rowline">
+            <span [class]="state(r).cls">{{ state(r).text }}</span>
+            @if (r.certificates && r.certificates.total && (r.requestStatus === 'in_progress' || r.requestStatus === 'certificate_returned')) {
+              <span class="chip">{{ r.certificates.submitted }} of {{ r.certificates.total }} submitted</span>
+            }
+          </span>
+          <span class="rowline">
+            @switch (r.requestStatus) {
+              @case ('unassigned') {
+                <button type="button" class="btn" [attr.aria-expanded]="openId() === r.requestId" (click)="open(r, 'assign')">Give to an inspector</button>
+              }
+              @case ('assigned') {
+                <button type="button" class="btn ghost" [attr.aria-expanded]="openId() === r.requestId" (click)="open(r, 'date')">Change the date</button>
+              }
+              @case ('task_accepted') {
+                <button type="button" class="btn ghost" [attr.aria-expanded]="openId() === r.requestId" (click)="open(r, 'date')">Change the date</button>
+              }
+              @case ('certificate_approved') {
+                <a class="btn go" [routerLink]="['/queue', r.requestId, 'deliver']">Deliver to the client</a>
+              }
+              @case ('sent_to_client') {
+                <a class="btn ghost" [routerLink]="['/queue', r.requestId, 'deliver']">See what was sent</a>
+              }
+              @default {
+                <a class="btn ghost" [routerLink]="['/requests', r.requestId]">Open the request</a>
+              }
+            }
+          </span>
+        </div>
+
+        @if (openId() === r.requestId) {
+          <div class="inline" role="group" [attr.aria-label]="panel() === 'assign' ? 'Give the job to an inspector' : 'Change the inspection date'">
+            @if (formError(); as msg) { <div class="error" role="alert">{{ msg }}</div> }
+            <div class="row3">
+              @if (panel() === 'assign') {
+                <div class="field">
+                  <label [for]="'in' + r.id">Inspector</label>
+                  <select [id]="'in' + r.id" (change)="inspectorId.set($any($event.target).value)">
+                    <option value="">Choose an inspector</option>
+                    @for (i of inspectors(); track i.id) {
+                      <option [value]="i.id" [selected]="i.id === inspectorId()">{{ inspectorLabel(i) }}</option>
+                    }
+                  </select>
+                </div>
+              }
+              <div class="field">
+                <label [for]="'wh' + r.id">Inspection date and time</label>
+                <input [id]="'wh' + r.id" type="datetime-local" [value]="when()" (input)="when.set($any($event.target).value)" />
+              </div>
+              <div class="field">
+                <label [for]="'nt' + r.id">Note (optional)</label>
+                <input [id]="'nt' + r.id" type="text" [value]="note()" (input)="note.set($any($event.target).value)" />
+              </div>
+            </div>
+            <div class="rowline">
+              <button type="button" class="btn go" [disabled]="busy()" (click)="submit(r)">{{ panel() === 'assign' ? 'Give the job' : 'Save the date' }}</button>
+              <button type="button" class="btn ghost" (click)="openId.set(null)">Cancel</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

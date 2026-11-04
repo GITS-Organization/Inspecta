@@ -1,0 +1,21 @@
+.scroll {
+  overflow-x: auto;
+  button {
+    white-space: nowrap;
+  }
+}
+.jobwrap {
+  border-bottom: 1px solid var(--line);
+  .job {
+    border-bottom: 0;
+  }
+}
+.inline {
+  background: var(--band);
+  border-radius: 10px;
+  padding: 16px 18px 12px;
+  margin-bottom: 14px;
+  .field {
+    margin-bottom: 12px;
+  }
+}

@@ -20,6 +20,7 @@ const NAV: NavItem[] = [
   { path: '/jobs', label: 'My jobs', icon: 'M9 5h10v14H9zM5 9v10h10', roles: ['inspector'] },
   { path: '/requests', label: 'Requests', icon: 'M4 6h16v12H4zM4 7l8 6 8-6', roles: ['coordinator'] },
   { path: '/quotations', label: 'Quotations', icon: 'M7 3h8l4 4v14H7zM15 3v4h4M10 12h6M10 16h6', roles: ['coordinator'] },
+  { path: '/queue', label: 'Jobs', icon: 'M9 5h10v14H9zM5 9v10h10', roles: ['coordinator'] },
   { path: '/create', label: 'Create certification', icon: 'M12 5v14M5 12h14', roles: ['admin', 'technical_manager', 'inspector'] },
 ];
 
