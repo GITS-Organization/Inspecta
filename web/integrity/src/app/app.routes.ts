@@ -26,7 +26,7 @@ export const routes: Routes = [
       },
       {
         path: 'jobs/:requestId',
-        canActivate: [roleGuard('inspector', 'admin', 'technical_manager')],
+        canActivate: [roleGuard('inspector', 'coordinator', 'admin', 'technical_manager')],
         title: 'Job · Integrity',
         loadComponent: () => import('./features/jobs/job').then((m) => m.Job),
       },
@@ -47,6 +47,12 @@ export const routes: Routes = [
         canActivate: [ops],
         title: 'New request · Integrity',
         loadComponent: () => import('./features/requests/request-new').then((m) => m.RequestNew),
+      },
+      {
+        path: 'requests/man-day',
+        canActivate: [ops],
+        title: 'New man day · Integrity',
+        loadComponent: () => import('./features/requests/man-day-new').then((m) => m.ManDayNew),
       },
       {
         path: 'requests/:requestId',

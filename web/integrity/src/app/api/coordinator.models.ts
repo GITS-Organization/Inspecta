@@ -1,4 +1,15 @@
-import { JobStatus, MachineProgress } from '../core/models';
+import { JobStatus, MachineProgress, RequestKind } from '../core/models';
+
+/** `POST /requests/man-day`. */
+export interface CreateManDay {
+  clientId: string;
+  inspectorId: string;
+  scheduledAt: string;
+  location?: string | null;
+  note?: string | null;
+  /** Admin only. */
+  managerId?: string | null;
+}
 
 export type Triage = 'request' | 'maybe';
 
@@ -87,6 +98,7 @@ export interface Quote {
 
 export interface RequestDetails {
   id: string;
+  kind?: RequestKind;
   clientId: string | null;
   clientName: string;
   location: string;
@@ -181,6 +193,7 @@ export type QuoteStage = 'draft' | 'sent' | 'accepted' | 'rejected';
 
 export interface QuoteRow {
   id: string;
+  kind?: RequestKind;
   requestId: string;
   version: number;
   stage: QuoteStage;

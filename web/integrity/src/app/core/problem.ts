@@ -38,3 +38,12 @@ export function problemMessage(err: unknown, fallback = 'Something went wrong. T
   }
   return fallback;
 }
+
+/** Like `problemMessage`, but the API's own sentence (its `detail`) wins over the generic text for its `code`. */
+export function apiMessage(err: unknown, fallback?: string): string {
+  if (err instanceof HttpErrorResponse && err.error && typeof err.error === 'object') {
+    const d = (err.error as ProblemDetails).detail;
+    if (d) return d;
+  }
+  return problemMessage(err, fallback);
+}

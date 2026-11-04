@@ -6,6 +6,7 @@ import { MachineList, QueueFilter, QueueRow } from '../core/models';
 import {
   Client,
   ClientHistory,
+  CreateManDay,
   CreateRequest,
   DeliveryPreview,
   Equipment,
@@ -88,8 +89,12 @@ export class CoordinatorApi {
   changeInspectionDate(requestId: string, scheduledAt: string, note?: string): Observable<RequestDetails> {
     return this.http.put<RequestDetails>(`${this.b}/quotation-queue/${requestId}/inspection-date`, { scheduledAt, note: note || null });
   }
-  inspectors(): Observable<Inspector[]> {
-    return this.http.get<Inspector[]>(`${this.b}/inspectors`);
+  /** Admin passes the team's manager id. */
+  inspectors(managerId?: string): Observable<Inspector[]> {
+    return this.http.get<Inspector[]>(`${this.b}/inspectors`, { params: params({ managerId }) });
+  }
+  createManDay(body: CreateManDay): Observable<RequestDetails> {
+    return this.http.post<RequestDetails>(`${this.b}/requests/man-day`, body);
   }
 
   // ---- quotations

@@ -53,8 +53,12 @@ export interface MachineProgress {
   delivered: number;
 }
 
+/** `man_day` and `direct` jobs carry a placeholder quotation of price 0: never show it as money. */
+export type RequestKind = 'standard' | 'man_day' | 'direct';
+
 export interface QueueRow {
   id: string;
+  kind?: RequestKind;
   requestId: string;
   requestStatus: JobStatus;
   quotationNumber: string | null;
