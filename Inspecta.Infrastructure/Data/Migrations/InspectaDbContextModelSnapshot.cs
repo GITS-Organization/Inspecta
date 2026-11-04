@@ -544,6 +544,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<Guid>("InspectorId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateOnly?>("IssueDate")
+                        .HasColumnType("date");
+
                     b.Property<string>("IssuedForJson")
                         .IsRequired()
                         .HasColumnType("text");

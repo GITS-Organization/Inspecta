@@ -454,6 +454,13 @@ Content-Type: application/json
 
 { "name": "Scissor Lift", "serialNumber": "SL-77", "capacity": "500 kg" }
 
+### Coordinator: set each certificate's number and date before the handover (examination dates stay as the inspector wrote them)
+PUT {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/certificate-details
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "certificates": [ { "requestItemId": "{{requestItemId}}", "certificateNumber": "CERT-2026-0100", "certificateDate": "2026-10-30" } ] }
+
 ### Inspector: submit all the certificates of the job together (all or nothing)
 POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/submit-all
 Authorization: Bearer {{token}}

@@ -34,6 +34,18 @@ public sealed class IssuedCertificateFile
     public string Sha256 { get; private set; } = string.Empty;
     public DateTimeOffset IssuedAt { get; private set; }
 
+    /// <summary>Replaces the file after the certificate number or date was changed before the handover: the same certificate, drawn again.</summary>
+    public void Reissue(string certificateNumber, DateTimeOffset issuedAt, string fileName, byte[] content)
+    {
+        if (string.IsNullOrWhiteSpace(certificateNumber)) throw new ArgumentException("Certificate number is required.", nameof(certificateNumber));
+        if (content is null || content.Length == 0) throw new ArgumentException("The certificate file is empty.", nameof(content));
+        CertificateNumber = certificateNumber.Trim();
+        IssuedAt = issuedAt;
+        FileName = fileName;
+        Content = content;
+        Sha256 = Convert.ToHexString(SHA256.HashData(content)).ToLowerInvariant();
+    }
+
     public static IssuedCertificateFile Create(
         Guid certificateId,
         Guid requestId,

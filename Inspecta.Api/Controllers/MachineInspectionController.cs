@@ -153,6 +153,27 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
         return Ok(await inspectionService.SplitAsync(requestId, requestItemId, actorId, role, request, cancellationToken));
     }
 
+    /// <summary>Set the certificate number and the certificate date of the approved certificates, before the handover.</summary>
+    /// <remarks>
+    /// For the coordinator (that owns the request), the technical manager and Admin, while the job is ready to be handed over
+    /// (<c>certificate_approved</c>, <c>canEditCertificateDetails: true</c>). Send <c>certificates</c>: for each machine its
+    /// <c>requestItemId</c>, <c>certificateNumber</c> (at most 64 characters, unique in the team) and <c>certificateDate</c>
+    /// (<c>yyyy-MM-dd</c>, from 2020 up to today). Each changed certificate is drawn again and the stored file replaced, so the PDF, the QR page, the
+    /// client's archive and the delivery email show the new number and date. The inspector's examination dates are not touched.
+    /// All or nothing: <c>409 certificate_number_taken</c>, <c>409 not_editable</c> (not approved, or already handed over).
+    /// </remarks>
+    [HttpPut("certificate-details")]
+    [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<MachineListResponse>> UpdateCertificateDetails(Guid requestId, UpdateCertificateDetailsRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await inspectionService.UpdateCertificateDetailsAsync(requestId, actorId, role, request, cancellationToken));
+    }
+
     /// <summary>Submit all the certificates of the job together.</summary>
     /// <remarks>
     /// One call for the whole job, all or nothing: every machine needs a saved, complete certificate. If any machine has none or an incomplete

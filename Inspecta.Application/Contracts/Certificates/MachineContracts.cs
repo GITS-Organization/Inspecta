@@ -82,7 +82,8 @@ public sealed record MachineSummaryResponse(
     bool IsGear = false,
     Guid? DivisionGroupId = null,
     int? DivisionTotal = null,
-    string? Kind = null);
+    string? Kind = null,
+    DateOnly? CertificateDate = null);
 
 public sealed record MachineProgress(int Total, int Submitted, int Approved, int Delivered);
 
@@ -109,7 +110,8 @@ public sealed record MachineListResponse(
     bool CanApprove = false,
     IReadOnlyList<string>? ReviewBlockers = null,
     string? PreviewZipUrl = null,
-    Requests.RequestResponse? Request = null);
+    Requests.RequestResponse? Request = null,
+    bool CanEditCertificateDetails = false);
 
 /// <summary>One comment of the technical manager: on the whole job (<c>requestItemId</c> empty) or on one machine.</summary>
 public sealed record ReviewCommentResponse(DateTimeOffset At, string? By, Guid? RequestItemId, string? MachineName, string Text);

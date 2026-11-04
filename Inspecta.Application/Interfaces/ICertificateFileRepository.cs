@@ -58,6 +58,14 @@ public interface ICertificateFileRepository
     /// </summary>
     Task EnsureCounterAsync(Guid managerId, int year, CancellationToken cancellationToken = default);
 
+    /// <summary>The issued file of a certificate ready to be changed (tracked; saved with the next save of the job).</summary>
+    Task<IssuedCertificateFile?> GetForUpdateAsync(Guid certificateId, CancellationToken cancellationToken = default) =>
+        GetByCertificateIdAsync(certificateId, cancellationToken);
+
+    /// <summary>True when the team already has a certificate with this number, other than <paramref name="excludingCertificateId"/>.</summary>
+    Task<bool> NumberTakenAsync(Guid managerId, string certificateNumber, Guid excludingCertificateId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
+
     /// <summary>Takes the next certificate number of the year for a team, for example <c>CERT-2026-0042</c>.</summary>
     Task<string> NextCertificateNumberAsync(Guid managerId, int year, CancellationToken cancellationToken = default);
 }

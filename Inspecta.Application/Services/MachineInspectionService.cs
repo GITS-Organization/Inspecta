@@ -296,6 +296,8 @@ public sealed class MachineInspectionService(
         var reviewer = await userRepository.GetByIdAsync(actorId, cancellationToken);
         var signature = !string.IsNullOrWhiteSpace(approval?.Signature) ? approval.Signature : reviewer?.SignatureStrokesJson;
         var number = await certificateFiles.NextCertificateNumberAsync(request.ManagerId ?? Guid.Empty, DateTimeOffset.UtcNow.Year, cancellationToken);
+        for (var skipped = 0; skipped < 50 && await certificateFiles.NumberTakenAsync(request.ManagerId ?? Guid.Empty, number, certificate.Id, cancellationToken); skipped++)
+            number = await certificateFiles.NextCertificateNumberAsync(request.ManagerId ?? Guid.Empty, DateTimeOffset.UtcNow.Year, cancellationToken);
         // The code and QR were reserved on submit and are kept; older submissions get them now.
         var code = certificate.VerificationCode ?? NewVerificationCode();
         certificate.ApproveForm(
@@ -409,6 +411,76 @@ public sealed class MachineInspectionService(
             return true;
         }, cancellationToken);
         return await ListMachinesAsync(requestId, actorId, role, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sets the certificate number and the certificate date of the approved certificates of a job that is ready to be handed over, and draws
+    /// each changed certificate again (the stored file is replaced). The inspector's examination dates are not touched. All or nothing.
+    /// </summary>
+    public async Task<MachineListResponse> UpdateCertificateDetailsAsync(
+        Guid requestId, Guid actorId, string role, UpdateCertificateDetailsRequest details, CancellationToken cancellationToken = default)
+    {
+        var request = await LoadAsync(requestId, actorId, role, tracking: true, cancellationToken);
+        EnsureCanDeliver(request, actorId, role);
+        var changes = details.Certificates ?? [];
+        if (changes.Count == 0) throw new ArgumentException("Send the certificates to change.");
+        if (changes.Select(change => change.RequestItemId).Distinct().Count() != changes.Count)
+            throw new ArgumentException("A certificate is listed twice.");
+
+        var managerId = request.ManagerId ?? Guid.Empty;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var numbers = changes.Select(change => change.CertificateNumber?.Trim() ?? string.Empty).ToList();
+        if (numbers.Any(number => number.Length == 0)) throw new ArgumentException("Every certificate needs a number.");
+        if (numbers.Distinct(StringComparer.OrdinalIgnoreCase).Count() != numbers.Count) throw new ArgumentException("Two certificates cannot have the same number.");
+        // The other certificates of the job keep their numbers: a number cannot be taken from them either.
+        foreach (var other in request.Certificates.Where(value => value.IsApproved && changes.All(change => change.RequestItemId != value.RequestItemId)))
+            if (numbers.Contains(other.CertificateNumber!, StringComparer.OrdinalIgnoreCase))
+                throw new AuthException("certificate_number_taken", $"The number {other.CertificateNumber} belongs to another certificate of this job.", 409);
+
+        var work = new List<(RequestItem Item, InspectionCertificate Certificate, CertificateDetail Detail)>();
+        foreach (var change in changes)
+        {
+            var item = FindItem(request, change.RequestItemId);
+            var certificate = await certificateRepository.GetByRequestItemIdAsync(requestId, change.RequestItemId, tracking: true, cancellationToken)
+                ?? throw new KeyNotFoundException("Certificate was not found.");
+            if (!certificate.IsApproved || certificate.IsDelivered)
+                throw new AuthException("not_editable", $"The certificate of {item.Name} cannot be changed: it is not approved, or it was already handed over.", 409);
+            if (change.CertificateDate < new DateOnly(2020, 1, 1) || change.CertificateDate > today.AddDays(1))
+                throw new ArgumentException($"The date of {item.Name} must be between 2020 and today.");
+            var number = change.CertificateNumber.Trim();
+            if (await certificateFiles.NumberTakenAsync(managerId, number, certificate.Id, cancellationToken))
+                throw new AuthException("certificate_number_taken", $"The number {number} is already used by another certificate.", 409);
+            work.Add((item, certificate, change));
+        }
+
+        await InTransactionAsync(async () =>
+        {
+            foreach (var (item, certificate, change) in work)
+            {
+                if (certificate.CertificateNumber == change.CertificateNumber.Trim() && certificate.CertificateDate == change.CertificateDate) continue;
+                certificate.ChangeIssueDetails(change.CertificateNumber, change.CertificateDate);
+                var issued = await certificateFiles.GetForUpdateAsync(certificate.Id, cancellationToken)
+                    ?? throw new InvalidOperationException("The issued file of this certificate is missing.");
+                var pdf = await RenderPdfAsync(request, item, certificate, cancellationToken);
+                issued.Reissue(certificate.CertificateNumber!, CertificateMoment(certificate) ?? DateTimeOffset.UtcNow, pdf.FileName, pdf.Content);
+            }
+
+            await requestRepository.SaveAsync(request, cancellationToken);
+            return true;
+        }, cancellationToken);
+        return await ListMachinesAsync(requestId, actorId, role, cancellationToken);
+    }
+
+    private async Task<PdfFile> RenderPdfAsync(InspectionRequest request, RequestItem item, InspectionCertificate certificate, CancellationToken cancellationToken)
+    {
+        var (match, equipment) = await ResolveAsync(item, cancellationToken);
+        var template = CertificateTemplateCatalog.Find(certificate.TemplateId) ?? match.Template;
+        var client = await FindClientAsync(request, cancellationToken);
+        var inspector = await userRepository.GetByIdAsync(certificate.InspectorId, cancellationToken);
+        var previous = await PreviousCertificateAsync(certificate, cancellationToken);
+        var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
+        var contacts = await ContactEmailsAsync(request, cancellationToken);
+        return pdfGenerator.Generate(BuildPdfModel(request, item, certificate, template, match, equipment, client, inspector, previous, company, contacts));
     }
 
     /// <summary>
@@ -753,7 +825,8 @@ public sealed class MachineInspectionService(
                 match.Item?.Gear == true,
                 item.DivisionGroupId,
                 item.DivisionTotal,
-                match.Item?.Kind));
+                match.Item?.Kind,
+                certificate is { IsApproved: true } ? certificate.CertificateDate : null));
         }
 
         var delivered = await DeliveryInfoAsync(request, cancellationToken);
@@ -771,6 +844,7 @@ public sealed class MachineInspectionService(
             CanStartInspection: request.Status is JobStatus.Assigned or JobStatus.TaskAccepted && CanEdit(request, actorId, role),
             CanDeliver: request.Status == JobStatus.CertificateApproved && CanDeliverJob(request, actorId, role),
             machines,
+            CanEditCertificateDetails: request.Status == JobStatus.CertificateApproved && CanDeliverJob(request, actorId, role),
             Delivery: delivered,
             CanReview: waitingForDecision,
             ReviewHistory: request.ReviewComments
@@ -875,6 +949,10 @@ public sealed class MachineInspectionService(
             certificate?.FinalResult.ToInspectionResult());
     }
 
+    // The "Certificate Date" printed on the certificate: the day the coordinator chose, else the approval moment.
+    private static DateTimeOffset? CertificateMoment(InspectionCertificate certificate) =>
+        certificate.IssueDate is { } chosen ? new DateTimeOffset(chosen.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero) : certificate.ReviewedAt;
+
     private static CertificatePdfModel BuildPdfModel(
         InspectionRequest request,
         RequestItem item,
@@ -910,7 +988,7 @@ public sealed class MachineInspectionService(
 
         return new CertificatePdfModel(
             certificate.CertificateNumber,
-            certificate.IsApproved ? certificate.ReviewedAt : null,
+            certificate.IsApproved ? CertificateMoment(certificate) : null,
             IsDraft: !certificate.IsApproved,
             request.ClientName,
             !string.IsNullOrWhiteSpace(client?.Location) ? client.Location : request.Location,

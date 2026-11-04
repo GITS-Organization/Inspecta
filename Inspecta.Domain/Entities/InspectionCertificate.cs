@@ -197,6 +197,27 @@ public sealed class InspectionCertificate
     public bool UsesTemplate => TemplateVersion > 0;
     public bool IsDelivered => SentAt is not null;
 
+    /// <summary>The date printed as "Certificate Date" when the coordinator chose one; otherwise the day the technical manager approved it.</summary>
+    public DateOnly? IssueDate { get; private set; }
+
+    /// <summary>The date printed as "Certificate Date": the chosen one, else the approval day. The examination date is not part of it.</summary>
+    public DateOnly? CertificateDate =>
+        !IsApproved ? null : IssueDate ?? DateOnly.FromDateTime(ReviewedAt!.Value.UtcDateTime);
+
+    /// <summary>
+    /// Changes the certificate number and the certificate date of an approved certificate that was not handed to the client yet.
+    /// The inspector's examination dates are left as they are.
+    /// </summary>
+    public void ChangeIssueDetails(string certificateNumber, DateOnly certificateDate)
+    {
+        if (!IsApproved) throw new InvalidOperationException("Only an approved certificate has a number and a date to change.");
+        if (IsDelivered) throw new InvalidOperationException("A certificate already handed to the client cannot be changed.");
+        if (string.IsNullOrWhiteSpace(certificateNumber)) throw new ArgumentException("The certificate number is required.", nameof(certificateNumber));
+        if (certificateNumber.Trim().Length > 64) throw new ArgumentException("The certificate number is too long.", nameof(certificateNumber));
+        CertificateNumber = certificateNumber.Trim();
+        IssueDate = certificateDate;
+    }
+
     /// <summary>Copies of the saved texts, dates and questionnaire answers (changing them does not change the certificate).</summary>
     public Dictionary<string, string> TextsOf() => Deserialize<Dictionary<string, string>>(TextsJson);
     public Dictionary<string, DateTimeOffset> DatesOf() => Deserialize<Dictionary<string, DateTimeOffset>>(DatesJson);

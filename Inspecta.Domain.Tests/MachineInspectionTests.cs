@@ -817,6 +817,84 @@ public sealed class MachineInspectionTests : IDisposable
 
     // ---- Helpers ------------------------------------------------------------------------------------------------
 
+    // ---- The coordinator sets the number and the date of each certificate before the handover -------------------------
+
+    private static UpdateCertificateDetailsRequest Details(params (Guid Item, string Number, DateOnly Date)[] rows) =>
+        new() { Certificates = rows.Select(row => new CertificateDetail { RequestItemId = row.Item, CertificateNumber = row.Number, CertificateDate = row.Date }).ToArray() };
+
+    private async Task ApproveTheJob()
+    {
+        await SubmitBothMachines();
+        await Run(service => service.ApproveAllAsync(requestId, manager.Id, "technical_manager"));
+    }
+
+    [Fact]
+    public async Task TheCoordinatorSetsEachCertificatesNumberAndDateAndTheFilesAreDrawnAgain()
+    {
+        await ApproveTheJob();
+        var before = await Run(service => service.ListMachinesAsync(requestId, coordinator.Id, "coordinator"));
+        Assert.True(before.CanEditCertificateDetails);
+        var forklift = before.Machines.Single(machine => machine.RequestItemId == forkliftItemId);
+        var examination = forklift.ExaminationDate;
+        Assert.NotNull(forklift.CertificateDate);
+        string firstHash;
+        await using (var db = CreateContext())
+            firstHash = db.IssuedCertificateFiles.IgnoreQueryFilters().Single(file => file.RequestId == requestId && file.CertificateNumber == forklift.CertificateNumber).Sha256;
+
+        var list = await Run(service => service.UpdateCertificateDetailsAsync(requestId, coordinator.Id, "coordinator",
+            Details((forkliftItemId, "CERT-2026-0100", new DateOnly(2026, 10, 30)), (chainItemId, " CERT-2026-0101 ", new DateOnly(2026, 10, 29)))));
+
+        var changed = list.Machines.Single(machine => machine.RequestItemId == forkliftItemId);
+        Assert.Equal("CERT-2026-0100", changed.CertificateNumber);
+        Assert.Equal(new DateOnly(2026, 10, 30), changed.CertificateDate);
+        Assert.Equal("CERT-2026-0101", list.Machines.Single(machine => machine.RequestItemId == chainItemId).CertificateNumber);
+        Assert.Equal(examination, changed.ExaminationDate); // the inspector's examination date is left as he wrote it
+        await using var check = CreateContext();
+        var file = check.IssuedCertificateFiles.IgnoreQueryFilters().Single(value => value.RequestId == requestId && value.CertificateNumber == "CERT-2026-0100");
+        Assert.NotEqual(firstHash, file.Sha256);
+        Assert.Contains("CERT-2026-0100", file.FileName);
+        Assert.Equal(new DateOnly(2026, 10, 30), DateOnly.FromDateTime(file.IssuedAt.UtcDateTime));
+        Assert.Equal(2, check.IssuedCertificateFiles.IgnoreQueryFilters().Count(value => value.RequestId == requestId)); // replaced, not added
+
+        // The same pair can be saved again, and the coordinator can still read each certificate as a PDF.
+        await Run(service => service.UpdateCertificateDetailsAsync(requestId, coordinator.Id, "coordinator",
+            Details((forkliftItemId, "CERT-2026-0100", new DateOnly(2026, 10, 30)))));
+        Assert.StartsWith("%PDF", Encoding.ASCII.GetString((await Run(service => service.GetPdfAsync(requestId, forkliftItemId, coordinator.Id, "coordinator"))).Content, 0, 4));
+    }
+
+    [Fact]
+    public async Task ANumberAlreadyUsedABadDateOrALockedJobIsRefusedAndNothingChanges()
+    {
+        await ApproveTheJob();
+        var list = await Run(service => service.ListMachinesAsync(requestId, coordinator.Id, "coordinator"));
+        var chainNumber = list.Machines.Single(machine => machine.RequestItemId == chainItemId).CertificateNumber!;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.UpdateCertificateDetailsAsync(requestId, coordinator.Id, "coordinator",
+            Details((forkliftItemId, "X-1", today), (chainItemId, "x-1", today)))));
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.UpdateCertificateDetailsAsync(requestId, coordinator.Id, "coordinator",
+            Details((forkliftItemId, "  ", today)))));
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.UpdateCertificateDetailsAsync(requestId, coordinator.Id, "coordinator",
+            Details((forkliftItemId, "X-2", new DateOnly(2019, 12, 31))))));
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.UpdateCertificateDetailsAsync(requestId, coordinator.Id, "coordinator",
+            Details((forkliftItemId, "X-3", today.AddDays(5))))));
+        var taken = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.UpdateCertificateDetailsAsync(requestId, coordinator.Id, "coordinator",
+            Details((forkliftItemId, chainNumber, today)))));
+        Assert.Equal("certificate_number_taken", taken.Code);
+        var inspectorDenied = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.UpdateCertificateDetailsAsync(requestId, inspector.Id, "inspector",
+            Details((forkliftItemId, "X-4", today)))));
+        Assert.Equal(403, inspectorDenied.StatusCode);
+        var unchanged = await Run(service => service.ListMachinesAsync(requestId, coordinator.Id, "coordinator"));
+        Assert.Equal(list.Machines.Select(machine => machine.CertificateNumber), unchanged.Machines.Select(machine => machine.CertificateNumber));
+
+        // Once the certificates are handed to the client they are final.
+        await Run(service => service.DeliverManuallyAsync(requestId, coordinator.Id, "coordinator", new ManualDeliveryRequest()));
+        var locked = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.UpdateCertificateDetailsAsync(requestId, coordinator.Id, "coordinator",
+            Details((forkliftItemId, "X-5", today)))));
+        Assert.Equal("not_approved", locked.Code);
+        Assert.False((await Run(service => service.ListMachinesAsync(requestId, coordinator.Id, "coordinator"))).CanEditCertificateDetails);
+    }
+
     // ---- Submit every certificate of the job together ---------------------------------------------------------------
 
     [Fact]

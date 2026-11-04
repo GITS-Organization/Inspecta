@@ -96,6 +96,14 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
         }
     }
 
+    public Task<IssuedCertificateFile?> GetForUpdateAsync(Guid certificateId, CancellationToken cancellationToken = default) =>
+        dbContext.IssuedCertificateFiles.SingleOrDefaultAsync(file => file.CertificateId == certificateId, cancellationToken);
+
+    public Task<bool> NumberTakenAsync(Guid managerId, string certificateNumber, Guid excludingCertificateId, CancellationToken cancellationToken = default) =>
+        dbContext.IssuedCertificateFiles.AnyAsync(
+            file => file.ManagerId == managerId && file.CertificateNumber == certificateNumber && file.CertificateId != excludingCertificateId,
+            cancellationToken);
+
     public async Task<string> NextCertificateNumberAsync(Guid managerId, int year, CancellationToken cancellationToken = default)
     {
         for (var attempt = 1; ; attempt++)

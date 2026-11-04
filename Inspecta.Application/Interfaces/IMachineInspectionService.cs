@@ -26,6 +26,9 @@ public interface IMachineInspectionService
     /// <summary>Submits every certificate of the job together, all or nothing; answers 409 with what is missing on each machine.</summary>
     Task<MachineListResponse> SubmitAllAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default);
 
+    /// <summary>Sets the number and the date of the approved certificates of a job ready for the handover, and draws them again; all or nothing.</summary>
+    Task<MachineListResponse> UpdateCertificateDetailsAsync(Guid requestId, Guid actorId, string role, UpdateCertificateDetailsRequest details, CancellationToken cancellationToken = default);
+
     /// <summary>Approves the whole job once every machine is submitted; the technical manager never approves part of a job.</summary>
     Task<MachineListResponse> ApproveAllAsync(Guid requestId, Guid actorId, string role, ApproveMachineRequest? approval = null, CancellationToken cancellationToken = default);
 
