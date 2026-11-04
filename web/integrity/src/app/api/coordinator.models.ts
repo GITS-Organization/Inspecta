@@ -103,6 +103,8 @@ export interface RequestDetails {
   kind?: RequestKind;
   /** A client with a contract may go straight to an inspector: only then is the option offered. */
   canAssignWithoutQuotation?: boolean;
+  /** Days of one inspector asked for as an extra priced line of the quotation; null when none. */
+  manDayDays?: number | null;
   clientId: string | null;
   clientName: string;
   location: string;
@@ -181,6 +183,8 @@ export interface SaveRequestDetails {
   items?: SaveRequestItem[] | null;
   expectedUpdatedAt?: string | null;
   prepareQuotation?: boolean | null;
+  /** 1 to 365 days of one inspector; 0 removes the line; left out keeps it. */
+  manDayDays?: number | null;
 }
 
 export interface CreateRequest {
@@ -191,6 +195,7 @@ export interface CreateRequest {
   preferredDate?: string | null;
   accessNotes?: string | null;
   items: SaveRequestItem[];
+  manDayDays?: number | null;
 }
 
 export type QuoteStage = 'draft' | 'sent' | 'accepted' | 'rejected';
@@ -222,7 +227,9 @@ export interface QuoteRow {
   hasUnreadClientReply: boolean;
 }
 
+/** The price of ONE man day, in piastres; the line itself has no request item. */
 export interface UpdateQuote {
+  manDayPricePiastres?: number | null;
   items: { requestItemId: string; unitPricePiastres: number | null }[];
   validForDays?: number | null;
   scopeOfWork?: string[] | null;

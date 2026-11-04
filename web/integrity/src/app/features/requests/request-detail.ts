@@ -8,13 +8,14 @@ import { STAGE_LABEL, formatDate, plural } from '../../shared/format';
 import { AssignDialog } from '../../shared/assign-dialog';
 import { KindBadge } from '../../shared/kind-badge';
 import { ItemsEditor } from '../../shared/items-editor';
+import { ManDayOption } from '../../shared/man-day-option';
 
 const toDateInput = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : '');
 
 /** One request: edit what the client asked for, add suggested machines, read the original email, open or turn down the quotation. */
 @Component({
   selector: 'app-request-detail',
-  imports: [RouterLink, ItemsEditor, KindBadge, AssignDialog],
+  imports: [RouterLink, ItemsEditor, KindBadge, AssignDialog, ManDayOption],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-detail.html',
   styleUrl: './request-detail.scss',
@@ -45,6 +46,8 @@ export class RequestDetail implements OnInit {
   protected readonly preferred = signal('');
   protected readonly access = signal('');
   protected readonly items = signal<SaveRequestItem[]>([]);
+  /** Days of the man day line; 0 when it is off. */
+  protected readonly manDay = signal(0);
   protected readonly rejecting = signal(false);
   protected readonly reason = signal('');
   protected readonly reasonMissing = signal(false);
@@ -89,6 +92,7 @@ export class RequestDetail implements OnInit {
     this.location.set(r.location ?? '');
     this.preferred.set(toDateInput(r.preferredDate));
     this.access.set(r.accessNotes ?? '');
+    this.manDay.set(r.manDayDays ?? 0);
     this.items.set(
       r.items.map((i) => ({
         id: i.id,
@@ -133,6 +137,7 @@ export class RequestDetail implements OnInit {
         preferredDate: this.preferred() ? this.preferred() + 'T00:00:00Z' : null,
         accessNotes: this.access().trim() || null,
         items: this.items().filter((i) => i.name.trim()),
+        manDayDays: this.manDay(),
         expectedUpdatedAt: r.updatedAt,
         prepareQuotation: prepare ? true : false,
       })

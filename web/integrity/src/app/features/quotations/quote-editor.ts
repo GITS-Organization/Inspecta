@@ -3,7 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { CoordinatorApi } from '../../api/coordinator.api';
 import { openBlob } from '../../api/backend.api';
-import { Quote, QuoteEmailPreview, SendEmail, UpdateQuote } from '../../api/coordinator.models';
+import { Quote, QuoteEmailPreview, QuoteItem, SendEmail, UpdateQuote } from '../../api/coordinator.models';
 import { problemMessage } from '../../core/problem';
 import { ToastService } from '../../core/toast.service';
 import { EmailComposer } from '../../shared/email-composer';
@@ -37,6 +37,8 @@ export class QuoteEditor {
   protected readonly error = signal<string | null>(null);
 
   protected readonly prices = signal<Record<string, string>>({});
+  /** Price of ONE man day in pounds, as typed. */
+  protected readonly manDayPrice = signal('');
   protected readonly validFor = signal(14);
   protected readonly proposalNumber = signal('');
   protected readonly contact = signal('');
@@ -56,16 +58,22 @@ export class QuoteEditor {
     return !!q && q.status === 'open' && !!q.sentAt && !q.canEdit;
   });
   protected readonly replies = computed(() => this.quote()?.clientReplies ?? []);
-  protected readonly lineTotal = (it: { requestItemId: string | null; quantity: number; unitPricePiastres: number | null }): string => {
-    const p = it.requestItemId ? egpToPiastres(this.prices()[it.requestItemId] ?? '') : it.unitPricePiastres;
+  /** The man day line has no request item: it is told apart by its type, never mapped by an id. */
+  protected readonly isManDay = (it: QuoteItem): boolean => !it.requestItemId && it.type === 'Man day';
+  protected readonly manDayLine = computed(() => (this.quote()?.items ?? []).find((i) => this.isManDay(i)) ?? null);
+  protected readonly unpricedManDay = computed(() => !!this.manDayLine() && egpToPiastres(this.manDayPrice()) === null);
+  /** The unit price of a line as it stands on screen (what was typed while the quotation is editable). */
+  private unit(it: QuoteItem): number | null {
+    if (this.isManDay(it)) return this.editable() ? egpToPiastres(this.manDayPrice()) : it.unitPricePiastres;
+    return it.requestItemId ? egpToPiastres(this.prices()[it.requestItemId] ?? '') : it.unitPricePiastres;
+  }
+  protected readonly lineTotal = (it: QuoteItem): string => {
+    const p = this.unit(it);
     return p === null ? '—' : formatEgp(p * it.quantity);
   };
-  protected readonly total = computed(() => {
-    const q = this.quote();
-    if (!q?.items) return 0;
-    return q.items.reduce((a, it) => a + (egpToPiastres(this.prices()[it.requestItemId ?? ''] ?? '') ?? 0) * it.quantity, 0);
-  });
-  protected readonly missing = computed(() => (this.quote()?.items ?? []).filter((it) => egpToPiastres(this.prices()[it.requestItemId ?? ''] ?? '') === null).length);
+  protected readonly total = computed(() => (this.quote()?.items ?? []).reduce((a, it) => a + (this.unit(it) ?? 0) * it.quantity, 0));
+  /** Lines without a price: the machines and the man day line. */
+  protected readonly missing = computed(() => (this.quote()?.items ?? []).filter((it) => this.unit(it) === null).length);
 
   constructor() {
     effect(() => {
@@ -93,6 +101,7 @@ export class QuoteEditor {
   private apply(q: Quote): void {
     this.quote.set(q);
     this.prices.set(Object.fromEntries((q.items ?? []).filter((i) => i.requestItemId).map((i) => [i.requestItemId!, toPounds(i.unitPricePiastres)])));
+    this.manDayPrice.set(toPounds((q.items ?? []).find((i) => !i.requestItemId && i.type === 'Man day')?.unitPricePiastres ?? null));
     this.validFor.set(q.validForDays);
     this.proposalNumber.set(q.proposalNumber);
     this.contact.set(q.contactName ?? '');
@@ -108,6 +117,7 @@ export class QuoteEditor {
   private body(): UpdateQuote {
     const q = this.quote()!;
     return {
+      ...(this.manDayLine() && egpToPiastres(this.manDayPrice()) !== null ? { manDayPricePiastres: egpToPiastres(this.manDayPrice()) } : {}),
       items: (q.items ?? []).filter((i) => i.requestItemId).map((i) => ({ requestItemId: i.requestItemId!, unitPricePiastres: egpToPiastres(this.prices()[i.requestItemId!] ?? '') })),
       validForDays: this.validFor(),
       scopeOfWork: lines(this.scope()),

@@ -57,11 +57,25 @@
           </thead>
           <tbody>
             @for (it of q.items ?? []; track $index) {
-              <tr>
-                <td><b>{{ it.description }}</b>@if (it.type) { <div class="muted sm">{{ it.type }}</div> }</td>
+              <tr [class.mdrow]="isManDay(it)">
+                <td>
+                  @if (isManDay(it)) {
+                    <b>{{ editable() ? it.description : 'Man day × ' + it.quantity + (it.quantity === 1 ? ' day' : ' days') }}</b>
+                    <div class="muted sm">
+                      {{ it.quantity }} {{ it.quantity === 1 ? 'day' : 'days' }} of one inspector, priced per day.
+                      @if (editable()) { Change the days on <a [routerLink]="['/requests', q.requestId]" class="lnk">the request</a>. }
+                    </div>
+                  } @else {
+                    <b>{{ it.description }}</b>@if (it.type) { <div class="muted sm">{{ it.type }}</div> }
+                  }
+                </td>
                 <td class="num">{{ it.quantity }}</td>
                 <td class="num">
-                  @if (editable() && it.requestItemId) {
+                  @if (editable() && isManDay(it)) {
+                    <label class="sr" for="mdp">Price per day for the man day</label>
+                    <input id="mdp" class="price" type="text" inputmode="decimal" [value]="manDayPrice()" (input)="manDayPrice.set($any($event.target).value)" />
+                    <div class="muted sm">per day</div>
+                  } @else if (editable() && it.requestItemId) {
                     <label class="sr" [for]="'p' + $index">Price for {{ it.description }}</label>
                     <input [id]="'p' + $index" class="price" type="text" inputmode="decimal" [value]="prices()[it.requestItemId] ?? ''" (input)="setPrice(it.requestItemId, $any($event.target).value)" />
                   } @else {
@@ -77,7 +91,7 @@
           </tfoot>
         </table>
         @if (editable() && missing()) {
-          <p class="miss">{{ missing() }} {{ missing() === 1 ? 'item has' : 'items have' }} no price yet. Every item needs a price before you can send.</p>
+          <p class="miss">{{ missing() }} {{ missing() === 1 ? 'line has' : 'lines have' }} no price yet{{ manDayLine() && unpricedManDay() ? ' (the man day among them)' : '' }}. Every line needs a price before you can send.</p>
         }
       </section>
 

@@ -111,6 +111,7 @@
             </div>
           }
           <app-items-editor [(items)]="items" [equipment]="equipment()" [disabled]="!editable()" />
+          <app-man-day-option inputId="rmd" [(days)]="manDay" [disabled]="!editable()" />
         </section>
 
         @if (editable()) {

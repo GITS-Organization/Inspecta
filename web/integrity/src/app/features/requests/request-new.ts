@@ -5,11 +5,12 @@ import { Client, Equipment, SaveRequestItem } from '../../api/coordinator.models
 import { problemMessage } from '../../core/problem';
 import { ToastService } from '../../core/toast.service';
 import { ItemsEditor } from '../../shared/items-editor';
+import { ManDayOption } from '../../shared/man-day-option';
 
 /** A request the coordinator enters by hand (a phone call, a visit). It opens the same request screen afterwards. */
 @Component({
   selector: 'app-request-new',
-  imports: [RouterLink, ItemsEditor],
+  imports: [RouterLink, ItemsEditor, ManDayOption],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a class="back" routerLink="/requests">Back to requests</a>
@@ -58,6 +59,7 @@ import { ItemsEditor } from '../../shared/items-editor';
       </div>
       <h2 class="h2">Items</h2>
       <app-items-editor [(items)]="items" [equipment]="equipment()" />
+      <app-man-day-option inputId="nmd" [(days)]="manDay" />
       <div class="actions">
         <button type="button" class="btn go" [disabled]="busy()" (click)="create()">Create the request</button>
       </div>
@@ -87,6 +89,7 @@ export class RequestNew implements OnInit {
   protected readonly subject = signal('');
   protected readonly access = signal('');
   protected readonly items = signal<SaveRequestItem[]>([{ name: '', quantity: 1 }]);
+  protected readonly manDay = signal(0);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
 
@@ -121,6 +124,7 @@ export class RequestNew implements OnInit {
         preferredDate: this.preferred() ? this.preferred() + 'T00:00:00Z' : null,
         accessNotes: this.access().trim() || null,
         items: this.items().filter((i) => i.name.trim()),
+        ...(this.manDay() > 0 ? { manDayDays: this.manDay() } : {}),
       })
       .subscribe({
         next: (r) => {
