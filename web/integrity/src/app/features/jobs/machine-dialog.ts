@@ -22,7 +22,7 @@ const opt = (v: string): string | null => v.trim() || null;
     <div class="scrim" (click)="closed.emit()"></div>
     <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="md-title" #box>
       <header>
-        <h2 id="md-title">{{ editing() ? 'Edit ' + editing()!.name : first() ? 'Add the first machine' : 'Add a machine' }}</h2>
+        <h2 id="md-title">{{ editing() ? 'Edit ' + editing()!.name : first() ? 'Add the first certificate' : 'Add a certificate' }}</h2>
         <button type="button" class="x" aria-label="Close" (click)="closed.emit()">×</button>
       </header>
 
@@ -40,7 +40,7 @@ const opt = (v: string): string | null => v.trim() || null;
       }
 
       @if (!editing() && tab() === 'registered') {
-        <p class="muted lead">The client's machines that are not in this job yet. Pick one to certify it on this visit.</p>
+        <p class="muted lead">The client's machines that are not in this job yet. Pick one and it gets a certificate on this visit.</p>
         <label class="sr" for="md-q">Search the client's machines</label>
         <input id="md-q" type="search" autocomplete="off" placeholder="Search by name, serial number or model" [value]="query()" (input)="query.set($any($event.target).value)" />
         <ul class="reg" aria-label="Registered machines">

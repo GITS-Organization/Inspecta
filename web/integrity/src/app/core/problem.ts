@@ -47,3 +47,20 @@ export function apiMessage(err: unknown, fallback?: string): string {
   }
   return problemMessage(err, fallback);
 }
+
+/**
+ * Like `apiMessage`, for calls whose answer is a file (`responseType: 'blob'`): an error body then arrives as a Blob, so the API's
+ * sentence has to be read out of it first.
+ */
+export async function apiMessageAsync(err: unknown, fallback?: string): Promise<string> {
+  if (err instanceof HttpErrorResponse && err.error instanceof Blob) {
+    try {
+      const body = JSON.parse(await err.error.text()) as ProblemDetails;
+      if (body.detail) return body.detail;
+    } catch {
+      /* not JSON */
+    }
+    return apiMessage(new HttpErrorResponse({ status: err.status, statusText: err.statusText, url: err.url ?? undefined }), fallback);
+  }
+  return apiMessage(err, fallback);
+}

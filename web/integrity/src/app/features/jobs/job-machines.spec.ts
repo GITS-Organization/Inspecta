@@ -57,16 +57,16 @@ describe('Job: machines added on site', () => {
     return { f, el, c: f.componentInstance as unknown as Internals, text: () => el.textContent ?? '', btn: (t: string) => [...el.querySelectorAll('button')].find((b) => b.textContent?.trim() === t) };
   }
 
-  it('offers "Add the first machine" on a man day that has none', () => {
+  it('offers "Add the first certificate" on a man day that has none', () => {
     const { text, btn } = open([], 'assigned');
-    expect(text()).toContain('No machines in this job yet.');
-    expect(btn('Add the first machine')).toBeTruthy();
+    expect(text()).toContain('No certificates in this job yet.');
+    expect(btn('Add the first certificate')).toBeTruthy();
   });
 
   it('shows the machine actions only while the job is under way', () => {
     for (const status of ['certificate_submitted', 'certificate_approved', 'sent_to_client'] as JobStatus[]) {
       const { btn, f } = open([machine('a', 'not_started')], status);
-      expect(btn('Add a machine')).toBeUndefined();
+      expect(btn('Add a certificate')).toBeUndefined();
       expect(btn('Edit')).toBeUndefined();
       expect(btn('Remove')).toBeUndefined();
       f.destroy();
@@ -76,14 +76,14 @@ describe('Job: machines added on site', () => {
   it('lets only an untouched machine be removed and only an unsubmitted one be edited', () => {
     const { el } = open([machine('a', 'not_started'), machine('b', 'draft'), machine('c', 'submitted')]);
     const rows = [...el.querySelectorAll('.mrow')].map((r) => [...r.querySelectorAll('button')].map((b) => b.textContent?.trim()));
-    expect(rows[0]).toEqual(['Edit', 'Remove']);
-    expect(rows[1]).toEqual(['Edit']);
-    expect(rows[2]).toEqual([]);
+    expect(rows[0]).toEqual(['Preview', 'Edit', 'Remove']);
+    expect(rows[1]).toEqual(['Preview', 'Edit']);
+    expect(rows[2]).toEqual(['Preview']);
   });
 
   it('adds a registered machine from the dialog and refreshes the list with the answer', () => {
     const { f, btn, text } = open([machine('a', 'not_started')]);
-    btn('Add a machine')!.click();
+    btn('Add a certificate')!.click();
     f.detectChanges();
     ctrl.expectOne(base + '/available-machines').flush([
       { id: 'e1', clientId: 'c1', name: 'Forklift 3t', serialNumber: 'FL-77', model: 'H30', capacity: '3 t', category: null, manufacturer: null, locationInsideClientLocation: null },
@@ -110,7 +110,7 @@ describe('Job: machines added on site', () => {
   it('adds a new machine by its details and warns that a gear is not registered', () => {
     const { f, btn, text } = open([]);
     ctrl.verify();
-    btn('Add the first machine')!.click();
+    btn('Add the first certificate')!.click();
     f.detectChanges();
     ctrl.expectOne(base + '/available-machines').flush([]);
     f.detectChanges();
@@ -174,7 +174,7 @@ describe('Job: machines added on site', () => {
   it('gives a coordinator the same actions and a way back to the queue', () => {
     role = 'coordinator';
     const { el, btn } = open([machine('a', 'not_started')], 'assigned');
-    expect(btn('Add a machine')).toBeTruthy();
+    expect(btn('Add a certificate')).toBeTruthy();
     expect(el.querySelector('a.back')?.getAttribute('href')).toBe('/queue');
   });
 });

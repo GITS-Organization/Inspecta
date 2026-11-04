@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   AddJobMachine,
@@ -25,6 +25,21 @@ const dayParams = (from?: string, to?: string): HttpParams => {
   if (to) p = p.set('to', to);
   return p;
 };
+
+/** The file name of a `Content-Disposition` header, if it has one. */
+export function fileNameOf(header: string | null): string | null {
+  if (!header) return null;
+  const star = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(header);
+  if (star) {
+    try {
+      return decodeURIComponent(star[1].trim().replace(/^"|"$/g, ''));
+    } catch {
+      /* fall through */
+    }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(header);
+  return plain ? plain[1].trim() : null;
+}
 
 /** Typed wrappers of the endpoints the screens use. Paths are relative to `/api/v1`. */
 @Injectable({ providedIn: 'root' })
@@ -98,6 +113,24 @@ export class BackendApi {
 
   machineTypes(): Observable<MachineType[]> {
     return this.http.get<MachineType[]>(`${this.base}/certifications/machine-types`);
+  }
+
+  /** Sends every certificate of the job to the technical manager, all or nothing. A refusal (409 `certificate_incomplete`) lists `problems`. */
+  submitAll(requestId: string): Observable<MachineList> {
+    return this.http.post<MachineList>(`${this.base}/quotation-queue/${requestId}/submit-all`, {});
+  }
+
+  /** A certificate as it would print (the `pdfUrl` the API gave), fetched with the bearer token. */
+  certificateFile(pdfUrl: string): Observable<Blob> {
+    const url = pdfUrl.startsWith('/api/v1') ? this.base + pdfUrl.slice('/api/v1'.length) : pdfUrl;
+    return this.http.get(url, { responseType: 'blob' });
+  }
+
+  /** Every certificate of the job in one ZIP, with the file name the API suggests. */
+  previewZipFile(requestId: string): Observable<{ blob: Blob; fileName: string }> {
+    return this.http.get(`${this.base}/quotation-queue/${requestId}/certificates/preview.zip`, { responseType: 'blob', observe: 'response' }).pipe(
+      map((r) => ({ blob: r.body as Blob, fileName: fileNameOf(r.headers.get('Content-Disposition')) ?? 'certificates-preview.zip' })),
+    );
   }
 
   approveAll(requestId: string): Observable<MachineList> {
