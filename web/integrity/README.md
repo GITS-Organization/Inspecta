@@ -1,59 +1,60 @@
-# Integrity
+# Integrity web app
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.5.
+Angular web client of Integrity (integrity.gitsplatform.com) for the Inspecta backend. Standalone components, signals,
+strict TypeScript, SCSS, no NgModules. Design: `docs/frontend-design/integrity-app.html`. Plan: [PLAN.md](PLAN.md).
 
-## Development server
-
-To start a local development server, run:
-
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Run
 
 ```bash
-ng generate component component-name
+npm install
+npm start
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+`npm start` serves http://localhost:4200 and proxies `/api` to `https://api.gitsplatform.com` (see `proxy.conf.json`), so there is
+no CORS setup. Sign in with an account that exists on that backend. To use a local backend change the `target` in `proxy.conf.json`.
+
+## Test and build
 
 ```bash
-ng generate --help
+npm test -- --watch=false
+npm run build
 ```
 
-## Building
+The production build (`dist/integrity/browser`) swaps `src/environments/environment.ts` for `environment.production.ts`, which calls
+`https://api.gitsplatform.com/api/v1` directly. Change `apiBase` there if the API moves.
 
-To build the project run:
+## Deploy (Firebase Hosting)
+
+The app is a single-page app served at `integrity.gitsplatform.com`. `firebase.json` points the `integrity` hosting site at
+`dist/integrity/browser` and rewrites every path to `index.html`.
 
 ```bash
-ng build
+npm run build
+firebase deploy --only hosting:integrity
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Needs a one-time `firebase use <project>` and the `integrity` site created in that project (`firebase hosting:sites:create integrity`),
+with the custom domain connected in the console. The API must allow the origin `https://integrity.gitsplatform.com` in its CORS settings.
 
-## Running unit tests
+## What is where
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+| Folder | Content |
+|---|---|
+| `src/app/core` | models, `AuthService` (JWT + refresh rotation, role from the `role` claim), interceptor, guards, branding |
+| `src/app/api` | typed endpoint wrappers; `certification.api.ts` is the Create certification contract |
+| `src/app/shared` | the certificate "paper" preview, formatting, serial-number split logic |
+| `src/app/shell` | navigation rail per role |
+| `src/app/features` | login, overview, jobs, job, review, machine-form, create |
 
-```bash
-ng test
-```
+Roles and start pages: admin and technical manager open **Overview** (and To review, Create certification); the inspector opens **My jobs**
+(and Create certification); the coordinator opens **Jobs** (approved and delivered lists).
 
-## Running end-to-end tests
+Branding: the app starts with the built-in Integrity identity. After sign-in it asks the public `GET /branding/{managerId}/logo.png`
+for the team's own logo and falls back to the built-in one on 404. Colours are not exposed by a public endpoint yet, so they stay on the tokens.
 
-For end-to-end (e2e) testing, run:
+## Known gaps
 
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- Inspectors cannot list clients or items (`/clients` and `/equipment` need a coordinator, manager or admin), so the Create certification client
+  picker shows a message for them until the backend offers a lookup for inspectors.
+- The coordinator hand-over (deliver to client) screens are not built; coordinators see the lists and the certificate PDFs.
+- Admin creating a certification needs `managerId` in the request; the tab does not send it yet.
