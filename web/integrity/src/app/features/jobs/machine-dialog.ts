@@ -89,7 +89,7 @@ const opt = (v: string): string | null => v.trim() || null;
               </div>
             }
             <div class="field">
-              <label for="md-c">Capacity</label>
+              <label for="md-c">SWL</label>
               <input id="md-c" type="text" maxlength="200" [value]="capacity()" (input)="capacity.set($any($event.target).value)" />
             </div>
           </div>

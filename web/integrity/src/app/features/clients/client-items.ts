@@ -34,7 +34,7 @@ const empty = (clientId: string): SaveEquipment => ({ clientId, name: '', itemTy
           <div class="field"><label for="is">Serial number</label><input id="is" type="text" [value]="f.serialNumber ?? ''" (input)="set({ serialNumber: $any($event.target).value })" /></div>
         </div>
         <div class="row2">
-          <div class="field"><label for="ica">Capacity</label><input id="ica" type="text" [value]="f.capacity ?? ''" (input)="set({ capacity: $any($event.target).value })" /></div>
+          <div class="field"><label for="ica">SWL</label><input id="ica" type="text" [value]="f.capacity ?? ''" (input)="set({ capacity: $any($event.target).value })" /></div>
         </div>
         <div class="row2">
           <div class="field"><label for="itt">Type of test</label><input id="itt" type="text" [value]="f.testType ?? ''" (input)="set({ testType: $any($event.target).value })" /></div>

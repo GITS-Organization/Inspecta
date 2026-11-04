@@ -46,7 +46,7 @@ import { Equipment, SaveRequestItem } from '../api/coordinator.models';
             </div>
           }
           <div class="field">
-            <label [for]="'c' + $index">Capacity</label>
+            <label [for]="'c' + $index">SWL</label>
             <input [id]="'c' + $index" type="text" [disabled]="disabled()" [value]="it.capacity ?? ''" (input)="set($index, { capacity: $any($event.target).value })" />
           </div>
           <div class="field">
