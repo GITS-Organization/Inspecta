@@ -132,6 +132,8 @@ export interface MachineList {
   canApprove?: boolean;
   reviewBlockers?: string[] | null;
   previewZipUrl?: string | null;
+  /** The request of the job (its `kind`, for the Man day / Contract / Direct tag). */
+  request?: { kind?: RequestKind } | null;
 }
 
 /** The details of one machine of a job: what `PUT .../machines/{id}/details` replaces and what a new machine is added with. */

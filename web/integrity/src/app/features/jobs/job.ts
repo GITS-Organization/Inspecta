@@ -8,12 +8,13 @@ import { MACHINES_OPEN, MachineList, MachineSummary } from '../../core/models';
 import { apiMessage, problemMessage } from '../../core/problem';
 import { ToastService } from '../../core/toast.service';
 import { MACHINE_STATUS_LABEL, formatDate, machineChip, plural } from '../../shared/format';
+import { KindBadge } from '../../shared/kind-badge';
 import { MachineKinds } from '../../shared/machine-kinds';
 
 /** The machines of one job: the inspector starts and continues here; the coordinator opens the approved certificates. */
 @Component({
   selector: 'app-job',
-  imports: [RouterLink, MachineDialog, GearDivision],
+  imports: [RouterLink, MachineDialog, GearDivision, KindBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a class="back muted" [routerLink]="backLink().path">{{ backLink().label }}</a>
@@ -23,6 +24,7 @@ import { MachineKinds } from '../../shared/machine-kinds';
     @if (job(); as j) {
       <div class="head">
         <div>
+          <app-kind-badge [kind]="j.request?.kind" />
           <h1>{{ j.clientName }}</h1>
           <p class="muted">
             {{ j.location }} · {{ plural(j.machines.length, 'machine') }}

@@ -55,8 +55,8 @@ export interface CreateCertificationRequest {
 }
 
 /**
- * Everything the Create certification tab needs from the backend. `HttpCertificationApi` is the real one; tests (or a
- * demo build) can bind another implementation to `CERTIFICATION_API`.
+ * Everything the Create certification tab needs from the backend. `HttpCertificationApi` is the only implementation the app
+ * uses (see `app.config.ts`); unit tests may bind another one to `CERTIFICATION_API`.
  */
 export interface CertificationApi {
   listClients(): Observable<ClientOption[]>;
