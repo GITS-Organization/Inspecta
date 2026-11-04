@@ -74,4 +74,38 @@ describe('ClientItems', () => {
     expect((f.nativeElement as HTMLElement).querySelector('[role=alert]')?.textContent).toContain('cannot be deleted');
     ctrl.verify();
   });
+
+  it('keeps no serial number for a gear: the field is not offered and nothing is sent', async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
+    const ctrl = TestBed.inject(HttpTestingController);
+    const f = TestBed.createComponent(ClientItems);
+    f.componentRef.setInput('clientId', 'c1');
+    f.detectChanges();
+    ctrl.expectOne(`${api}/equipment?clientId=c1`).flush([]);
+
+    type I = { startNew(): void; set(p: object): void; save(): void };
+    const c = f.componentInstance as unknown as I;
+    c.startNew();
+    f.detectChanges();
+    const types = [
+      { name: 'Chain Sling grade 4', aliases: [], standards: [], templateKey: 'basic', templateName: 'Standard', isGear: true, kind: 'gear' },
+      { name: 'Scissor Lift', aliases: [], standards: [], templateKey: 'basic', templateName: 'Standard', isGear: false, kind: 'equipment' },
+    ];
+    ctrl.match(`${api}/certifications/machine-types`).forEach((r) => r.flush(types));
+
+    const serialField = () => (f.nativeElement as HTMLElement).querySelector('#is');
+    c.set({ name: 'Scissor Lift', serialNumber: 'SL-9' });
+    f.detectChanges();
+    expect(serialField()).not.toBeNull();
+
+    c.set({ name: 'Chain Sling grade 4', serialNumber: 'CS-0001' });
+    f.detectChanges();
+    expect(serialField()).toBeNull();
+    c.save();
+    const post = ctrl.expectOne((r) => r.method === 'POST' && r.url === `${api}/equipment`);
+    expect(post.request.body.serialNumber).toBeNull();
+    post.flush({});
+    ctrl.expectOne(`${api}/equipment?clientId=c1`).flush([]);
+    ctrl.verify();
+  });
 });

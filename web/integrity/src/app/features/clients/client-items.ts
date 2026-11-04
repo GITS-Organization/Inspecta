@@ -31,7 +31,9 @@ const empty = (clientId: string): SaveEquipment => ({ clientId, name: '', itemTy
         <div class="row3">
           <div class="field"><label for="im">Manufacturer</label><input id="im" type="text" [value]="f.manufacturer ?? ''" (input)="set({ manufacturer: $any($event.target).value })" /></div>
           <div class="field"><label for="imo">Model</label><input id="imo" type="text" [value]="f.model ?? ''" (input)="set({ model: $any($event.target).value })" /></div>
-          <div class="field"><label for="is">Serial number</label><input id="is" type="text" [value]="f.serialNumber ?? ''" (input)="set({ serialNumber: $any($event.target).value })" /></div>
+          @if (!kinds.isGear(f.name)) {
+            <div class="field"><label for="is">Serial number</label><input id="is" type="text" [value]="f.serialNumber ?? ''" (input)="set({ serialNumber: $any($event.target).value })" /></div>
+          }
         </div>
         <div class="row2">
           <div class="field"><label for="ica">SWL</label><input id="ica" type="text" [value]="f.capacity ?? ''" (input)="set({ capacity: $any($event.target).value })" /></div>
@@ -165,7 +167,8 @@ export class ClientItems implements OnInit {
     this.busy.set(true);
     this.error.set(null);
     const id = this.editingId();
-    (id ? this.api.updateEquipment(id, f) : this.api.createEquipment(f)).subscribe({
+    const toSave = this.kinds.isGear(f.name) ? { ...f, serialNumber: null } : f;
+    (id ? this.api.updateEquipment(id, toSave) : this.api.createEquipment(toSave)).subscribe({
       next: () => {
         this.busy.set(false);
         this.form.set(null);

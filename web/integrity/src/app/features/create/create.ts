@@ -171,7 +171,7 @@ export class Create {
         isGear: this.isGear(),
         ...(this.source() === 'ex' && sel ? { equipmentId: sel.id } : {}),
         ...(this.matchedType() ? { type: this.matchedType()!.name } : {}),
-        ...(this.source() === 'new' && this.newSerial().trim() ? { serialNumber: this.newSerial().trim() } : {}),
+        ...(this.source() === 'new' && !this.isGear() && this.newSerial().trim() ? { serialNumber: this.newSerial().trim() } : {}),
       },
       serials: this.isGear() ? this.serials() : [],
       certificates: this.count(),
