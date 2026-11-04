@@ -1,14 +1,18 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { CoordinatorApi } from '../../api/coordinator.api';
+import { MachineType } from '../../api/certification.api';
 import { Equipment, ItemType, SaveEquipment } from '../../api/coordinator.models';
 import { problemMessage } from '../../core/problem';
 import { ToastService } from '../../core/toast.service';
 import { formatDate } from '../../shared/format';
+import { MachineKinds } from '../../shared/machine-kinds';
+import { MachineNamePicker } from '../../shared/machine-name-picker';
 
 const empty = (clientId: string): SaveEquipment => ({ clientId, name: '', itemType: 'equipment' });
 
 /** The machines and gear of one client: add, edit and delete. The server decides what may be deleted. */
 @Component({
+  imports: [MachineNamePicker],
   selector: 'app-client-items',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -20,16 +24,8 @@ const empty = (clientId: string): SaveEquipment => ({ clientId, name: '', itemTy
 
     @if (form(); as f) {
       <div class="itemcard" role="group" [attr.aria-label]="editingId() ? 'Edit the item' : 'New item'">
-        <div class="row3">
-          <div class="field"><label for="in">Name</label><input id="in" type="text" [value]="f.name" (input)="set({ name: $any($event.target).value })" /></div>
-          <div class="field">
-            <label for="it">Kind</label>
-            <select id="it" (change)="set({ itemType: $any($event.target).value })">
-              <option value="equipment" [selected]="f.itemType === 'equipment'">Equipment</option>
-              <option value="gear" [selected]="f.itemType === 'gear'">Lifting gear</option>
-              <option value="non_lifting" [selected]="f.itemType === 'non_lifting'">Not a lifting item</option>
-            </select>
-          </div>
+        <div class="row2">
+          <div class="field"><app-machine-name-picker inputId="in" [value]="f.name" (valueChange)="set({ name: $event })" (picked)="pick($event)" /></div>
           <div class="field"><label for="ic">Category</label><input id="ic" type="text" [value]="f.category ?? ''" (input)="set({ category: $any($event.target).value })" /></div>
         </div>
         <div class="row3">
@@ -39,7 +35,6 @@ const empty = (clientId: string): SaveEquipment => ({ clientId, name: '', itemTy
         </div>
         <div class="row2">
           <div class="field"><label for="ica">Capacity</label><input id="ica" type="text" [value]="f.capacity ?? ''" (input)="set({ capacity: $any($event.target).value })" /></div>
-          <div class="field"><label for="ist">Inspection standard</label><input id="ist" type="text" [value]="f.inspectionStandard ?? ''" (input)="set({ inspectionStandard: $any($event.target).value })" /></div>
         </div>
         <div class="row2">
           <div class="field"><label for="itt">Type of test</label><input id="itt" type="text" [value]="f.testType ?? ''" (input)="set({ testType: $any($event.target).value })" /></div>
@@ -62,7 +57,7 @@ const empty = (clientId: string): SaveEquipment => ({ clientId, name: '', itemTy
         <tbody>
           @for (e of items(); track e.id) {
             <tr>
-              <td><b>{{ e.name }}</b><div class="muted sm">{{ e.manufacturer }}{{ e.model ? ' ' + e.model : '' }}</div></td>
+              <td><b>{{ e.name }}</b> <span class="chip">{{ kinds.kindLabel(e.kind ?? e.itemType) }}</span><div class="muted sm">{{ e.manufacturer }}{{ e.model ? ' ' + e.model : '' }}</div>@if (e.inspectionStandards?.length) { <div class="muted sm">{{ e.inspectionStandards!.join(' · ') }}</div> }</td>
               <td>{{ e.serialNumber || '—' }}</td>
               <td>{{ formatDate(e.lastInspectedOn) || '—' }}</td>
               <td>
@@ -147,6 +142,13 @@ export class ClientItems implements OnInit {
       clientId: e.clientId, name: e.name, itemType: e.itemType, category: e.category, manufacturer: e.manufacturer, model: e.model, serialNumber: e.serialNumber,
       capacity: e.capacity, inspectionStandard: e.inspectionStandard, testType: e.testType, notes: e.notes,
     });
+  }
+
+  protected readonly kinds = inject(MachineKinds);
+
+  /** The name fixes the kind of the item. */
+  protected pick(t: MachineType): void {
+    this.set({ itemType: this.kinds.kindOf(t) });
   }
 
   protected set(p: Partial<SaveEquipment> & { itemType?: ItemType }): void {

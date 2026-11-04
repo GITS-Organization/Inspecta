@@ -66,20 +66,7 @@
         } @else {
           <div class="row2">
             <div class="field">
-              <label for="nn">Machine name</label>
-              <input id="nn" type="text" list="types" placeholder="e.g. Scissor lift" [value]="newName()" (input)="newName.set($any($event.target).value)" />
-              <datalist id="types">
-                @for (t of types(); track t.name) {
-                  <option [value]="t.name"></option>
-                }
-              </datalist>
-              <small>
-                @if (matchedType(); as t) {
-                  {{ t.templateName }}{{ t.isGear ? ' · quantity and serial numbers' : '' }}
-                } @else {
-                  Pick a known kind to get its certificate type.
-                }
-              </small>
+              <app-machine-name-picker inputId="nn" label="Machine name" [value]="newName()" (valueChange)="newName.set($event)" />
             </div>
             <div class="field">
               <label for="nm">Manufacturer</label>

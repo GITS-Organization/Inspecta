@@ -24,6 +24,7 @@
             }
             <span class="muted">
               @if (m.quantity > 1) { {{ m.quantity }} pieces } @else if (m.serialNumber) { S/N {{ m.serialNumber }}{{ m.manufacturer ? ' · ' + m.manufacturer : '' }} }
+              @if (m.kind) { <span class="kd">{{ kindLabels[m.kind] }}{{ m.inspectionStandards?.length ? ' · ' + m.inspectionStandards!.join(' · ') : '' }}</span> }
             </span>
             <span class="muted">{{ formatDate(m.examinationDate) }}</span>
           </button>

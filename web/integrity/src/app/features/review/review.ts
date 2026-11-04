@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { BackendApi, openBlob, saveBlob } from '../../api/backend.api';
+import { KIND_LABELS } from '../../api/certification.api';
 import { MachineList, MachineSummary } from '../../core/models';
 import { problemMessage } from '../../core/problem';
 import { ToastService } from '../../core/toast.service';
@@ -16,6 +17,7 @@ import { MACHINE_STATUS_LABEL, RESULT_LABEL, formatDate, plural, resultChip } fr
   styleUrl: './review.scss',
 })
 export class Review implements OnInit {
+  protected readonly kindLabels = KIND_LABELS;
   readonly requestId = input.required<string>();
 
   private readonly api = inject(BackendApi);

@@ -15,6 +15,8 @@ export type Triage = 'request' | 'maybe';
 
 export interface RequestItem {
   id: string;
+  kind?: ItemType | null;
+  inspectionStandards?: string[] | null;
   equipmentId: string | null;
   name: string;
   type: string | null;
@@ -346,6 +348,8 @@ export type ItemType = 'gear' | 'equipment' | 'non_lifting';
 
 export interface Equipment {
   id: string;
+  kind?: ItemType | null;
+  inspectionStandards?: string[] | null;
   clientId: string;
   name: string;
   category: string | null;

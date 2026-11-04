@@ -18,7 +18,19 @@ const list = (machines: MachineSummary[], requestStatus: JobStatus = 'in_progres
   canStartInspection: false, canDeliver: false, machines,
 });
 
-const types = [{ name: 'Sling', aliases: ['Web sling'], standards: [], templateKey: 'gear', templateName: 'Gear', isGear: true }];
+const types = [
+  { name: 'Sling', aliases: ['Web sling'], standards: ['LOLER 1998'], templateKey: 'gear', templateName: 'Gear', isGear: true, kind: 'gear' },
+  { name: 'Overhead crane', aliases: [], standards: [], templateKey: 'crane', templateName: 'Crane', isGear: false, kind: 'equipment' },
+];
+/** Opens the name select of the dialog and chooses one catalogue name. */
+const pickName = (f: { detectChanges(): void; nativeElement: unknown }, name: string) => {
+  const el = f.nativeElement as HTMLElement;
+  el.querySelector<HTMLButtonElement>('#md-n')!.click();
+  f.detectChanges();
+  const opt = [...el.querySelectorAll('[role=option] button')].find((b) => b.textContent?.includes(name)) as HTMLButtonElement;
+  opt.click();
+  f.detectChanges();
+};
 
 type Internals = { adding: { set(v: boolean): void }; editing: { set(v: MachineSummary | null): void }; remove(m: MachineSummary): void };
 
@@ -108,10 +120,10 @@ describe('Job: machines added on site', () => {
       i.value = v;
       i.dispatchEvent(new Event('input'));
     };
-    set('md-n', '  Chain sling 2t ');
-    set('md-t', 'web sling');
-    f.detectChanges();
-    expect(text()).toContain('web sling is a gear.');
+    expect(el.querySelector('input#md-n')).toBeNull();
+    pickName(f, 'Sling');
+    expect(text()).toContain('Sling is a gear.');
+    expect(text()).toContain('LOLER 1998');
     expect(el.querySelector('#md-s')).toBeNull();
     expect(el.querySelector('#md-l')).toBeNull();
     set('md-q2', '12');
@@ -119,11 +131,11 @@ describe('Job: machines added on site', () => {
     (el.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
     const post = ctrl.expectOne(base + '/machines');
     expect(post.request.body).toEqual({
-      name: 'Chain sling 2t', quantity: 12, type: 'web sling', capacity: null, serialNumber: null, manufacturer: null, model: null, issueDescription: null,
+      name: 'Sling', quantity: 12, type: null, capacity: null, serialNumber: null, manufacturer: null, model: null, issueDescription: null,
     });
-    post.flush(list([machine('n', 'not_started', { name: 'Chain sling 2t', quantity: 12 })]), { status: 201, statusText: 'Created' });
+    post.flush(list([machine('n', 'not_started', { name: 'Sling', quantity: 12 })]), { status: 201, statusText: 'Created' });
     f.detectChanges();
-    expect(text()).toContain('Chain sling 2t');
+    expect(text()).toContain('12 pieces');
   });
 
   it('shows the API sentence when a machine cannot be removed', () => {
@@ -144,14 +156,15 @@ describe('Job: machines added on site', () => {
     btn('Edit')!.click();
     f.detectChanges();
     const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector<HTMLInputElement>('#md-n')!.value).toBe('Crane a');
-    const n = el.querySelector<HTMLInputElement>('#md-n')!;
-    n.value = 'Crane A1';
-    n.dispatchEvent(new Event('input'));
+    expect(el.querySelector('#md-n')!.textContent).toContain('Crane a');
+    expect(text()).toContain('Not in the list: choose a name.');
+    pickName(f, 'Overhead crane');
+    expect(text()).not.toContain('Not in the list');
+    expect(text()).toContain('No standard defined yet');
     (el.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
     const put = ctrl.expectOne(base + '/machines/a/details');
     expect(put.request.method).toBe('PUT');
-    expect(put.request.body).toMatchObject({ name: 'Crane A1', quantity: 1, type: 'Crane', capacity: '5 t', serialNumber: 'SN-a' });
+    expect(put.request.body).toMatchObject({ name: 'Overhead crane', quantity: 1, type: null, capacity: '5 t', serialNumber: 'SN-a' });
     put.flush({ code: 'certificate_locked', detail: 'A submitted certificate cannot be changed; wait for the review or for it to be returned.' }, { status: 409, statusText: 'Conflict' });
     f.detectChanges();
     expect(text()).toContain('A submitted certificate cannot be changed');

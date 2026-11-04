@@ -91,6 +91,7 @@ export interface MachineSummary {
   canReview: boolean;
   /** The catalogue says this machine is a gear (inspected in numbers). */
   isGear?: boolean;
+  kind?: 'gear' | 'equipment' | 'non_lifting' | null;
   /** Machines of one gear that was divided into certificates share this id. */
   divisionGroupId?: string | null;
   /** The quantity of the gear before the first division. */

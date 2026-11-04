@@ -67,6 +67,7 @@ import { MachineKinds } from '../../shared/machine-kinds';
                 @if (gear(m)) { {{ m.quantity }} {{ m.quantity === 1 ? 'piece' : 'pieces' }}@if (m.serialNumber) { · <span class="sn">{{ m.serialNumber }}</span> } } @else if (m.serialNumber) { S/N {{ m.serialNumber }} }
                 @if (m.certificateNumber) { · {{ m.certificateNumber }} }
               </div>
+              @if (kindOf(m); as k) { <div class="muted std">{{ k }}@if (m.inspectionStandards?.length) { · {{ m.inspectionStandards!.join(' · ') }} }</div> }
               @if (m.reviewNote) { <div class="rn">{{ m.reviewNote }}</div> }
             </div>
             <span class="chip" [class]="chipClass(m.status)">{{ statusLabel(m.status) }}</span>
@@ -198,6 +199,9 @@ import { MachineKinds } from '../../shared/machine-kinds';
       white-space: nowrap;
       vertical-align: bottom;
     }
+    .std {
+      font-size: 13px;
+    }
     .rn {
       color: var(--red);
       font-size: 13px;
@@ -268,6 +272,9 @@ export class Job implements OnInit {
     return this.canChange() && m.status === 'not_started';
   }
 
+  protected kindOf(m: MachineSummary): string {
+    return this.kinds.kindLabel(m.kind ?? null);
+  }
   protected gear(m: MachineSummary): boolean {
     return m.isGear ?? this.kinds.isGear(m.name, m.type);
   }

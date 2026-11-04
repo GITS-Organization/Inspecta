@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, model } from '@angular/core';
 import { MachineKinds } from './machine-kinds';
+import { MachineNamePicker } from './machine-name-picker';
 import { Equipment, SaveRequestItem } from '../api/coordinator.models';
 
 /** Edits the equipment list of a request: each item can be typed or taken from the client's registered items. */
 @Component({
   selector: 'app-items-editor',
+  imports: [MachineNamePicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @for (it of items(); track $index) {
@@ -26,12 +28,11 @@ import { Equipment, SaveRequestItem } from '../api/coordinator.models';
             </select>
           </div>
         }
-        @let gear = kinds.isGear(it.name, it.type);
-        <div class="row3">
-          <div class="field">
-            <label [for]="'n' + $index">Name</label>
-            <input [id]="'n' + $index" type="text" [disabled]="disabled()" [value]="it.name" (input)="set($index, { name: $any($event.target).value })" />
-          </div>
+        @let gear = kinds.isGear(it.name);
+        <div class="field">
+          <app-machine-name-picker [inputId]="'n' + $index" [disabled]="disabled()" [value]="it.name" (valueChange)="set($index, { name: $event, type: null })" />
+        </div>
+        <div class="row2">
           @if (gear) {
             <div class="field">
               <label [for]="'q' + $index">Quantity</label>
@@ -44,12 +45,6 @@ import { Equipment, SaveRequestItem } from '../api/coordinator.models';
               <input [id]="'s' + $index" type="text" [disabled]="disabled()" [value]="it.serialNumber ?? ''" (input)="set($index, { serialNumber: $any($event.target).value })" />
             </div>
           }
-          <div class="field">
-            <label [for]="'t' + $index">Type</label>
-            <input [id]="'t' + $index" type="text" [disabled]="disabled()" [value]="it.type ?? ''" (input)="set($index, { type: $any($event.target).value })" />
-          </div>
-        </div>
-        <div class="row2">
           <div class="field">
             <label [for]="'c' + $index">Capacity</label>
             <input [id]="'c' + $index" type="text" [disabled]="disabled()" [value]="it.capacity ?? ''" (input)="set($index, { capacity: $any($event.target).value })" />
@@ -104,7 +99,7 @@ export class ItemsEditor implements OnInit {
   }
   /** A machine that is not a gear is one unit; a gear has no serial number at this level (the inspector writes them per certificate). */
   private normalise(it: SaveRequestItem): SaveRequestItem {
-    return this.kinds.isGear(it.name, it.type) ? { ...it, serialNumber: null } : { ...it, quantity: 1 };
+    return this.kinds.isGear(it.name) ? { ...it, serialNumber: null } : { ...it, quantity: 1 };
   }
   protected pick(i: number, id: string): void {
     const e = this.equipment().find((x) => x.id === id);

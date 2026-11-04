@@ -6,6 +6,7 @@ import { problemMessage } from '../../core/problem';
 import { ToastService } from '../../core/toast.service';
 import { CertificatePaper } from '../../shared/certificate-paper';
 import { formatDate, plural } from '../../shared/format';
+import { MachineNamePicker } from '../../shared/machine-name-picker';
 import { DEFAULT_LIMITS, SerialLimits, fillRatio, generateSerials, parseSerials, splitSerials, suggestedCertificateCount } from '../../shared/serials';
 import { DirectCertification, DirectPlan } from './direct-certification';
 
@@ -20,7 +21,7 @@ const norm = (s: string) => s.trim().toLowerCase();
 /** Create certification: a certificate without a quotation, sent straight to the technical manager. */
 @Component({
   selector: 'app-create',
-  imports: [CertificatePaper],
+  imports: [MachineNamePicker, CertificatePaper],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './create.html',
   styleUrl: './create.scss',

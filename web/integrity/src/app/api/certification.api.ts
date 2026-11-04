@@ -20,6 +20,9 @@ export interface MachineOption {
   overdue: boolean;
 }
 
+export type ItemKind = 'gear' | 'equipment' | 'non_lifting';
+export const KIND_LABELS: Record<ItemKind, string> = { gear: 'Gear', equipment: 'Equipment', non_lifting: 'Non-lifting' };
+
 /** One kind of machine of the catalogue (`GET /certifications/machine-types`). */
 export interface MachineType {
   name: string;
@@ -28,6 +31,8 @@ export interface MachineType {
   templateKey: string;
   templateName: string;
   isGear: boolean;
+  /** `gear`, `equipment` or `non_lifting`. */
+  kind?: ItemKind;
 }
 
 export interface CreateMachine {
