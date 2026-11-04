@@ -46,8 +46,7 @@ with the custom domain connected in the console. The API must allow the origin `
 | `src/app/shell` | navigation rail per role |
 | `src/app/features` | login, overview, jobs, job, review, machine-form, create |
 
-Roles and start pages: admin and technical manager open **Overview** (and To review, Create certification); the inspector opens **My jobs**
-(and Create certification); the coordinator opens **Jobs** (approved and delivered lists).
+Roles and start pages: admin and technical manager open **Overview** (and To review, Create certification); the inspector opens **My jobs** (and Create certification); the coordinator opens **Requests** and also has **Quotations**, **Jobs** (the queue: assign inspectors, deliver certificates) and **Clients** (details, contacts, items, senders, history and the certificate archive). Create certification is not offered to coordinators (the API answers 403).
 
 Branding: the app starts with the built-in Integrity identity. After sign-in it asks the public `GET /branding/{managerId}/logo.png`
 for the team's own logo and falls back to the built-in one on 404. Colours are not exposed by a public endpoint yet, so they stay on the tokens.
@@ -56,5 +55,6 @@ for the team's own logo and falls back to the built-in one on 404. Colours are n
 
 - Inspectors cannot list clients or items (`/clients` and `/equipment` need a coordinator, manager or admin), so the Create certification client
   picker shows a message for them until the backend offers a lookup for inspectors.
-- The coordinator hand-over (deliver to client) screens are not built; coordinators see the lists and the certificate PDFs.
+- The coordinator screens are for the coordinator role; admin and technical manager can open the same URLs but have no menu entries for them yet.
+- Not built for coordinators: editing the quotation scope text templates, the mailbox (IMAP) settings and the maybe-email sender rules list under `/client-mail-rules` (senders are managed per client).
 - Admin creating a certification needs `managerId` in the request; the tab does not send it yet.

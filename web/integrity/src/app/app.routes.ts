@@ -79,6 +79,24 @@ export const routes: Routes = [
         loadComponent: () => import('./features/queue/deliver').then((m) => m.Deliver),
       },
       {
+        path: 'clients',
+        canActivate: [ops],
+        title: 'Clients · Integrity',
+        loadComponent: () => import('./features/clients/clients').then((m) => m.Clients),
+      },
+      {
+        path: 'clients/new',
+        canActivate: [ops],
+        title: 'New client · Integrity',
+        loadComponent: () => import('./features/clients/client-detail').then((m) => m.ClientDetail),
+      },
+      {
+        path: 'clients/:clientId',
+        canActivate: [ops],
+        title: 'Client · Integrity',
+        loadComponent: () => import('./features/clients/client-detail').then((m) => m.ClientDetail),
+      },
+      {
         path: 'review',
         canActivate: [managers],
         title: 'To review · Integrity',

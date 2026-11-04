@@ -25,7 +25,7 @@ export class RequestDetail implements OnInit {
   private readonly toast = inject(ToastService);
   protected readonly formatDate = formatDate;
   protected readonly plural = plural;
-  protected readonly stage = (s: string) => STAGE_LABEL[s as keyof typeof STAGE_LABEL] ?? s;
+  protected readonly stage = (s: string) => (s === 'request_received' ? 'New request' : (STAGE_LABEL[s as keyof typeof STAGE_LABEL] ?? s));
 
   protected readonly request = signal<RequestDetails | null>(null);
   protected readonly clients = signal<Client[]>([]);

@@ -1,0 +1,114 @@
+<a class="back" routerLink="/clients">Back to clients</a>
+@if (error(); as msg) {
+  <div class="error" role="alert">{{ msg }}</div>
+}
+<div class="head">
+  <div>
+    <h1>{{ clientId() ? client()?.name || 'Client' : 'New client' }}</h1>
+    @if (client(); as c) {
+      <p class="muted">{{ c.location || 'No location' }}{{ c.archivedAt ? ' · archived' : '' }}</p>
+    }
+  </div>
+</div>
+
+@if (clientId()) {
+  <div class="tabs scroll" role="tablist" aria-label="Client sections">
+    @for (t of tabs; track t.id) {
+      <button type="button" role="tab" [attr.aria-selected]="tab() === t.id" (click)="tab.set(t.id)">{{ t.label }}</button>
+    }
+  </div>
+}
+
+@if (loading()) {
+  <p class="muted empty" role="status">Loading the client…</p>
+} @else {
+  @switch (tab()) {
+    @case ('details') {
+      <div class="narrow">
+        <div class="row2 top">
+          <div class="field">
+            <label for="nm">Name</label>
+            <input id="nm" type="text" [value]="name()" (input)="name.set($any($event.target).value)" />
+          </div>
+          <div class="field">
+            <label for="lo">Location</label>
+            <input id="lo" type="text" [value]="location()" (input)="location.set($any($event.target).value)" />
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="ce">Email for certificates</label>
+            <input id="ce" type="email" [value]="certEmail()" (input)="certEmail.set($any($event.target).value)" />
+            <small>The certificates are sent here when the original sender is not used.</small>
+          </div>
+          <div class="field">
+            <label for="tx">Tax number</label>
+            <input id="tx" type="text" [value]="tax()" (input)="tax.set($any($event.target).value)" />
+          </div>
+        </div>
+        <div class="rowline checks2">
+          <label class="check-line"><input type="checkbox" [checked]="isCompany()" (change)="isCompany.set($any($event.target).checked)" /> A company</label>
+          <label class="check-line"><input type="checkbox" [checked]="hasContract()" (change)="hasContract.set($any($event.target).checked)" /> Has a contract</label>
+        </div>
+        <div class="field">
+          <label for="no">Notes</label>
+          <textarea id="no" [value]="notes()" (input)="notes.set($any($event.target).value)"></textarea>
+        </div>
+
+        <section class="panel">
+          <header><h2>Contacts</h2><button type="button" class="btn ghost small" (click)="addContact()">Add a contact</button></header>
+          @for (c of contacts(); track $index) {
+            <div class="itemcard">
+              <div class="row3">
+                <div class="field">
+                  <label [for]="'cn' + $index">Name</label>
+                  <input [id]="'cn' + $index" type="text" [value]="c.name" (input)="setContact($index, { name: $any($event.target).value })" />
+                </div>
+                <div class="field">
+                  <label [for]="'ce' + $index">Email</label>
+                  <input [id]="'ce' + $index" type="email" [value]="c.email ?? ''" (input)="setContact($index, { email: $any($event.target).value })" />
+                </div>
+                <div class="field">
+                  <label [for]="'cp' + $index">Phone</label>
+                  <input [id]="'cp' + $index" type="text" [value]="c.phone ?? ''" (input)="setContact($index, { phone: $any($event.target).value })" />
+                </div>
+              </div>
+              <div class="rowline">
+                <label class="check-line"><input type="radio" name="primary" [checked]="c.isPrimary" (change)="setContact($index, { isPrimary: true })" /> Main contact</label>
+                <button type="button" class="btn warn small" (click)="removeContact($index)">Remove</button>
+              </div>
+            </div>
+          } @empty {
+            <p class="muted">No contacts yet. A contact's email also counts as this client's sender.</p>
+          }
+        </section>
+
+        <div class="actions">
+          <button type="button" class="btn go" [disabled]="busy()" (click)="save()">{{ clientId() ? 'Save' : 'Add the client' }}</button>
+          @if (clientId()) {
+            <button type="button" class="btn warn" [disabled]="busy()" (click)="confirmDelete.set(!confirmDelete())">Delete the client</button>
+          }
+        </div>
+        @if (confirmDelete()) {
+          <div class="callout">
+            <b>Delete {{ client()?.name }}?</b>
+            <p>This removes the client for good. If it still has requests, items or certificates the server refuses and tells you.</p>
+            <div class="rowline">
+              <button type="button" class="btn warn" [disabled]="busy()" (click)="remove()">Yes, delete it</button>
+              <button type="button" class="btn ghost" (click)="confirmDelete.set(false)">Keep it</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+    @case ('items') {
+      @if (clientId(); as id) { <app-client-items [clientId]="id" /> }
+    }
+    @case ('emails') {
+      @if (clientId(); as id) { <app-client-emails [clientId]="id" /> }
+    }
+    @case ('history') {
+      @if (clientId(); as id) { <app-client-archive [clientId]="id" /> }
+    }
+  }
+}

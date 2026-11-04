@@ -110,7 +110,7 @@ export class Requests {
   protected readonly summary = signal<RequestSummary | null>(null);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
-  protected readonly stage = (s: JobStatus) => STAGE_LABEL[s] ?? s;
+  protected readonly stage = (s: JobStatus) => (s === 'request_received' ? 'New request' : (STAGE_LABEL[s] ?? s));
 
   constructor() {
     this.api.requestSummary().subscribe({ next: (s) => this.summary.set(s), error: () => undefined });

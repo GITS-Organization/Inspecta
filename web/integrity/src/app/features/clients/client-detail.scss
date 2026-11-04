@@ -1,0 +1,16 @@
+.narrow {
+  max-width: 860px;
+}
+.top {
+  margin-top: 18px;
+}
+.checks2 {
+  margin-bottom: 18px;
+  gap: 24px;
+}
+.scroll {
+  overflow-x: auto;
+  button {
+    white-space: nowrap;
+  }
+}
