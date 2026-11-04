@@ -32,6 +32,11 @@ public static class WorkflowDocs
             **When:** a request did not come by email. It is then visible to the whole team.
             **How:** send the client, location and equipment items. Email requests are created automatically; you do not call this for them.
             """),
+        [Key<RequestsController>(nameof(RequestsController.AssignWithoutQuotation))] = new(1.12, "Step 1b1 · Client with a contract: assign an inspector straight away",
+            """
+            **When:** the request is new (`request_received`) and its client has a contract (`client.hasContract`), with the client and the location filled in. The request then has **`canAssignWithoutQuotation: true`**: offer "Assign an inspector" next to the quotation.
+            **How:** `POST /requests/{requestId}/assign-without-quotation` with `inspectorId`, `scheduledAt` and an optional `note`. There is **no quotation**: the request becomes `assigned` with `kind: contract` (and a placeholder accepted quotation of price 0, number `CT-...`, so it shows in the Quotation queue). The inspector starts it from the queue (step 5) and may add machines found on site (step 8d). The inspector must belong to the team and not be on leave. `409 no_contract` for a client without a contract, `409 not_assignable` when the request is not in that stage. Coordinator that owns the request, technical manager, Admin.
+            """),
         [Key<RequestsController>(nameof(RequestsController.CreateManDay))] = new(1.15, "Step 1b2 · Create a man day",
             """
             **When:** a client phones or emails asking for an inspector on a day, with no list of machines. **Who:** the coordinator (the technical manager and Admin too).

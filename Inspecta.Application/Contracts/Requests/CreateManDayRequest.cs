@@ -2,6 +2,20 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Inspecta.Application.Contracts.Requests;
 
+/// <summary>Gives a request of a client with a contract to an inspector straight away, with no quotation.</summary>
+public sealed record AssignWithoutQuotationRequest
+{
+    [Required]
+    public Guid InspectorId { get; init; }
+
+    /// <summary>The day (and time) the inspector goes to the client.</summary>
+    [Required]
+    public DateTimeOffset ScheduledAt { get; init; }
+
+    [MaxLength(2000)]
+    public string? Note { get; init; }
+}
+
 /// <summary>A day of an inspector's time for a registered client: no machines and no quotation, the inspector adds the machines on site.</summary>
 public sealed record CreateManDayRequest
 {

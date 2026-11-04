@@ -69,6 +69,44 @@ public sealed class InspectionRequestService(
         return RequestResponseMapper.Map(await requestRepository.GetByIdAsync(manDay.Id, tracking: false, cancellationToken) ?? manDay);
     }
 
+    public async Task<RequestResponse> AssignWithoutQuotationAsync(
+        Guid requestId, Guid actorId, string role, AssignWithoutQuotationRequest request, CancellationToken cancellationToken = default)
+    {
+        if (role is not ("admin" or "technical_manager" or "coordinator"))
+            throw new AuthException("forbidden", "Only the coordinator, the technical manager or the admin can assign a request.", 403);
+
+        var job = await requestRepository.GetByIdAsync(requestId, tracking: true, cancellationToken);
+        if (job is null || !RequestAccess.IsVisible(job, actorId, role)) throw new KeyNotFoundException("Request was not found.");
+        if (role == "coordinator" && !RequestAccess.CanManageQuotes(job, actorId, role))
+            throw new AuthException("forbidden", "Only the coordinator that owns the request can assign it.", 403);
+        if (job.Client is not { HasContract: true })
+            throw new AuthException("no_contract", "Only a client with a contract can be given to an inspector without a quotation.", 409);
+        if (!job.CanAssignWithoutQuotation)
+            throw new AuthException("not_assignable", "Fill in the client and the location first; a request that already has a quotation or was assigned cannot go this way.", 409);
+
+        var inspector = await userRepository.GetByIdAsync(request.InspectorId, cancellationToken);
+        if (inspector is null || !inspector.IsActive || inspector.Role != UserRole.Inspector)
+            throw new InvalidOperationException("The selected inspector is unavailable.");
+        if (inspector.ManagerId != job.ManagerId)
+            throw new AuthException("forbidden", "The selected inspector does not belong to the request team.", 403);
+        if (inspector.IsOnLeave && (inspector.LeaveUntil is null || inspector.LeaveUntil >= request.ScheduledAt))
+            throw new InvalidOperationException("The selected inspector is on leave at the scheduled time.");
+
+        job.AssignWithoutQuotation(inspector.Id, request.ScheduledAt, actorId, request.Note);
+        async Task<bool> Save()
+        {
+            await requestRepository.SaveAsync(job, cancellationToken);
+            // The placeholder quotation (price 0, number CT-...) puts the job in the quotation queue, where the inspector finds it.
+            if (quoteRepository is not null)
+                await quoteRepository.AddAsync(Quote.CreateAccepted(job.Id, actorId, "CT", job.ClientName, "Client with a contract"), cancellationToken);
+            return true;
+        }
+
+        if (transactions is null) await Save();
+        else await transactions.RunAsync(Save, cancellationToken);
+        return RequestResponseMapper.Map(job);
+    }
+
     public async Task<RequestResponse> CreateFromEmailAsync(
         CreateInspectionRequest request,
         string senderEmail,

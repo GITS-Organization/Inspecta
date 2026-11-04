@@ -35,7 +35,8 @@ internal static class RequestResponseMapper
             ? new RequestClientResponse(client.Id, client.Name, client.Location ?? string.Empty, client.HasContract)
             : null,
         HasUnreadClientReply: request.HasUnreadClientReply,
-        Kind: request.Kind);
+        Kind: request.Kind,
+        CanAssignWithoutQuotation: request.CanAssignWithoutQuotation);
 
     // The kind and the standard of inspection follow from the machine's name in the catalogue.
     public static RequestItemResponse MapItem(RequestItem item)

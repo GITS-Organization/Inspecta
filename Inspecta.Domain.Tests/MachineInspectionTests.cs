@@ -1159,6 +1159,85 @@ public sealed class MachineInspectionTests : IDisposable
         Assert.StartsWith("%PDF", Encoding.ASCII.GetString(pdf.Content, 0, 4));
     }
 
+    // ---- A client with a contract: the request goes straight to an inspector --------------------------------------------
+
+    private async Task<Guid> NewRequestFor(bool contract)
+    {
+        Guid clientForRequest;
+        await using (var db = CreateContext())
+            clientForRequest = (await new ClientService(new EfClientRepository(db), new EfUserRepository(db)).CreateAsync(new CreateClientRequest
+            {
+                Name = contract ? "Contract Client Co." : "Walk-in Client Co.", HasContract = contract, Location = "Alexandria",
+                CertificatesEmail = "certificates@client.com"
+            }, manager.Id)).Id;
+        await using var save = CreateContext();
+        var request = InspectionRequest.Create(contract ? "Contract Client Co." : "Walk-in Client Co.", "Alexandria", clientForRequest,
+            [RequestItem.Create("Air Compressor", 1)], coordinator.Id, managerId: manager.Id);
+        save.Requests.Add(request);
+        await save.SaveChangesAsync();
+        return request.Id;
+    }
+
+    private async Task<T> Requests<T>(Func<InspectionRequestService, Task<T>> action)
+    {
+        await using var db = CreateContext();
+        return await action(new InspectionRequestService(
+            new EfRequestRepository(db), new EfUserRepository(db), clientRepository: new EfClientRepository(db),
+            quoteRepository: new EfQuoteRepository(db), transactions: new EfTransactionRunner(db)));
+    }
+
+    private static Inspecta.Application.Contracts.Requests.AssignWithoutQuotationRequest Assignment(Guid inspectorId) =>
+        new() { InspectorId = inspectorId, ScheduledAt = DateTimeOffset.UtcNow.AddDays(1), Note = "Contract visit." };
+
+    [Fact]
+    public async Task ARequestOfAContractClientGoesStraightToAnInspectorWithoutAQuotation()
+    {
+        var contractRequest = await NewRequestFor(contract: true);
+        var plainRequest = await NewRequestFor(contract: false);
+        Assert.True((await Requests(service => service.GetVisibleAsync(contractRequest, coordinator.Id, "coordinator")))!.CanAssignWithoutQuotation);
+        Assert.False((await Requests(service => service.GetVisibleAsync(plainRequest, coordinator.Id, "coordinator")))!.CanAssignWithoutQuotation);
+
+        var assigned = await Requests(service => service.AssignWithoutQuotationAsync(contractRequest, coordinator.Id, "coordinator", Assignment(inspector.Id)));
+
+        Assert.Equal(JobStatus.Assigned, assigned.Status);
+        Assert.Equal(inspector.Id, assigned.InspectorId);
+        Assert.Equal(Inspecta.Domain.Enums.RequestKind.Contract, assigned.Kind);
+        Assert.False(assigned.CanAssignWithoutQuotation);
+        await using (var db = CreateContext())
+        {
+            // A placeholder accepted quotation puts the job in the quotation queue.
+            var quote = db.Quotes.Single(value => value.RequestId == contractRequest);
+            Assert.Equal(QuoteStatus.Accepted, quote.Status);
+            Assert.StartsWith("CT-", quote.QuotationNumber);
+        }
+
+        // The inspector starts it and sees the machines of the request.
+        var started = await Run(service => service.StartInspectionAsync(contractRequest, inspector.Id, "inspector"));
+        Assert.Equal(JobStatus.InProgress, started.RequestStatus);
+        Assert.Equal("Air Compressor", started.Machines.Single().Name);
+    }
+
+    [Fact]
+    public async Task OnlyAContractClientsNewRequestCanGoWithoutAQuotationAndOnlyToATeamInspector()
+    {
+        var plainRequest = await NewRequestFor(contract: false);
+        var noContract = await Assert.ThrowsAsync<AuthException>(() => Requests(service =>
+            service.AssignWithoutQuotationAsync(plainRequest, coordinator.Id, "coordinator", Assignment(inspector.Id))));
+        Assert.Equal("no_contract", noContract.Code);
+
+        var contractRequest = await NewRequestFor(contract: true);
+        var byInspector = await Assert.ThrowsAsync<AuthException>(() => Requests(service =>
+            service.AssignWithoutQuotationAsync(contractRequest, inspector.Id, "inspector", Assignment(inspector.Id))));
+        Assert.Equal(403, byInspector.StatusCode);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Requests(service =>
+            service.AssignWithoutQuotationAsync(contractRequest, coordinator.Id, "coordinator", Assignment(coordinator.Id))));
+
+        await Requests(service => service.AssignWithoutQuotationAsync(contractRequest, coordinator.Id, "coordinator", Assignment(inspector.Id)));
+        var again = await Assert.ThrowsAsync<AuthException>(() => Requests(service =>
+            service.AssignWithoutQuotationAsync(contractRequest, coordinator.Id, "coordinator", Assignment(otherInspector.Id))));
+        Assert.Equal("not_assignable", again.Code);
+    }
+
     // ---- Man day, and machines added to a job on site ---------------------------------------------------------------
 
     private async Task<T> Machines<T>(Func<JobMachineService, Task<T>> action)

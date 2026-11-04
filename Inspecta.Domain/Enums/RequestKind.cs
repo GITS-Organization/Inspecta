@@ -11,5 +11,8 @@ public enum RequestKind
     ManDay,
 
     /// <summary>A certificate created directly by the person who inspects, with no request from the client and no quotation.</summary>
-    Direct
+    Direct,
+
+    /// <summary>A request of a client with a contract that was given to an inspector straight away, with no quotation.</summary>
+    Contract
 }

@@ -503,6 +503,36 @@ public sealed class InspectionRequest
     }
 
     /// <summary>
+    /// True when a client with a contract asked for work and nobody has priced it: the coordinator may give it to an inspector straight away
+    /// instead of sending a quotation.
+    /// </summary>
+    public bool CanAssignWithoutQuotation =>
+        Status == JobStatus.RequestReceived && Triage == RequestTriage.Request && Kind == RequestKind.Standard &&
+        ClientId is not null && Client is { HasContract: true } && !string.IsNullOrWhiteSpace(Location);
+
+    /// <summary>
+    /// Gives a request of a contract client to an inspector without a quotation: it goes from <c>request_received</c> straight to
+    /// <c>assigned</c>. The items stay as they are; the inspector may add machines found on site.
+    /// </summary>
+    public void AssignWithoutQuotation(Guid inspectorId, DateTimeOffset scheduledAt, Guid actorId, string? note = null)
+    {
+        if (actorId == Guid.Empty) throw new ArgumentException("Actor is required.", nameof(actorId));
+        if (inspectorId == Guid.Empty) throw new ArgumentException("Inspector is required.", nameof(inspectorId));
+        if (!CanAssignWithoutQuotation)
+            throw new InvalidOperationException("Only a new request of a client with a contract, with its client and location filled in, can go to an inspector without a quotation.");
+
+        var previous = Status;
+        var cleanNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        Kind = RequestKind.Contract;
+        InspectorId = inspectorId;
+        ScheduledAt = scheduledAt;
+        AssignmentNote = cleanNote;
+        Status = JobStatus.Assigned;
+        UpdatedAt = DateTimeOffset.UtcNow;
+        History.Add(JobStatusHistory.Create(Id, previous, Status, actorId, UpdatedAt, cleanNote ?? "Client with a contract: given to an inspector without a quotation."));
+    }
+
+    /// <summary>
     /// Starts the inspection of a request that never had a quotation: a certificate created directly by the person who inspects.
     /// The job goes from <c>request_received</c> straight to <c>in_progress</c> with that person as its inspector.
     /// </summary>

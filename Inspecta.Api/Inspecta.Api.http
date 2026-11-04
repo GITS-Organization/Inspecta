@@ -413,6 +413,13 @@ Content-Type: application/json
 
 { "name": "Test client (renamed)" }
 
+### Client with a contract: give the new request to an inspector without a quotation (request.canAssignWithoutQuotation)
+POST {{baseUrl}}/api/v1/requests/{{requestId}}/assign-without-quotation
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "inspectorId": "{{inspectorId}}", "scheduledAt": "2026-11-10T08:00:00Z", "note": "Contract visit." }
+
 ### Man day: a client asked for an inspector on a day (no quotation, no machines yet)
 POST {{baseUrl}}/api/v1/requests/man-day
 Authorization: Bearer {{token}}

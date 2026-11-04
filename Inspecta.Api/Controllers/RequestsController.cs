@@ -114,6 +114,26 @@ public sealed class RequestsController(IInspectionRequestService requestService,
         return CreatedAtAction(nameof(GetById), new { requestId = created.Id }, created);
     }
 
+    /// <summary>Give a request of a client with a contract to an inspector straight away, with no quotation.</summary>
+    /// <remarks>
+    /// Offered when the request has <c>canAssignWithoutQuotation: true</c>: a new request (<c>request_received</c>) whose client has a contract
+    /// (<c>client.hasContract</c>) and whose client and location are filled in. The request becomes <c>assigned</c> with <c>kind: contract</c>
+    /// and a placeholder accepted quotation of price 0 (number <c>CT-...</c>), so it shows in the quotation queue like any assigned job.
+    /// <c>409 no_contract</c> for a client without a contract, <c>409 not_assignable</c> when the request is not in that stage.
+    /// </remarks>
+    [HttpPost("{requestId:guid}/assign-without-quotation")]
+    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
+    [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<RequestResponse>> AssignWithoutQuotation(Guid requestId, AssignWithoutQuotationRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await requestService.AssignWithoutQuotationAsync(requestId, actorId, role, request, cancellationToken));
+    }
+
     /// <summary>Create a man day: a day of an inspector's time that a client asked for.</summary>
     /// <remarks>
     /// For a client that phones or emails asking for an inspector on a day, with no list of machines. The job has no quotation: it is
