@@ -153,6 +153,24 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
         return Ok(await inspectionService.SplitAsync(requestId, requestItemId, actorId, role, request, cancellationToken));
     }
 
+    /// <summary>Submit all the certificates of the job together.</summary>
+    /// <remarks>
+    /// One call for the whole job, all or nothing: every machine needs a saved, complete certificate. If any machine has none or an incomplete
+    /// one, nothing is submitted and the answer is <c>409 certificate_incomplete</c> with <c>problems[]</c>, one entry per machine ("Machine: what
+    /// is missing"). Certificates already submitted are left alone. When every certificate is submitted the job goes to the technical manager
+    /// (<c>certificate_submitted</c>). The answer is the machine list.
+    /// </remarks>
+    [HttpPost("submit-all")]
+    [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<MachineListResponse>> SubmitAll(Guid requestId, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await inspectionService.SubmitAllAsync(requestId, actorId, role, cancellationToken));
+    }
+
     [HttpPost("machines/{requestItemId:guid}/submit")]
     [ProducesResponseType<MachineFormResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

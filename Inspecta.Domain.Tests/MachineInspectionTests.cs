@@ -817,6 +817,64 @@ public sealed class MachineInspectionTests : IDisposable
 
     // ---- Helpers ------------------------------------------------------------------------------------------------
 
+    // ---- Submit every certificate of the job together ---------------------------------------------------------------
+
+    [Fact]
+    public async Task EveryCertificateOfTheJobIsSubmittedTogetherAndTheJobGoesToReview()
+    {
+        await Start();
+        await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", CompleteForm("forklift")));
+        await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", CompleteForm("basic")));
+
+        var list = await Run(service => service.SubmitAllAsync(requestId, inspector.Id, "inspector"));
+
+        Assert.Equal(JobStatus.CertificateSubmitted, list.RequestStatus);
+        Assert.All(list.Machines, machine => Assert.Equal(MachineStatus.Submitted, machine.Status));
+        Assert.All(list.Machines, machine => Assert.NotNull(machine.QrUrl)); // the QR was made on submit
+        var review = await Run(service => service.ListMachinesAsync(requestId, manager.Id, "technical_manager"));
+        Assert.True(review.CanApprove);
+    }
+
+    [Fact]
+    public async Task SubmittingEverythingIsAllOrNothingAndNamesWhatIsMissing()
+    {
+        await Start();
+        await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", CompleteForm("forklift")));
+
+        var refused = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.SubmitAllAsync(requestId, inspector.Id, "inspector")));
+
+        Assert.Equal("certificate_incomplete", refused.Code);
+        Assert.Equal(409, refused.StatusCode);
+        Assert.Contains(refused.Problems!, problem => problem.StartsWith("Chain Block") && problem.Contains("not filled in"));
+        var after = await Run(service => service.ListMachinesAsync(requestId, inspector.Id, "inspector"));
+        Assert.Equal(JobStatus.InProgress, after.RequestStatus);
+        Assert.Equal(MachineStatus.Draft, after.Machines.Single(machine => machine.RequestItemId == forkliftItemId).Status); // nothing was submitted
+
+        // An incomplete certificate is named too, with what it lacks.
+        await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", new SaveMachineFormRequest { Texts = new Dictionary<string, string> { ["testType"] = "Visual" } }));
+        var incomplete = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.SubmitAllAsync(requestId, inspector.Id, "inspector")));
+        Assert.Contains(incomplete.Problems!, problem => problem.StartsWith("Chain Block") && problem.Contains("result"));
+    }
+
+    [Fact]
+    public async Task CertificatesAlreadySubmittedAreLeftAloneAndOnlyTheJobsInspectorSubmitsEverything()
+    {
+        await Start();
+        await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", CompleteForm("forklift")));
+        await Run(service => service.SubmitAsync(requestId, forkliftItemId, inspector.Id, "inspector"));
+        await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", CompleteForm("basic")));
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Run(service => service.SubmitAllAsync(requestId, otherInspector.Id, "inspector")));
+        var denied = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.SubmitAllAsync(requestId, coordinator.Id, "coordinator")));
+        Assert.Equal(403, denied.StatusCode);
+
+        var list = await Run(service => service.SubmitAllAsync(requestId, inspector.Id, "inspector"));
+        Assert.Equal(JobStatus.CertificateSubmitted, list.RequestStatus);
+
+        var again = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.SubmitAllAsync(requestId, inspector.Id, "inspector")));
+        Assert.Equal("inspection_not_started", again.Code);
+    }
+
     // ---- The certificate answers: defaults and opposite pairs ---------------------------------------------------------
 
     [Fact]

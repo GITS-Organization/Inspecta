@@ -256,6 +256,12 @@ public static class WorkflowDocs
             **How:** `POST /quotation-queue/{requestId}/machines/{requestItemId}/submit`, no body. If something is missing the answer is `409` with `code: certificate_incomplete` and a **`problems` array** with one entry per missing item (the result, dates, questionnaire, unanswered checklist rows, notes for `no`, the defect description for an unsatisfactory machine) that the app can show as a list. Blank texts get the usual wording (`NONE`, `N/A`).
             The first submit gives the certificate its **QR code** (kept from then on), so the previews in queues 10 and 10b show it. Every machine needs a certificate, Satisfactory or Unsatisfactory: when **every machine** of the job is submitted, the job moves to `certificate_submitted` and appears for the technical manager in `GET /quotation-queue/to-review`.
             """),
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.SubmitAll))] = new(9.5, "Queue 9b · Inspector: submit all the certificates of the job",
+            """
+            **When:** every machine of the job has its certificate filled in and the inspector is ready to hand them over. **Who:** the assigned inspector (the technical manager and Admin too).
+            **How:** `POST /quotation-queue/{requestId}/submit-all`, no body. **One call for the whole job, all or nothing**: each machine needs a saved, complete certificate. If any machine has none or an incomplete one, nothing is submitted and the answer is `409 certificate_incomplete` with `problems[]`, one entry per machine ("Chain Block: the certificate is not filled in", "Forklift: ... result ..."). Certificates already submitted are left alone. When all are submitted the job goes to the technical manager (`certificate_submitted`) and the answer is the machine list. Submitting one machine at a time (step 9) still works.
+            Before submitting, look at each certificate with step 10 (`pdfUrl` of each machine: marked DRAFT, QR empty until approved) or all together with `GET /quotation-queue/{requestId}/certificates/preview.zip`.
+            """),
         [Key<MachineInspectionController>(nameof(MachineInspectionController.DownloadMachinePdf))] = new(10, "Queue 10 · Inspector and technical manager: see the certificate (PDF)",
             """
             **When:** any time after the machine was saved, to see exactly how the certificate will look. **Who:** the inspector of the job, the technical manager and Admin; the coordinator once the job is approved (`409` before).

@@ -182,6 +182,69 @@ public sealed class MachineInspectionService(
         if (problems.Count > 0)
             throw new AuthException("certificate_incomplete", $"Complete the certificate first. Missing: {string.Join("; ", problems)}.", 409) { Problems = problems };
 
+        var equipment = await ApplySubmitAsync(item, certificate, texts, cancellationToken);
+        MoveToReviewWhenEveryMachineIsSubmitted(request, actorId);
+        await requestRepository.SaveAsync(request, cancellationToken);
+        return await BuildFormAsync(request, item, certificate, actorId, role, cancellationToken, equipment);
+    }
+
+    /// <summary>
+    /// Submits every certificate of the job in one go, all or nothing: when any machine has no saved certificate or an incomplete one, nothing
+    /// is submitted and the answer lists what is missing on each machine. Certificates already submitted are left alone.
+    /// </summary>
+    public async Task<MachineListResponse> SubmitAllAsync(
+        Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
+    {
+        var request = await LoadAsync(requestId, actorId, role, tracking: true, cancellationToken);
+        if (!CanEdit(request, actorId, role))
+            throw new AuthException("forbidden", "Only the assigned inspector can submit the certificates.", 403);
+        if (request.Status is not (JobStatus.InProgress or JobStatus.CertificateReturned))
+            throw new AuthException("inspection_not_started", "Start the inspection before submitting.", 409);
+
+        var ready = new List<(RequestItem Item, InspectionCertificate Certificate)>();
+        var problems = new List<string>();
+        foreach (var item in request.Items)
+        {
+            var certificate = await certificateRepository.GetByRequestItemIdAsync(requestId, item.Id, tracking: true, cancellationToken);
+            if (StatusOf(certificate) is MachineStatus.Submitted or MachineStatus.Approved or MachineStatus.Delivered) continue;
+
+            var label = item.SerialNumber is { Length: > 0 } serials && item.Quantity > 1
+                ? $"{item.Name} ({(serials.Length > 24 ? serials[..24] + "..." : serials)})"
+                : item.Name;
+            if (certificate is null)
+            {
+                problems.Add($"{label}: the certificate is not filled in");
+                continue;
+            }
+
+            EnsureTemplateCertificate(certificate);
+            var template = CertificateTemplateCatalog.Find(certificate.TemplateId) ?? CertificateTemplateCatalog.Basic;
+            var missing = MachineFormRules.Problems(
+                template, certificate.Checklist, certificate.TextsOf(), certificate.DatesOf(),
+                MachineFormRules.WithDefaults(certificate.AnswersOf()), certificate.FinalResult);
+            if (missing.Count > 0) problems.Add($"{label}: {string.Join("; ", missing)}");
+            else ready.Add((item, certificate));
+        }
+
+        if (problems.Count > 0)
+            throw new AuthException(
+                "certificate_incomplete", $"{problems.Count} certificate(s) are not ready, so nothing was submitted. Complete them first.", 409)
+            { Problems = problems };
+        if (ready.Count == 0)
+            throw new AuthException("nothing_to_submit", "Every certificate of this job was already submitted.", 409);
+
+        foreach (var (item, certificate) in ready)
+            await ApplySubmitAsync(item, certificate, certificate.TextsOf(), cancellationToken);
+        MoveToReviewWhenEveryMachineIsSubmitted(request, actorId);
+        await requestRepository.SaveAsync(request, cancellationToken);
+        return await BuildListAsync(request, actorId, role, cancellationToken);
+    }
+
+    // What submitting one certificate does: the standard text, the inspector's name and qualifications, and the QR (made on the first submit
+    // and kept, so the technical manager previews the certificate with it).
+    private async Task<Item?> ApplySubmitAsync(
+        RequestItem item, InspectionCertificate certificate, IReadOnlyDictionary<string, string> texts, CancellationToken cancellationToken)
+    {
         var (match, equipment) = await ResolveAsync(item, cancellationToken);
         var finalTexts = MachineFormRules.WithDefaults(texts);
         if (!finalTexts.ContainsKey("standardOfInspection"))
@@ -192,13 +255,17 @@ public sealed class MachineInspectionService(
         var preparedBy = inspector?.FullName ?? "Inspector";
         var qualifications = inspector is null ? null : string.Join(", ", inspector.Qualifications.Select(value => value.Name));
         certificate.SubmitForm(preparedBy, qualifications);
-        // The QR is made on the first submit and kept, so the technical manager previews the certificate with it.
         if (certificate.VerificationCode is null)
         {
             var reserved = NewVerificationCode();
             certificate.ReserveVerification(reserved, (options ?? new CertificateOptions()).VerifyUrl(reserved));
         }
 
+        return equipment;
+    }
+
+    private static void MoveToReviewWhenEveryMachineIsSubmitted(InspectionRequest request, Guid actorId)
+    {
         if (request.Items.Count > 0 && request.Items.All(value => request.Certificates.Any(existing =>
                 existing.RequestItemId == value.Id &&
                 (existing.IsApproved || existing is { SubmittedAt: not null, ReviewedAt: null }))))
@@ -208,9 +275,6 @@ public sealed class MachineInspectionService(
             if (request.Status == JobStatus.InProgress)
                 request.TransitionTo(JobStatus.CertificateSubmitted, actorId);
         }
-
-        await requestRepository.SaveAsync(request, cancellationToken);
-        return await BuildFormAsync(request, item, certificate, actorId, role, cancellationToken, equipment);
     }
 
     // ---- Technical manager: review ------------------------------------------------------------------------------

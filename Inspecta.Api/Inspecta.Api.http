@@ -454,6 +454,18 @@ Content-Type: application/json
 
 { "name": "Scissor Lift", "serialNumber": "SL-77", "capacity": "500 kg" }
 
+### Inspector: submit all the certificates of the job together (all or nothing)
+POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/submit-all
+Authorization: Bearer {{token}}
+
+### Inspector: preview one certificate (DRAFT) and all of them before submitting
+GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{requestItemId}}/pdf
+Authorization: Bearer {{token}}
+
+###
+GET {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/certificates/preview.zip
+Authorization: Bearer {{token}}
+
 ### Gear: divide into the certificates the inspector decides (own qty and serial text each, no maximum)
 PUT {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{requestItemId}}/certificates
 Authorization: Bearer {{token}}
