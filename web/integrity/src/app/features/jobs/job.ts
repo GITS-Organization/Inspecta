@@ -104,6 +104,9 @@ import { MACHINE_STATUS_LABEL, formatDate, machineChip, plural } from '../../sha
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
+      margin: 0;
+      padding: 0;
+      border: 0;
     }
     .note-box {
       background: var(--amber-bg);
