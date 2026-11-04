@@ -6,6 +6,7 @@
   <div class="head">
     <div>
       <span class="chip" [class.a]="isMaybe()">{{ isMaybe() ? 'Unknown sender' : stage(r.status) }}</span>
+      <app-kind-badge [kind]="r.kind" />
       <h1 class="title">{{ r.clientName || r.emailFromName || r.emailFrom || 'New request' }}</h1>
       <p class="muted">
         {{ r.subject || 'No subject' }} · received {{ formatDate(r.receivedAt) }}
@@ -13,7 +14,7 @@
       </p>
     </div>
     <div class="rowline">
-      @if (r.quotation) {
+      @if (r.quotation && (!r.kind || r.kind === 'standard')) {
         <a class="btn" [routerLink]="['/quotations', r.id, r.quotation.id]">Open the quotation</a>
       }
       @if (r.status === 'unassigned' || r.status === 'assigned' || r.status === 'task_accepted' || r.status === 'in_progress' || r.status === 'certificate_submitted' || r.status === 'certificate_returned' || r.status === 'certificate_approved' || r.status === 'sent_to_client') {

@@ -6,8 +6,9 @@ import { JobStatus } from '../../core/models';
 import { problemMessage } from '../../core/problem';
 import { ToastService } from '../../core/toast.service';
 import { formatDate, formatDateTime, plural, relativeTime } from '../../shared/format';
+import { KindBadge } from '../../shared/kind-badge';
 
-export type TabId = 'new' | 'details' | 'progress' | 'closed' | 'maybe' | 'all';
+export type TabId = 'new' | 'details' | 'progress' | 'man_day' | 'closed' | 'maybe' | 'all';
 
 /** Statuses of a request that was accepted: the work goes on in Jobs, the request stays here for reference. */
 export const IN_PROGRESS: JobStatus[] = [
@@ -24,13 +25,13 @@ export interface TabDef {
   /** A tab the API cannot filter by itself: the list is loaded (up to 100) and filtered here. */
   derived?: (r: RequestDetails) => boolean;
   empty: { title: string; hint: string };
-  // A "Man days" tab fits here later, for example { id: 'man_day', triage: 'request', kind: 'man_day' } once the API can filter by kind.
 }
 
 export const TABS: TabDef[] = [
   { id: 'new', label: 'New requests', triage: 'request', status: 'request_received', empty: { title: 'No new requests.', hint: 'When a client emails you, the request appears here. You can also enter one yourself.' } },
   { id: 'details', label: 'Needs details', triage: 'request', status: 'request_received', derived: (r) => r.status === 'request_received' && r.missingFields.length > 0, empty: { title: 'Every new request is complete.', hint: 'Requests that miss a client, a location or an item wait here until you fill them in.' } },
   { id: 'progress', label: 'Accepted', triage: 'request', derived: (r) => IN_PROGRESS.includes(r.status), empty: { title: 'No accepted request yet.', hint: 'Accepted requests are worked on under Jobs.' } },
+  { id: 'man_day', label: 'Man days', triage: 'request', derived: (r) => r.kind === 'man_day', empty: { title: 'No man day yet.', hint: 'A man day is a day of an inspector that a client asked for, with no list of machines. Create one when a client phones.' } },
   { id: 'closed', label: 'Closed', triage: 'request', derived: (r) => CLOSED.includes(r.status), empty: { title: 'No closed requests.', hint: 'Requests you turned down, or that the client declined, end up here.' } },
   { id: 'maybe', label: 'Unknown senders', triage: 'maybe', empty: { title: 'No email is waiting for a decision.', hint: 'Emails from senders that belong to no client wait here. Add the sender to a client and they become requests.' } },
   { id: 'all', label: 'All', triage: 'request', empty: { title: 'No request matches.', hint: 'Try another search, or clear it.' } },
@@ -41,9 +42,9 @@ const STORE = 'integrity.requests.tab';
 const isTab = (v: string | undefined | null): v is TabId => !!v && TABS.some((t) => t.id === v);
 
 /** Counts for the tab badges: from the summary where the API knows them, otherwise unknown (null). */
-export function tabCounts(s: RequestSummary | null, needsDetails: number | null): Record<TabId, number | null> {
+export function tabCounts(s: RequestSummary | null, needsDetails: number | null, manDays: number | null = null): Record<TabId, number | null> {
   const by = (...st: JobStatus[]) => (s ? s.byStatus.filter((x) => st.includes(x.status)).reduce((a, x) => a + x.count, 0) : null);
-  return { new: by('request_received'), details: needsDetails, progress: by(...IN_PROGRESS), closed: by(...CLOSED), maybe: s ? s.maybe : null, all: s ? s.requests : null };
+  return { new: by('request_received'), details: needsDetails, progress: by(...IN_PROGRESS), man_day: manDays, closed: by(...CLOSED), maybe: s ? s.maybe : null, all: s ? s.requests : null };
 }
 
 /** What a request needs next: one chip, and the colour of the edge of its row. */
@@ -74,7 +75,7 @@ export function describe(r: RequestDetails): { label: string; chip: string; edge
 /** The request inbox: the status is the navigation. Tab, search and page live in the URL (`?tab=&q=&page=`). */
 @Component({
   selector: 'app-requests',
-  imports: [RouterLink],
+  imports: [RouterLink, KindBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './requests.html',
   styleUrl: './requests.scss',
@@ -98,6 +99,7 @@ export class Requests {
 
   protected readonly summary = signal<RequestSummary | null>(null);
   protected readonly needsDetails = signal<number | null>(null);
+  protected readonly manDays = signal<number | null>(null);
   protected readonly fetched = signal<RequestDetails[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -110,7 +112,7 @@ export class Requests {
   protected readonly active = computed<TabDef>(() => TABS.find((t) => t.id === this.tab()) ?? TABS[0]);
   protected readonly pageNo = computed(() => Math.max(1, parseInt(this.page() ?? '1', 10) || 1));
   protected readonly query = computed(() => (this.q() ?? '').trim());
-  protected readonly counts = computed(() => tabCounts(this.summary(), this.needsDetails()));
+  protected readonly counts = computed(() => tabCounts(this.summary(), this.needsDetails(), this.manDays()));
   private readonly matching = computed(() => {
     const d = this.active().derived;
     return d ? this.fetched().filter(d) : this.fetched();
@@ -174,6 +176,7 @@ export class Requests {
         this.fetched.set(r);
         this.loading.set(false);
         if (t.id === 'details' && !q) this.needsDetails.set(r.filter((x) => x.missingFields.length > 0).length);
+        if (t.id === 'man_day' && !q) this.manDays.set(r.filter((x) => x.kind === 'man_day').length);
       },
       error: (e: unknown) => {
         if (key !== this.latest) return;

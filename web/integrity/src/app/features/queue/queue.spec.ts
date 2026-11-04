@@ -47,6 +47,26 @@ describe('Queue', () => {
     ctrl.expectOne(`${api}/quotation-queue?status=unassigned&pageSize=100`).flush([]);
   });
 
+  it('tags man days, never shows money, and links the machines of a job that is under way', () => {
+    const f = TestBed.createComponent(Queue);
+    f.detectChanges();
+    ctrl.expectOne(`${api}/quotation-queue?status=unassigned&pageSize=100`).flush([
+      row({ kind: 'man_day', requestStatus: 'assigned', quotationNumber: 'MD-0001', totalUnits: 0, requestId: 'r7' }),
+      row({ id: 'q2', requestId: 'r8', requestStatus: 'certificate_approved' }),
+    ]);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('app-kind-badge').length).toBe(2);
+    expect(el.querySelector('app-kind-badge')?.textContent?.trim()).toBe('Man day');
+    expect(el.textContent).toContain('MD-0001');
+    expect(el.textContent).toContain('no machines yet');
+    expect(el.textContent).not.toContain('EGP');
+    const hrefs = Array.from(el.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    expect(hrefs).toContain('/jobs/r7');
+    expect(hrefs).not.toContain('/jobs/r8');
+    expect(hrefs).toContain('/requests/man-day');
+  });
+
   it('round-trips a timestamp through the datetime-local value', () => {
     expect(new Date(toLocalInput('2026-11-10T07:30:00Z')).toISOString()).toBe('2026-11-10T07:30:00.000Z');
   });

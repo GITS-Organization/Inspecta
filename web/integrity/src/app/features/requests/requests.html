@@ -63,6 +63,8 @@
           <button type="button" class="btn ghost" (click)="clear()">Clear the search</button>
         } @else if (active().id === 'progress') {
           <a class="btn" routerLink="/queue">Open Jobs</a>
+        } @else if (active().id === 'man_day') {
+          <a class="btn go" routerLink="/requests/man-day">New man day</a>
         } @else if (active().id === 'maybe') {
           <a class="btn" routerLink="/clients">Open Clients</a>
         } @else {
@@ -79,9 +81,10 @@
           <div class="main">
             <div class="title">
               <b>{{ r.clientName || r.emailFromName || r.emailFrom || 'No client yet' }}</b>
+              <app-kind-badge [kind]="r.kind" />
               @if (r.hasUnreadClientReply) { <span class="reply"><i aria-hidden="true"></i>Client replied</span> }
             </div>
-            <div class="sub">{{ r.subject || 'No subject' }}</div>
+            <div class="sub">{{ r.subject || (r.kind === 'man_day' ? 'Man day · no list of machines' : 'No subject') }}</div>
             <div class="meta muted">
               @if (r.emailFrom) { <span>{{ r.emailFromName ? r.emailFromName + ' · ' : '' }}{{ r.emailFrom }}</span> }
               <time [attr.datetime]="r.receivedAt" [title]="full(r.receivedAt)">{{ relative(r.receivedAt) }}</time>

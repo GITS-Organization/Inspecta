@@ -24,9 +24,9 @@
       <div class="jobwrap">
         <div class="job">
           <div>
-            <b>{{ r.clientName || 'Client' }}</b>
+            <b>{{ r.clientName || 'Client' }}</b> <app-kind-badge [kind]="r.kind" />
             <div class="muted">
-              {{ r.quotationNumber || r.proposalNumber }} · {{ r.location }} · {{ r.totalUnits }} {{ r.totalUnits === 1 ? 'unit' : 'units' }}
+              {{ r.quotationNumber || r.proposalNumber }} · {{ r.location }} · @if (r.kind === 'man_day' && !r.totalUnits) { no machines yet } @else { {{ r.totalUnits }} {{ r.totalUnits === 1 ? 'unit' : 'units' }} }
               @if (r.inspectorName) { · {{ r.inspectorName }} }
               @if (r.scheduledAt) { · {{ formatDate(r.scheduledAt) }} }
             </div>
@@ -38,6 +38,9 @@
             }
           </span>
           <span class="rowline">
+            @if (isOpen(r)) {
+              <a class="lnk" [routerLink]="['/jobs', r.requestId]">Machines</a>
+            }
             @switch (r.requestStatus) {
               @case ('unassigned') {
                 <button type="button" class="btn" [attr.aria-expanded]="openId() === r.requestId" (click)="open(r, 'assign')">Give to an inspector</button>

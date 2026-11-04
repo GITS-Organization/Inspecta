@@ -5,6 +5,7 @@ import { Client, Equipment, MachineSuggestion, RequestDetails, RequestEmail, Sav
 import { problemMessage } from '../../core/problem';
 import { ToastService } from '../../core/toast.service';
 import { STAGE_LABEL, formatDate, plural } from '../../shared/format';
+import { KindBadge } from '../../shared/kind-badge';
 import { ItemsEditor } from '../../shared/items-editor';
 
 const toDateInput = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : '');
@@ -12,7 +13,7 @@ const toDateInput = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) 
 /** One request: edit what the client asked for, add suggested machines, read the original email, open or turn down the quotation. */
 @Component({
   selector: 'app-request-detail',
-  imports: [RouterLink, ItemsEditor],
+  imports: [RouterLink, ItemsEditor, KindBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-detail.html',
   styleUrl: './request-detail.scss',

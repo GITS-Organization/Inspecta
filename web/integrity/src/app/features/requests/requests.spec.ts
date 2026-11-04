@@ -21,7 +21,7 @@ const summary: RequestSummary = {
 
 describe('helpers', () => {
   it('builds the badge counts from the summary', () => {
-    expect(tabCounts(summary, 3)).toEqual({ new: 5, details: 3, progress: 9, closed: 2, maybe: 2, all: 30 });
+    expect(tabCounts(summary, 3, 4)).toEqual({ new: 5, details: 3, progress: 9, man_day: 4, closed: 2, maybe: 2, all: 30 });
     expect(tabCounts(null, null).all).toBeNull();
   });
 
@@ -69,9 +69,9 @@ describe('Requests page', () => {
     f.detectChanges();
     const el = f.nativeElement as HTMLElement;
     const tabs = Array.from(el.querySelectorAll('[role=tab]'));
-    expect(tabs.map((t) => t.querySelector('.l')?.textContent)).toEqual(['New requests', 'Needs details', 'Accepted', 'Closed', 'Unknown senders', 'All']);
+    expect(tabs.map((t) => t.querySelector('.l')?.textContent)).toEqual(['New requests', 'Needs details', 'Accepted', 'Man days', 'Closed', 'Unknown senders', 'All']);
     expect(tabs[0].querySelector('.n')?.textContent).toBe('5');
-    expect(tabs[4].querySelector('.n')?.textContent).toBe('2');
+    expect(tabs[5].querySelector('.n')?.textContent).toBe('2');
     expect(tabs[0].getAttribute('aria-selected')).toBe('true');
     expect(tabs[0].getAttribute('tabindex')).toBe('0');
     expect(tabs[1].getAttribute('tabindex')).toBe('-1');
@@ -96,6 +96,24 @@ describe('Requests page', () => {
     const text = (f.nativeElement as HTMLElement).textContent;
     expect(text).toContain('Accepted one');
     expect(text).not.toContain('Closed one');
+  });
+
+  it('lists only the man days in the Man days tab, tags them, and counts them once loaded', async () => {
+    const f = await open({ tab: 'man_day' });
+    ctrl.expectOne((r) => r.url === `${api}/requests` && r.params.get('pageSize') === '100' && r.params.get('triage') === 'request' && !r.params.has('status')).flush([
+      req({ kind: 'man_day', status: 'assigned', clientName: 'Al Noor', subject: null, items: [] }),
+      req({ kind: 'standard', status: 'assigned', clientName: 'Standard one' }),
+      req({ kind: 'direct', status: 'certificate_approved', clientName: 'Direct one' }),
+    ]);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Al Noor');
+    expect(el.textContent).not.toContain('Standard one');
+    expect(el.textContent).not.toContain('Direct one');
+    expect(el.querySelector('app-kind-badge')?.textContent?.trim()).toBe('Man day');
+    expect(el.textContent).toContain('Man day · no list of machines');
+    expect(el.querySelector('#tab-man_day .n')?.textContent).toBe('1');
+    expect(Array.from(el.querySelectorAll('a.btn')).map((a) => a.getAttribute('href'))).toContain('/requests/man-day');
   });
 
   it('moves between tabs with the arrow keys by writing the tab to the URL', async () => {

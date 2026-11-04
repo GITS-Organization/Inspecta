@@ -2,10 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink } from '@angular/router';
 import { CoordinatorApi } from '../../api/coordinator.api';
 import { Inspector } from '../../api/coordinator.models';
-import { QueueFilter, QueueRow } from '../../core/models';
+import { MACHINES_OPEN, QueueFilter, QueueRow } from '../../core/models';
 import { problemMessage } from '../../core/problem';
 import { ToastService } from '../../core/toast.service';
 import { formatDate } from '../../shared/format';
+import { KindBadge } from '../../shared/kind-badge';
 
 const TABS: { filter: QueueFilter; label: string; empty: string }[] = [
   { filter: 'unassigned', label: 'To give to an inspector', empty: 'No accepted job is waiting for an inspector.' },
@@ -18,7 +19,7 @@ const TABS: { filter: QueueFilter; label: string; empty: string }[] = [
 /** The coordinator's job queue: give accepted jobs to inspectors, follow them, and hand the approved certificates to the client. */
 @Component({
   selector: 'app-queue',
-  imports: [RouterLink],
+  imports: [RouterLink, KindBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './queue.html',
   styleUrl: './queue.scss',
@@ -111,6 +112,11 @@ export class Queue {
         this.formError.set(problemMessage(e));
       },
     });
+  }
+
+  /** The job is under way: its machines can still change. */
+  protected isOpen(r: QueueRow): boolean {
+    return MACHINES_OPEN.includes(r.requestStatus);
   }
 
   protected inspectorLabel(i: Inspector): string {

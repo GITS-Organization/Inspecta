@@ -5,6 +5,7 @@ import { AuthService } from '../../core/auth.service';
 import { QueueFilter, QueueRow } from '../../core/models';
 import { problemMessage } from '../../core/problem';
 import { plural } from '../../shared/format';
+import { KindBadge } from '../../shared/kind-badge';
 
 interface Tab {
   filter: QueueFilter;
@@ -26,7 +27,7 @@ const TABS: Record<'inspector' | 'coordinator', Tab[]> = {
 
 @Component({
   selector: 'app-jobs',
-  imports: [RouterLink],
+  imports: [RouterLink, KindBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="head">
@@ -61,7 +62,7 @@ const TABS: Record<'inspector' | 'coordinator', Tab[]> = {
         @for (r of rows(); track r.id) {
           <div class="job">
             <div>
-              <b>{{ r.clientName || 'Client' }}</b>
+              <b>{{ r.clientName || 'Client' }}</b> <app-kind-badge [kind]="r.kind" />
               <div class="muted">
                 {{ r.quotationNumber || r.proposalNumber }} · {{ r.location }} · {{ plural(r.totalUnits, 'machine') }}
               </div>

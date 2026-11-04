@@ -4,6 +4,7 @@ import { CoordinatorApi } from '../../api/coordinator.api';
 import { QuoteRow, QuoteStage } from '../../api/coordinator.models';
 import { problemMessage } from '../../core/problem';
 import { formatDate, formatEgp } from '../../shared/format';
+import { KindBadge } from '../../shared/kind-badge';
 
 const TABS: { stage: QuoteStage; label: string }[] = [
   { stage: 'draft', label: 'Being prepared' },
@@ -15,7 +16,7 @@ const TABS: { stage: QuoteStage; label: string }[] = [
 /** All quotations by stage. The editor opens from a row. */
 @Component({
   selector: 'app-quotations',
-  imports: [RouterLink],
+  imports: [RouterLink, KindBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="head">
@@ -50,10 +51,10 @@ const TABS: { stage: QuoteStage; label: string }[] = [
         @for (r of rows(); track r.id) {
           <div class="job">
             <div>
-              <b>{{ r.clientName || 'Client' }}</b>
+              <b>{{ r.clientName || 'Client' }}</b> <app-kind-badge [kind]="r.kind" />
               <div class="muted">
                 {{ r.quotationNumber || r.proposalNumber }} · {{ r.location }} · {{ r.totalUnits }} {{ r.totalUnits === 1 ? 'unit' : 'units' }}
-                @if (r.amountPiastres !== null) { · {{ egp(r.amountPiastres) }} }
+                @if (r.amountPiastres !== null && (!r.kind || r.kind === 'standard')) { · {{ egp(r.amountPiastres) }} }
               </div>
               @if (r.missingPrices && r.stage === 'draft') { <div class="miss">{{ r.missingPrices }} {{ r.missingPrices === 1 ? 'price' : 'prices' }} missing</div> }
             </div>
