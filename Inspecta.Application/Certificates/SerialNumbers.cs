@@ -4,7 +4,13 @@ namespace Inspecta.Application.Certificates;
 public static class SerialNumbers
 {
     /// <summary>The most characters the printed serial number box takes.</summary>
-    public const int MaxCharacters = 600;
+    public const int MaxCharacters = 1000;
+
+    /// <summary>
+    /// What one gear certificate can hold in all: its serial text plus the free texts (defect, repairs, tests, note). Measured on the printed
+    /// certificate: about 1250 characters in total fit on the one page (1000 of serial numbers with texts of 60 characters each fit, 100 each do not).
+    /// </summary>
+    public const int PageBudget = 1200;
 
     /// <summary>The longest single serial number accepted.</summary>
     public const int MaxLength = 60;

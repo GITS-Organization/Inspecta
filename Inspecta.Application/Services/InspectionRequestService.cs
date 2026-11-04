@@ -326,7 +326,7 @@ public sealed class InspectionRequestService(
     {
         var request = await LoadForEditAsync(requestId, actorId, role, cancellationToken);
         request.UpdateItem(
-            itemId, item.Name, item.Quantity, item.EquipmentId, item.Type, item.Capacity,
+            itemId, item.Name, Certificates.GearRules.QuantityFor(item.Name, item.Quantity), item.EquipmentId, item.Type, item.Capacity,
             item.SerialNumber, item.Location, item.IssueDescription);
         await RegisterEquipmentAsync(request, cancellationToken);
         await requestRepository.SaveAsync(request, cancellationToken);
@@ -462,7 +462,7 @@ public sealed class InspectionRequestService(
 
     private static RequestItem CreateItem(CreateRequestItem item) => RequestItem.Create(
         item.Name,
-        item.Quantity,
+        Certificates.GearRules.QuantityFor(item.Name, item.Quantity),
         item.EquipmentId,
         item.Type,
         item.Capacity,

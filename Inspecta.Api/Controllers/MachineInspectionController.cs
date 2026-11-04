@@ -109,6 +109,25 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
         return Ok(await jobMachines.EditAsync(requestId, requestItemId, actorId, role, request, cancellationToken));
     }
 
+    /// <summary>Divide a gear into the certificates the inspector decided on.</summary>
+    /// <remarks>
+    /// Each certificate has its own <c>quantity</c> and its own <c>serialNumbers</c> (one free text, at most 1000 characters so the certificate
+    /// stays one page); there is no limit on how many certificates. The machine keeps the first one and every other becomes a new machine of the
+    /// job; calling it again replaces the earlier division until a certificate of the gear is started. Machines of the group share
+    /// <c>divisionGroupId</c> and <c>divisionTotal</c> (the quantity before the first division); a sum of quantities that differs is allowed.
+    /// </remarks>
+    [HttpPut("machines/{requestItemId:guid}/certificates")]
+    [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<MachineListResponse>> DivideMachine(Guid requestId, Guid requestItemId, DivideMachineRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await jobMachines.DivideAsync(requestId, requestItemId, actorId, role, request, cancellationToken));
+    }
+
     /// <summary>Take a machine out of the job; only before its certificate was started.</summary>
     [HttpDelete("machines/{requestItemId:guid}")]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]

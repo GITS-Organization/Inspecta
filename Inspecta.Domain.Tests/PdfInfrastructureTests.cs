@@ -128,6 +128,29 @@ public sealed class PdfInfrastructureTests
     }
 
     [Fact]
+    public void AGearCertificateFilledToItsPageBudgetIsOnePage()
+    {
+        using var provider = BuildProvider();
+        var serials = string.Join(", ", Enumerable.Range(1, 400).Select(number => "CS-26-" + number.ToString("0000")))[..Inspecta.Application.Certificates.SerialNumbers.MaxCharacters];
+        // The page budget: the serial text and the four free texts share it (1000 + 4 x 50 = 1200 characters).
+        var longText = string.Join(' ', Enumerable.Repeat("The sling shows wear near the hook and must be replaced.", 2))[..50];
+        var model = new CertificatePdfModel(
+            "CERT-2026-0001", DateTimeOffset.UtcNow, false, "Delta Steel Co.",
+            "10th of Ramadan - Zone B3", "Ahmed Rafat", null, null, null,
+            new DateOnly(2026, 10, 26), new DateOnly(2027, 10, 25), "Full Body Safety Harness", ["BS EN 361:2002"], "Visual & function test",
+            "Unsatisfactory",
+            [new CertificatePdfField("Description", "Full Body Safety Harness"), new CertificatePdfField("SWL", "25 tonnes"),
+                new CertificatePdfField("Qty.", "1000"), new CertificatePdfField("Serial Number", serials)],
+            new CertificatePdfQuestionnaire(false, null, true, false, true, false, longText, true, true, new DateOnly(2026, 12, 1), longText, longText, longText),
+            [], "Karim Adel", "Lifts, Lifting equipment, Pressure vessels", "Mona Manager", null, "https://example.com/verify/ABCD");
+
+        var file = provider.GetRequiredService<IPdfGenerator>().Generate(model);
+
+        var pages = System.Text.RegularExpressions.Regex.Matches(Encoding.Latin1.GetString(file.Content), @"/Type\s*/Page(?![s\w])").Count;
+        Assert.Equal(1, pages);
+    }
+
+    [Fact]
     public void RenderingFailuresAreWrappedAndTheOriginalErrorIsKept()
     {
         var services = new ServiceCollection();

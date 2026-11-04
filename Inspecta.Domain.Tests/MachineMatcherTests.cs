@@ -184,7 +184,7 @@ public sealed class MachineMatcherTests
         var added = await service.AutofillAsync(request, "Please quote 4 air receivers and the pump.", null);
 
         var item = Assert.Single(added);
-        Assert.Equal(4, item.Quantity);
+        Assert.Equal(1, item.Quantity); // only gears are counted in numbers
         Assert.Equal("Air Receiver", item.Name);
         Assert.Equal(catalog.Machines.First(machine => machine.Name == "Air Receiver").Id, item.EquipmentId);
         Assert.Equal("10 bar", item.Capacity);

@@ -134,6 +134,7 @@ public sealed class InspectaDbContext(
         requestItem.HasOne(value => value.Request).WithMany(value => value.Items)
             .HasForeignKey(value => value.RequestId).OnDelete(DeleteBehavior.Cascade);
         requestItem.HasOne<Item>().WithMany().HasForeignKey(item => item.EquipmentId).OnDelete(DeleteBehavior.SetNull);
+        requestItem.HasIndex(item => item.DivisionGroupId);
         requestItem.HasMany(item => item.Certificates).WithOne(item => item.RequestItem)
             .HasForeignKey(item => item.RequestItemId).OnDelete(DeleteBehavior.Restrict);
 

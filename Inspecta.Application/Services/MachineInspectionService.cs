@@ -91,6 +91,7 @@ public sealed class MachineInspectionService(
         var technical = Merge(certificate.Technical, ReadFields(form.Fields, template));
         var checklist = Merge(certificate.Checklist, ReadChecklist(form.Checklist, template));
         var texts = Merge(certificate.TextsOf(), ReadTexts(form.Texts));
+        if (match.Item?.Gear == true) EnsureGearFitsOnePage(technical.GetValueOrDefault("serialNumber") ?? item.SerialNumber, texts);
         var dates = Merge(certificate.DatesOf(), ReadDates(form.Dates));
         var answers = Merge(certificate.AnswersOf(), ReadAnswers(form.Answers));
         if (answers.TryGetValue("within6Months", out var six) && !(form.Answers?.ContainsKey("within12Months") ?? false))
@@ -679,7 +680,9 @@ public sealed class MachineInspectionService(
                 dates.TryGetValue("nextExamination", out var nextOn) ? nextOn : null,
                 certificate is { UsesTemplate: true } ? $"/api/v1/quotation-queue/{request.Id}/machines/{item.Id}/pdf" : null,
                 certificate is { UsesTemplate: true } ? certificate.QrData : null,
-                match.Item?.Gear == true));
+                match.Item?.Gear == true,
+                item.DivisionGroupId,
+                item.DivisionTotal));
         }
 
         var delivered = await DeliveryInfoAsync(request, cancellationToken);
@@ -1000,6 +1003,16 @@ public sealed class MachineInspectionService(
         var result = new Dictionary<string, T>(current);
         foreach (var (key, value) in changes) result[key] = value;
         return result;
+    }
+
+    // A gear certificate is one page: its serial text and its free texts share one budget of characters.
+    private static void EnsureGearFitsOnePage(string? serialNumbers, IReadOnlyDictionary<string, string> texts)
+    {
+        var used = (serialNumbers?.Trim().Length ?? 0) + new[] { "defectDescription", "repairsRequired", "testsCarriedOut", "note" }
+            .Sum(key => texts.TryGetValue(key, out var value) ? value.Trim().Length : 0);
+        if (used > SerialNumbers.PageBudget)
+            throw new ArgumentException(
+                $"The serial numbers and the texts take {used} characters and one page holds {SerialNumbers.PageBudget}. Shorten the texts or move serial numbers to another certificate.");
     }
 
     private static Dictionary<string, string> ReadFields(IReadOnlyDictionary<string, string>? fields, CertificateTemplate template)

@@ -19,6 +19,13 @@ public sealed class RequestItem
     public int Quantity { get; private set; }
     public string? SerialNumber { get; private set; }
     public string? IssueDescription { get; private set; }
+
+    /// <summary>The certificates one gear was divided into share this id; null for a machine that was never divided.</summary>
+    public Guid? DivisionGroupId { get; private set; }
+
+    /// <summary>The quantity of the gear before it was divided (the sum the inspector is expected to reach); null when not divided.</summary>
+    public int? DivisionTotal { get; private set; }
+
     public List<InspectionCertificate> Certificates { get; private set; } = [];
 
     /// <summary>Throws when the values would not make a valid item, without creating anything.</summary>
@@ -115,6 +122,15 @@ public sealed class RequestItem
         Model = model?.Trim();
         Location = location?.Trim();
         IssueDescription = string.IsNullOrWhiteSpace(issueDescription) ? null : issueDescription.Trim();
+    }
+
+    /// <summary>Makes the item one certificate of a divided gear.</summary>
+    public void JoinDivision(Guid groupId, int total)
+    {
+        if (groupId == Guid.Empty) throw new ArgumentException("Division group is required.", nameof(groupId));
+        if (total < 1) throw new ArgumentOutOfRangeException(nameof(total));
+        DivisionGroupId = groupId;
+        DivisionTotal = total;
     }
 
     /// <summary>The same machine with another quantity and serial numbers: one share of a gear that is split over several certificates.</summary>

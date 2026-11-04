@@ -46,4 +46,4 @@ public sealed record MachineTypeResponse(
     bool IsGear);
 
 /// <summary>The most a printed certificate takes, so the screen can plan a split before it asks for one.</summary>
-public sealed record SerialLimitsResponse(int MaxCharactersPerCertificate, int MaxLengthPerSerialNumber, int MaxSerialNumbers);
+public sealed record SerialLimitsResponse(int MaxCharactersPerCertificate, int MaxLengthPerSerialNumber, int MaxSerialNumbers, int PageBudgetCharacters = 1200);

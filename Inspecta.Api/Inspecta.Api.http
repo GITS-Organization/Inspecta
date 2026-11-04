@@ -431,6 +431,13 @@ Content-Type: application/json
 
 { "name": "Scissor Lift", "serialNumber": "SL-77", "capacity": "500 kg" }
 
+### Gear: divide into the certificates the inspector decides (own qty and serial text each, no maximum)
+PUT {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{requestItemId}}/certificates
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "certificates": [ { "quantity": 150, "serialNumbers": "CS-0001-CS-0150" }, { "quantity": 850, "serialNumbers": "CS-0151-CS-1000" } ] }
+
 ### Job: change a machine's details
 PUT {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{requestItemId}}/details
 Authorization: Bearer {{token}}

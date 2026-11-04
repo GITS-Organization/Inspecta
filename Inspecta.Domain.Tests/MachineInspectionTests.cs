@@ -817,6 +817,155 @@ public sealed class MachineInspectionTests : IDisposable
 
     // ---- Helpers ------------------------------------------------------------------------------------------------
 
+    // ---- Gears: quantity is for gears only -------------------------------------------------------------------------
+
+    [Fact]
+    public void QuantityIsKeptForGearsAndIsOneForEveryOtherMachine()
+    {
+        Assert.Equal(40, GearRules.QuantityFor("Chain Sling grade 4", 40));
+        Assert.Equal(0, GearRules.QuantityFor("Chain Sling grade 4", 0)); // the item refuses it
+        Assert.Equal(1, GearRules.QuantityFor("Forklift Truck", 5));
+        Assert.Equal(1, GearRules.QuantityFor("A machine the catalogue does not know", 3));
+        Assert.Equal(1, GearRules.QuantityFor(null, 9));
+    }
+
+    [Fact]
+    public async Task AMachineAddedToAJobIsOneUnitUnlessItIsAGear()
+    {
+        await Start();
+
+        var list = await Machines(service => service.AddAsync(requestId, inspector.Id, "inspector", new AddMachineRequest { Name = "Scissor Lift", Quantity = 6 }));
+        var gears = await Machines(service => service.AddAsync(requestId, inspector.Id, "inspector", new AddMachineRequest { Name = "Chain Sling grade 4", Quantity = 6 }));
+
+        Assert.Equal(1, list.Machines.Single(machine => machine.Name == "Scissor Lift").Quantity);
+        Assert.Equal(6, gears.Machines.Single(machine => machine.Name == "Chain Sling grade 4").Quantity);
+    }
+
+    // ---- Gears: the inspector divides a gear into certificates, each with its own qty and serial text ----------------
+
+    private async Task<Guid> AddSlings(int quantity = 1000)
+    {
+        await Start();
+        var list = await Machines(service => service.AddAsync(requestId, inspector.Id, "inspector",
+            new AddMachineRequest { Name = "Chain Sling grade 4", Quantity = quantity }));
+        return list.Machines.Single(machine => machine.Name == "Chain Sling grade 4").RequestItemId;
+    }
+
+    private static DivideMachineRequest Division(params (int Quantity, string Serials)[] shares) =>
+        new() { Certificates = shares.Select(share => new CertificateShare { Quantity = share.Quantity, SerialNumbers = share.Serials }).ToArray() };
+
+    [Fact]
+    public async Task AGearIsDividedIntoCertificatesWithTheirOwnQtyAndSerials()
+    {
+        var slings = await AddSlings();
+
+        var list = await Machines(service => service.DivideAsync(requestId, slings, inspector.Id, "inspector",
+            Division((150, "CS-0001-CS-0150"), (150, "CS-0151-CS-0300"), (700, "CS-0301-CS-1000, X-9"))));
+
+        var parts = list.Machines.Where(machine => machine.Name == "Chain Sling grade 4").OrderBy(machine => machine.Quantity).ToList();
+        Assert.Equal([150, 150, 700], parts.Select(machine => machine.Quantity).ToArray());
+        Assert.Contains(parts, machine => machine.RequestItemId == slings); // the machine keeps the first share
+        Assert.Equal("CS-0301-CS-1000, X-9", parts.Single(machine => machine.Quantity == 700).SerialNumber);
+        Assert.Single(parts.Select(machine => machine.DivisionGroupId).Distinct());
+        Assert.NotNull(parts[0].DivisionGroupId);
+        Assert.All(parts, machine => Assert.Equal(1000, machine.DivisionTotal));
+        Assert.All(parts, machine => Assert.True(machine.IsGear));
+        Assert.Equal(5, list.Machines.Count); // the forklift, the chain block and the three certificates of the slings
+
+        // Each share is its own certificate, filled and submitted like any machine.
+        foreach (var part in parts)
+        {
+            await Run(service => service.SaveFormAsync(requestId, part.RequestItemId, inspector.Id, "inspector", CompleteForm("basic")));
+            await Run(service => service.SubmitAsync(requestId, part.RequestItemId, inspector.Id, "inspector"));
+        }
+    }
+
+    [Fact]
+    public async Task DividingAgainReplacesTheFirstDivisionAndAnyTotalIsAccepted()
+    {
+        var slings = await AddSlings();
+        await Machines(service => service.DivideAsync(requestId, slings, inspector.Id, "inspector", Division((300, "A-1-A-300"), (300, "A-301-A-600"), (400, "A-601-A-1000"))));
+
+        var again = await Machines(service => service.DivideAsync(requestId, slings, inspector.Id, "inspector", Division((250, "B-1-B-250"), (250, "B-251-B-500"))));
+
+        var parts = again.Machines.Where(machine => machine.Name == "Chain Sling grade 4").ToList();
+        Assert.Equal(2, parts.Count);
+        Assert.Equal(500, parts.Sum(machine => machine.Quantity)); // a total that differs from 1000 is not refused
+        Assert.All(parts, machine => Assert.Equal(1000, machine.DivisionTotal)); // the total of the first division is kept
+        Assert.DoesNotContain(parts, machine => machine.SerialNumber!.StartsWith("A-"));
+        await using var db = CreateContext();
+        Assert.Equal(2, db.Requests.Include(value => value.Items).Single(value => value.Id == requestId).Items.Count(item => item.Name == "Chain Sling grade 4"));
+    }
+
+    [Fact]
+    public async Task ThereIsNoLimitOnTheNumberOfCertificates()
+    {
+        var slings = await AddSlings(120);
+
+        var list = await Machines(service => service.DivideAsync(requestId, slings, inspector.Id, "inspector",
+            Division(Enumerable.Range(1, 60).Select(number => (2, $"S-{number}")).ToArray())));
+
+        Assert.Equal(60, list.Machines.Count(machine => machine.Name == "Chain Sling grade 4"));
+    }
+
+    [Fact]
+    public async Task TheSerialTextIsLimitedByItsCharactersOnly()
+    {
+        var slings = await AddSlings();
+        var exactly = new string('7', SerialNumbers.MaxCharacters);
+
+        await Machines(service => service.DivideAsync(requestId, slings, inspector.Id, "inspector", Division((10, exactly))));
+        var tooLong = await Assert.ThrowsAsync<ArgumentException>(() => Machines(service => service.DivideAsync(
+            requestId, slings, inspector.Id, "inspector", Division((10, "S-1"), (10, exactly + "7")))));
+        Assert.Contains("Certificate 2", tooLong.Message);
+        Assert.Contains("1001", tooLong.Message);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => Machines(service => service.DivideAsync(requestId, slings, inspector.Id, "inspector", Division((0, "S-1")))));
+        await Assert.ThrowsAsync<ArgumentException>(() => Machines(service => service.DivideAsync(requestId, slings, inspector.Id, "inspector", Division((5, "  ")))));
+        await Assert.ThrowsAsync<ArgumentException>(() => Machines(service => service.DivideAsync(requestId, slings, inspector.Id, "inspector", Division())));
+
+        // Free text: ranges, commas, repeats and counts are not checked.
+        await Machines(service => service.DivideAsync(requestId, slings, inspector.Id, "inspector", Division((4, "500-600, 500-600"), (900, "700"))));
+    }
+
+    [Fact]
+    public async Task AGearCertificateSerialTextAndFreeTextsShareTheOnePageBudget()
+    {
+        var slings = await AddSlings();
+        await Machines(service => service.DivideAsync(requestId, slings, inspector.Id, "inspector", Division((10, new string('7', SerialNumbers.MaxCharacters)))));
+
+        // 1000 serial characters leave 200 for the four free texts; 201 does not fit on one page.
+        var within = CompleteForm("basic") with { Texts = new Dictionary<string, string> { ["testType"] = "Visual", ["defectDescription"] = new string('d', 200) } };
+        await Run(service => service.SaveFormAsync(requestId, slings, inspector.Id, "inspector", within));
+        var over = CompleteForm("basic") with { Texts = new Dictionary<string, string> { ["defectDescription"] = new string('d', 201) } };
+        var refused = await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.SaveFormAsync(requestId, slings, inspector.Id, "inspector", over)));
+        Assert.Contains("one page holds 1200", refused.Message);
+
+        // A machine that is not a gear is not held to the budget.
+        await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector",
+            CompleteForm("forklift") with { Texts = new Dictionary<string, string> { ["testType"] = "Visual", ["defectDescription"] = new string('d', 1500) } }));
+    }
+
+    [Fact]
+    public async Task OnlyAGearIsDividedAndNotOnceACertificateOfItStarted()
+    {
+        await Start();
+        var notAGear = await Assert.ThrowsAsync<AuthException>(() => Machines(service => service.DivideAsync(
+            requestId, forkliftItemId, inspector.Id, "inspector", Division((1, "FK-1")))));
+        Assert.Equal("not_a_gear", notAGear.Code);
+
+        var slings = await AddSlings();
+        var list = await Machines(service => service.DivideAsync(requestId, slings, inspector.Id, "inspector", Division((500, "S-1-S-500"), (500, "S-501-S-1000"))));
+        var second = list.Machines.Where(machine => machine.Name == "Chain Sling grade 4").Select(machine => machine.RequestItemId).First(id => id != slings);
+        await Run(service => service.SaveFormAsync(requestId, second, inspector.Id, "inspector", CompleteForm("basic")));
+
+        var started = await Assert.ThrowsAsync<AuthException>(() => Machines(service => service.DivideAsync(
+            requestId, slings, inspector.Id, "inspector", Division((1000, "S-1-S-1000")))));
+        Assert.Equal("machine_already_started", started.Code);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Machines(service => service.DivideAsync(
+            requestId, slings, otherInspector.Id, "inspector", Division((1, "S-1")))));
+    }
+
     // ---- Gears: one machine, many serial numbers, shared over several certificates ----------------------------------
 
     private static IReadOnlyList<string> Serials(int count, string prefix = "CS-26-") =>
@@ -1048,7 +1197,9 @@ public sealed class MachineInspectionTests : IDisposable
         var scissor = byCoordinator.Machines.Single(machine => machine.Name == "Scissor Lift").RequestItemId;
         var edited = await Machines(service => service.EditAsync(requestId, scissor, inspector.Id, "inspector",
             new EditMachineRequest { Name = "Scissor Lift", Quantity = 2, SerialNumber = "SL-1, SL-2", Capacity = "300 kg" }));
-        Assert.Equal(2, edited.Machines.Single(machine => machine.RequestItemId == scissor).Quantity);
+        var changed = edited.Machines.Single(machine => machine.RequestItemId == scissor);
+        Assert.Equal("SL-1, SL-2", changed.SerialNumber);
+        Assert.Equal(1, changed.Quantity); // not a gear: one unit
         await Run(service => service.SaveFormAsync(requestId, scissor, inspector.Id, "inspector", CompleteForm("basic")));
         var started = await Assert.ThrowsAsync<AuthException>(() => Machines(service => service.RemoveAsync(requestId, scissor, inspector.Id, "inspector")));
         Assert.Equal("machine_already_started", started.Code);

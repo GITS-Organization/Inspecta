@@ -13,5 +13,8 @@ public interface IJobMachineService
 
     Task<MachineListResponse> EditAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, EditMachineRequest machine, CancellationToken cancellationToken = default);
 
+    /// <summary>Divides a gear into the certificates the inspector decided on (quantity and serial text each); a second call replaces the first division.</summary>
+    Task<MachineListResponse> DivideAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, DivideMachineRequest division, CancellationToken cancellationToken = default);
+
     Task<MachineListResponse> RemoveAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, CancellationToken cancellationToken = default);
 }

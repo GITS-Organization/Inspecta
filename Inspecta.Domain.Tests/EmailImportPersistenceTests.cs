@@ -73,7 +73,7 @@ public sealed class EmailImportPersistenceTests : IDisposable
         Assert.Equal(known ? RequestTriage.Request : RequestTriage.Maybe, saved.Triage);
         Assert.Equal(known ? "Borg El Arab" : string.Empty, saved.Location);
         Assert.Equal(known ? 1 : 0, saved.Items.Count);
-        if (known) Assert.Equal(4, saved.Items.Single().Quantity);
+        if (known) Assert.Equal(1, saved.Items.Single().Quantity);
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public sealed class EmailImportPersistenceTests : IDisposable
         Assert.Equal(RequestTriage.Request, saved[fromCertificatesEmail.Id].Triage);
         Assert.Equal(client.Id, saved[fromCertificatesEmail.Id].ClientId);
         Assert.Equal("Borg El Arab", saved[fromCertificatesEmail.Id].Location);
-        Assert.Equal(3, Assert.Single(saved[fromCertificatesEmail.Id].Items).Quantity);
+        Assert.Equal(1, Assert.Single(saved[fromCertificatesEmail.Id].Items).Quantity);
         Assert.Equal(RequestTriage.Request, saved[fromContact.Id].Triage);
         Assert.Equal(RequestTriage.Maybe, saved[stranger.Id].Triage);
         Assert.Equal(0, await repository.PromoteMatchingMaybesAsync(manager.Id, senders));

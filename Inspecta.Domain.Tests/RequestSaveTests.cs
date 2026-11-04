@@ -46,7 +46,7 @@ public sealed class RequestSaveTests
         Assert.Equal(2, saved.Items.Count);
         var crane = saved.Items.Single(item => item.Id == fixture.Crane.Id);
         Assert.Equal("Mobile crane 100 t", crane.Name);
-        Assert.Equal(2, crane.Quantity);
+        Assert.Equal(1, crane.Quantity);
         Assert.Equal("Yard", crane.Location);
         var added = Assert.Single(fixture.Repository.LastChanges!.Added);
         Assert.Equal("Safety valve DN40", added.Name);
@@ -83,7 +83,7 @@ public sealed class RequestSaveTests
             Items =
             [
                 new SaveRequestItem { Id = fixture.Crane.Id, Name = "Renamed", Quantity = 3 },
-                new SaveRequestItem { Name = "Broken", Quantity = 0 }
+                new SaveRequestItem { Name = "Chain Sling grade 4", Quantity = 0 }
             ]
         }));
 
@@ -112,7 +112,7 @@ public sealed class RequestSaveTests
 
         var added = Assert.Single(fixture.Repository.LastChanges!.Added);
         Assert.Equal(screenId, added.Id);
-        Assert.Contains(saved.Items, item => item.Id == screenId && item.Name == "Equipment from the screen" && item.Quantity == 2);
+        Assert.Contains(saved.Items, item => item.Id == screenId && item.Name == "Equipment from the screen" && item.Quantity == 1);
         Assert.Equal(fixture.Receiver.Id, Assert.Single(fixture.Repository.LastChanges.Removed).Id);
     }
 

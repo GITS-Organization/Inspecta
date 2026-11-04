@@ -440,6 +440,41 @@ public sealed class InspectionRequest
         return item;
     }
 
+    /// <summary>
+    /// Divides a gear into the certificates the inspector decided on: every share is one certificate with its own quantity and its own
+    /// serial text. The given item keeps the first share, one copy is added for each other share, and the certificates of an earlier
+    /// division of the same gear are replaced. There is no limit on the number of shares.
+    /// </summary>
+    public (IReadOnlyList<RequestItem> Added, IReadOnlyList<RequestItem> Removed) DivideItem(
+        Guid itemId, IReadOnlyList<(int Quantity, string Serials)> shares, Guid actorId)
+    {
+        EnsureMachinesCanChange();
+        if (shares.Count < 1) throw new ArgumentException("At least one certificate is needed.", nameof(shares));
+
+        var item = FindItem(itemId);
+        var groupId = item.DivisionGroupId ?? Guid.NewGuid();
+        var total = item.DivisionTotal ?? item.Quantity;
+        var removed = item.DivisionGroupId is null
+            ? new List<RequestItem>()
+            : Items.Where(value => value.DivisionGroupId == item.DivisionGroupId && value.Id != item.Id).ToList();
+        foreach (var gone in removed) Items.Remove(gone);
+
+        item.SetShare(shares[0].Quantity, shares[0].Serials);
+        item.JoinDivision(groupId, total);
+        var added = new List<RequestItem>();
+        for (var index = 1; index < shares.Count; index++)
+        {
+            var copy = item.CopyWith(shares[index].Quantity, shares[index].Serials);
+            copy.JoinDivision(groupId, total);
+            Items.Add(copy);
+            added.Add(copy);
+        }
+
+        UpdatedAt = DateTimeOffset.UtcNow;
+        History.Add(JobStatusHistory.Create(Id, Status, Status, actorId, UpdatedAt, $"{item.Name} was divided into {shares.Count} certificates."));
+        return (added, removed);
+    }
+
     /// <summary>Changes the details of one machine of a job that is under way.</summary>
     public RequestItem EditMachine(
         Guid itemId, string name, int quantity, string? type, string? capacity, string? serialNumber,

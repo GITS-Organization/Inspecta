@@ -41,7 +41,7 @@ public sealed class MachineSuggestionService(IEquipmentCatalog catalog) : IMachi
             var machine = match.Machine;
             created.Add(request.AddItem(RequestItem.Create(
                 machine.Name,
-                match.Quantity,
+                Certificates.GearRules.QuantityFor(machine.Name, match.Quantity),
                 machine.EquipmentId,
                 type: machine.Name,
                 capacity: machine.Capacity,

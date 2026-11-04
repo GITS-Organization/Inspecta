@@ -1398,6 +1398,12 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<string>("Category")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("DivisionGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("DivisionTotal")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("EquipmentId")
                         .HasColumnType("uuid");
 
@@ -1434,6 +1440,8 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DivisionGroupId");
 
                     b.HasIndex("EquipmentId");
 

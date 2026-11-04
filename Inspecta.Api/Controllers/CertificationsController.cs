@@ -65,5 +65,5 @@ public sealed class CertificationsController(IDirectCertificationService directC
     [HttpGet("serial-limits")]
     [ProducesResponseType<SerialLimitsResponse>(StatusCodes.Status200OK)]
     public ActionResult<SerialLimitsResponse> SerialLimits() =>
-        Ok(new SerialLimitsResponse(SerialNumbers.MaxCharacters, SerialNumbers.MaxLength, SerialNumbers.MaxCount));
+        Ok(new SerialLimitsResponse(SerialNumbers.MaxCharacters, SerialNumbers.MaxLength, SerialNumbers.MaxCount, SerialNumbers.PageBudget));
 }
