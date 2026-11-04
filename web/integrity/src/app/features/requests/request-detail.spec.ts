@@ -35,6 +35,7 @@ describe('RequestDetail', () => {
     ctrl.expectOne(`${api}/requests/r1/email`).flush({ requestId: 'r1', textBody: 'Please inspect', attachments: [], to: [], cc: [] });
     await f.whenStable();
     f.detectChanges();
+    ctrl.match(`${api}/certifications/machine-types`).forEach((r) => r.flush([]));
     return f;
   };
 

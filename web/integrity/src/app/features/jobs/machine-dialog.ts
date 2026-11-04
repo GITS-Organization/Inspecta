@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { BackendApi } from '../../api/backend.api';
-import { MachineType } from '../../api/certification.api';
 import { Equipment } from '../../api/coordinator.models';
 import { JobMachineDetails, MachineList, MachineSummary } from '../../core/models';
 import { apiMessage } from '../../core/problem';
+import { MachineKinds } from '../../shared/machine-kinds';
 
 /** The text of an optional input as the API wants it: trimmed, and null when empty. */
 const opt = (v: string): string | null => v.trim() || null;
@@ -40,7 +40,7 @@ const opt = (v: string): string | null => v.trim() || null;
       @if (!editing() && tab() === 'registered') {
         <p class="muted lead">The client's machines that are not in this job yet. Pick one to certify it on this visit.</p>
         <label class="sr" for="md-q">Search the client's machines</label>
-        <input id="md-q" type="search" autocomplete="off" placeholder="Search by name, serial number, model or location" [value]="query()" (input)="query.set($any($event.target).value)" />
+        <input id="md-q" type="search" autocomplete="off" placeholder="Search by name, serial number or model" [value]="query()" (input)="query.set($any($event.target).value)" />
         <ul class="reg" aria-label="Registered machines">
           @if (available() === null) {
             <li class="muted none">Loading the client's machines…</li>
@@ -81,24 +81,27 @@ const opt = (v: string): string | null => v.trim() || null;
           </div>
           @if (gear()) {
             <p class="gear" role="note">
-              <b>{{ type().trim() }} is a gear.</b> A gear is inspected in numbers (a quantity and its serial numbers) and is not added to the client's list of machines.
+              <b>{{ type().trim() || name().trim() }} is a gear.</b> A gear is inspected in numbers: give the quantity here, then divide it into certificates and write their serial numbers on the job screen. It is not added to the client's list of machines.
             </p>
           }
-          <div class="row3">
-            <div class="field">
-              <label for="md-q2">Quantity</label>
-              <input id="md-q2" type="number" min="1" max="10000" [value]="quantity()" (input)="quantity.set(+$any($event.target).value || 1)" />
-            </div>
-            <div class="field">
-              <label for="md-s">Serial number</label>
-              <input id="md-s" type="text" maxlength="600" [value]="serial()" (input)="serial.set($any($event.target).value)" />
-            </div>
+          <div class="row2">
+            @if (gear()) {
+              <div class="field">
+                <label for="md-q2">Quantity</label>
+                <input id="md-q2" type="number" min="1" max="10000" [value]="quantity()" (input)="quantity.set(+$any($event.target).value || 1)" />
+              </div>
+            } @else {
+              <div class="field">
+                <label for="md-s">Serial number</label>
+                <input id="md-s" type="text" maxlength="600" [value]="serial()" (input)="serial.set($any($event.target).value)" />
+              </div>
+            }
             <div class="field">
               <label for="md-c">Capacity</label>
               <input id="md-c" type="text" maxlength="200" [value]="capacity()" (input)="capacity.set($any($event.target).value)" />
             </div>
           </div>
-          <div class="row3">
+          <div class="row2">
             <div class="field">
               <label for="md-m">Manufacturer</label>
               <input id="md-m" type="text" maxlength="200" [value]="manufacturer()" (input)="manufacturer.set($any($event.target).value)" />
@@ -107,16 +110,12 @@ const opt = (v: string): string | null => v.trim() || null;
               <label for="md-o">Model</label>
               <input id="md-o" type="text" maxlength="200" [value]="model()" (input)="model.set($any($event.target).value)" />
             </div>
-            <div class="field">
-              <label for="md-l">Where on site</label>
-              <input id="md-l" type="text" maxlength="500" [value]="location()" (input)="location.set($any($event.target).value)" />
-            </div>
           </div>
           <div class="field">
             <label for="md-i">What is wrong, if the client said</label>
             <input id="md-i" type="text" maxlength="4000" [value]="issue()" (input)="issue.set($any($event.target).value)" />
             @if (editing()) {
-              <small>Where on site and this text are not shown in the list. What you leave empty here is cleared.</small>
+              <small>This text is not shown in the list. What you leave empty here is cleared.</small>
             }
           </div>
           <div class="actions">
@@ -276,7 +275,8 @@ export class MachineDialog implements OnInit {
 
   protected readonly tab = signal<'registered' | 'new'>('registered');
   protected readonly available = signal<Equipment[] | null>(null);
-  protected readonly types = signal<MachineType[]>([]);
+  private readonly kinds = inject(MachineKinds);
+  protected readonly types = this.kinds.types;
   protected readonly query = signal('');
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -288,17 +288,13 @@ export class MachineDialog implements OnInit {
   protected readonly capacity = signal('');
   protected readonly manufacturer = signal('');
   protected readonly model = signal('');
-  protected readonly location = signal('');
   protected readonly issue = signal('');
 
-  protected readonly gear = computed(() => {
-    const t = this.type().trim().toLowerCase();
-    return !!t && this.types().some((x) => x.isGear && (x.name.toLowerCase() === t || x.aliases.some((a) => a.toLowerCase() === t)));
-  });
+  protected readonly gear = computed(() => this.kinds.isGear(this.name(), this.type()));
   protected readonly matches = computed(() => {
     const q = this.query().trim().toLowerCase();
     return (this.available() ?? []).filter((e) =>
-      !q || [e.name, e.serialNumber, e.model, e.manufacturer, e.category, e.locationInsideClientLocation].some((v) => (v ?? '').toLowerCase().includes(q)),
+      !q || [e.name, e.serialNumber, e.model, e.manufacturer, e.category].some((v) => (v ?? '').toLowerCase().includes(q)),
     );
   });
 
@@ -325,12 +321,12 @@ export class MachineDialog implements OnInit {
         },
       });
     }
-    this.api.machineTypes().subscribe({ next: (t) => this.types.set(t), error: () => undefined });
+    this.kinds.load();
     queueMicrotask(() => this.box()?.nativeElement.querySelector<HTMLElement>('input')?.focus());
   }
 
   protected describe(e: Equipment): string {
-    return [e.serialNumber && 'S/N ' + e.serialNumber, e.model, e.capacity, e.locationInsideClientLocation].filter(Boolean).join(' · ') || 'No details on file';
+    return [e.serialNumber && 'S/N ' + e.serialNumber, e.model, e.capacity].filter(Boolean).join(' · ') || 'No details on file';
   }
 
   protected addRegistered(e: Equipment): void {
@@ -342,13 +338,12 @@ export class MachineDialog implements OnInit {
     if (!this.name().trim()) return void this.error.set('Give the machine a name.');
     const body: JobMachineDetails = {
       name: this.name().trim(),
-      quantity: Math.max(1, Math.min(10000, Math.round(this.quantity()))),
+      quantity: this.gear() ? Math.max(1, Math.min(10000, Math.round(this.quantity()))) : 1,
       type: opt(this.type()),
       capacity: opt(this.capacity()),
-      serialNumber: opt(this.serial()),
+      serialNumber: this.gear() ? null : opt(this.serial()),
       manufacturer: opt(this.manufacturer()),
       model: opt(this.model()),
-      location: opt(this.location()),
       issueDescription: opt(this.issue()),
     };
     const m = this.editing();

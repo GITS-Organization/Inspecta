@@ -78,7 +78,7 @@ describe('Job: machines added on site', () => {
     f.detectChanges();
     expect(text()).toContain('Forklift 3t');
     const q = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>('#md-q')!;
-    q.value = 'shed';
+    q.value = 'hoist';
     q.dispatchEvent(new Event('input'));
     f.detectChanges();
     expect(text()).not.toContain('Forklift 3t');
@@ -109,13 +109,16 @@ describe('Job: machines added on site', () => {
     };
     set('md-n', '  Chain sling 2t ');
     set('md-t', 'web sling');
-    set('md-q2', '12');
     f.detectChanges();
     expect(text()).toContain('web sling is a gear.');
+    expect(el.querySelector('#md-s')).toBeNull();
+    expect(el.querySelector('#md-l')).toBeNull();
+    set('md-q2', '12');
+    f.detectChanges();
     (el.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
     const post = ctrl.expectOne(base + '/machines');
     expect(post.request.body).toEqual({
-      name: 'Chain sling 2t', quantity: 12, type: 'web sling', capacity: null, serialNumber: null, manufacturer: null, model: null, location: null, issueDescription: null,
+      name: 'Chain sling 2t', quantity: 12, type: 'web sling', capacity: null, serialNumber: null, manufacturer: null, model: null, issueDescription: null,
     });
     post.flush(list([machine('n', 'not_started', { name: 'Chain sling 2t', quantity: 12 })]), { status: 201, statusText: 'Created' });
     f.detectChanges();

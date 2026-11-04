@@ -37,9 +37,8 @@ const empty = (clientId: string): SaveEquipment => ({ clientId, name: '', itemTy
           <div class="field"><label for="imo">Model</label><input id="imo" type="text" [value]="f.model ?? ''" (input)="set({ model: $any($event.target).value })" /></div>
           <div class="field"><label for="is">Serial number</label><input id="is" type="text" [value]="f.serialNumber ?? ''" (input)="set({ serialNumber: $any($event.target).value })" /></div>
         </div>
-        <div class="row3">
+        <div class="row2">
           <div class="field"><label for="ica">Capacity</label><input id="ica" type="text" [value]="f.capacity ?? ''" (input)="set({ capacity: $any($event.target).value })" /></div>
-          <div class="field"><label for="il">Where on site</label><input id="il" type="text" [value]="f.locationInsideClientLocation ?? ''" (input)="set({ locationInsideClientLocation: $any($event.target).value })" /></div>
           <div class="field"><label for="ist">Inspection standard</label><input id="ist" type="text" [value]="f.inspectionStandard ?? ''" (input)="set({ inspectionStandard: $any($event.target).value })" /></div>
         </div>
         <div class="row2">
@@ -146,7 +145,7 @@ export class ClientItems implements OnInit {
     this.editingId.set(e.id);
     this.form.set({
       clientId: e.clientId, name: e.name, itemType: e.itemType, category: e.category, manufacturer: e.manufacturer, model: e.model, serialNumber: e.serialNumber,
-      capacity: e.capacity, locationInsideClientLocation: e.locationInsideClientLocation, inspectionStandard: e.inspectionStandard, testType: e.testType, notes: e.notes,
+      capacity: e.capacity, inspectionStandard: e.inspectionStandard, testType: e.testType, notes: e.notes,
     });
   }
 

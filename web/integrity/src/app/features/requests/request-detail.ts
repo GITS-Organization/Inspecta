@@ -96,7 +96,6 @@ export class RequestDetail implements OnInit {
         type: i.type,
         capacity: i.capacity,
         serialNumber: i.serialNumber,
-        location: i.location,
         issueDescription: i.issueDescription,
       })),
     );
