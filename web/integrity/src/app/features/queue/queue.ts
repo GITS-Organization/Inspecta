@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CoordinatorApi } from '../../api/coordinator.api';
+import { DateRangeService } from '../../core/date-range.service';
+import { DateEmpty } from '../../shared/date-empty';
 import { Inspector } from '../../api/coordinator.models';
 import { MACHINES_OPEN, QueueFilter, QueueRow } from '../../core/models';
 import { problemMessage } from '../../core/problem';
@@ -19,7 +21,7 @@ const TABS: { filter: QueueFilter; label: string; empty: string }[] = [
 /** The coordinator's job queue: give accepted jobs to inspectors, follow them, and hand the approved certificates to the client. */
 @Component({
   selector: 'app-queue',
-  imports: [RouterLink, KindBadge],
+  imports: [RouterLink, KindBadge, DateEmpty],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './queue.html',
   styleUrl: './queue.scss',
@@ -27,6 +29,7 @@ const TABS: { filter: QueueFilter; label: string; empty: string }[] = [
 export class Queue {
   private readonly api = inject(CoordinatorApi);
   private readonly toast = inject(ToastService);
+  protected readonly range = inject(DateRangeService);
   protected readonly tabs = TABS;
   protected readonly formatDate = formatDate;
 
@@ -47,7 +50,15 @@ export class Queue {
   protected readonly formError = signal<string | null>(null);
 
   constructor() {
-    this.load();
+    // The list follows the date range of the app.
+    effect(() => {
+      this.range.from();
+      this.range.to();
+      untracked(() => {
+        this.openId.set(null);
+        this.load();
+      });
+    });
   }
 
   protected select(f: QueueFilter): void {
@@ -60,7 +71,7 @@ export class Queue {
     this.loading.set(true);
     this.error.set(null);
     const wanted = this.filter();
-    this.api.queue(wanted).subscribe({
+    this.api.queue(wanted, undefined, this.range.from(), this.range.to()).subscribe({
       next: (r) => {
         if (wanted !== this.filter()) return;
         this.rows.set(r);

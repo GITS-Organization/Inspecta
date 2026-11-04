@@ -54,6 +54,8 @@
       }
     </div>
     <p class="sr" role="status">Loading requests…</p>
+  } @else if (!rows().length && range.active() && !search()) {
+    <app-date-empty />
   } @else if (!rows().length) {
     <div class="emptystate">
       <h2>{{ search() ? 'Nothing matches “' + search() + '”.' : active().empty.title }}</h2>

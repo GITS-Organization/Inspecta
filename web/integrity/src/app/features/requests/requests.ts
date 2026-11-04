@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CoordinatorApi } from '../../api/coordinator.api';
+import { DateRangeService } from '../../core/date-range.service';
+import { DateEmpty } from '../../shared/date-empty';
 import { RequestDetails, RequestSummary } from '../../api/coordinator.models';
 import { JobStatus } from '../../core/models';
 import { problemMessage } from '../../core/problem';
@@ -76,7 +78,7 @@ export function describe(r: RequestDetails): { label: string; chip: string; edge
 /** The request inbox: the status is the navigation. Tab, search and page live in the URL (`?tab=&q=&page=`). */
 @Component({
   selector: 'app-requests',
-  imports: [RouterLink, KindBadge, AssignDialog],
+  imports: [RouterLink, KindBadge, AssignDialog, DateEmpty],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './requests.html',
   styleUrl: './requests.scss',
@@ -88,6 +90,7 @@ export class Requests {
   readonly page = input<string>();
 
   private readonly api = inject(CoordinatorApi);
+  protected readonly range = inject(DateRangeService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   protected readonly tabs = TABS;
@@ -123,7 +126,16 @@ export class Requests {
   protected readonly hasNext = computed(() => (this.active().derived ? this.matching().length > this.pageNo() * PAGE : this.fetched().length >= PAGE));
 
   constructor() {
-    this.loadSummary();
+    effect(() => {
+      // The tab counts follow the date range too.
+      this.range.from();
+      this.range.to();
+      untracked(() => {
+        this.needsDetails.set(null);
+        this.manDays.set(null);
+        this.loadSummary();
+      });
+    });
     effect(() => {
       // Nothing in the URL: open the tab used last time.
       if (this.tab()) return;
@@ -134,6 +146,8 @@ export class Requests {
       const t = this.active();
       const q = this.query();
       const p = this.pageNo();
+      this.range.from();
+      this.range.to();
       untracked(() => {
         this.search.set(q);
         this.remember(t.id);
@@ -160,7 +174,7 @@ export class Requests {
   }
 
   private loadSummary(): void {
-    this.api.requestSummary().subscribe({ next: (s) => this.summary.set(s), error: () => undefined });
+    this.api.requestSummary(this.range.from(), this.range.to()).subscribe({ next: (s) => this.summary.set(s), error: () => undefined });
   }
 
   private load(t: TabDef, q: string, page: number): void {
@@ -170,8 +184,8 @@ export class Requests {
     this.latest = key;
     // Tabs the API cannot filter load the whole default list once and are paged here; the others page on the server.
     const query = t.derived
-      ? { triage: t.triage, status: t.status, q, pageSize: 100 }
-      : { triage: t.triage, status: t.status, q, page, pageSize: PAGE };
+      ? { triage: t.triage, status: t.status, q, pageSize: 100, from: this.range.from(), to: this.range.to() }
+      : { triage: t.triage, status: t.status, q, page, pageSize: PAGE, from: this.range.from(), to: this.range.to() };
     this.api.requests(query).subscribe({
       next: (r) => {
         if (key !== this.latest) return;

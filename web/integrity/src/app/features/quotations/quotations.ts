@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CoordinatorApi } from '../../api/coordinator.api';
+import { DateRangeService } from '../../core/date-range.service';
+import { DateEmpty } from '../../shared/date-empty';
 import { QuoteRow, QuoteStage } from '../../api/coordinator.models';
 import { problemMessage } from '../../core/problem';
 import { formatDate, formatEgp } from '../../shared/format';
@@ -16,7 +18,7 @@ const TABS: { stage: QuoteStage; label: string }[] = [
 /** All quotations by stage. The editor opens from a row. */
 @Component({
   selector: 'app-quotations',
-  imports: [RouterLink, KindBadge],
+  imports: [RouterLink, KindBadge, DateEmpty],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="head">
@@ -46,7 +48,7 @@ const TABS: { stage: QuoteStage; label: string }[] = [
       } @else if (loading()) {
         <p class="muted empty">Loading quotations…</p>
       } @else if (!rows().length) {
-        <p class="empty">{{ emptyText() }}</p>
+        @if (range.active()) { <app-date-empty /> } @else { <p class="empty">{{ emptyText() }}</p> }
       } @else {
         @for (r of rows(); track r.id) {
           <div class="job">
@@ -80,6 +82,7 @@ const TABS: { stage: QuoteStage; label: string }[] = [
 })
 export class Quotations {
   private readonly api = inject(CoordinatorApi);
+  protected readonly range = inject(DateRangeService);
   protected readonly tabs = TABS;
   protected readonly formatDate = formatDate;
   protected readonly egp = formatEgp;
@@ -90,7 +93,11 @@ export class Quotations {
   protected readonly error = signal<string | null>(null);
 
   constructor() {
-    this.load();
+    effect(() => {
+      this.range.from();
+      this.range.to();
+      untracked(() => this.load());
+    });
   }
 
   protected emptyText(): string {
@@ -106,7 +113,7 @@ export class Quotations {
     this.loading.set(true);
     this.error.set(null);
     const wanted = this.stage();
-    this.api.quotations({ stage: wanted, q: this.query().trim() }).subscribe({
+    this.api.quotations({ stage: wanted, q: this.query().trim(), from: this.range.from(), to: this.range.to() }).subscribe({
       next: (r) => {
         if (wanted !== this.stage()) return;
         this.rows.set(r);

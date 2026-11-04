@@ -18,6 +18,14 @@ import { Equipment } from './coordinator.models';
 import { MachineType } from './certification.api';
 import { SerialLimits } from '../shared/serials';
 
+/** `from` and `to` as `yyyy-MM-dd`; an empty side is left out. */
+const dayParams = (from?: string, to?: string): HttpParams => {
+  let p = new HttpParams();
+  if (from) p = p.set('from', from);
+  if (to) p = p.set('to', to);
+  return p;
+};
+
 /** Typed wrappers of the endpoints the screens use. Paths are relative to `/api/v1`. */
 @Injectable({ providedIn: 'root' })
 export class BackendApi {
@@ -25,8 +33,8 @@ export class BackendApi {
   private readonly base = environment.apiBase;
 
   // ---- dashboard (technical manager, admin)
-  overview(): Observable<DashboardOverview> {
-    return this.http.get<DashboardOverview>(`${this.base}/dashboard/overview`);
+  overview(from?: string, to?: string): Observable<DashboardOverview> {
+    return this.http.get<DashboardOverview>(`${this.base}/dashboard/overview`, { params: dayParams(from, to) });
   }
 
   // ---- quotation queue
@@ -36,8 +44,8 @@ export class BackendApi {
     return this.http.get<QueueRow[]>(`${this.base}/quotation-queue`, { params });
   }
 
-  toReview(): Observable<QueueRow[]> {
-    return this.http.get<QueueRow[]>(`${this.base}/quotation-queue/to-review`);
+  toReview(from?: string, to?: string): Observable<QueueRow[]> {
+    return this.http.get<QueueRow[]>(`${this.base}/quotation-queue/to-review`, { params: dayParams(from, to) });
   }
 
   // ---- machines of a job

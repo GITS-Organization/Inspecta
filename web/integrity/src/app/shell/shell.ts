@@ -4,6 +4,7 @@ import { BackendApi } from '../api/backend.api';
 import { AuthService } from '../core/auth.service';
 import { BrandingService } from '../core/branding.service';
 import { Role } from '../core/models';
+import { DateRangeBar } from './date-range-bar';
 import { ToastService } from '../core/toast.service';
 
 interface NavItem {
@@ -35,7 +36,7 @@ const ROLE_LABEL: Record<Role, string> = {
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, DateRangeBar],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shell.html',
   styleUrl: './shell.scss',

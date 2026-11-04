@@ -50,11 +50,11 @@ export class CoordinatorApi {
   }
 
   // ---- requests
-  requests(f: { triage?: Triage; status?: string; q?: string; page?: number; pageSize?: number }): Observable<RequestDetails[]> {
+  requests(f: { triage?: Triage; status?: string; q?: string; page?: number; pageSize?: number; from?: string; to?: string }): Observable<RequestDetails[]> {
     return this.http.get<RequestDetails[]>(`${this.b}/requests`, { params: params({ pageSize: 100, ...f }) });
   }
-  requestSummary(): Observable<RequestSummary> {
-    return this.http.get<RequestSummary>(`${this.b}/requests/summary`);
+  requestSummary(from?: string, to?: string): Observable<RequestSummary> {
+    return this.http.get<RequestSummary>(`${this.b}/requests/summary`, { params: params({ from, to }) });
   }
   request(id: string): Observable<RequestDetails> {
     return this.http.get<RequestDetails>(`${this.b}/requests/${id}`);
@@ -102,7 +102,7 @@ export class CoordinatorApi {
   }
 
   // ---- quotations
-  quotations(f: { stage?: QuoteStage; q?: string; includeSuperseded?: boolean }): Observable<QuoteRow[]> {
+  quotations(f: { stage?: QuoteStage; q?: string; includeSuperseded?: boolean; from?: string; to?: string }): Observable<QuoteRow[]> {
     return this.http.get<QuoteRow[]>(`${this.b}/quotations`, { params: params({ ...f, pageSize: 100 }) });
   }
   quote(requestId: string, quoteId: string): Observable<Quote> {
@@ -138,8 +138,8 @@ export class CoordinatorApi {
   }
 
   // ---- queue and delivery
-  queue(status?: QueueFilter, q?: string): Observable<QueueRow[]> {
-    return this.http.get<QueueRow[]>(`${this.b}/quotation-queue`, { params: params({ status, q, pageSize: 100 }) });
+  queue(status?: QueueFilter, q?: string, from?: string, to?: string): Observable<QueueRow[]> {
+    return this.http.get<QueueRow[]>(`${this.b}/quotation-queue`, { params: params({ status, q, from, to, pageSize: 100 }) });
   }
   deliveryPreview(requestId: string): Observable<DeliveryPreview> {
     return this.http.get<DeliveryPreview>(`${this.b}/quotation-queue/${requestId}/deliver-to-client/preview`);

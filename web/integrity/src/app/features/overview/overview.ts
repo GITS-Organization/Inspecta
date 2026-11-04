@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { DateRangeService } from '../../core/date-range.service';
 import { RouterLink } from '@angular/router';
 import { BackendApi } from '../../api/backend.api';
 import { DashboardOverview, JobStatus } from '../../core/models';
@@ -37,6 +38,7 @@ export function pipelineSegments(pipeline: DashboardOverview['pipeline']): { seg
 })
 export class Overview {
   private readonly api = inject(BackendApi);
+  protected readonly range = inject(DateRangeService);
 
   protected readonly data = signal<DashboardOverview | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -62,13 +64,17 @@ export class Overview {
   protected readonly maxWorkload = computed(() => Math.max(1, ...(this.data()?.inspectorWorkload ?? []).map((i) => i.certificates)));
 
   constructor() {
-    this.load();
+    effect(() => {
+      this.range.from();
+      this.range.to();
+      untracked(() => this.load());
+    });
   }
 
   protected load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.api.overview().subscribe({
+    this.api.overview(this.range.from(), this.range.to()).subscribe({
       next: (d) => {
         this.data.set(d);
         this.loading.set(false);

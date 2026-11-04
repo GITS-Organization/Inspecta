@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BackendApi } from '../../api/backend.api';
+import { DateRangeService } from '../../core/date-range.service';
+import { DateEmpty } from '../../shared/date-empty';
 import { QueueRow } from '../../core/models';
 import { problemMessage } from '../../core/problem';
 import { formatDate, plural } from '../../shared/format';
@@ -8,7 +10,7 @@ import { KindBadge } from '../../shared/kind-badge';
 
 @Component({
   selector: 'app-review-list',
-  imports: [RouterLink, KindBadge],
+  imports: [RouterLink, KindBadge, DateEmpty],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="head">
@@ -22,7 +24,7 @@ import { KindBadge } from '../../shared/kind-badge';
     } @else if (loading()) {
       <p class="muted empty" role="status">Loading jobs…</p>
     } @else if (!rows().length) {
-      <p class="empty">Nothing is waiting for your review.</p>
+      @if (range.active()) { <app-date-empty /> } @else { <p class="empty">Nothing is waiting for your review.</p> }
     } @else {
       @for (r of rows(); track r.id) {
         <div class="job">
@@ -62,6 +64,7 @@ import { KindBadge } from '../../shared/kind-badge';
 })
 export class ReviewList {
   private readonly api = inject(BackendApi);
+  protected readonly range = inject(DateRangeService);
   protected readonly plural = plural;
   protected readonly formatDate = formatDate;
   protected readonly rows = signal<QueueRow[]>([]);
@@ -69,7 +72,17 @@ export class ReviewList {
   protected readonly error = signal<string | null>(null);
 
   constructor() {
-    this.api.toReview().subscribe({
+    effect(() => {
+      const from = this.range.from();
+      const to = this.range.to();
+      untracked(() => this.load(from, to));
+    });
+  }
+
+  private load(from: string, to: string): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.api.toReview(from, to).subscribe({
       next: (r) => {
         this.rows.set(r);
         this.loading.set(false);

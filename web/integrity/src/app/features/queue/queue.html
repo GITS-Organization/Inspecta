@@ -18,7 +18,7 @@
   } @else if (loading()) {
     <p class="muted empty">Loading jobs…</p>
   } @else if (!rows().length) {
-    <p class="empty">{{ empty() }}</p>
+    @if (range.active()) { <app-date-empty /> } @else { <p class="empty">{{ empty() }}</p> }
   } @else {
     @for (r of rows(); track r.id) {
       <div class="jobwrap">
