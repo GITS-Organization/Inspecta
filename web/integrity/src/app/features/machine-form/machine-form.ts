@@ -20,6 +20,13 @@ export const ANSWER_LABELS: Record<string, string> = {
   futureDanger: 'A defect will become a danger',
 };
 
+/** Two pairs of questions always have opposite answers: choosing one sets the other (the API does the same). */
+export const ANSWER_PAIRS: readonly (readonly [string, string])[] = [
+  ['firstExamination', 'installedCorrectly'],
+  ['within6Months', 'within12Months'],
+];
+const OPPOSITE: Record<string, string> = Object.fromEntries(ANSWER_PAIRS.flatMap(([a, b]) => [[a, b], [b, a]]));
+
 export const TEXT_LABELS: Record<string, string> = {
   testType: 'Type of test',
   testsCarriedOut: 'Tests carried out',
@@ -62,6 +69,8 @@ export class MachineFormPage implements OnInit {
   private readonly toast = inject(ToastService);
   protected readonly formatDate = formatDate;
   protected readonly answerKeys = Object.keys(ANSWER_LABELS);
+  protected readonly pairs = ANSWER_PAIRS;
+  protected readonly singles = Object.keys(ANSWER_LABELS).filter((k) => !OPPOSITE[k]);
   protected readonly answerLabels = ANSWER_LABELS;
   protected readonly textKeys = Object.keys(TEXT_LABELS);
   protected readonly textLabels = TEXT_LABELS;
@@ -171,7 +180,8 @@ export class MachineFormPage implements OnInit {
     this.saved.set(false);
   }
   protected setAnswer(k: string, v: boolean): void {
-    this.answers.update((m) => ({ ...m, [k]: v }));
+    const other = OPPOSITE[k];
+    this.answers.update((m) => ({ ...m, [k]: v, ...(other ? { [other]: !v } : {}) }));
     this.saved.set(false);
   }
   protected setRow(k: string, patch: Partial<Row>): void {

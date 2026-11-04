@@ -81,8 +81,23 @@
 
         <section class="step">
           <h3>Questions</h3>
+          @for (p of pairs; track p[0]) {
+            <div class="pair" role="group">
+              <span class="link" aria-hidden="true"></span>
+              @for (k of p; track k) {
+                <div class="check">
+                  <span [id]="'a-' + k">{{ answerLabels[k] }}</span>
+                  <span class="yn" role="group" [attr.aria-labelledby]="'a-' + k">
+                    <button type="button" [attr.aria-pressed]="answers()[k] === true" (click)="setAnswer(k, true)">Yes</button>
+                    <button type="button" [attr.aria-pressed]="answers()[k] === false" (click)="setAnswer(k, false)">No</button>
+                  </span>
+                </div>
+              }
+              <small class="muted">These two always have opposite answers.</small>
+            </div>
+          }
           <div class="checks">
-            @for (k of answerKeys; track k) {
+            @for (k of singles; track k) {
               <div class="check">
                 <span [id]="'a-' + k">{{ answerLabels[k] }}</span>
                 <span class="yn" role="group" [attr.aria-labelledby]="'a-' + k">

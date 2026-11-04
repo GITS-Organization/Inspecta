@@ -12,7 +12,7 @@ const form = (item: string, serial: string): MachineForm => ({
   templateKey: 'basic', templateName: 'Basic',
   header: { clientName: 'Al Noor', clientAddress: null, clientRepresentative: null, inspectedItem: item, standards: [], lastExaminationDate: null, nextExaminationDue: null, inspectorName: 'Omar' },
   fields: [{ key: 'serialNumber', label: 'Serial numbers', value: serial }],
-  checklist: [], answers: {}, texts: {}, dates: {}, reviewNote: null, certificateNumber: null, result: null,
+  checklist: [], answers: { within6Months: true, within12Months: false, firstExamination: false, installedCorrectly: true, examinationScheme: true, exceptionalCircumstances: true, existingDanger: false, futureDanger: false }, texts: {}, dates: {}, reviewNote: null, certificateNumber: null, result: null,
 });
 
 describe('roomFor', () => {
@@ -77,5 +77,50 @@ describe('Machine form: one page for a gear', () => {
     expect(m.text()).not.toContain('/ 1200');
     const area = m.type('t-defectDescription', 'a'.repeat(3000));
     expect(area.value.length).toBe(3000);
+  });
+
+  describe('linked answers', () => {
+    const press = (el: HTMLElement, key: string, label: 'Yes' | 'No') =>
+      ([...el.querySelectorAll(`[aria-labelledby="a-${key}"] button`)].find((b) => b.textContent?.trim() === label) as HTMLButtonElement).click();
+    const pressed = (el: HTMLElement, key: string) => [...el.querySelectorAll(`[aria-labelledby="a-${key}"] button`)].find((b) => b.getAttribute('aria-pressed') === 'true')?.textContent?.trim();
+
+    it('starts from the answers the API sends: none is unanswered', () => {
+      const m = open('Overhead crane', 'SN-1');
+      expect(pressed(m.el, 'within6Months')).toBe('Yes');
+      expect(pressed(m.el, 'within12Months')).toBe('No');
+      expect(pressed(m.el, 'installedCorrectly')).toBe('Yes');
+      expect(pressed(m.el, 'firstExamination')).toBe('No');
+      expect(pressed(m.el, 'futureDanger')).toBe('No');
+      expect(m.el.querySelectorAll('.pair').length).toBe(2);
+    });
+
+    it('sets the other answer of a pair to the opposite at once, in both directions', () => {
+      const m = open('Overhead crane', 'SN-1');
+      press(m.el, 'within12Months', 'Yes');
+      m.f.detectChanges();
+      expect(pressed(m.el, 'within6Months')).toBe('No');
+      press(m.el, 'within6Months', 'No');
+      m.f.detectChanges();
+      expect(pressed(m.el, 'within12Months')).toBe('Yes');
+      press(m.el, 'firstExamination', 'Yes');
+      m.f.detectChanges();
+      expect(pressed(m.el, 'installedCorrectly')).toBe('No');
+      press(m.el, 'installedCorrectly', 'Yes');
+      m.f.detectChanges();
+      expect(pressed(m.el, 'firstExamination')).toBe('No');
+    });
+
+    it('never sends a pair with the same value, and leaves the other questions alone', () => {
+      const m = open('Overhead crane', 'SN-1');
+      press(m.el, 'within12Months', 'Yes');
+      press(m.el, 'existingDanger', 'Yes');
+      m.f.detectChanges();
+      const a = m.f.componentInstance.buildRequest().answers!;
+      expect(a['within6Months']).toBe(false);
+      expect(a['within12Months']).toBe(true);
+      expect(a['installedCorrectly']).toBe(!a['firstExamination']);
+      expect(a['existingDanger']).toBe(true);
+      expect(a['examinationScheme']).toBe(true);
+    });
   });
 });
