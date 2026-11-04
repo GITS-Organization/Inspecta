@@ -19,13 +19,13 @@ export const routes: Routes = [
       },
       {
         path: 'jobs',
-        canActivate: [roleGuard('inspector', 'coordinator')],
+        canActivate: [roleGuard('inspector', 'coordinator', 'admin', 'technical_manager')],
         title: 'Jobs · Integrity',
         loadComponent: () => import('./features/jobs/jobs').then((m) => m.Jobs),
       },
       {
         path: 'jobs/:requestId',
-        canActivate: [roleGuard('inspector', 'coordinator')],
+        canActivate: [roleGuard('inspector', 'coordinator', 'admin', 'technical_manager')],
         title: 'Job · Integrity',
         loadComponent: () => import('./features/jobs/job').then((m) => m.Job),
       },

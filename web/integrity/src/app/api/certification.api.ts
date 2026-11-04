@@ -1,12 +1,9 @@
-import { InjectionToken } from '@angular/core';
-import { Observable } from 'rxjs';
-import { ChecklistValue, InspectionResult } from '../core/models';
-
-/**
- * The Create certification tab talks to this interface only. Today it is bound to `MockCertificationApi`; when the backend
- * contract for direct certificates and gears is final, bind `HttpCertificationApi` in `CERTIFICATION_API` (see app.config.ts).
- */
-export type CertificateKind = 'standard' | 'gear';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, InjectionToken, inject } from '@angular/core';
+import { Observable, map } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { MachineList } from '../core/models';
+import { SerialLimits } from '../shared/serials';
 
 export interface ClientOption {
   id: string;
@@ -18,58 +15,107 @@ export interface MachineOption {
   name: string;
   serialNumber: string | null;
   manufacturer: string | null;
-  kind: CertificateKind;
   /** `yyyy-MM-dd` of the last examination, when there was one. */
   lastExaminedOn: string | null;
   overdue: boolean;
 }
 
-export interface NewMachine {
+/** One kind of machine of the catalogue (`GET /certifications/machine-types`). */
+export interface MachineType {
   name: string;
-  manufacturer: string;
-  serialNumber: string;
-  kind: CertificateKind;
+  aliases: string[];
+  standards: string[];
+  templateKey: string;
+  templateName: string;
+  isGear: boolean;
 }
 
-export interface ChecklistItemDef {
-  key: string;
-  label: string;
-}
-
-export interface GearDetails {
-  quantity: number;
-  /** Every serial number of the batch. */
-  serials: string[];
-  /** The serial numbers split over the certificates; one entry per certificate. */
-  certificates: string[][];
+export interface CreateMachine {
+  name: string;
+  quantity?: number;
+  equipmentId?: string;
+  type?: string;
+  capacity?: string;
+  serialNumber?: string;
+  location?: string;
+  issueDescription?: string;
 }
 
 export interface CreateCertificationRequest {
   clientId: string;
-  /** An existing machine, or null when `newMachine` is given. */
-  machineId: string | null;
-  newMachine: NewMachine | null;
-  examinedOn: string;
-  nextExaminationOn: string;
-  result: InspectionResult;
-  checklist: Record<string, ChecklistValue>;
-  gear: GearDetails | null;
-  /** false saves a draft only; true sends the certificate(s) to the technical manager. */
-  submit: boolean;
+  location?: string;
+  /** Admin only. */
+  managerId?: string;
+  machines: CreateMachine[];
 }
 
-export interface CreateCertificationResult {
-  requestId: string;
-  certificateCount: number;
-  status: 'draft' | 'submitted';
-}
-
+/**
+ * Everything the Create certification tab needs from the backend. `HttpCertificationApi` is the real one; tests (or a
+ * demo build) can bind another implementation to `CERTIFICATION_API`.
+ */
 export interface CertificationApi {
   listClients(): Observable<ClientOption[]>;
   listMachines(clientId: string): Observable<MachineOption[]>;
-  /** The questions the standard checklist asks. */
-  checklistFor(kind: CertificateKind): ChecklistItemDef[];
-  create(request: CreateCertificationRequest): Observable<CreateCertificationResult>;
+  machineTypes(): Observable<MachineType[]>;
+  serialLimits(): Observable<SerialLimits>;
+  /** `POST /certifications`: the job starts in progress with the caller as inspector. */
+  create(request: CreateCertificationRequest): Observable<MachineList>;
+  /** `POST /quotation-queue/{requestId}/machines/{requestItemId}/split`: shares the serials over the certificates. */
+  split(requestId: string, requestItemId: string, serialNumbers: string[], certificates?: number): Observable<MachineList>;
 }
 
 export const CERTIFICATION_API = new InjectionToken<CertificationApi>('CERTIFICATION_API');
+
+interface EquipmentDto {
+  id: string;
+  name: string;
+  serialNumber: string | null;
+  manufacturer: string | null;
+  lastInspectedOn: string | null;
+  nextInspectionDueAt: string | null;
+}
+
+@Injectable({ providedIn: 'root' })
+export class HttpCertificationApi implements CertificationApi {
+  private readonly http = inject(HttpClient);
+  private readonly base = environment.apiBase;
+
+  listClients(): Observable<ClientOption[]> {
+    return this.http.get<ClientOption[]>(`${this.base}/clients`).pipe(map((cs) => cs.map((c) => ({ id: c.id, name: c.name }))));
+  }
+
+  listMachines(clientId: string): Observable<MachineOption[]> {
+    return this.http.get<EquipmentDto[]>(`${this.base}/equipment`, { params: { clientId } }).pipe(
+      map((items) =>
+        items.map((e) => ({
+          id: e.id,
+          name: e.name,
+          serialNumber: e.serialNumber,
+          manufacturer: e.manufacturer,
+          lastExaminedOn: e.lastInspectedOn,
+          overdue: !!e.nextInspectionDueAt && new Date(e.nextInspectionDueAt).getTime() < Date.now(),
+        })),
+      ),
+    );
+  }
+
+  machineTypes(): Observable<MachineType[]> {
+    return this.http.get<MachineType[]>(`${this.base}/certifications/machine-types`);
+  }
+
+  serialLimits(): Observable<SerialLimits> {
+    return this.http.get<SerialLimits>(`${this.base}/certifications/serial-limits`);
+  }
+
+  create(request: CreateCertificationRequest): Observable<MachineList> {
+    return this.http.post<MachineList>(`${this.base}/certifications`, request);
+  }
+
+  split(requestId: string, requestItemId: string, serialNumbers: string[], certificates?: number): Observable<MachineList> {
+    return this.http.post<MachineList>(`${this.base}/quotation-queue/${requestId}/machines/${requestItemId}/split`, {
+      serialNumbers,
+      ...(certificates ? { certificates } : {}),
+    });
+  }
+}
+
