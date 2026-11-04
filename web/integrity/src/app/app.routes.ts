@@ -115,6 +115,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/review/review').then((m) => m.Review),
       },
       {
+        path: 'mailbox',
+        canActivate: [managers],
+        title: 'Mailbox · Integrity',
+        loadComponent: () => import('./features/mailbox/mailbox').then((m) => m.Mailbox),
+      },
+      {
         path: 'create',
         canActivate: [roleGuard('admin', 'technical_manager', 'inspector')],
         title: 'Create certification · Integrity',
