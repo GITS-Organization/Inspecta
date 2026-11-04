@@ -77,6 +77,7 @@ type View =
     dt { color: var(--muted); } dd { font-weight: 600; margin: 0; overflow-wrap: anywhere; }
     .small-p { font-size: 14px; margin-top: 8px; }
     .code { margin-top: 18px; border-top: 1.5px dashed var(--line); padding-top: 14px; }
+    @media (max-width: 520px) { .scan { width: calc(100% - 10px); justify-self: start; } }
     .code-row { display: flex; gap: 8px; input { min-width: 0; padding: 9px 12px; } }
   `,
 })

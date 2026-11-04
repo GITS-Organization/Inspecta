@@ -25,8 +25,7 @@ import { CompanyFormValue, buildCreateRequest, initials, readPngAsBase64, valida
             <div class="field"><label for="fullName">Full name</label><input id="fullName" type="text" formControlName="fullName" autocomplete="off" placeholder="Full name" /></div>
             <div class="field"><label for="email">Email</label><input id="email" type="email" formControlName="email" autocomplete="off" placeholder="name@company.com" /></div>
           </div>
-          <div class="row2">
-            <div class="field">
+          <div class="field">
               <label for="password">First password</label>
               <div class="pw">
                 <input id="password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" autocomplete="new-password" />
@@ -34,8 +33,7 @@ import { CompanyFormValue, buildCreateRequest, initials, readPngAsBase64, valida
               </div>
               <small>At least 12 characters. Pass it on to the manager yourself: no invitation email is sent.</small>
             </div>
-            <div class="field"><label for="months">Subscription (months)</label><input id="months" type="number" min="1" max="120" formControlName="subscriptionMonths" /></div>
-          </div>
+          <div class="field narrow"><label for="months">Subscription (months)</label><input id="months" type="number" min="1" max="120" formControlName="subscriptionMonths" /></div>
         </fieldset>
 
         <fieldset>
@@ -107,9 +105,10 @@ import { CompanyFormValue, buildCreateRequest, initials, readPngAsBase64, valida
   `,
   styles: `
     h1 { font-size: 44px; }
-    .formgrid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 56px; margin-top: 28px; align-items: start; }
+    .formgrid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 40px; margin-top: 28px; align-items: start; }
     fieldset { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; }
     legend { font-family: var(--display); font-weight: 800; font-size: 22px; padding: 0; margin-bottom: 14px; }
+    .narrow { max-width: 200px; }
     .pw { display: flex; gap: 8px; input { min-width: 0; } .btn { flex: none; } }
     .drop { border: 2px dashed #b3b1a4; border-radius: 12px; padding: 16px; background: #fff; color: var(--muted); small { display: block; margin-top: 8px; } }
     .colors { display: flex; gap: 12px; align-items: center; }
