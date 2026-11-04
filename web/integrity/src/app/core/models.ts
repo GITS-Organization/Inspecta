@@ -87,6 +87,8 @@ export interface MachineSummary {
   checklistAnswered: number;
   reviewNote: string | null;
   certificateNumber: string | null;
+  /** `yyyy-MM-dd`: the approval day until the coordinator changes it. */
+  certificateDate?: string | null;
   canEdit: boolean;
   canReview: boolean;
   /** The catalogue says this machine is a gear (inspected in numbers). */
@@ -132,6 +134,8 @@ export interface MachineList {
   canApprove?: boolean;
   reviewBlockers?: string[] | null;
   previewZipUrl?: string | null;
+  /** True while the job is approved and not yet handed over, for the owning coordinator, technical manager and admin. */
+  canEditCertificateDetails?: boolean;
   /** The request of the job (its `kind`, for the Man day / Contract / Direct tag). */
   request?: { kind?: RequestKind } | null;
 }

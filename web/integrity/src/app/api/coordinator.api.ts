@@ -156,6 +156,10 @@ export class CoordinatorApi {
       note: note || null,
     });
   }
+  /** The Certificate No. and Certificate Date printed at the top of each approved certificate; all or nothing. */
+  saveCertificateDetails(requestId: string, certificates: { requestItemId: string; certificateNumber: string; certificateDate: string }[]): Observable<MachineList> {
+    return this.http.put<MachineList>(`${this.b}/quotation-queue/${requestId}/certificate-details`, { certificates });
+  }
   certificatesZip(requestId: string): Observable<Blob> {
     return this.http.get(`${this.b}/quotation-queue/${requestId}/certificates.zip`, { responseType: 'blob' });
   }
