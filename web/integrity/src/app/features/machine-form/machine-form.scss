@@ -120,3 +120,25 @@ fieldset {
     order: -1;
   }
 }
+
+.budget {
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--band);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  &.near {
+    background: var(--amber-bg);
+    color: var(--amber);
+  }
+  &.full {
+    background: var(--red-bg);
+    color: var(--red);
+  }
+  .cut {
+    display: block;
+    font-weight: 600;
+    color: var(--red);
+  }
+}

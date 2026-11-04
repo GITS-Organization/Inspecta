@@ -7,6 +7,7 @@ import { problemMessage } from '../../core/problem';
 import { ToastService } from '../../core/toast.service';
 import { CertificatePaper } from '../../shared/certificate-paper';
 import { formatDate } from '../../shared/format';
+import { MachineKinds } from '../../shared/machine-kinds';
 
 export const ANSWER_LABELS: Record<string, string> = {
   firstExamination: 'First examination after installation',
@@ -29,6 +30,15 @@ export const TEXT_LABELS: Record<string, string> = {
   clientRepresentative: 'Client representative',
 };
 const LONG_TEXTS = new Set(['testsCarriedOut', 'defectDescription', 'repairsRequired', 'conclusion', 'note']);
+
+/** The free texts that share the one page of a gear certificate with its serial numbers. */
+export const BUDGET_TEXTS = ['defectDescription', 'repairsRequired', 'testsCarriedOut', 'note'] as const;
+export const DEFAULT_PAGE_BUDGET = 1200;
+
+/** Characters a text may still take: the budget minus everything else that is on the page. Never negative. */
+export function roomFor(budget: number, others: number): number {
+  return Math.max(0, budget - others);
+}
 
 interface Row {
   value: ChecklistValue | null;
@@ -55,6 +65,9 @@ export class MachineFormPage implements OnInit {
   protected readonly answerLabels = ANSWER_LABELS;
   protected readonly textKeys = Object.keys(TEXT_LABELS);
   protected readonly textLabels = TEXT_LABELS;
+  private readonly kinds = inject(MachineKinds);
+  protected readonly budget = signal(DEFAULT_PAGE_BUDGET);
+  protected readonly cutNote = signal<string | null>(null);
   protected readonly isLong = (k: string) => LONG_TEXTS.has(k);
 
   protected readonly form = signal<MachineForm | null>(null);
@@ -87,7 +100,20 @@ export class MachineFormPage implements OnInit {
     return hit ? (this.fields()[hit.key] ?? '') : '';
   });
 
+  /** A gear (a divided gear certificate is one too): its page has a character budget. */
+  protected readonly gear = computed(() => {
+    const f = this.form();
+    return !!f && this.kinds.isGear(f.header.inspectedItem);
+  });
+  private serialKey(): string | null {
+    return this.form()?.fields.find((x) => /serial/i.test(x.key))?.key ?? null;
+  }
+  /** The serial text plus the four free texts. */
+  protected readonly used = computed(() => this.serialValue().length + BUDGET_TEXTS.reduce((a, k) => a + (this.texts()[k] ?? '').length, 0));
+
   ngOnInit(): void {
+    this.kinds.load();
+    this.api.serialLimits().subscribe({ next: (l) => l.pageBudgetCharacters && this.budget.set(l.pageBudgetCharacters), error: () => undefined });
     this.api.machine(this.requestId(), this.itemId()).subscribe({
       next: (f) => {
         this.apply(f);
@@ -116,11 +142,27 @@ export class MachineFormPage implements OnInit {
     this.result.set(f.result ?? null);
   }
 
-  protected setField(k: string, v: string): void {
+  protected setField(k: string, v: string, el?: HTMLInputElement | HTMLTextAreaElement): void {
+    if (this.gear() && k === this.serialKey()) {
+      const room = roomFor(this.budget(), this.used() - this.serialValue().length);
+      if (v.length > room) {
+        v = v.slice(0, room);
+        if (el) el.value = v;
+        this.cutNote.set('The serial numbers were cut: with the texts, a gear certificate holds ' + this.budget() + ' characters on its one page.');
+      } else this.cutNote.set(null);
+    }
     this.fields.update((m) => ({ ...m, [k]: v }));
     this.saved.set(false);
   }
-  protected setText(k: string, v: string): void {
+  protected setText(k: string, v: string, el?: HTMLInputElement | HTMLTextAreaElement): void {
+    if (this.gear() && (BUDGET_TEXTS as readonly string[]).includes(k)) {
+      const room = roomFor(this.budget(), this.used() - (this.texts()[k] ?? '').length);
+      if (v.length > room) {
+        v = v.slice(0, room);
+        if (el) el.value = v;
+        this.cutNote.set('The text was cut: the serial numbers and the texts of a gear certificate share ' + this.budget() + ' characters, one page.');
+      } else this.cutNote.set(null);
+    }
     this.texts.update((m) => ({ ...m, [k]: v }));
     this.saved.set(false);
   }

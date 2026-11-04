@@ -3,6 +3,8 @@ export interface SerialLimits {
   maxCharactersPerCertificate: number;
   maxLengthPerSerialNumber: number;
   maxSerialNumbers: number;
+  /** A gear certificate is one page: its serial text and its free texts share this many characters. */
+  pageBudgetCharacters?: number;
 }
 
 export const DEFAULT_LIMITS: SerialLimits = { maxCharactersPerCertificate: 600, maxLengthPerSerialNumber: 60, maxSerialNumbers: 5000 };

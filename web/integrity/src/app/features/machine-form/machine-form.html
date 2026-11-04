@@ -27,7 +27,7 @@
             @for (fd of f.fields; track fd.key) {
               <div class="field">
                 <label [for]="'f-' + fd.key">{{ fd.label }}</label>
-                <input [id]="'f-' + fd.key" type="text" [value]="fields()[fd.key] ?? ''" (input)="setField(fd.key, $any($event.target).value)" />
+                <input [id]="'f-' + fd.key" type="text" [value]="fields()[fd.key] ?? ''" (input)="setField(fd.key, $any($event.target).value, $any($event.target))" />
               </div>
             }
           </div>
@@ -102,13 +102,19 @@
 
         <section class="step">
           <h3>Findings</h3>
+          @if (gear()) {
+            <p class="budget" [class.near]="used() >= budget() * 0.9" [class.full]="used() >= budget()" role="status">
+              <b>{{ used() }} / {{ budget() }}</b> characters on the page: the serial numbers ({{ serialValue().length }}) and the texts below share one page.
+              @if (cutNote(); as n) { <span class="cut">{{ n }}</span> }
+            </p>
+          }
           @for (k of textKeys; track k) {
             <div class="field">
               <label [for]="'t-' + k">{{ textLabels[k] }}</label>
               @if (isLong(k)) {
-                <textarea [id]="'t-' + k" [value]="texts()[k] ?? ''" (input)="setText(k, $any($event.target).value)"></textarea>
+                <textarea [id]="'t-' + k" [value]="texts()[k] ?? ''" (input)="setText(k, $any($event.target).value, $any($event.target))"></textarea>
               } @else {
-                <input [id]="'t-' + k" type="text" [value]="texts()[k] ?? ''" (input)="setText(k, $any($event.target).value)" />
+                <input [id]="'t-' + k" type="text" [value]="texts()[k] ?? ''" (input)="setText(k, $any($event.target).value, $any($event.target))" />
               }
             </div>
           }
