@@ -34,8 +34,9 @@ export function homeFor(role: Role | null): string {
     case 'technical_manager':
       return '/overview';
     case 'inspector':
-    case 'coordinator':
       return '/jobs';
+    case 'coordinator':
+      return '/requests';
     default:
       return '/login';
   }

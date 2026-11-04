@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard, guestGuard, homeGuard, roleGuard } from './core/guards';
 
 const managers = roleGuard('admin', 'technical_manager');
+const ops = roleGuard('coordinator', 'technical_manager', 'admin');
 
 export const routes: Routes = [
   { path: 'login', canActivate: [guestGuard], title: 'Sign in · Integrity', loadComponent: () => import('./features/login/login').then((m) => m.Login) },
@@ -19,13 +20,13 @@ export const routes: Routes = [
       },
       {
         path: 'jobs',
-        canActivate: [roleGuard('inspector', 'coordinator', 'admin', 'technical_manager')],
+        canActivate: [roleGuard('inspector')],
         title: 'Jobs · Integrity',
         loadComponent: () => import('./features/jobs/jobs').then((m) => m.Jobs),
       },
       {
         path: 'jobs/:requestId',
-        canActivate: [roleGuard('inspector', 'coordinator', 'admin', 'technical_manager')],
+        canActivate: [roleGuard('inspector', 'admin', 'technical_manager')],
         title: 'Job · Integrity',
         loadComponent: () => import('./features/jobs/job').then((m) => m.Job),
       },
@@ -34,6 +35,24 @@ export const routes: Routes = [
         canActivate: [roleGuard('inspector', 'admin', 'technical_manager')],
         title: 'Machine · Integrity',
         loadComponent: () => import('./features/machine-form/machine-form').then((m) => m.MachineFormPage),
+      },
+      {
+        path: 'requests',
+        canActivate: [ops],
+        title: 'Requests · Integrity',
+        loadComponent: () => import('./features/requests/requests').then((m) => m.Requests),
+      },
+      {
+        path: 'requests/new',
+        canActivate: [ops],
+        title: 'New request · Integrity',
+        loadComponent: () => import('./features/requests/request-new').then((m) => m.RequestNew),
+      },
+      {
+        path: 'requests/:requestId',
+        canActivate: [ops],
+        title: 'Request · Integrity',
+        loadComponent: () => import('./features/requests/request-detail').then((m) => m.RequestDetail),
       },
       {
         path: 'review',

@@ -18,7 +18,7 @@ const NAV: NavItem[] = [
   { path: '/overview', label: 'Overview', icon: 'M4 13h6V4H4zM14 20h6v-9h-6zM14 8h6V4h-6zM4 20h6v-4H4z', roles: ['admin', 'technical_manager'] },
   { path: '/review', label: 'To review', icon: 'M5 12l4 4 10-10', roles: ['admin', 'technical_manager'], badge: true },
   { path: '/jobs', label: 'My jobs', icon: 'M9 5h10v14H9zM5 9v10h10', roles: ['inspector'] },
-  { path: '/jobs', label: 'Jobs', icon: 'M9 5h10v14H9zM5 9v10h10', roles: ['coordinator'] },
+  { path: '/requests', label: 'Requests', icon: 'M4 6h16v12H4zM4 7l8 6 8-6', roles: ['coordinator'] },
   { path: '/create', label: 'Create certification', icon: 'M12 5v14M5 12h14', roles: ['admin', 'technical_manager', 'inspector'] },
 ];
 

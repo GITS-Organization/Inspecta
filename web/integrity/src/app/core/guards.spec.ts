@@ -37,7 +37,7 @@ describe('guards', () => {
 
   it('sends a coordinator who opens a manager page to their own start page', () => {
     signInAs('coordinator');
-    expect(path(run(roleGuard('admin', 'technical_manager')))).toBe('/jobs');
+    expect(path(run(roleGuard('admin', 'technical_manager')))).toBe('/requests');
   });
 
   it('sends an inspector away from the overview to their jobs', () => {

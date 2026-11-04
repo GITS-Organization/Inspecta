@@ -1,0 +1,168 @@
+<a class="back" routerLink="/requests">Back to requests</a>
+@if (error(); as msg) {
+  <div class="error" role="alert">{{ msg }}</div>
+}
+@if (request(); as r) {
+  <div class="head">
+    <div>
+      <span class="chip" [class.a]="isMaybe()">{{ isMaybe() ? 'Unknown sender' : stage(r.status) }}</span>
+      <h1 class="title">{{ r.clientName || r.emailFromName || r.emailFrom || 'New request' }}</h1>
+      <p class="muted">
+        {{ r.subject || 'No subject' }} · received {{ formatDate(r.receivedAt) }}
+        @if (r.emailFrom) { · from {{ r.emailFrom }} }
+      </p>
+    </div>
+    <div class="rowline">
+      @if (r.quotation) {
+        <a class="btn" [routerLink]="['/quotations', r.id, r.quotation.id]">Open the quotation</a>
+      }
+      @if (r.status === 'unassigned' || r.status === 'assigned' || r.status === 'task_accepted' || r.status === 'in_progress' || r.status === 'certificate_submitted' || r.status === 'certificate_returned' || r.status === 'certificate_approved' || r.status === 'sent_to_client') {
+        <a class="btn ghost" routerLink="/queue">Open in the job queue</a>
+      }
+    </div>
+  </div>
+
+  @if (r.hasUnreadClientReply) {
+    <div class="callout"><b>The client replied to your quotation.</b> Open the quotation to read the reply.</div>
+  }
+
+  @if (isMaybe()) {
+    <div class="callout">
+      <b>This email came from a sender who is not attached to a client.</b>
+      <p>Add the sender's address to a client under Clients and it becomes a request by itself. If the sender already belongs to a client, confirm it. Otherwise delete it
+        @if (r.maybeExpiresAt) { (it is deleted on {{ formatDate(r.maybeExpiresAt) }}) }.</p>
+      <div class="rowline">
+        <button type="button" class="btn" [disabled]="busy()" (click)="confirm()">Make it a request</button>
+        <button type="button" class="btn warn" [disabled]="busy()" (click)="deleteMaybe()">Delete the email</button>
+      </div>
+    </div>
+  } @else if (r.missingFields.length) {
+    <div class="callout"><b>Still to fill in before a quotation can be prepared:</b> {{ r.missingFields.join(', ') }}.</div>
+  }
+
+  <div class="two">
+    <div>
+      @if (!isMaybe()) {
+        <section class="panel first">
+          <h2>What the client asked for</h2>
+          @if (!editable()) {
+            <p class="muted">This request can no longer be edited here because its quotation was sent.</p>
+          }
+          <div class="row2">
+            <div class="field">
+              <label for="cl">Client</label>
+              <select id="cl" [disabled]="!editable()" (change)="pickClient($any($event.target).value)">
+                <option value="">Another client (type the name)</option>
+                @for (c of clients(); track c.id) {
+                  <option [value]="c.id" [selected]="c.id === clientId()">{{ c.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="field">
+              <label for="cn">Client name</label>
+              <input id="cn" type="text" [disabled]="!editable() || !!clientId()" [value]="clientName()" (input)="clientName.set($any($event.target).value)" />
+              @if (clientId()) { <small>Taken from the client record.</small> }
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="lo">Location</label>
+              <input id="lo" type="text" [disabled]="!editable()" [value]="location()" (input)="location.set($any($event.target).value)" />
+            </div>
+            <div class="field">
+              <label for="pd">Preferred date</label>
+              <input id="pd" type="date" [disabled]="!editable()" [value]="preferred()" (input)="preferred.set($any($event.target).value)" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="an">Access notes</label>
+            <textarea id="an" [disabled]="!editable()" [value]="access()" (input)="access.set($any($event.target).value)" placeholder="Gate, permits, who to ask for on site"></textarea>
+          </div>
+        </section>
+
+        <section class="panel">
+          <header>
+            <h2>Items</h2>
+            @if (editable() && clientId() && !items().length) {
+              <button type="button" class="btn ghost small" [disabled]="busy()" (click)="autofill()">Read the email again</button>
+            }
+          </header>
+          @if (suggestions().length && editable()) {
+            <div class="callout info" role="group" aria-label="Suggested machines">
+              <b>Machines the email seems to ask about</b>
+              @for (s of suggestions(); track s.equipmentId) {
+                <div class="sug">
+                  <div>
+                    <b>{{ s.name }}</b> × {{ s.quantity }}
+                    <span class="chip" [class.g]="s.level === 'high'" [class.a]="s.level !== 'high'">{{ s.level === 'high' ? 'Sure' : s.level === 'medium' ? 'Maybe' : 'Several fit' }}</span>
+                    <div class="muted ev">“{{ s.evidence }}”</div>
+                  </div>
+                  <button type="button" class="btn ghost small" (click)="addSuggestion(s)">Add</button>
+                </div>
+              }
+            </div>
+          }
+          <app-items-editor [(items)]="items" [equipment]="equipment()" [disabled]="!editable()" />
+        </section>
+
+        @if (editable()) {
+          <div class="actions">
+            <button type="button" class="btn go" [disabled]="busy() || !complete()" (click)="save(true)">Save and prepare the quotation</button>
+            <button type="button" class="btn ghost" [disabled]="busy()" (click)="save(false)">Save only</button>
+            @if (canReject()) {
+              <button type="button" class="btn warn" [disabled]="busy()" (click)="rejecting.set(!rejecting())">Turn the request down</button>
+            }
+            @if (!complete()) { <span class="muted sm">Add the client, the location and at least one item to prepare the quotation.</span> }
+          </div>
+        } @else if (canReject()) {
+          <div class="actions"><button type="button" class="btn warn" (click)="rejecting.set(!rejecting())">Turn the request down</button></div>
+        }
+
+        @if (rejecting()) {
+          <div class="callout">
+            <b>Why are you turning this request down?</b>
+            <div class="field top">
+              <label for="rr" class="sr">Reason</label>
+              <textarea id="rr" [value]="reason()" (input)="reason.set($any($event.target).value); reasonMissing.set(false)" [attr.aria-invalid]="reasonMissing()"></textarea>
+              @if (reasonMissing()) { <small class="bad">Write the reason. It is kept in the history; no email is sent to the client.</small> }
+            </div>
+            <button type="button" class="btn warn" [disabled]="busy()" (click)="reject()">Turn it down</button>
+          </div>
+        }
+      }
+
+      <section class="panel">
+        <h2>History</h2>
+        @for (h of r.history; track h.at) {
+          <div class="hist"><span class="muted">{{ formatDate(h.at) }}</span> <span>{{ h.from ? stage(h.from) + ' → ' : '' }}<b>{{ stage(h.to) }}</b></span>@if (h.note) { <span class="muted"> · {{ h.note }}</span> }</div>
+        } @empty {
+          <p class="muted">Nothing yet.</p>
+        }
+      </section>
+    </div>
+
+    <aside class="stick">
+      @if (email(); as m) {
+        <section class="panel first">
+          <h2>The client's email</h2>
+          <p class="muted">
+            From {{ m.fromName || m.fromAddress }}@if (m.fromName && m.fromAddress) { ({{ m.fromAddress }}) }<br />
+            {{ m.subject || 'No subject' }}
+          </p>
+          <pre class="mail">{{ m.textBody || 'This email has no text.' }}</pre>
+          @if (m.attachments.length) {
+            <p class="muted sm">Attachments (names only):</p>
+            <ul class="att">@for (a of m.attachments; track a.fileName) { <li>{{ a.fileName }}</li> }</ul>
+          }
+        </section>
+      } @else if (r.emailPreview) {
+        <section class="panel first">
+          <h2>The client's email</h2>
+          <pre class="mail">{{ r.emailPreview }}</pre>
+        </section>
+      }
+    </aside>
+  </div>
+} @else if (loading()) {
+  <p class="muted empty" role="status">Loading the request…</p>
+}

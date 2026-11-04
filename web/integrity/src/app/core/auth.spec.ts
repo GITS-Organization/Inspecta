@@ -22,7 +22,7 @@ describe('roleFromToken', () => {
     expect(homeFor('admin')).toBe('/overview');
     expect(homeFor('technical_manager')).toBe('/overview');
     expect(homeFor('inspector')).toBe('/jobs');
-    expect(homeFor('coordinator')).toBe('/jobs');
+    expect(homeFor('coordinator')).toBe('/requests');
     expect(homeFor(null)).toBe('/login');
   });
 });

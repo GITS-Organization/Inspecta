@@ -1,0 +1,106 @@
+import { ChangeDetectionStrategy, Component, input, model } from '@angular/core';
+import { Equipment, SaveRequestItem } from '../api/coordinator.models';
+
+/** Edits the equipment list of a request: each item can be typed or taken from the client's registered items. */
+@Component({
+  selector: 'app-items-editor',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    @for (it of items(); track $index) {
+      <div class="itemcard">
+        <div class="head2">
+          <b>Item {{ $index + 1 }}</b>
+          @if (!disabled()) {
+            <button type="button" class="btn warn small" (click)="remove($index)">Remove</button>
+          }
+        </div>
+        @if (equipment().length && !disabled()) {
+          <div class="field">
+            <label [for]="'eq' + $index">Take it from the client's items</label>
+            <select [id]="'eq' + $index" (change)="pick($index, $any($event.target).value)">
+              <option value="">Type it yourself</option>
+              @for (e of equipment(); track e.id) {
+                <option [value]="e.id" [selected]="e.id === it.equipmentId">{{ e.name }}{{ e.serialNumber ? ' · ' + e.serialNumber : '' }}</option>
+              }
+            </select>
+          </div>
+        }
+        <div class="row3">
+          <div class="field">
+            <label [for]="'n' + $index">Name</label>
+            <input [id]="'n' + $index" type="text" [disabled]="disabled()" [value]="it.name" (input)="set($index, { name: $any($event.target).value })" />
+          </div>
+          <div class="field">
+            <label [for]="'q' + $index">Quantity</label>
+            <input [id]="'q' + $index" type="number" min="1" max="10000" [disabled]="disabled()" [value]="it.quantity" (input)="set($index, { quantity: +$any($event.target).value || 1 })" />
+          </div>
+          <div class="field">
+            <label [for]="'s' + $index">Serial number</label>
+            <input [id]="'s' + $index" type="text" [disabled]="disabled()" [value]="it.serialNumber ?? ''" (input)="set($index, { serialNumber: $any($event.target).value })" />
+          </div>
+        </div>
+        <div class="row3">
+          <div class="field">
+            <label [for]="'t' + $index">Type</label>
+            <input [id]="'t' + $index" type="text" [disabled]="disabled()" [value]="it.type ?? ''" (input)="set($index, { type: $any($event.target).value })" />
+          </div>
+          <div class="field">
+            <label [for]="'c' + $index">Capacity</label>
+            <input [id]="'c' + $index" type="text" [disabled]="disabled()" [value]="it.capacity ?? ''" (input)="set($index, { capacity: $any($event.target).value })" />
+          </div>
+          <div class="field">
+            <label [for]="'l' + $index">Where on site</label>
+            <input [id]="'l' + $index" type="text" [disabled]="disabled()" [value]="it.location ?? ''" (input)="set($index, { location: $any($event.target).value })" />
+          </div>
+        </div>
+        <div class="field">
+          <label [for]="'i' + $index">What the client says is wrong</label>
+          <input [id]="'i' + $index" type="text" [disabled]="disabled()" [value]="it.issueDescription ?? ''" (input)="set($index, { issueDescription: $any($event.target).value })" />
+        </div>
+      </div>
+    } @empty {
+      <p class="muted">No items yet.</p>
+    }
+    @if (!disabled()) {
+      <button type="button" class="btn ghost" (click)="add()">Add an item</button>
+    }
+  `,
+  styles: `
+    .head2 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      b {
+        color: var(--ink);
+      }
+    }
+    .field {
+      margin-bottom: 10px;
+    }
+  `,
+})
+export class ItemsEditor {
+  readonly items = model.required<SaveRequestItem[]>();
+  readonly equipment = input<Equipment[]>([]);
+  readonly disabled = input(false);
+
+  protected add(): void {
+    this.items.update((l) => [...l, { name: '', quantity: 1 }]);
+  }
+  protected remove(i: number): void {
+    this.items.update((l) => l.filter((_, x) => x !== i));
+  }
+  protected set(i: number, patch: Partial<SaveRequestItem>): void {
+    this.items.update((l) => l.map((it, x) => (x === i ? { ...it, ...patch } : it)));
+  }
+  protected pick(i: number, id: string): void {
+    const e = this.equipment().find((x) => x.id === id);
+    this.set(
+      i,
+      e
+        ? { equipmentId: e.id, name: e.name, type: e.category ?? null, capacity: e.capacity, serialNumber: e.serialNumber, location: e.locationInsideClientLocation }
+        : { equipmentId: null },
+    );
+  }
+}
