@@ -50,6 +50,19 @@ public sealed class EquipmentService(IEquipmentRepository equipmentRepository) :
         await equipmentRepository.SaveAsync(cancellationToken);
     }
 
+    public async Task DeleteAsync(Guid equipmentId, CancellationToken cancellationToken = default)
+    {
+        var equipment = await equipmentRepository.GetByIdAsync(equipmentId, tracking: true, cancellationToken)
+            ?? throw new KeyNotFoundException("Equipment was not found.");
+        var usages = await equipmentRepository.CountUsagesAsync(equipmentId, cancellationToken);
+        if (usages > 0)
+            throw new Exceptions.AuthException(
+                "equipment_in_use",
+                $"The item is used by {usages} request(s) or certificate(s), so it cannot be deleted for good. Archive it instead.",
+                409);
+        await equipmentRepository.RemoveAsync(equipment, cancellationToken);
+    }
+
     public async Task ArchiveAsync(Guid equipmentId, CancellationToken cancellationToken = default)
     {
         var equipment = await equipmentRepository.GetByIdAsync(equipmentId, tracking: true, cancellationToken)

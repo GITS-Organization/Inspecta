@@ -166,7 +166,7 @@ public sealed class IncomingEmailRequestTests
             CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task SaveAsync(AppUser user, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<bool> SetActiveAsync(Guid userId, bool isActive, CancellationToken cancellationToken = default) => Task.FromResult(false);
-        public Task<bool> SoftDeleteAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<bool> DeleteAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task SaveRefreshTokenAsync(RefreshToken refreshToken, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<RefreshToken?> GetRefreshTokenByHashAsync(string tokenHash, CancellationToken cancellationToken = default) => Task.FromResult<RefreshToken?>(null);
         public Task<bool> RotateRefreshTokenAsync(RefreshToken currentToken, RefreshToken nextToken, CancellationToken cancellationToken = default) => Task.FromResult(false);

@@ -9,5 +9,6 @@ public interface IEquipmentService
     Task<EquipmentResponse?> GetByIdAsync(Guid equipmentId, CancellationToken cancellationToken = default);
     Task<EquipmentResponse> UpdateAsync(Guid equipmentId, SaveEquipmentRequest request, CancellationToken cancellationToken = default);
     Task RecordInspectionAsync(Guid equipmentId, RecordEquipmentInspectionRequest request, CancellationToken cancellationToken = default);
+    Task DeleteAsync(Guid equipmentId, CancellationToken cancellationToken = default);
     Task ArchiveAsync(Guid equipmentId, CancellationToken cancellationToken = default);
 }

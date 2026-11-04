@@ -80,10 +80,11 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
         return NoContent();
     }
 
-    /// <summary>Soft-delete a team member assigned to the current manager.</summary>
+    /// <summary>Delete a team member for good. <c>409 user_in_use</c> while records still point at them: deactivate instead.</summary>
     [HttpDelete("{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Deactivate(
         Guid userId,
         [FromQuery] Guid? managerId,

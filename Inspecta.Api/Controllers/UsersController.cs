@@ -67,10 +67,11 @@ public sealed class UsersController(IUserManagementService userManagementService
         return NoContent();
     }
 
-    /// <summary>Soft-delete a user and revoke their active refresh tokens.</summary>
+    /// <summary>Delete a user for good (their sessions go with them). <c>409 user_in_use</c> while records still point at the user: deactivate instead.</summary>
     [HttpDelete("{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Deactivate(Guid userId, CancellationToken cancellationToken)
     {
         await userManagementService.DeactivateAsync(userId, cancellationToken);

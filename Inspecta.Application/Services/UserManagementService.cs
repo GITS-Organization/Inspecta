@@ -191,8 +191,8 @@ public sealed class UserManagementService(
 
     public async Task DeactivateAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        if (!await userRepository.SoftDeleteAsync(userId, cancellationToken))
-            throw new AuthException("user_not_found", "User was not found or is already deleted.", 404);
+        if (!await userRepository.DeleteAsync(userId, cancellationToken))
+            throw new AuthException("user_not_found", "User was not found.", 404);
     }
 
     public async Task SetUserActiveAsync(
@@ -326,8 +326,8 @@ public sealed class UserManagementService(
     {
         await GetAuthorizedManagerAsync(managerId, cancellationToken);
         await GetScopedTeamMemberAsync(managerId, userId, cancellationToken);
-        if (!await userRepository.SoftDeleteAsync(userId, cancellationToken))
-            throw new AuthException("user_not_found", "User was not found or is already deleted.", 404);
+        if (!await userRepository.DeleteAsync(userId, cancellationToken))
+            throw new AuthException("user_not_found", "User was not found.", 404);
     }
 
     public async Task SetTeamMemberActiveAsync(

@@ -20,7 +20,8 @@ public interface IUserRepository
         CancellationToken cancellationToken = default);
     Task SaveAsync(AppUser user, CancellationToken cancellationToken = default);
     Task<bool> SetActiveAsync(Guid userId, bool isActive, CancellationToken cancellationToken = default);
-    Task<bool> SoftDeleteAsync(Guid userId, CancellationToken cancellationToken = default);
+    /// <summary>Deletes the user for good (false when not found); throws <c>user_in_use</c> (409) while other records still point at them.</summary>
+    Task<bool> DeleteAsync(Guid userId, CancellationToken cancellationToken = default);
     Task SaveRefreshTokenAsync(RefreshToken refreshToken, CancellationToken cancellationToken = default);
     Task<RefreshToken?> GetRefreshTokenByHashAsync(string tokenHash, CancellationToken cancellationToken = default);
     Task<bool> RotateRefreshTokenAsync(RefreshToken currentToken, RefreshToken nextToken, CancellationToken cancellationToken = default);

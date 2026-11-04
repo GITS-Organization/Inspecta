@@ -48,17 +48,17 @@ public sealed class AdminClientsController(IClientService clientService) : Contr
     public async Task<ActionResult<ClientResponse>> Update(Guid clientId, UpdateClientRequest request, CancellationToken cancellationToken) =>
         Ok(await clientService.UpdateAsync(clientId, request, cancellationToken));
 
-    /// <summary>Remove a client: archive it (default) or delete it for good.</summary>
+    /// <summary>Remove a client: delete it for good (default) or archive it.</summary>
     /// <remarks>
-    /// <c>permanent=false</c> (default) archives the client: it leaves the lists and can no longer be edited.
-    /// <c>permanent=true</c> deletes the client and its contacts for good, and is refused with <c>409 client_in_use</c>
+    /// <c>permanent=false</c> archives the client: it leaves the lists and can no longer be edited.
+    /// <c>permanent=true</c> (default) deletes the client and its contacts for good, and is refused with <c>409 client_in_use</c>
     /// while requests or registered items still use it.
     /// </remarks>
     [HttpDelete("{clientId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Delete(Guid clientId, [FromQuery] bool permanent, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(Guid clientId, [FromQuery] bool permanent = true, CancellationToken cancellationToken)
     {
         if (permanent) await clientService.DeleteAsync(clientId, cancellationToken);
         else await clientService.ArchiveAsync(clientId, cancellationToken);

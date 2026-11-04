@@ -212,7 +212,7 @@ public sealed class UserManagementTests
     }
 
     [Fact]
-    public async Task DeletedUsersAreSoftDeletedAndExcludedFromNormalQueries()
+    public async Task DeletedUsersAreRemovedForGood()
     {
         var user = AppUser.Create("staff@example.com", "Staff Member", UserRole.Inspector);
         var users = new MemoryUserRepository(user);
@@ -220,11 +220,8 @@ public sealed class UserManagementTests
 
         await service.DeactivateAsync(user.Id);
 
-        Assert.True(user.IsDeleted);
-        Assert.False(user.IsActive);
-        Assert.NotNull(user.DeletedAt);
         Assert.Null(await users.GetByIdAsync(user.Id));
-        Assert.Single(await users.ListAsync(includeDeleted: true));
+        Assert.Empty(await users.ListAsync(includeDeleted: true));
     }
 
     [Fact]
@@ -410,11 +407,11 @@ public sealed class UserManagementTests
             return Task.FromResult(true);
         }
 
-        public Task<bool> SoftDeleteAsync(Guid userId, CancellationToken cancellationToken = default)
+        public Task<bool> DeleteAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             var user = _users.SingleOrDefault(candidate => candidate.Id == userId);
-            if (user is null || user.IsDeleted) return Task.FromResult(false);
-            user.SoftDelete();
+            if (user is null) return Task.FromResult(false);
+            _users.Remove(user);
             return Task.FromResult(true);
         }
 

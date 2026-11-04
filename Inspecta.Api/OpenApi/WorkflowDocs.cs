@@ -290,11 +290,11 @@ public static class WorkflowDocs
             "**How:** `GET /admin/clients/{clientId}` returns the client with its contacts."),
         [Key<AdminClientsController>(nameof(AdminClientsController.Update))] = new(4, "Admin 4 · Change a client and its contacts",
             "**How:** `PUT /admin/clients/{clientId}` with the profile fields. Add `contacts` to change them: a contact with an `id` is edited, one without is added, one left out is removed. Leave `contacts` out to keep them."),
-        [Key<AdminClientsController>(nameof(AdminClientsController.Delete))] = new(5, "Admin 5 · Archive or delete a client",
+        [Key<AdminClientsController>(nameof(AdminClientsController.Delete))] = new(5, "Admin 5 · Delete or archive a client",
             """
             **How:** `DELETE /admin/clients/{clientId}`.
-            - Default (`permanent=false`): the client is **archived**: it leaves the lists and can no longer be edited.
-            - `permanent=true`: the client and its contacts are **deleted for good**. Refused with `409 client_in_use` while requests or registered items still use the client; archive it instead.
+            - Default (`permanent=true`): the client and its contacts are **deleted for good**. Refused with `409 client_in_use` while requests or registered items still use the client; archive it instead.
+            - `permanent=false`: the client is **archived**: it leaves the lists and can no longer be edited.
             """),
         [Key<DashboardController>(nameof(DashboardController.Overview))] = new(8, "Dashboard · The manager's overview",
             """
@@ -380,12 +380,12 @@ public static class WorkflowDocs
             "**How:** `GET /clients/{clientId}/certificates/{certificateFileId}/qr.png` returns the certificate's QR code (the one printed on it) as an image to send to the client; it opens the public check page with the PDF download (`qrUrl` in the list)."),
         [Key<ClientsController>(nameof(ClientsController.GetHistory))] = new(20, "Extra · Client history",
             "**How:** `GET /clients/{clientId}/history` returns the client's previous requests with their certificates."),
-        [Key<ClientsController>(nameof(ClientsController.Archive))] = new(21, "Extra · Archive a client",
-            "**How:** `DELETE /clients/{clientId}` archives the client; it disappears from the default list and can no longer be edited."),
+        [Key<ClientsController>(nameof(ClientsController.Archive))] = new(21, "Extra · Delete a client",
+            "**How:** `DELETE /clients/{clientId}` deletes the client and its contacts for good. Refused with `409 client_in_use` while requests or registered items still use the client."),
         [Key<EquipmentController>(nameof(EquipmentController.RecordInspection))] = new(22, "Extra · Record an inspection",
             "**How:** `POST /equipment/{equipmentId}/inspections` with `inspectedAt` and `nextDueAt`; sets the last inspection and the next due date."),
-        [Key<EquipmentController>(nameof(EquipmentController.Archive))] = new(23, "Extra · Archive an item",
-            "**How:** `DELETE /equipment/{equipmentId}` archives the item; it can no longer be edited."),
+        [Key<EquipmentController>(nameof(EquipmentController.Archive))] = new(23, "Extra · Delete an item",
+            "**How:** `DELETE /equipment/{equipmentId}` deletes the item for good. Refused with `409 equipment_in_use` while a request or an issued certificate still uses it."),
     };
 
     internal static string ConfigDescription => "One-time setup: clients with their contacts, and the items registered for each client.";

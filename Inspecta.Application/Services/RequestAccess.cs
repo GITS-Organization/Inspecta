@@ -15,7 +15,8 @@ internal static class RequestAccess
         _ => true
     };
 
-    // Email requests belong to the coordinator that received them; managers and admins can read their quotes only.
+    // Email requests belong to the coordinator that received them; managers can read their quotes only; the admin can do everything.
     public static bool CanManageQuotes(InspectionRequest request, Guid actorId, string role) =>
+        role == "admin" ||
         IsVisible(request, actorId, role) && (request.Source != RequestSource.Email || request.CoordinatorId == actorId);
 }

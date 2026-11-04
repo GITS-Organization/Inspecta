@@ -120,25 +120,27 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
         return true;
     }
 
-    public async Task<bool> SoftDeleteAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         var user = await dbContext.Users.IgnoreQueryFilters()
             .SingleOrDefaultAsync(user => user.Id == userId, cancellationToken);
-        if (user is null || user.IsDeleted)
+        if (user is null) return false;
+
+        // The user's refresh tokens go with them (cascade); anything else that points at the user blocks the delete.
+        dbContext.Users.Remove(user);
+        try
         {
-            await transaction.RollbackAsync(cancellationToken);
-            return false;
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            dbContext.ChangeTracker.Clear();
+            throw new AuthException(
+                "user_in_use",
+                "This user has requests, clients or other records, so it cannot be deleted for good. Deactivate the account instead.",
+                409);
         }
 
-        user.SoftDelete();
-        var tokens = await dbContext.RefreshTokens
-            .Where(token => token.UserId == userId && token.RevokedAt == null)
-            .ToListAsync(cancellationToken);
-        var now = DateTimeOffset.UtcNow;
-        foreach (var token in tokens) token.RevokedAt = now;
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
         return true;
     }
 

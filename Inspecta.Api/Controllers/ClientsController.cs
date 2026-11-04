@@ -41,7 +41,6 @@ public sealed class ClientsController(IClientService clientService) : Controller
 
     /// <summary>Create a client and its contacts.</summary>
     [HttpPost]
-    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ClientResponse>(StatusCodes.Status201Created)]
     public async Task<ActionResult<ClientResponse>> Create(CreateClientRequest request, CancellationToken cancellationToken)
@@ -54,7 +53,6 @@ public sealed class ClientsController(IClientService clientService) : Controller
 
     /// <summary>Update a client's profile, location, and business details.</summary>
     [HttpPut("{clientId:guid}")]
-    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ClientResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -67,14 +65,14 @@ public sealed class ClientsController(IClientService clientService) : Controller
         return Ok(client);
     }
 
-    /// <summary>Archive a client.</summary>
+    /// <summary>Delete a client and its contacts for good. Refused with <c>409 client_in_use</c> while requests or items still use it.</summary>
     [HttpDelete("{clientId:guid}")]
     [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Archive(Guid clientId, CancellationToken cancellationToken)
     {
-        await clientService.ArchiveAsync(clientId, cancellationToken);
+        await clientService.DeleteAsync(clientId, cancellationToken);
         return NoContent();
     }
 }

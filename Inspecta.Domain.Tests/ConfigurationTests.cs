@@ -259,6 +259,42 @@ public sealed class ConfigurationTests : IDisposable
     }
 
     [Fact]
+    public async Task AnItemNobodyUsesIsDeletedForGood()
+    {
+        var clientId = await CreateClientAsync();
+        Guid itemId;
+        await using (var db = CreateContext())
+            itemId = (await new EquipmentService(new EfEquipmentRepository(db)).CreateAsync(new SaveEquipmentRequest { ClientId = clientId, Name = "Crane" })).Id;
+
+        await using (var attempt = CreateContext())
+            await new EquipmentService(new EfEquipmentRepository(attempt)).DeleteAsync(itemId);
+
+        await using var check = CreateContext();
+        Assert.Empty(check.Items.IgnoreQueryFilters().ToList());
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => new EquipmentService(new EfEquipmentRepository(check)).DeleteAsync(itemId));
+    }
+
+    [Fact]
+    public async Task AUserWithClientsCannotBeDeletedForGoodButAFreeOneCan()
+    {
+        await CreateClientAsync();
+        var spare = Inspecta.Domain.Entities.AppUser.Create("spare@example.com", "Spare Person", Inspecta.Domain.Enums.UserRole.Inspector);
+        await using (var add = CreateContext()) await new EfUserRepository(add).AddAsync(spare);
+
+        await using var attempt = CreateContext();
+        var users = new EfUserRepository(attempt);
+        var refused = await Assert.ThrowsAsync<Inspecta.Application.Exceptions.AuthException>(() => users.DeleteAsync(manager.Id));
+        Assert.Equal("user_in_use", refused.Code);
+        Assert.Equal(409, refused.StatusCode);
+
+        Assert.True(await users.DeleteAsync(spare.Id));
+        Assert.False(await users.DeleteAsync(spare.Id));
+        await using var check = CreateContext();
+        Assert.Null(await new EfUserRepository(check).GetByIdAsync(spare.Id));
+        Assert.NotNull(await new EfUserRepository(check).GetByIdAsync(manager.Id));
+    }
+
+    [Fact]
     public async Task DeletingAnUnknownClientIsNotFound()
     {
         await using var db = CreateContext();
