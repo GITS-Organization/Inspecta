@@ -58,9 +58,9 @@ public sealed class AdminClientsController(IClientService clientService) : Contr
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Delete(Guid clientId, [FromQuery] bool permanent = true, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(Guid clientId, [FromQuery] bool? permanent, CancellationToken cancellationToken)
     {
-        if (permanent) await clientService.DeleteAsync(clientId, cancellationToken);
+        if (permanent ?? true) await clientService.DeleteAsync(clientId, cancellationToken);
         else await clientService.ArchiveAsync(clientId, cancellationToken);
         return NoContent();
     }
