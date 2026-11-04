@@ -395,6 +395,17 @@ Content-Type: application/json
   "contacts": [ { "name": "Test Contact", "email": "contact@test-client.com", "isPrimary": true } ]
 }
 
+### Coordinator mailbox: the settings and the date mail is imported from (default 2026-11-01)
+GET {{baseUrl}}/api/v1/manager/team/{{coordinatorId}}/email-config
+Authorization: Bearer {{token}}
+
+### Coordinator mailbox: import mail that arrived after this date (restarts the import from it)
+PUT {{baseUrl}}/api/v1/manager/team/{{coordinatorId}}/email-config/sync-from
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "syncFrom": "2026-11-01T00:00:00Z" }
+
 ### Admin: change a client
 PUT {{baseUrl}}/api/v1/admin/clients/{{clientId}}
 Authorization: Bearer {{token}}

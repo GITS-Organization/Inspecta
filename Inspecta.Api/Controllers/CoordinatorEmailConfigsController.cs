@@ -34,6 +34,28 @@ public sealed class CoordinatorEmailConfigsController(
         return NoContent();
     }
 
+    /// <summary>The coordinator's mailbox settings (never the password) and the date mail is imported from.</summary>
+    /// <remarks><c>configured: false</c> when no mailbox was set yet; <c>syncFrom</c> is then the default, 1 November 2026.</remarks>
+    [HttpGet]
+    [ProducesResponseType<CoordinatorEmailConfigResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CoordinatorEmailConfigResponse>> Get(
+        Guid coordinatorId, [FromQuery] Guid? managerId, CancellationToken cancellationToken) =>
+        Ok(await configService.GetAsync(ResolveManagerId(managerId), coordinatorId, cancellationToken));
+
+    /// <summary>Choose the date mail is imported from.</summary>
+    /// <remarks>
+    /// Only mail that arrived after <c>syncFrom</c> is fetched; changing it makes the import start again from the new date (mail already
+    /// imported is not imported twice). It does not delete anything: requests that were already imported stay.
+    /// </remarks>
+    [HttpPut("sync-from")]
+    [ProducesResponseType<CoordinatorEmailConfigResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CoordinatorEmailConfigResponse>> ChangeSyncFrom(
+        Guid coordinatorId, ChangeSyncFromRequest request, [FromQuery] Guid? managerId, CancellationToken cancellationToken) =>
+        Ok(await configService.ChangeSyncFromAsync(ResolveManagerId(managerId), coordinatorId, request.SyncFrom, cancellationToken));
+
     private Guid ResolveManagerId(Guid? requestedManagerId)
     {
         var actorId = GetActorId();

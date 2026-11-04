@@ -29,4 +29,27 @@ public sealed record CoordinatorEmailConfigRequest
 
     /// <summary>True for implicit TLS (usually port 465), false for STARTTLS. Defaults to true only for port 465.</summary>
     public bool? SmtpUseSsl { get; init; }
+
+    /// <summary>Import mail that arrived after this date. A new mailbox starts from 1 November 2026 when it is left out; changing it makes the import start again from the new date.</summary>
+    public DateTimeOffset? SyncFrom { get; init; }
+}
+
+/// <summary>The mailbox settings of a coordinator without the password.</summary>
+public sealed record CoordinatorEmailConfigResponse(
+    bool Configured,
+    string? ImapServer,
+    int? ImapPort,
+    string? EmailUsername,
+    bool? UseSsl,
+    string? SmtpServer,
+    int? SmtpPort,
+    bool? SmtpUseSsl,
+    DateTimeOffset SyncFrom,
+    DateTimeOffset? UpdatedAt);
+
+/// <summary>Chooses the date mail is imported from.</summary>
+public sealed record ChangeSyncFromRequest
+{
+    [System.ComponentModel.DataAnnotations.Required]
+    public DateTimeOffset SyncFrom { get; init; }
 }

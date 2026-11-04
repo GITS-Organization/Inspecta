@@ -11,13 +11,8 @@ public sealed class CoordinatorEmailConfigService(
     ICoordinatorEmailConfigRepository configRepository,
     ISecretProtector secretProtector) : ICoordinatorEmailConfigService
 {
-    public async Task UpdateAsync(
-        Guid managerId,
-        Guid coordinatorId,
-        CoordinatorEmailConfigRequest request,
-        CancellationToken cancellationToken = default)
+    private async Task EnsureTeamCoordinatorAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken)
     {
-        Validate(request);
         var manager = await userRepository.GetByIdAsync(managerId, cancellationToken);
         if (manager is null || manager.Role != UserRole.TechnicalManager || !manager.HasActiveSubscription())
             throw new AuthException("manager_not_found", "Active technical manager was not found.", 404);
@@ -29,6 +24,39 @@ public sealed class CoordinatorEmailConfigService(
         {
             throw new AuthException("coordinator_not_found", "Coordinator was not found in this team.", 404);
         }
+    }
+
+    private static CoordinatorEmailConfigResponse Map(CoordinatorEmailConfig? config) => config is null
+        ? new CoordinatorEmailConfigResponse(false, null, null, null, null, null, null, null, CoordinatorEmailConfig.DefaultSyncFromUtc, null)
+        : new CoordinatorEmailConfigResponse(
+            true, config.ImapServer, config.ImapPort, config.EmailUsername, config.UseSsl,
+            config.SmtpServer, config.SmtpPort, config.SmtpUseSsl, config.SyncFromUtc, config.UpdatedAt);
+
+    public async Task<CoordinatorEmailConfigResponse> GetAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken = default)
+    {
+        await EnsureTeamCoordinatorAsync(managerId, coordinatorId, cancellationToken);
+        return Map(await configRepository.GetByCoordinatorAsync(coordinatorId, cancellationToken));
+    }
+
+    public async Task<CoordinatorEmailConfigResponse> ChangeSyncFromAsync(
+        Guid managerId, Guid coordinatorId, DateTimeOffset syncFrom, CancellationToken cancellationToken = default)
+    {
+        await EnsureTeamCoordinatorAsync(managerId, coordinatorId, cancellationToken);
+        var config = await configRepository.GetByCoordinatorAsync(coordinatorId, cancellationToken)
+            ?? throw new AuthException("email_config_not_found", "Set the mailbox first, then choose the date to import from.", 404);
+        config.ChangeSyncFrom(syncFrom);
+        await configRepository.SaveAsync(config, cancellationToken);
+        return Map(config);
+    }
+
+    public async Task UpdateAsync(
+        Guid managerId,
+        Guid coordinatorId,
+        CoordinatorEmailConfigRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        Validate(request);
+        await EnsureTeamCoordinatorAsync(managerId, coordinatorId, cancellationToken);
 
         var encryptedPassword = secretProtector.Protect(request.Password);
         var config = await configRepository.GetByCoordinatorAsync(coordinatorId, cancellationToken);
@@ -44,7 +72,8 @@ public sealed class CoordinatorEmailConfigService(
                 request.UseSsl,
                 smtpServer: request.SmtpServer,
                 smtpPort: request.SmtpPort,
-                smtpUseSsl: request.SmtpUseSsl);
+                smtpUseSsl: request.SmtpUseSsl,
+                syncFromUtc: request.SyncFrom ?? CoordinatorEmailConfig.DefaultSyncFromUtc);
         }
         else
         {
@@ -56,7 +85,8 @@ public sealed class CoordinatorEmailConfigService(
                 request.UseSsl,
                 smtpServer: request.SmtpServer,
                 smtpPort: request.SmtpPort,
-                smtpUseSsl: request.SmtpUseSsl);
+                smtpUseSsl: request.SmtpUseSsl,
+                syncFromUtc: request.SyncFrom);
         }
 
         await configRepository.SaveAsync(config, cancellationToken);
@@ -64,6 +94,8 @@ public sealed class CoordinatorEmailConfigService(
 
     private static void Validate(CoordinatorEmailConfigRequest request)
     {
+        if (request.SyncFrom is { } from && (from < CoordinatorEmailConfig.EarliestSyncFromUtc || from > DateTimeOffset.UtcNow.AddDays(30)))
+            throw new ArgumentException("Choose a date from 2020 up to 30 days ahead.");
         if (string.IsNullOrWhiteSpace(request.ImapServer) ||
             request.ImapServer.Length > 255 ||
             request.ImapPort is < 1 or > 65535 ||

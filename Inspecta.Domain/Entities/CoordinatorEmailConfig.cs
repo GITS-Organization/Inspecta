@@ -18,6 +18,9 @@ public sealed class CoordinatorEmailConfig
     public bool? SmtpUseSsl { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
+    /// <summary>The date mail is imported from when nobody chose one: 1 November 2026.</summary>
+    public static readonly DateTimeOffset DefaultSyncFromUtc = new(2026, 11, 1, 0, 0, 0, TimeSpan.Zero);
+
     /// <summary>Only mail that arrived after this moment is imported; older mailbox content is ignored.</summary>
     public DateTimeOffset SyncFromUtc { get; private set; }
 
@@ -36,7 +39,8 @@ public sealed class CoordinatorEmailConfig
         DateTimeOffset? updatedAt = null,
         string? smtpServer = null,
         int? smtpPort = null,
-        bool? smtpUseSsl = null)
+        bool? smtpUseSsl = null,
+        DateTimeOffset? syncFromUtc = null)
     {
         if (string.IsNullOrWhiteSpace(imapServer))
             throw new ArgumentException("IMAP server is required.", nameof(imapServer));
@@ -63,7 +67,9 @@ public sealed class CoordinatorEmailConfig
         UpdatedAt = updatedAt ?? DateTimeOffset.UtcNow;
 
         // A different mailbox has its own UIDs: start again from now instead of importing its history.
-        if (mailboxChanged) ResetSync(UpdatedAt);
+        // A date the user chose wins, and moves the start of the import by itself.
+        if (syncFromUtc is { } chosen && chosen != SyncFromUtc) ResetSync(chosen);
+        else if (mailboxChanged) ResetSync(UpdatedAt);
     }
 
     public void ResetSync(DateTimeOffset from)
@@ -84,7 +90,8 @@ public sealed class CoordinatorEmailConfig
         DateTimeOffset? updatedAt = null,
         string? smtpServer = null,
         int? smtpPort = null,
-        bool? smtpUseSsl = null)
+        bool? smtpUseSsl = null,
+        DateTimeOffset? syncFromUtc = null)
     {
         if (coordinatorId == Guid.Empty || tenantId == Guid.Empty)
             throw new ArgumentException("Coordinator and tenant ids are required.");
@@ -110,8 +117,20 @@ public sealed class CoordinatorEmailConfig
             SmtpPort = ValidateSmtpPort(smtpPort),
             SmtpUseSsl = smtpUseSsl,
             UpdatedAt = updatedAt ?? DateTimeOffset.UtcNow,
-            SyncFromUtc = updatedAt ?? DateTimeOffset.UtcNow
+            SyncFromUtc = syncFromUtc ?? updatedAt ?? DateTimeOffset.UtcNow
         };
+    }
+
+    /// <summary>The earliest date a person may choose to import mail from.</summary>
+    public static readonly DateTimeOffset EarliestSyncFromUtc = new(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+    /// <summary>Starts the import again from a date the user chose: only mail that arrived after it is fetched.</summary>
+    public void ChangeSyncFrom(DateTimeOffset from)
+    {
+        if (from < EarliestSyncFromUtc || from > DateTimeOffset.UtcNow.AddDays(30))
+            throw new ArgumentOutOfRangeException(nameof(from), "Choose a date from 2020 up to 30 days ahead.");
+        if (from == SyncFromUtc) return;
+        ResetSync(from);
     }
 
     /// <summary>The outgoing mail server to use: the configured one, or one derived from the IMAP server.</summary>

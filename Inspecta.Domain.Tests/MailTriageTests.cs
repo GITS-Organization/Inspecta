@@ -192,6 +192,36 @@ public sealed class MailTriageTests
     }
 
     [Fact]
+    public void TheDateMailIsImportedFromCanBeChosenAndRestartsTheImport()
+    {
+        Assert.Equal(new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero), CoordinatorEmailConfig.DefaultSyncFromUtc);
+        var config = CoordinatorEmailConfig.Create(
+            CoordinatorId, ManagerId, "imap.example.com", 993, "coordinator@example.com", "secret", true,
+            syncFromUtc: CoordinatorEmailConfig.DefaultSyncFromUtc);
+        Assert.Equal(CoordinatorEmailConfig.DefaultSyncFromUtc, config.SyncFromUtc);
+
+        // Part way through the import: the same date changes nothing, another date starts again from it.
+        typeof(CoordinatorEmailConfig).GetProperty(nameof(CoordinatorEmailConfig.LastUid))!.SetValue(config, 42L);
+        typeof(CoordinatorEmailConfig).GetProperty(nameof(CoordinatorEmailConfig.LastUidValidity))!.SetValue(config, "7");
+        config.ChangeSyncFrom(CoordinatorEmailConfig.DefaultSyncFromUtc);
+        Assert.Equal(42, config.LastUid);
+
+        var later = new DateTimeOffset(2026, 11, 3, 0, 0, 0, TimeSpan.Zero);
+        config.ChangeSyncFrom(later);
+        Assert.Equal(later, config.SyncFromUtc);
+        Assert.Null(config.LastUidValidity);
+        Assert.Equal(0, config.LastUid);
+
+        // A date chosen together with the password settings wins over the "mailbox changed: start from now" rule.
+        var chosen = new DateTimeOffset(2026, 10, 20, 0, 0, 0, TimeSpan.Zero);
+        config.Update("imap.other.example.com", 993, "coordinator@example.com", "secret", true, syncFromUtc: chosen);
+        Assert.Equal(chosen, config.SyncFromUtc);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => config.ChangeSyncFrom(new DateTimeOffset(2019, 12, 31, 0, 0, 0, TimeSpan.Zero)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => config.ChangeSyncFrom(DateTimeOffset.UtcNow.AddDays(31)));
+    }
+
+    [Fact]
     public async Task RuleCreationRequiresAnActiveManagerAndAClientOfTheSameTeam()
     {
         var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
