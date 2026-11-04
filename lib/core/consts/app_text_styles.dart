@@ -10,7 +10,7 @@ class AppTextStyles {
 
   /// Large bold screen heading (e.g. "Welcome back", "Reset your password").
   static const TextStyle pageTitle = TextStyle(
-    fontSize: 32,
+    fontSize: 25,
     height: 38 / 32,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.64,

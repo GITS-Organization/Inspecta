@@ -2551,4 +2551,53 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get machineChecklistTitle => 'قائمة الفحص';
+
+  @override
+  String get sentSearchHint => 'ابحث بالشهادة أو العرض أو العميل';
+
+  @override
+  String sentCertificatesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count شهادة',
+      many: '$count شهادة',
+      few: '$count شهادات',
+      two: 'شهادتان',
+      one: 'شهادة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sentSummaryAllDelivered => 'جميعها سُلّمت للعملاء';
+
+  @override
+  String sentSummaryMixed(int delivered, int waiting) {
+    return '$delivered تم تسليمها · $waiting لدى المنسق';
+  }
+
+  @override
+  String sentGroupSent(String date) {
+    return 'أُرسلت $date';
+  }
+
+  @override
+  String sentGroupApproved(String date) {
+    return 'اعتُمدت $date';
+  }
+
+  @override
+  String sentInspectedOn(String date) {
+    return 'تم الفحص $date';
+  }
+
+  @override
+  String get sentStatusWithCoordinator => 'لدى المنسق';
+
+  @override
+  String get sentNoResults => 'لا توجد شهادات تطابق بحثك.';
+
+  @override
+  String get sentNoResultsHint => 'جرّب رقم شهادة أو عرض أو عميل مختلفًا.';
 }

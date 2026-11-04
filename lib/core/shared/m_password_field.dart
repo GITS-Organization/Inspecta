@@ -18,6 +18,9 @@ class MPasswordField extends StatefulWidget {
   /// Light-on-dark styling, as on [MTextField].
   final bool glass;
 
+  /// See [MTextField.subtleHint].
+  final bool subtleHint;
+
   const MPasswordField({
     super.key,
     required this.controller,
@@ -28,6 +31,7 @@ class MPasswordField extends StatefulWidget {
     this.label,
     this.hintText,
     this.glass = false,
+    this.subtleHint = false,
   });
 
   @override
@@ -51,6 +55,7 @@ class _MPasswordFieldState extends State<MPasswordField> {
       label: widget.label,
       hintText: widget.hintText,
       glass: widget.glass,
+      subtleHint: widget.subtleHint,
       obscureText: _obscureText,
       prefixIcon: Icons.lock_outline_rounded,
       keyboardType: TextInputType.visiblePassword,

@@ -19,11 +19,8 @@ class InspectorTasksCubit extends Cubit<InspectorTasksState> {
   /// one.
   int _fetch = 0;
 
-  InspectorTasksCubit({
-    required this.inspectorId,
-    required GetQueue getQueue,
-  }) : _getQueue = getQueue,
-       super(const InspectorTasksState());
+  InspectorTasksCubit({required this.inspectorId, required this._getQueue})
+    : super(const InspectorTasksState());
 
   /// Loads the tasks — also the pull-to-refresh and the reload after an
   /// action. A failed reload keeps the list already on screen; only a first
@@ -33,21 +30,31 @@ class InspectorTasksCubit extends Cubit<InspectorTasksState> {
     try {
       final requests = await _getQueue();
       if (isClosed || fetch != _fetch) return;
-      emit(state.copyWith(status: InspectorTasksStatus.ready, requests: requests, clearFailure: true));
+      emit(
+        state.copyWith(
+          status: InspectorTasksStatus.ready,
+          requests: requests,
+          clearFailure: true,
+        ),
+      );
     } catch (error) {
       if (isClosed || fetch != _fetch) return;
       if (state.status == InspectorTasksStatus.ready) return;
       emit(
         state.copyWith(
           status: InspectorTasksStatus.error,
-          failure: error is RequestsFailure ? error.code : RequestsFailureCode.unknown,
+          failure: error is RequestsFailure
+              ? error.code
+              : RequestsFailureCode.unknown,
         ),
       );
     }
   }
 
   Future<void> retry() {
-    emit(state.copyWith(status: InspectorTasksStatus.loading, clearFailure: true));
+    emit(
+      state.copyWith(status: InspectorTasksStatus.loading, clearFailure: true),
+    );
     return start();
   }
 

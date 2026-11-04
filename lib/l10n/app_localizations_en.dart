@@ -2558,4 +2558,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get machineChecklistTitle => 'Checklist';
+
+  @override
+  String get sentSearchHint => 'Search certificate, quotation or client';
+
+  @override
+  String sentCertificatesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count certificates',
+      one: '1 certificate',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sentSummaryAllDelivered => 'all delivered to clients';
+
+  @override
+  String sentSummaryMixed(int delivered, int waiting) {
+    return '$delivered delivered · $waiting with the coordinator';
+  }
+
+  @override
+  String sentGroupSent(String date) {
+    return 'Sent $date';
+  }
+
+  @override
+  String sentGroupApproved(String date) {
+    return 'Approved $date';
+  }
+
+  @override
+  String sentInspectedOn(String date) {
+    return 'Inspected $date';
+  }
+
+  @override
+  String get sentStatusWithCoordinator => 'With coordinator';
+
+  @override
+  String get sentNoResults => 'No certificates match your search.';
+
+  @override
+  String get sentNoResultsHint =>
+      'Try a different certificate number, quotation or client.';
 }

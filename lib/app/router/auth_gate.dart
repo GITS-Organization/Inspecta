@@ -11,13 +11,7 @@ import '../../features/home/presentation/pages/technical_manager_root_page.dart'
 import '../../features/home/presentation/pages/wms_root_page.dart';
 import '../../features/splash/presentation/views/splash_screen.dart';
 
-/// Root route: splash (with a "Start" button once the session is known)
-/// while nothing has been shown yet, sign in when signed out, the role home
-/// when signed in.
-///
-/// Any screens pushed on top (forgot password, profile, ...) are popped
-/// whenever the session changes, so signing out — or being signed out by a
-/// deactivation — always lands back on the sign-in screen.
+
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
@@ -57,18 +51,19 @@ class _AuthGateState extends State<AuthGate> {
         return switch (state) {
           AuthUnknown() => const SplashScreen(),
           Unauthenticated() => const SignInPage(),
-          Authenticated(:final user) => KeyedSubtree(
-            key: ValueKey((user.id, user.role)),
-            child: switch (user.role) {
-              UserRole.coordinator => const CoordinatorRootPage(),
-              UserRole.inspector => const InspectorRootPage(),
-              UserRole.technicalManager => const TechnicalManagerRootPage(),
-              UserRole.finance ||
-              UserRole.managingDirector ||
-              UserRole.merchandiser => const WmsRootPage(),
-              _ => const RoleHomePage(),
-            },
-          ),
+          Authenticated(:final user) =>
+              KeyedSubtree(
+                key: ValueKey((user.id, user.role)),
+                child: switch (user.role) {
+                  UserRole.coordinator => const CoordinatorRootPage(),
+                  UserRole.inspector => const InspectorRootPage(),
+                  UserRole.technicalManager => const TechnicalManagerRootPage(),
+                  UserRole.finance ||
+                  UserRole.managingDirector ||
+                  UserRole.merchandiser => const WmsRootPage(),
+                  _ => const RoleHomePage(),
+                },
+              ),
         };
       },
     );

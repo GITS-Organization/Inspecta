@@ -16,6 +16,7 @@ class QueueItemModel {
   final DateTime? scheduledAt;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final DateTime? sentAt;
   final CertificateCounts? certificates;
 
   const QueueItemModel({
@@ -29,6 +30,7 @@ class QueueItemModel {
     this.scheduledAt,
     this.createdAt,
     this.updatedAt,
+    this.sentAt,
     this.certificates,
   });
 
@@ -52,6 +54,7 @@ class QueueItemModel {
       scheduledAt: date('scheduledAt'),
       createdAt: date('createdAt'),
       updatedAt: date('updatedAt'),
+      sentAt: date('sentAt'),
       certificates: certs is Map<String, dynamic>
           ? CertificateCounts(
               total: count(certs, 'total'),
@@ -79,6 +82,7 @@ class QueueItemModel {
       inspectorId: inspectorId,
       inspectorName: inspectorName,
       scheduledAt: scheduledAt,
+      sentAt: sentAt,
       updatedAt: updatedAt,
       certificates: certificates,
     );

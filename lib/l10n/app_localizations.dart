@@ -4609,6 +4609,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Checklist'**
   String get machineChecklistTitle;
+
+  /// No description provided for @sentSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search certificate, quotation or client'**
+  String get sentSearchHint;
+
+  /// No description provided for @sentCertificatesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 certificate} other{{count} certificates}}'**
+  String sentCertificatesCount(int count);
+
+  /// No description provided for @sentSummaryAllDelivered.
+  ///
+  /// In en, this message translates to:
+  /// **'all delivered to clients'**
+  String get sentSummaryAllDelivered;
+
+  /// No description provided for @sentSummaryMixed.
+  ///
+  /// In en, this message translates to:
+  /// **'{delivered} delivered · {waiting} with the coordinator'**
+  String sentSummaryMixed(int delivered, int waiting);
+
+  /// No description provided for @sentGroupSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent {date}'**
+  String sentGroupSent(String date);
+
+  /// No description provided for @sentGroupApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved {date}'**
+  String sentGroupApproved(String date);
+
+  /// No description provided for @sentInspectedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspected {date}'**
+  String sentInspectedOn(String date);
+
+  /// No description provided for @sentStatusWithCoordinator.
+  ///
+  /// In en, this message translates to:
+  /// **'With coordinator'**
+  String get sentStatusWithCoordinator;
+
+  /// No description provided for @sentNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No certificates match your search.'**
+  String get sentNoResults;
+
+  /// No description provided for @sentNoResultsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Try a different certificate number, quotation or client.'**
+  String get sentNoResultsHint;
 }
 
 class _AppLocalizationsDelegate

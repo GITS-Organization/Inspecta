@@ -29,6 +29,10 @@ class MTextField extends StatefulWidget {
   /// see-through fill, white border/text, and no focus ring.
   final bool glass;
 
+  /// A smaller, fainter hint, so it reads as a prompt and never as typed
+  /// text (the sign-in form).
+  final bool subtleHint;
+
   const MTextField({
     super.key,
     required this.controller,
@@ -45,6 +49,7 @@ class MTextField extends StatefulWidget {
     this.prefixIcon,
     this.trailing,
     this.glass = false,
+    this.subtleHint = false,
   });
 
   @override
@@ -133,7 +138,8 @@ class _MTextFieldState extends State<MTextField> {
                 contentPadding: EdgeInsets.zero,
                 hintText: widget.hintText,
                 hintStyle: AppTextStyles.input.copyWith(
-                  color: mutedColor,
+                  color: widget.subtleHint ? mutedColor.withValues(alpha: glass ? 0.4 : 0.55) : mutedColor,
+                  fontSize: widget.subtleHint ? 13 : null,
                   fontWeight: FontWeight.w400,
                 ),
               ),

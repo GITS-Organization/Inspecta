@@ -14,7 +14,12 @@ class UserAppHeader extends StatelessWidget {
   final VoidCallback? onOpenProfile;
   final Widget? bottom;
 
-  const UserAppHeader({super.key, required this.title, this.onOpenProfile, this.bottom});
+  const UserAppHeader({
+    super.key,
+    required this.title,
+    this.onOpenProfile,
+    this.bottom,
+  });
 
   static String _greeting(AppLocalizations t) {
     final hour = DateTime.now().hour;
@@ -29,7 +34,9 @@ class UserAppHeader extends StatelessWidget {
     final user = context.select((AuthCubit cubit) => cubit.user);
     if (user == null) return const SizedBox.shrink();
 
-    final comma = Localizations.localeOf(context).languageCode == 'ar' ? '، ' : ', ';
+    final comma = Localizations.localeOf(context).languageCode == 'ar'
+        ? '، '
+        : ', ';
     final firstName = user.name.trim().split(RegExp(r'\s+')).first;
 
     return AppHeader(

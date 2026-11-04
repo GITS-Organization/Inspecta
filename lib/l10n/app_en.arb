@@ -909,5 +909,20 @@
   "machineChecklistYes": "Yes",
   "machineChecklistNo": "No",
   "machineChecklistNa": "N/A",
-  "machineChecklistTitle": "Checklist"
+  "machineChecklistTitle": "Checklist",
+  "sentSearchHint": "Search certificate, quotation or client",
+  "sentCertificatesCount": "{count, plural, one{1 certificate} other{{count} certificates}}",
+  "@sentCertificatesCount": { "placeholders": { "count": { "type": "int" } } },
+  "sentSummaryAllDelivered": "all delivered to clients",
+  "sentSummaryMixed": "{delivered} delivered · {waiting} with the coordinator",
+  "@sentSummaryMixed": { "placeholders": { "delivered": { "type": "int" }, "waiting": { "type": "int" } } },
+  "sentGroupSent": "Sent {date}",
+  "@sentGroupSent": { "placeholders": { "date": { "type": "String" } } },
+  "sentGroupApproved": "Approved {date}",
+  "@sentGroupApproved": { "placeholders": { "date": { "type": "String" } } },
+  "sentInspectedOn": "Inspected {date}",
+  "@sentInspectedOn": { "placeholders": { "date": { "type": "String" } } },
+  "sentStatusWithCoordinator": "With coordinator",
+  "sentNoResults": "No certificates match your search.",
+  "sentNoResultsHint": "Try a different certificate number, quotation or client."
 }

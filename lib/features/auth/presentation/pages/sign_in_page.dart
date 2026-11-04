@@ -224,6 +224,7 @@ class _SignInViewState extends State<_SignInView> {
                   controller: _emailController,
                   label: t.workEmail,
                   hintText: t.emailHint,
+                  subtleHint: true,
                   prefixIcon: Icons.mail_outline_rounded,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
@@ -239,7 +240,8 @@ class _SignInViewState extends State<_SignInView> {
                 MPasswordField(
                   controller: _passwordController,
                   label: t.password,
-                  hintText: 'enter your password',
+                  hintText: t.password,
+                  subtleHint: true,
                   enabled: !submitting,
                   errorText: _passwordError,
                   onChanged: _onChanged,

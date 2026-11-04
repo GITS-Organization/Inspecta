@@ -68,6 +68,10 @@ class InspectionRequest extends Equatable {
   /// jobs submitted before it was recorded.
   final DateTime? certificateSubmittedAt;
 
+  /// When the coordinator sent the job's certificates to the client; the
+  /// queue rows carry it. Null until then.
+  final DateTime? sentAt;
+
   /// When the API last changed the request; sent back on an update so the
   /// API can refuse it if the request changed meanwhile. Null for requests
   /// that didn't come from the API.
@@ -108,6 +112,7 @@ class InspectionRequest extends Equatable {
     this.scheduledAt,
     this.assignmentNote,
     this.certificateSubmittedAt,
+    this.sentAt,
     this.updatedAt,
     this.draftQuoteId,
     this.hasUnreadClientReply = false,
@@ -189,6 +194,7 @@ class InspectionRequest extends Equatable {
     scheduledAt,
     assignmentNote,
     certificateSubmittedAt,
+    sentAt,
     updatedAt,
     draftQuoteId,
     hasUnreadClientReply,

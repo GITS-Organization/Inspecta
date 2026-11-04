@@ -822,5 +822,15 @@
   "machineChecklistYes": "نعم",
   "machineChecklistNo": "لا",
   "machineChecklistNa": "لا ينطبق",
-  "machineChecklistTitle": "قائمة الفحص"
+  "machineChecklistTitle": "قائمة الفحص",
+  "sentSearchHint": "ابحث بالشهادة أو العرض أو العميل",
+  "sentCertificatesCount": "{count, plural, one{شهادة واحدة} two{شهادتان} few{{count} شهادات} many{{count} شهادة} other{{count} شهادة}}",
+  "sentSummaryAllDelivered": "جميعها سُلّمت للعملاء",
+  "sentSummaryMixed": "{delivered} تم تسليمها · {waiting} لدى المنسق",
+  "sentGroupSent": "أُرسلت {date}",
+  "sentGroupApproved": "اعتُمدت {date}",
+  "sentInspectedOn": "تم الفحص {date}",
+  "sentStatusWithCoordinator": "لدى المنسق",
+  "sentNoResults": "لا توجد شهادات تطابق بحثك.",
+  "sentNoResultsHint": "جرّب رقم شهادة أو عرض أو عميل مختلفًا."
 }

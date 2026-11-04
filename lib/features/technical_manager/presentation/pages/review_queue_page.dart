@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_layout.dart';
 import '../../../../core/consts/app_text_styles.dart';
-import '../../../../core/shared/loading.dart';
+import '../../../../core/enums/job_status.dart';
 import '../../../../core/shared/m_notice.dart';
+import '../../../../core/widgets/empty_widget.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../machines/presentation/pages/job_machines_page.dart';
 import 'review_summary_page.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
+import '../../../requests/domain/entities/request_source.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
 import '../bloc/review_queue_cubit.dart';
@@ -82,7 +85,7 @@ class _Body extends StatelessWidget {
     return BlocBuilder<ReviewQueueCubit, ReviewQueueState>(
       builder: (context, state) {
         if (state.status == ReviewQueueStatus.loading) {
-          return Loading.loader(context);
+          return const _Skeleton();
         }
         if (state.status == ReviewQueueStatus.error) {
           return _ErrorState(failure: state.failure!);
@@ -90,6 +93,9 @@ class _Body extends StatelessWidget {
 
         final toReview = state.toReview;
         final returned = state.returned;
+        if (toReview.isEmpty && returned.isEmpty) {
+          return EmptyState(kind: EmptyKind.done, title: t.emptyReviewQueue);
+        }
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, AppLayout.bottomNavClearance),
           children: [
@@ -99,10 +105,7 @@ class _Body extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             if (toReview.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Center(child: Text(t.emptyReviewQueue, style: AppTextStyles.subtitle)),
-              ),
+              EmptyState(kind: EmptyKind.done, title: t.emptyReviewQueue, compact: true),
             for (final request in toReview) ...[
               ReviewCertificateCard(
                 key: ValueKey(request.id),
@@ -123,6 +126,39 @@ class _Body extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// What the skeleton cards are drawn from; only its shape matters.
+final _placeholder = InspectionRequest(
+  id: 'placeholder',
+  source: RequestSource.email,
+  clientName: 'Client name',
+  receivedAt: DateTime(2026),
+  location: 'Location of the site',
+  status: JobStatus.certificateSubmitted,
+  items: const [],
+  subject: 'Quotation number',
+  updatedAt: DateTime(2026),
+  certificates: const CertificateCounts(total: 2, submitted: 1),
+);
+
+/// The queue's loading state: cards drawn from [_placeholder], shimmering.
+class _Skeleton extends StatelessWidget {
+  const _Skeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Skeletonizer(
+      child: ListView.separated(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+        itemCount: 3,
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        itemBuilder: (_, _) =>
+            ReviewCertificateCard(request: _placeholder, inspectorName: 'Inspector name', onOpen: () {}),
+      ),
     );
   }
 }

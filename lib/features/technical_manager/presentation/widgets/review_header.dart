@@ -10,10 +10,19 @@ class ReviewHeader extends StatelessWidget {
   final VoidCallback onOpenProfile;
   final Widget? child;
 
-  const ReviewHeader({super.key, required this.title, required this.onOpenProfile, this.child});
+  const ReviewHeader({
+    super.key,
+    required this.title,
+    required this.onOpenProfile,
+    this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return UserAppHeader(title: title, onOpenProfile: onOpenProfile, bottom: child);
+    return UserAppHeader(
+      title: title,
+      onOpenProfile: onOpenProfile,
+      bottom: child,
+    );
   }
 }
