@@ -41,6 +41,20 @@ public sealed class InspectionRequest
     public string? EmailPreview { get; private set; }
     public RequestSource Source { get; private set; } = RequestSource.Manual;
     public RequestKind Kind { get; private set; } = RequestKind.Standard;
+
+    /// <summary>How many days of one inspector (a "man day") the quotation also sells, next to the machines; null when none.</summary>
+    public int? ManDayDays { get; private set; }
+
+    /// <summary>Asks for a man day line in the quotation (1 to 365 days), or none (null or 0). Allowed while the request can still be edited.</summary>
+    public void SetManDay(int? days)
+    {
+        if (days is < 0 or > 365) throw new ArgumentOutOfRangeException(nameof(days), "A man day request is between 1 and 365 days.");
+        var value = days is > 0 ? days : null;
+        if (value == ManDayDays) return;
+        EnsureEditable();
+        ManDayDays = value;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
     public RequestTriage Triage { get; private set; } = RequestTriage.Request;
     public bool HasUnreadClientReply { get; private set; }
     public string? SeededBy { get; private set; }

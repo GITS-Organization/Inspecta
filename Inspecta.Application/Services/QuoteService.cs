@@ -180,7 +180,7 @@ public sealed class QuoteService(
             quote.ClientName ?? request.ClientName,
             request.Location,
             showPrices ? quote.AmountPiastres : null,
-            items.Sum(item => item.Quantity),
+            items.Where(item => !item.IsManDay).Sum(item => item.Quantity),
             showPrices ? quote.GetUnpricedItems().Count : 0,
             quote.ValidUntil,
             quote.IsExpired,
@@ -365,9 +365,10 @@ public sealed class QuoteService(
         var previousPrices = previous?.GetItems()
             .Where(item => item.RequestItemId is not null)
             .ToDictionary(item => item.RequestItemId!.Value, item => item.UnitPricePiastres);
-        var items = request.Items
-            .Select(item => ToQuoteItem(item, previousPrices is not null && previousPrices.TryGetValue(item.Id, out var price) ? price : null))
-            .ToArray();
+        var items = QuoteLines(
+            request,
+            item => previousPrices is not null && previousPrices.TryGetValue(item.Id, out var price) ? price : null,
+            previous?.GetItems().FirstOrDefault(line => line.IsManDay)?.UnitPricePiastres);
         var sourceEmail = previous is null ? await requestRepository.GetEmailAsync(request.Id, cancellationToken) : null;
         var contactName = previous?.ContactName ?? sourceEmail?.FromName;
         var quote = Quote.Create(
@@ -383,7 +384,7 @@ public sealed class QuoteService(
         quote.SetDraftDetails(
             items,
             previous?.Message,
-            Summarize(request.Items),
+            Summarize(request),
             clientName,
             previous?.GetNotes() ?? QuotationDefaults.StandardNotes,
             previous?.GetScopeOfWork(),
@@ -398,9 +399,9 @@ public sealed class QuoteService(
             .Where(item => item.RequestItemId is not null)
             .ToDictionary(item => item.RequestItemId!.Value, item => item.UnitPricePiastres);
         draft.SetDraftDetails(
-            request.Items.Select(item => ToQuoteItem(item, prices.TryGetValue(item.Id, out var price) ? price : null)).ToArray(),
+            QuoteLines(request, item => prices.TryGetValue(item.Id, out var price) ? price : null, draft.GetItems().FirstOrDefault(line => line.IsManDay)?.UnitPricePiastres),
             draft.Message,
-            Summarize(request.Items),
+            Summarize(request),
             string.IsNullOrWhiteSpace(request.ClientName) ? null : request.ClientName);
     }
 
@@ -420,11 +421,11 @@ public sealed class QuoteService(
             throw new InvalidOperationException("The request is not in the quote drafting stage.");
 
         var prices = MatchPricesToRequestItems(request, update.Items);
-        var items = request.Items.Select(item => ToQuoteItem(item, prices[item.Id])).ToArray();
+        var items = QuoteLines(request, item => prices[item.Id], update.ManDayPricePiastres);
         quote.SetDraftDetails(
             items,
             update.Message,
-            Summarize(request.Items),
+            Summarize(request),
             string.IsNullOrWhiteSpace(request.ClientName) ? null : request.ClientName,
             update.Notes,
             update.ScopeOfWork,
@@ -702,8 +703,17 @@ public sealed class QuoteService(
         item.Name,
         item.PrNumber);
 
-    private static string Summarize(IEnumerable<RequestItem> items) =>
-        string.Join(", ", items.Select(item => $"{item.Name} x {item.Quantity}"));
+    // The lines of a quotation: one for each machine of the request, then the man day when the request asks for one.
+    private static QuoteItem[] QuoteLines(InspectionRequest request, Func<RequestItem, long?> priceOf, long? manDayPricePiastres)
+    {
+        var lines = request.Items.Select(item => ToQuoteItem(item, priceOf(item))).ToList();
+        if (request.ManDayDays is > 0 and var days) lines.Add(QuoteItem.ManDay(days, manDayPricePiastres));
+        return lines.ToArray();
+    }
+
+    private static string Summarize(InspectionRequest request) =>
+        string.Join(", ", request.Items.Select(item => $"{item.Name} x {item.Quantity}")
+            .Concat(request.ManDayDays is > 0 and var days ? [$"{QuoteItem.ManDayType} x {days}"] : []));
 
     private async Task<QuoteResponse> MapAsync(Quote quote, bool canManage, CancellationToken cancellationToken) =>
         Map(
@@ -766,7 +776,7 @@ public sealed class QuoteService(
             quote.GetScopeOfWork(),
             quote.GetNotes(),
             quote.GetUnpricedItems().Where(item => item.RequestItemId is not null).Select(item => item.RequestItemId!.Value).ToArray(),
-            items.Sum(item => item.Quantity),
+            items.Where(item => !item.IsManDay).Sum(item => item.Quantity),
             canManage && quote.IsEditable,
             quote.IsExpired,
             quote.SentAt,

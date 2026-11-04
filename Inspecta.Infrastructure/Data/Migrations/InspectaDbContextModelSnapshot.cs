@@ -682,6 +682,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int?>("ManDayDays")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("ManagerId")
                         .HasColumnType("uuid");
 

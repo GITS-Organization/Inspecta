@@ -39,6 +39,7 @@ internal sealed class RequestDetailsEditor(IRequestRepository requestRepository,
             details.Items?.Select(item => new RequestItemSpec(
                 item.Id, item.Name, Certificates.GearRules.QuantityFor(item.Name, item.Quantity), item.EquipmentId, item.Type, item.Capacity,
                 item.SerialNumber, item.Location, item.IssueDescription)).ToArray());
+        if (details.ManDayDays is { } manDayDays) request.SetManDay(manDayDays);
         if (equipmentRegistrar is not null)
             await equipmentRegistrar.RegisterAsync(request, cancellationToken);
         return changes;

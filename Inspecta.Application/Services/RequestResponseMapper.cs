@@ -36,7 +36,8 @@ internal static class RequestResponseMapper
             : null,
         HasUnreadClientReply: request.HasUnreadClientReply,
         Kind: request.Kind,
-        CanAssignWithoutQuotation: request.CanAssignWithoutQuotation);
+        CanAssignWithoutQuotation: request.CanAssignWithoutQuotation,
+        ManDayDays: request.ManDayDays);
 
     // The kind and the standard of inspection follow from the machine's name in the catalogue.
     public static RequestItemResponse MapItem(RequestItem item)

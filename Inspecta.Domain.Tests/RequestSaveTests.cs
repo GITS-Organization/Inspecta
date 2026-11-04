@@ -59,6 +59,21 @@ public sealed class RequestSaveTests
     }
 
     [Fact]
+    public async Task TheRequestScreenSavesTheDaysOfAManDayAndZeroRemovesThem()
+    {
+        var fixture = new Fixture();
+
+        var asked = await fixture.SaveAsync(new UpdateRequestDetailsRequest { ManDayDays = 3 });
+        Assert.Equal(3, asked.ManDayDays);
+
+        var kept = await fixture.SaveAsync(new UpdateRequestDetailsRequest { Location = "Industrial City" });
+        Assert.Equal(3, kept.ManDayDays); // left out: unchanged
+
+        var removed = await fixture.SaveAsync(new UpdateRequestDetailsRequest { ManDayDays = 0 });
+        Assert.Null(removed.ManDayDays);
+    }
+
+    [Fact]
     public async Task AnEmptyListRemovesEveryItem()
     {
         var fixture = new Fixture();

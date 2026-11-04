@@ -10,6 +10,18 @@ public sealed record QuoteItem(
     string? Description = null,
     string? PrNumber = null)
 {
+    /// <summary>The type of the line that sells an inspector's day: it is not a machine, so it has no request item.</summary>
+    public const string ManDayType = "Man day";
+
+    public const string ManDayPricingUnit = "Per Day";
+
+    /// <summary>True for the man day line of a quotation.</summary>
+    public bool IsManDay => RequestItemId is null && Type == ManDayType;
+
+    /// <summary>The man day line: <paramref name="days"/> days of one inspector at a price per day.</summary>
+    public static QuoteItem ManDay(int days, long? pricePerDayPiastres) =>
+        Create(null, ManDayType, days, pricePerDayPiastres, ManDayPricingUnit, "Man day (inspector)");
+
     /// <summary>A line counts as priced once it has a price above zero.</summary>
     public bool IsPriced => UnitPricePiastres is > 0;
 

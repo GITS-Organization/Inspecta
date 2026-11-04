@@ -40,7 +40,7 @@ internal static class QuotationPdfModelFactory
     // "Mobile crane, Air receiver": the distinct item types in order.
     private static string Subject(IReadOnlyList<QuoteItem> items)
     {
-        var subject = string.Join(", ", items.Select(item => item.Type).Distinct(StringComparer.OrdinalIgnoreCase));
+        var subject = string.Join(", ", items.Where(item => !item.IsManDay).Select(item => item.Type).Distinct(StringComparer.OrdinalIgnoreCase));
         return subject.Length <= MaxSubjectLength ? subject : subject[..(MaxSubjectLength - 1)].TrimEnd() + "…";
     }
 }

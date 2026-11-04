@@ -59,6 +59,55 @@ public sealed class QuotationTests
     }
 
     [Fact]
+    public async Task ARequestThatAsksForAManDayGetsAPricedManDayLineBesideTheMachines()
+    {
+        var fixture = new Fixture();
+        fixture.Request.SetManDay(3);
+
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+
+        Assert.Equal(3, quote.Items!.Count);
+        var manDay = quote.Items.Last();
+        Assert.Null(manDay.RequestItemId); // an inspector's day is not a machine
+        Assert.Equal("Man day", manDay.Type);
+        Assert.Equal(3, manDay.Quantity);
+        Assert.Equal("Per Day", manDay.PricingUnit);
+        Assert.Null(manDay.UnitPricePiastres);
+        Assert.Equal(5, quote.TotalUnits); // the days are not counted as machines
+
+        // It must be priced before the quotation goes out, like every machine.
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+        var unpriced = await Assert.ThrowsAsync<ArgumentException>(() => fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator"));
+        Assert.Contains("Man day", unpriced.Message, StringComparison.Ordinal);
+
+        var priced = await fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { ManDayPricePiastres = 500_000 });
+        Assert.Equal(1_200_000 + 4 * 850_000 + 3 * 500_000, priced.AmountPiastres);
+        Assert.Equal(1_500_000, priced.Items!.Last().TotalPiastres);
+        var sent = await fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+        Assert.Equal(QuoteStatus.Open, sent.Status);
+        Assert.NotNull(sent.SentAt);
+    }
+
+    [Fact]
+    public async Task TheManDayLineFollowsTheRequestAndKeepsItsPrice()
+    {
+        var fixture = new Fixture();
+        fixture.Request.SetManDay(2);
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1, 2) with { ManDayPricePiastres = 700_000 });
+
+        // Asking for no man day removes the line from the next save; the request itself refuses 366 days and a negative number.
+        fixture.Request.SetManDay(0);
+        Assert.Null(fixture.Request.ManDayDays);
+        var without = await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1, 2) with { ManDayPricePiastres = 700_000 });
+        Assert.Equal(2, without.Items!.Count);
+        Assert.Equal(1 + 4 * 2, without.AmountPiastres);
+        Assert.Throws<ArgumentOutOfRangeException>(() => fixture.Request.SetManDay(366));
+        Assert.Throws<ArgumentOutOfRangeException>(() => fixture.Request.SetManDay(-1));
+    }
+
+    [Fact]
     public async Task SavingTheDraftStoresPricesTotalsTextsAndValidity()
     {
         var fixture = new Fixture();

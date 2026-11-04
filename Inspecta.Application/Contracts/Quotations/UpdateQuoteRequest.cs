@@ -9,6 +9,13 @@ public sealed record UpdateQuoteRequest
     [Required]
     public required IReadOnlyList<UpdateQuoteItem> Items { get; init; }
 
+    /// <summary>
+    /// Price of one day of the man day line, in piastres. Only used when the request asks for a man day (<c>manDayDays</c>); it may stay
+    /// empty in a draft but must be set before the quotation is sent.
+    /// </summary>
+    [Range(0, long.MaxValue)]
+    public long? ManDayPricePiastres { get; init; }
+
     [Range(1, 365)]
     public int? ValidForDays { get; init; }
 

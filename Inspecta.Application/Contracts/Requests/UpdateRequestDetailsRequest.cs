@@ -30,6 +30,13 @@ public sealed record UpdateRequestDetailsRequest
     public IReadOnlyList<SaveRequestItem>? Items { get; init; }
 
     /// <summary>
+    /// Days of one inspector (a "man day") to sell in the quotation next to the machines, 1 to 365; <c>0</c> removes it; left out (<c>null</c>)
+    /// keeps it as it is. The quotation gets a "Man day" line with its own price per day.
+    /// </summary>
+    [Range(0, 365)]
+    public int? ManDayDays { get; init; }
+
+    /// <summary>
     /// The <c>updatedAt</c> of the request as the screen last read it. When set and the request changed since, nothing is
     /// saved and the API answers <c>409</c>, so a stale screen cannot overwrite or delete newer changes.
     /// </summary>

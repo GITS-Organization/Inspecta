@@ -62,6 +62,7 @@ public static class WorkflowDocs
             **How:** send `clientName` (or `clientId`), `location`, optional `preferredDate`/`accessNotes` and the whole `items` list. Items with an `id` are updated, items without one are added, items left out are removed. New clients and machines are registered automatically.
             No flag is needed: as soon as the request is complete this same save opens the quotation (`"prepareQuotation": false` only saves, `true` refuses an incomplete request with `409`). The request then leaves the request list and the response has a `quotation` with its `id`, the machines with empty prices and `missingPrices`. Pressing it again refreshes the draft and keeps the prices already typed.
             **Incomplete data:** a save that is not complete yet is just saved, and no quotation is opened. With `prepareQuotation: true` it is refused with `409 request_incomplete` naming the missing fields. A request whose quotation was sent can no longer be edited.
+            **Man day:** `manDayDays` (1 to 365 days of one inspector; `0` removes it; left out keeps it) adds a "Man day" line to the quotation, priced per day in step 7 with `manDayPricePiastres`. The request answers `manDayDays`.
             **Next:** price the machines (step 7).
             """),
         [Key<QuotationsController>(nameof(QuotationsController.List))] = new(5, "Step 5 · List my quotations",
@@ -76,6 +77,7 @@ public static class WorkflowDocs
             """
             **When:** the coordinator enters the price of every machine. Save as often as needed while `canEdit` is true.
             **How:** send `items` (every machine of the request exactly once, `unitPricePiastres` may stay empty while drafting; 1 EGP = 100 piastres), plus `validForDays`, `scopeOfWork`, `notes`, `message`, `proposalNumber` and `contactName`.
+            **Man day:** when the request asks for a man day (`manDayDays`), the quotation has one more line (`type: "Man day"`, `pricingUnit: "Per Day"`, `quantity` = the days, no `requestItemId`): price it with `manDayPricePiastres` (price of one day). It is part of the total, the PDF and the email, and must be priced before sending.
             **Result:** the total is calculated by the server; `missingPrices` lists the machines still without a price.
             """),
         [Key<QuotesController>(nameof(QuotesController.Pdf))] = new(8, "Step 8 · Preview the PDF",
