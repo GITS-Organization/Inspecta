@@ -41,7 +41,7 @@ public sealed class JobMachineService(
             var registered = (await catalog.ListClientEquipmentAsync(clientId, cancellationToken)).Single(value => value.Id == equipmentId);
             item = RequestItem.Create(
                 registered.Name, GearRules.QuantityFor(registered.Name, machine.Quantity), registered.Id, machine.Type, machine.Capacity ?? registered.Capacity,
-                machine.SerialNumber ?? registered.SerialNumber, registered.Category, registered.Manufacturer, registered.Model,
+                machine.SerialNumber ?? GearRules.SerialFor(registered.Name, registered.SerialNumber), registered.Category, registered.Manufacturer, registered.Model,
                 registered.PrNumber, machine.Location ?? registered.LocationInsideClientLocation, machine.IssueDescription);
         }
         else

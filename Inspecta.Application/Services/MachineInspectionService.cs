@@ -991,7 +991,7 @@ public sealed class MachineInspectionService(
         "manufacturer" => item.Manufacturer ?? equipment?.Manufacturer,
         "capacity" => item.Capacity ?? equipment?.Capacity,
         "model" => string.Join(" / ", new[] { item.Model ?? equipment?.Model, equipment?.YearOfManufacture?.ToString() }.Where(value => !string.IsNullOrWhiteSpace(value))) is { Length: > 0 } model ? model : null,
-        "serialNumber" => item.SerialNumber ?? equipment?.SerialNumber,
+        "serialNumber" => item.SerialNumber ?? (GearRules.IsGear(item.Name) ? null : equipment?.SerialNumber),
         _ => null
     };
 

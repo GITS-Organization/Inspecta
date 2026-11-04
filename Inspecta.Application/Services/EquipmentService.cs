@@ -1,3 +1,4 @@
+using Inspecta.Application.Certificates;
 using Inspecta.Application.Contracts.Equipment;
 using Inspecta.Application.Interfaces;
 using Inspecta.Domain.Entities;
@@ -12,7 +13,7 @@ public sealed class EquipmentService(IEquipmentRepository equipmentRepository) :
             throw new KeyNotFoundException("Client was not found or is archived.");
         var equipment = Item.Create(request.ClientId, request.Name);
         equipment.UpdateDetails(
-            request.Name, request.Category, request.Manufacturer, request.Model, request.SerialNumber, request.Capacity,
+            request.Name, request.Category, request.Manufacturer, request.Model, GearRules.SerialFor(request.Name, request.SerialNumber), request.Capacity,
             request.ItemType ?? Inspecta.Domain.Enums.ItemType.Equipment,
             request.LocationInsideClientLocation, request.Notes, request.InspectionStandard, request.TestType);
         equipment.UpdateMetadata(request.Labels, request.Dates, request.Checklist, request.Attachments);
@@ -35,7 +36,7 @@ public sealed class EquipmentService(IEquipmentRepository equipmentRepository) :
             ?? throw new KeyNotFoundException("Equipment was not found.");
         if (equipment.ClientId != request.ClientId) throw new InvalidOperationException("Equipment cannot be reassigned to another client.");
         equipment.UpdateDetails(
-            request.Name, request.Category, request.Manufacturer, request.Model, request.SerialNumber, request.Capacity,
+            request.Name, request.Category, request.Manufacturer, request.Model, GearRules.SerialFor(request.Name, request.SerialNumber), request.Capacity,
             request.ItemType, request.LocationInsideClientLocation, request.Notes, request.InspectionStandard, request.TestType);
         equipment.UpdateMetadata(request.Labels, request.Dates, request.Checklist, request.Attachments);
         await equipmentRepository.SaveAsync(cancellationToken);
@@ -73,7 +74,7 @@ public sealed class EquipmentService(IEquipmentRepository equipmentRepository) :
 
     private static EquipmentResponse Map(Item equipment) => new(
         equipment.Id, equipment.ClientId, equipment.Name, equipment.Category, equipment.Manufacturer,
-        equipment.Model, equipment.SerialNumber, equipment.Capacity, equipment.ItemType,
+        equipment.Model, GearRules.SerialFor(equipment.Name, equipment.SerialNumber), equipment.Capacity, equipment.ItemType,
         equipment.LocationInsideClientLocation, equipment.Notes, equipment.GetLabels(), equipment.GetDates(),
         equipment.GetChecklist(), equipment.GetAttachments(), equipment.CertificateExpiryDate,
         equipment.LastInspectedOn, equipment.LastInspectionAt, equipment.NextInspectionDueAt, equipment.ArchivedAt,

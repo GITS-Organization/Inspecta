@@ -1033,6 +1033,28 @@ public sealed class MachineInspectionTests : IDisposable
             requestId, slings, otherInspector.Id, "inspector", Division((1, "S-1")))));
     }
 
+    // ---- A registered gear keeps no serial number ------------------------------------------------------------------
+
+    [Fact]
+    public async Task ARegisteredItemThatIsAGearKeepsNoSerialNumberButOtherItemsDo()
+    {
+        await using var db = CreateContext();
+        var items = new EquipmentService(new EfEquipmentRepository(db));
+
+        var sling = await items.CreateAsync(new SaveEquipmentRequest { ClientId = clientId, Name = "Chain Sling grade 4", SerialNumber = "CS-0001" });
+        var lift = await items.CreateAsync(new SaveEquipmentRequest { ClientId = clientId, Name = "Scissor Lift", SerialNumber = "SL-9" });
+        var changed = await items.UpdateAsync(sling.Id, new SaveEquipmentRequest { ClientId = clientId, Name = "Chain Sling grade 4", SerialNumber = "CS-0002", Capacity = "2 t" });
+
+        Assert.Null(sling.SerialNumber);
+        Assert.Equal("SL-9", lift.SerialNumber);
+        Assert.Null(changed.SerialNumber);
+        Assert.Equal("2 t", changed.Capacity);
+        Assert.Null(db.Items.Single(item => item.Id == sling.Id).SerialNumber); // nothing was stored
+        Assert.Equal("SL-9", db.Items.Single(item => item.Id == lift.Id).SerialNumber);
+        Assert.Null(GearRules.SerialFor("Eye Bolt", "X-1"));
+        Assert.Equal("X-1", GearRules.SerialFor("Forklift Truck", "X-1"));
+    }
+
     // ---- Gears: one machine, many serial numbers, shared over several certificates ----------------------------------
 
     private static IReadOnlyList<string> Serials(int count, string prefix = "CS-26-") =>
