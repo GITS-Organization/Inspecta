@@ -134,7 +134,7 @@ export class Requests {
         this.search.set(q);
         this.remember(t.id);
         // On a phone the active tab may sit outside the visible part of the strip.
-        setTimeout(() => document.getElementById('tab-' + t.id)?.scrollIntoView({ inline: 'center', block: 'nearest' }));
+        setTimeout(() => document.getElementById('tab-' + t.id)?.scrollIntoView?.({ inline: 'center', block: 'nearest' }));
         this.load(t, q, p);
       });
     });
