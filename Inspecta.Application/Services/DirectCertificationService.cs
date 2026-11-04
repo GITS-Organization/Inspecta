@@ -102,6 +102,7 @@ public sealed class DirectCertificationService(
                 item.Standards,
                 item.Template,
                 CertificateTemplateCatalog.Find(item.Template)?.Name ?? item.Template,
-                item.Gear))
+                item.Gear,
+                item.Kind))
             .ToArray();
 }

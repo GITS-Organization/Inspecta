@@ -817,6 +817,73 @@ public sealed class MachineInspectionTests : IDisposable
 
     // ---- Helpers ------------------------------------------------------------------------------------------------
 
+    // ---- The certificate answers: defaults and opposite pairs ---------------------------------------------------------
+
+    [Fact]
+    public async Task ACertificateStartsWithYesEverywhereExceptTheTwelveMonthsAndTheOppositesOfThePairs()
+    {
+        await Start();
+
+        var form = await Run(service => service.GetFormAsync(requestId, forkliftItemId, inspector.Id, "inspector"));
+
+        Assert.True(form.Answers["within6Months"]);
+        Assert.False(form.Answers["within12Months"]);
+        Assert.False(form.Answers["firstExamination"]);
+        Assert.True(form.Answers["installedCorrectly"]); // the opposite of the first examination
+        Assert.True(form.Answers["examinationScheme"]);
+        Assert.True(form.Answers["exceptionalCircumstances"]);
+        Assert.False(form.Answers["existingDanger"]); // Yes here would mean a defect exists
+        Assert.False(form.Answers["futureDanger"]);
+    }
+
+    [Fact]
+    public async Task FirstExaminationAndInstalledCorrectlyAreAlwaysOppositeAndSoAreTheTwoIntervals()
+    {
+        await Start();
+        async Task<IReadOnlyDictionary<string, bool>> Save(Dictionary<string, bool> answers) =>
+            (await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", new SaveMachineFormRequest { Answers = answers }))).Answers;
+
+        var first = await Save(new() { ["firstExamination"] = true });
+        Assert.False(first["installedCorrectly"]);
+        var installed = await Save(new() { ["installedCorrectly"] = true });
+        Assert.False(installed["firstExamination"]);
+        var six = await Save(new() { ["within6Months"] = false });
+        Assert.True(six["within12Months"]);
+        var twelve = await Save(new() { ["within12Months"] = false });
+        Assert.True(twelve["within6Months"]);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => Save(new() { ["firstExamination"] = true, ["installedCorrectly"] = true }));
+        await Assert.ThrowsAsync<ArgumentException>(() => Save(new() { ["within6Months"] = true, ["within12Months"] = true }));
+        var both = await Save(new() { ["firstExamination"] = false, ["installedCorrectly"] = true });
+        Assert.True(both["installedCorrectly"]);
+    }
+
+    // ---- The name fixes the standard and the kind -------------------------------------------------------------------
+
+    [Fact]
+    public async Task TheNameDecidesTheKindAndTheStandardOfInspection()
+    {
+        Assert.Equal(58, CertificateTemplateCatalog.Items.Count);
+        Assert.Equal(17, CertificateTemplateCatalog.Items.Count(item => item.Kind == CatalogKinds.Gear));
+        Assert.Equal(23, CertificateTemplateCatalog.Items.Count(item => item.Kind == CatalogKinds.Equipment));
+        Assert.Equal(18, CertificateTemplateCatalog.Items.Count(item => item.Kind == CatalogKinds.NonLifting));
+        Assert.Equal(CatalogKinds.NonLifting, CertificateTemplateCatalog.Resolve("Air Compressor").Item!.Kind);
+        Assert.Equal(CatalogKinds.Equipment, CertificateTemplateCatalog.Resolve("Forklift Truck").Item!.Kind);
+        Assert.Equal(["BS EN 361:2002"], CertificateTemplateCatalog.Resolve("Full Body Safety Harness").Item!.Standards);
+        // Only three names have no standard yet.
+        Assert.Equal(["Container", "Ship to Shore Container crane (STS)", "Trailer Truck"],
+            CertificateTemplateCatalog.Items.Where(item => item.Standards.Count == 0).Select(item => item.Name).Order().ToArray());
+
+        await Start();
+        var list = await Run(service => service.ListMachinesAsync(requestId, inspector.Id, "inspector"));
+        var forklift = list.Machines.Single(machine => machine.RequestItemId == forkliftItemId);
+        Assert.Equal(CatalogKinds.Equipment, forklift.Kind);
+        Assert.Equal(CertificateTemplateCatalog.Resolve("Forklift Truck").Item!.Standards, forklift.InspectionStandards);
+        var types = new DirectCertificationService(null!, null!, null!, null!).MachineTypes();
+        Assert.Equal(CatalogKinds.Gear, types.Single(type => type.Name == "Eye Bolt").Kind);
+        Assert.All(types, type => Assert.Contains(type.Kind, new[] { CatalogKinds.Gear, CatalogKinds.Equipment, CatalogKinds.NonLifting }));
+    }
+
     // ---- Gears: quantity is for gears only -------------------------------------------------------------------------
 
     [Fact]

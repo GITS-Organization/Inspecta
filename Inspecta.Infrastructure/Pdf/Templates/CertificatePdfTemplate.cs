@@ -315,7 +315,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
                 {
                     left.Item().Element(content => YesNo(content, "Is this the first examination after installation or assembly at a new site or location?", q.FirstExamination));
                     left.Item().PaddingTop(4).Element(content => YesNo(content, "If the answer to the above question is YES has the equipment been installed correctly?",
-                        q.FirstExamination == true ? q.InstalledCorrectly : null));
+                        q.InstalledCorrectly));
                 });
                 row.RelativeItem().Element(Cell).Column(right =>
                 {

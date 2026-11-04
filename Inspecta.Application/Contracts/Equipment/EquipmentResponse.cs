@@ -26,4 +26,6 @@ public sealed record EquipmentResponse(
     DateTimeOffset? NextInspectionDueAt,
     DateTimeOffset? ArchivedAt,
     string? InspectionStandard = null,
-    string? TestType = null);
+    string? TestType = null,
+    string? Kind = null,
+    IReadOnlyList<string>? InspectionStandards = null);

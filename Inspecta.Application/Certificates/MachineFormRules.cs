@@ -17,6 +17,30 @@ public static class MachineFormRules
         "examinationScheme", "exceptionalCircumstances", "existingDanger", "futureDanger"
     };
 
+    /// <summary>
+    /// What a certificate answers until the inspector changes it: Yes everywhere except "within 12 months", and except "first examination"
+    /// (the opposite of "installed correctly", so one of the two is No) and the two danger questions, where Yes means a defect exists.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, bool> AnswerDefaults = new Dictionary<string, bool>
+    {
+        ["firstExamination"] = false,
+        ["installedCorrectly"] = true,
+        ["within6Months"] = true,
+        ["within12Months"] = false,
+        ["examinationScheme"] = true,
+        ["exceptionalCircumstances"] = true,
+        ["existingDanger"] = false,
+        ["futureDanger"] = false
+    };
+
+    /// <summary>The answers a certificate has: what was saved, and the default for every question that was never answered.</summary>
+    public static Dictionary<string, bool> WithDefaults(IReadOnlyDictionary<string, bool>? saved)
+    {
+        var answers = new Dictionary<string, bool>(AnswerDefaults);
+        foreach (var (key, value) in saved ?? new Dictionary<string, bool>()) answers[key] = value;
+        return answers;
+    }
+
     public static readonly IReadOnlySet<string> TextKeys = new HashSet<string>
     {
         "testType", "conclusion", "defectDescription", "repairsRequired", "testsCarriedOut", "note", "clientRepresentative"
@@ -51,7 +75,7 @@ public static class MachineFormRules
         }
 
         Need("firstExamination", "the answer to \"first examination after installation\"");
-        if (answers.GetValueOrDefault("firstExamination")) Need("installedCorrectly", "the answer to \"installed correctly\"");
+        Need("installedCorrectly", "the answer to \"installed correctly\"");
         Need("within6Months", "the answer to \"within 6 months\"");
         Need("within12Months", "the answer to \"within 12 months\"");
         Need("examinationScheme", "the answer to \"in accordance with an examination scheme\"");

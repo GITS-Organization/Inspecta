@@ -81,7 +81,8 @@ public sealed record MachineSummaryResponse(
     string? QrUrl = null,
     bool IsGear = false,
     Guid? DivisionGroupId = null,
-    int? DivisionTotal = null);
+    int? DivisionTotal = null,
+    string? Kind = null);
 
 public sealed record MachineProgress(int Total, int Submitted, int Approved, int Delivered);
 

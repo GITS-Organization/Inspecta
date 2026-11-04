@@ -93,14 +93,20 @@ public sealed class MachineInspectionService(
         var texts = Merge(certificate.TextsOf(), ReadTexts(form.Texts));
         if (match.Item?.Gear == true) EnsureGearFitsOnePage(technical.GetValueOrDefault("serialNumber") ?? item.SerialNumber, texts);
         var dates = Merge(certificate.DatesOf(), ReadDates(form.Dates));
-        var answers = Merge(certificate.AnswersOf(), ReadAnswers(form.Answers));
+        var answers = Merge(MachineFormRules.WithDefaults(certificate.AnswersOf()), ReadAnswers(form.Answers));
         if (answers.TryGetValue("within6Months", out var six) && !(form.Answers?.ContainsKey("within12Months") ?? false))
             answers["within12Months"] = !six;
         if (answers.TryGetValue("within12Months", out var twelve) && !(form.Answers?.ContainsKey("within6Months") ?? false))
             answers["within6Months"] = !twelve;
         if (answers.TryGetValue("within6Months", out var a6) && answers.TryGetValue("within12Months", out var a12) && a6 == a12)
             throw new ArgumentException("Within 6 months and within 12 months must be opposite answers.");
-        if (!answers.GetValueOrDefault("firstExamination")) answers.Remove("installedCorrectly");
+        // "First examination" and "installed correctly" are always opposite answers, like the two intervals above.
+        var touchedFirst = form.Answers?.ContainsKey("firstExamination") ?? false;
+        var touchedInstalled = form.Answers?.ContainsKey("installedCorrectly") ?? false;
+        if (touchedFirst && !touchedInstalled) answers["installedCorrectly"] = !answers["firstExamination"];
+        if (touchedInstalled && !touchedFirst) answers["firstExamination"] = !answers["installedCorrectly"];
+        if ((touchedFirst || touchedInstalled) && answers["firstExamination"] == answers["installedCorrectly"])
+            throw new ArgumentException("First examination and installed correctly must be opposite answers.");
         if (!answers.GetValueOrDefault("futureDanger")) dates.Remove("futureDangerBy");
 
         certificate.SaveForm(technical, checklist, texts, dates, answers);
@@ -172,7 +178,7 @@ public sealed class MachineInspectionService(
         var template = CertificateTemplateCatalog.Find(certificate.TemplateId) ?? CertificateTemplateCatalog.Basic;
 
         var texts = certificate.TextsOf();
-        var problems = MachineFormRules.Problems(template, certificate.Checklist, texts, certificate.DatesOf(), certificate.AnswersOf(), certificate.FinalResult);
+        var problems = MachineFormRules.Problems(template, certificate.Checklist, texts, certificate.DatesOf(), MachineFormRules.WithDefaults(certificate.AnswersOf()), certificate.FinalResult);
         if (problems.Count > 0)
             throw new AuthException("certificate_incomplete", $"Complete the certificate first. Missing: {string.Join("; ", problems)}.", 409) { Problems = problems };
 
@@ -180,7 +186,7 @@ public sealed class MachineInspectionService(
         var finalTexts = MachineFormRules.WithDefaults(texts);
         if (!finalTexts.ContainsKey("standardOfInspection"))
             finalTexts["standardOfInspection"] = string.Join("\n", StandardsOf(match, equipment));
-        certificate.SaveForm(certificate.Technical, certificate.Checklist, finalTexts, certificate.DatesOf(), certificate.AnswersOf());
+        certificate.SaveForm(certificate.Technical, certificate.Checklist, finalTexts, certificate.DatesOf(), MachineFormRules.WithDefaults(certificate.AnswersOf()));
 
         var inspector = await userRepository.GetByIdAsync(certificate.InspectorId, cancellationToken);
         var preparedBy = inspector?.FullName ?? "Inspector";
@@ -682,7 +688,8 @@ public sealed class MachineInspectionService(
                 certificate is { UsesTemplate: true } ? certificate.QrData : null,
                 match.Item?.Gear == true,
                 item.DivisionGroupId,
-                item.DivisionTotal));
+                item.DivisionTotal,
+                match.Item?.Kind));
         }
 
         var delivered = await DeliveryInfoAsync(request, cancellationToken);
@@ -796,7 +803,7 @@ public sealed class MachineInspectionService(
             fields,
             sections,
             ChecklistValues.All,
-            certificate?.AnswersOf() ?? new Dictionary<string, bool>(),
+            MachineFormRules.WithDefaults(certificate?.AnswersOf()),
             texts,
             ToDateOnly(certificate?.DatesOf() ?? new Dictionary<string, DateTimeOffset>()),
             certificate?.ReviewNote,
@@ -819,7 +826,7 @@ public sealed class MachineInspectionService(
     {
         var texts = MachineFormRules.WithDefaults(certificate.TextsOf());
         var dates = certificate.DatesOf();
-        var answers = certificate.AnswersOf();
+        var answers = MachineFormRules.WithDefaults(certificate.AnswersOf());
         var technical = certificate.Technical;
         var checklist = certificate.Checklist;
 
@@ -956,11 +963,14 @@ public sealed class MachineInspectionService(
     private static string? PrimaryContact(Client? client) =>
         client?.Contacts.OrderByDescending(contact => contact.IsPrimary).FirstOrDefault()?.Name;
 
-    // The standard the machine was registered with wins; otherwise the one the catalogue knows for that kind of machine.
+    // The standard of inspection is fixed by the machine's name in the catalogue; one registered with the machine is only the fallback for a
+    // name the catalogue has no standard for.
     private static IReadOnlyList<string> StandardsOf(TemplateMatch match, Item? equipment) =>
-        !string.IsNullOrWhiteSpace(equipment?.InspectionStandard)
-            ? equipment.InspectionStandard.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            : match.Item?.Standards ?? [];
+        match.Item is { Standards.Count: > 0 } catalogued
+            ? catalogued.Standards
+            : !string.IsNullOrWhiteSpace(equipment?.InspectionStandard)
+                ? equipment.InspectionStandard.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                : [];
 
     // What happened at delivery, shown on the job afterwards: the email that went out, or that it was handed over without one.
     private async Task<MachineDelivery?> DeliveryInfoAsync(InspectionRequest request, CancellationToken cancellationToken)

@@ -43,7 +43,8 @@ public sealed record MachineTypeResponse(
     IReadOnlyList<string> Standards,
     string TemplateKey,
     string TemplateName,
-    bool IsGear);
+    bool IsGear,
+    string Kind = "equipment");
 
 /// <summary>The most a printed certificate takes, so the screen can plan a split before it asks for one.</summary>
 public sealed record SerialLimitsResponse(int MaxCharactersPerCertificate, int MaxLengthPerSerialNumber, int MaxSerialNumbers, int PageBudgetCharacters = 1200);

@@ -24,10 +24,28 @@ public sealed record CertificateTemplate(
 }
 
 /// <summary>
-/// A machine kind known to the catalogue, with the standard(s) it is inspected against. A gear is a lifting accessory
-/// (sling, shackle, hook...) inspected in numbers: its certificate carries a quantity and many serial numbers, and it is not registered as an item.
+/// A machine kind known to the catalogue: its name (the one the screens offer in a list), the standard(s) it is inspected against (fixed by
+/// the name), its template and its <see cref="Kind"/>. A gear is a lifting accessory (sling, shackle, hook...) inspected in numbers: its
+/// certificate carries a quantity and many serial numbers, and it is not registered as an item.
 /// </summary>
-public sealed record CatalogItem(string Name, IReadOnlyList<string> Aliases, IReadOnlyList<string> Standards, string Template, bool Gear = false);
+public sealed record CatalogItem(string Name, IReadOnlyList<string> Aliases, IReadOnlyList<string> Standards, string Template, string Kind = CatalogKinds.Equipment)
+{
+    /// <summary>A gear is counted in numbers and divided into certificates; it is not registered as an item.</summary>
+    public bool Gear => Kind == CatalogKinds.Gear;
+}
+
+/// <summary>The three kinds of machine a catalogue name belongs to.</summary>
+public static class CatalogKinds
+{
+    /// <summary>A lifting accessory: sling, shackle, hook, clamp, harness...</summary>
+    public const string Gear = "gear";
+
+    /// <summary>Lifting equipment: cranes, hoists, jacks, forklifts, lifts...</summary>
+    public const string Equipment = "equipment";
+
+    /// <summary>A machine that does not lift: compressors, generators, loaders, vehicles...</summary>
+    public const string NonLifting = "non_lifting";
+}
 
 /// <summary>The template chosen for a machine, and the catalogue entry when its name was recognised.</summary>
 public sealed record TemplateMatch(CertificateTemplate Template, CatalogItem? Item);

@@ -50,7 +50,9 @@ public sealed record RequestItemResponse(
     int Quantity,
     string? SerialNumber,
     string? IssueDescription,
-    string? Location = null);
+    string? Location = null,
+    string? Kind = null,
+    IReadOnlyList<string>? InspectionStandards = null);
 
 /// <summary>One recorded request status transition.</summary>
 public sealed record RequestHistoryResponse(JobStatus? From, JobStatus To, Guid ActorId, DateTimeOffset At, string? Note);

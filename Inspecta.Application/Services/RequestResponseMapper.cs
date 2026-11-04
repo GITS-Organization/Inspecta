@@ -37,9 +37,14 @@ internal static class RequestResponseMapper
         HasUnreadClientReply: request.HasUnreadClientReply,
         Kind: request.Kind);
 
-    public static RequestItemResponse MapItem(RequestItem item) => new(
-        item.Id, item.EquipmentId, item.Name, item.Type, item.Capacity, item.Quantity,
-        item.SerialNumber, item.IssueDescription, item.Location);
+    // The kind and the standard of inspection follow from the machine's name in the catalogue.
+    public static RequestItemResponse MapItem(RequestItem item)
+    {
+        var catalogued = Certificates.CertificateTemplateCatalog.Resolve(item.Name).Item;
+        return new(
+            item.Id, item.EquipmentId, item.Name, item.Type, item.Capacity, item.Quantity,
+            item.SerialNumber, item.IssueDescription, item.Location, catalogued?.Kind, catalogued?.Standards ?? []);
+    }
 
     public static RequestEmailResponse MapEmail(RequestEmail email) => new(
         email.RequestId,
