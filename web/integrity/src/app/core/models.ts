@@ -127,6 +127,25 @@ export interface MachineList {
   previewZipUrl?: string | null;
 }
 
+/** The details of one machine of a job: what `PUT .../machines/{id}/details` replaces and what a new machine is added with. */
+export interface JobMachineDetails {
+  name: string;
+  quantity: number;
+  type?: string | null;
+  capacity?: string | null;
+  serialNumber?: string | null;
+  manufacturer?: string | null;
+  model?: string | null;
+  location?: string | null;
+  issueDescription?: string | null;
+}
+
+/** `POST .../machines`: a registered machine of the client, or a new one by its details. */
+export type AddJobMachine = { equipmentId: string } | JobMachineDetails;
+
+/** A job's machines can change from the assignment until the certificates are submitted. */
+export const MACHINES_OPEN: JobStatus[] = ['assigned', 'task_accepted', 'in_progress', 'certificate_returned'];
+
 export interface MachineFormField {
   key: string;
   label: string;

@@ -1,19 +1,20 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { MachineDialog } from './machine-dialog';
 import { BackendApi, openBlob, saveBlob } from '../../api/backend.api';
 import { AuthService } from '../../core/auth.service';
-import { MachineList } from '../../core/models';
-import { problemMessage } from '../../core/problem';
+import { MACHINES_OPEN, MachineList, MachineSummary } from '../../core/models';
+import { apiMessage, problemMessage } from '../../core/problem';
 import { ToastService } from '../../core/toast.service';
 import { MACHINE_STATUS_LABEL, formatDate, machineChip, plural } from '../../shared/format';
 
 /** The machines of one job: the inspector starts and continues here; the coordinator opens the approved certificates. */
 @Component({
   selector: 'app-job',
-  imports: [RouterLink],
+  imports: [RouterLink, MachineDialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <a class="back muted" routerLink="/jobs">Back to jobs</a>
+    <a class="back muted" [routerLink]="backLink().path">{{ backLink().label }}</a>
     @if (error(); as msg) {
       <div class="error" role="alert">{{ msg }}</div>
     }
@@ -29,6 +30,9 @@ import { MACHINE_STATUS_LABEL, formatDate, machineChip, plural } from '../../sha
         <div class="actions">
           @if (j.canStartInspection && isInspector()) {
             <button type="button" class="btn go" [disabled]="busy()" (click)="start()">Start inspection</button>
+          }
+          @if (canChange()) {
+            <button type="button" class="btn" [class.ghost]="!j.machines.length" [disabled]="busy()" (click)="adding.set(true)">Add a machine</button>
           }
           @if (isInspector() && j.machines.length) {
             <button type="button" class="btn ghost" [disabled]="busy()" (click)="zip()">Download previews (ZIP)</button>
@@ -52,18 +56,42 @@ import { MACHINE_STATUS_LABEL, formatDate, machineChip, plural } from '../../sha
               @if (m.reviewNote) { <div class="rn">{{ m.reviewNote }}</div> }
             </div>
             <span class="chip" [class]="chipClass(m.status)">{{ statusLabel(m.status) }}</span>
-            @if (isInspector()) {
-              <a class="btn" [class.ghost]="!m.canEdit" [routerLink]="['/jobs', j.requestId, 'machines', m.requestItemId]">{{ m.canEdit ? 'Fill in' : 'Open' }}</a>
-            } @else if (m.pdfUrl) {
-              <button type="button" class="btn ghost" (click)="pdf(m.requestItemId)">Certificate PDF</button>
-            }
+            <div class="macts">
+              @if (isInspector()) {
+                <a class="btn" [class.ghost]="!m.canEdit" [routerLink]="['/jobs', j.requestId, 'machines', m.requestItemId]">{{ m.canEdit ? 'Fill in' : 'Open' }}</a>
+              } @else if (m.pdfUrl) {
+                <button type="button" class="btn ghost" (click)="pdf(m.requestItemId)">Certificate PDF</button>
+              }
+              @if (canEdit(m)) {
+                <button type="button" class="btn ghost small" [disabled]="busy()" (click)="editing.set(m)">Edit</button>
+              }
+              @if (canRemove(m)) {
+                @if (confirmId() === m.requestItemId) {
+                  <button type="button" class="btn warn small" [disabled]="busy()" (click)="remove(m)">Remove it</button>
+                  <button type="button" class="btn ghost small" (click)="confirmId.set(null)">Keep</button>
+                } @else {
+                  <button type="button" class="btn ghost small" [disabled]="busy()" (click)="confirmId.set(m.requestItemId)" [attr.aria-label]="'Remove ' + m.name">Remove</button>
+                }
+              }
+            </div>
           </div>
         } @empty {
-          <p class="empty">This job has no machines.</p>
+          <div class="emptyjob">
+            <h2>No machines in this job yet.</h2>
+            @if (canChange()) {
+              <p class="muted">Add the machines found on site, registered ones or new ones. A new machine is registered for the client at once.</p>
+              <button type="button" class="btn go" (click)="adding.set(true)">Add the first machine</button>
+            } @else {
+              <p class="muted">The machines are added once the inspector is on site.</p>
+            }
+          </div>
         }
       </div>
     } @else if (loading()) {
       <p class="muted empty" role="status">Loading the job…</p>
+    }
+    @if (adding() || editing()) {
+      <app-machine-dialog [requestId]="requestId()" [editing]="editing()" [first]="!!job() && !job()!.machines.length" (done)="changed($event)" (closed)="closeDialog()" />
     }
   `,
   styles: `
@@ -99,6 +127,26 @@ import { MACHINE_STATUS_LABEL, formatDate, machineChip, plural } from '../../sha
         font-size: 16px;
       }
     }
+    .macts {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .emptyjob {
+      border: 1.5px dashed var(--line);
+      border-radius: 12px;
+      padding: 36px 24px;
+      text-align: center;
+      h2 {
+        font-size: 28px;
+        margin-bottom: 6px;
+      }
+      p {
+        max-width: 460px;
+        margin: 0 auto 18px;
+      }
+    }
     .rn {
       color: var(--red);
       font-size: 13px;
@@ -126,6 +174,15 @@ export class Job implements OnInit {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly isInspector = computed(() => this.auth.role() === 'inspector');
+  protected readonly adding = signal(false);
+  protected readonly editing = signal<MachineSummary | null>(null);
+  protected readonly confirmId = signal<string | null>(null);
+  /** Inspector, coordinator, technical manager and admin may change the machines while the job is under way. */
+  protected readonly canChange = computed(() => !!this.auth.role() && MACHINES_OPEN.includes(this.job()?.requestStatus as never));
+  protected readonly backLink = computed(() => {
+    const r = this.auth.role();
+    return r === 'inspector' ? { path: '/jobs', label: 'Back to jobs' } : r === 'coordinator' ? { path: '/queue', label: 'Back to jobs' } : { path: '/review', label: 'Back to review' };
+  });
 
   protected readonly latestNote = computed(() => {
     const j = this.job();
@@ -134,6 +191,44 @@ export class Job implements OnInit {
 
   ngOnInit(): void {
     this.load();
+  }
+
+  /** A machine whose certificate was submitted is locked until the review. */
+  protected canEdit(m: MachineSummary): boolean {
+    return this.canChange() && (m.status === 'not_started' || m.status === 'draft' || m.status === 'returned');
+  }
+  /** Once a certificate was started (even as a draft) the machine stays. */
+  protected canRemove(m: MachineSummary): boolean {
+    return this.canChange() && m.status === 'not_started';
+  }
+
+  protected changed(list: MachineList): void {
+    this.job.set(list);
+    const wasEdit = !!this.editing();
+    this.closeDialog();
+    this.toast.show(wasEdit ? 'The machine was changed.' : 'The machine was added.');
+  }
+  protected closeDialog(): void {
+    this.adding.set(false);
+    this.editing.set(null);
+  }
+
+  protected remove(m: MachineSummary): void {
+    this.busy.set(true);
+    this.error.set(null);
+    this.api.removeMachine(this.requestId(), m.requestItemId).subscribe({
+      next: (list) => {
+        this.job.set(list);
+        this.confirmId.set(null);
+        this.busy.set(false);
+        this.toast.show('The machine was removed from the job.');
+      },
+      error: (e: unknown) => {
+        this.confirmId.set(null);
+        this.busy.set(false);
+        this.error.set(apiMessage(e));
+      },
+    });
   }
 
   protected statusLabel = (s: Parameters<typeof machineChip>[0]) => MACHINE_STATUS_LABEL[s];

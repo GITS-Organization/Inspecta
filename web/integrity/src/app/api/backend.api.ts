@@ -3,7 +3,9 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
+  AddJobMachine,
   DashboardOverview,
+  JobMachineDetails,
   MachineForm,
   MachineList,
   QueueFilter,
@@ -11,6 +13,8 @@ import {
   ReturnJobRequest,
   SaveMachineFormRequest,
 } from '../core/models';
+import { Equipment } from './coordinator.models';
+import { MachineType } from './certification.api';
 
 /** Typed wrappers of the endpoints the screens use. Paths are relative to `/api/v1`. */
 @Injectable({ providedIn: 'root' })
@@ -53,6 +57,28 @@ export class BackendApi {
 
   submitMachine(requestId: string, itemId: string): Observable<MachineForm> {
     return this.http.post<MachineForm>(`${this.base}/quotation-queue/${requestId}/machines/${itemId}/submit`, {});
+  }
+
+  // ---- changing the machines of a job that is under way
+  availableMachines(requestId: string): Observable<Equipment[]> {
+    return this.http.get<Equipment[]>(`${this.base}/quotation-queue/${requestId}/available-machines`);
+  }
+
+  /** A registered machine (`equipmentId`) or a new one by its details. Answers 201 with the new list. */
+  addMachine(requestId: string, body: AddJobMachine): Observable<MachineList> {
+    return this.http.post<MachineList>(`${this.base}/quotation-queue/${requestId}/machines`, body);
+  }
+
+  editMachine(requestId: string, itemId: string, body: JobMachineDetails): Observable<MachineList> {
+    return this.http.put<MachineList>(`${this.base}/quotation-queue/${requestId}/machines/${itemId}/details`, body);
+  }
+
+  removeMachine(requestId: string, itemId: string): Observable<MachineList> {
+    return this.http.delete<MachineList>(`${this.base}/quotation-queue/${requestId}/machines/${itemId}`);
+  }
+
+  machineTypes(): Observable<MachineType[]> {
+    return this.http.get<MachineType[]>(`${this.base}/certifications/machine-types`);
   }
 
   approveAll(requestId: string): Observable<MachineList> {
