@@ -1,0 +1,146 @@
+<a class="back muted" [routerLink]="['/jobs', requestId()]">Back to the job</a>
+@if (error(); as msg) {
+  <div class="error" role="alert">{{ msg }}</div>
+}
+@if (form(); as f) {
+  <div class="head">
+    <div>
+      <span class="chip" [class.a]="f.status === 'draft'" [class.r]="f.status === 'returned'" [class.g]="f.status === 'submitted' || f.status === 'approved'">{{ f.templateName }}</span>
+      <h1 class="title">{{ f.header.inspectedItem }}</h1>
+      <p class="muted">{{ f.header.clientName }}@if (f.header.clientAddress) { · {{ f.header.clientAddress }} }</p>
+    </div>
+  </div>
+
+  @if (f.reviewNote) {
+    <div class="note-box" role="note"><b>Your technical manager asks you to fix</b><p>{{ f.reviewNote }}</p></div>
+  }
+
+  <div class="create">
+    <form (submit)="$event.preventDefault()">
+      @if (!editable()) {
+        <p class="muted readonly">This certificate is read-only now.</p>
+      }
+      <fieldset [disabled]="!editable() || busy()">
+        <section class="step">
+          <h3>Details</h3>
+          <div class="row2">
+            @for (fd of f.fields; track fd.key) {
+              <div class="field">
+                <label [for]="'f-' + fd.key">{{ fd.label }}</label>
+                <input [id]="'f-' + fd.key" type="text" [value]="fields()[fd.key] ?? ''" (input)="setField(fd.key, $any($event.target).value)" />
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="step">
+          <h3>Examination</h3>
+          <div class="row3">
+            <div class="field">
+              <label for="d-examination">Examined on</label>
+              <input id="d-examination" type="date" [value]="dates()['examination'] ?? ''" (input)="setDate('examination', $any($event.target).value)" />
+            </div>
+            <div class="field">
+              <label for="d-next">Next examination</label>
+              <input id="d-next" type="date" [value]="dates()['nextExamination'] ?? ''" (input)="setDate('nextExamination', $any($event.target).value)" />
+            </div>
+            <div class="field">
+              <label for="res">Result</label>
+              <select id="res" [value]="result() ?? ''" (change)="setResult($any($event.target).value)">
+                <option value="" disabled>Choose a result</option>
+                <option value="satisfactory">Satisfactory</option>
+                <option value="unsatisfactory">Unsatisfactory</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        @for (s of f.checklist; track s.key) {
+          <section class="step">
+            <h3>{{ s.title }}</h3>
+            <div class="checks">
+              @for (i of s.items; track i.key) {
+                <div class="check">
+                  <span id="l-{{ i.key }}">{{ i.label }}</span>
+                  <span class="yn" role="group" [attr.aria-labelledby]="'l-' + i.key">
+                    <button type="button" [attr.aria-pressed]="rows()[i.key]?.value === 'yes'" (click)="setRow(i.key, { value: 'yes' })">Yes</button>
+                    <button type="button" class="bad" [attr.aria-pressed]="rows()[i.key]?.value === 'no'" (click)="setRow(i.key, { value: 'no' })">No</button>
+                    <button type="button" [attr.aria-pressed]="rows()[i.key]?.value === 'na'" (click)="setRow(i.key, { value: 'na' })">N/A</button>
+                  </span>
+                  @if (rows()[i.key]?.value === 'no') {
+                    <div class="why">
+                      <label [for]="'n-' + i.key" class="sr">Why is the answer No?</label>
+                      <input [id]="'n-' + i.key" type="text" placeholder="Say what is wrong (required)" [value]="rows()[i.key]?.note ?? ''" (input)="setRow(i.key, { note: $any($event.target).value })" />
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        <section class="step">
+          <h3>Questions</h3>
+          <div class="checks">
+            @for (k of answerKeys; track k) {
+              <div class="check">
+                <span [id]="'a-' + k">{{ answerLabels[k] }}</span>
+                <span class="yn" role="group" [attr.aria-labelledby]="'a-' + k">
+                  <button type="button" [attr.aria-pressed]="answers()[k] === true" (click)="setAnswer(k, true)">Yes</button>
+                  <button type="button" [attr.aria-pressed]="answers()[k] === false" (click)="setAnswer(k, false)">No</button>
+                </span>
+              </div>
+            }
+          </div>
+          @if (answers()['futureDanger']) {
+            <div class="field fd">
+              <label for="d-future">Danger expected by</label>
+              <input id="d-future" type="date" [value]="dates()['futureDangerBy'] ?? ''" (input)="setDate('futureDangerBy', $any($event.target).value)" />
+            </div>
+          }
+        </section>
+
+        <section class="step">
+          <h3>Findings</h3>
+          @for (k of textKeys; track k) {
+            <div class="field">
+              <label [for]="'t-' + k">{{ textLabels[k] }}</label>
+              @if (isLong(k)) {
+                <textarea [id]="'t-' + k" [value]="texts()[k] ?? ''" (input)="setText(k, $any($event.target).value)"></textarea>
+              } @else {
+                <input [id]="'t-' + k" type="text" [value]="texts()[k] ?? ''" (input)="setText(k, $any($event.target).value)" />
+              }
+            </div>
+          }
+        </section>
+      </fieldset>
+
+      @if (editable()) {
+        @if (f.missing.length) {
+          <div class="missing" role="status"><b>Still missing before you can submit:</b><ul>@for (m of f.missing; track m) { <li>{{ m }}</li> }</ul></div>
+        }
+        <div class="submitbar">
+          <button type="button" class="btn go" [disabled]="busy()" (click)="submit()">Send to technical manager</button>
+          <button type="button" class="btn ghost" [disabled]="busy()" (click)="save()">Save draft</button>
+          <span class="muted sum">{{ answered() }} of {{ total() }} checks answered@if (saved()) { · saved }</span>
+        </div>
+      }
+    </form>
+
+    <div class="side">
+      <div class="muted lp">Live preview</div>
+      <app-certificate-paper
+        [client]="f.header.clientName"
+        [item]="f.header.inspectedItem"
+        [manufacturer]="manufacturerValue()"
+        [serial]="serialValue()"
+        [examined]="formatDate(dates()['examination'])"
+        [next]="formatDate(dates()['nextExamination'])"
+        [number]="f.certificateNumber"
+        [stamp]="stamp()"
+      />
+    </div>
+  </div>
+} @else if (loading()) {
+  <p class="muted empty" role="status">Loading the machine…</p>
+}

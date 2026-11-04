@@ -1,0 +1,28 @@
+<a class="skip" href="#main">Skip to content</a>
+<div class="app">
+  <aside class="rail">
+    <img class="logo" [src]="branding.logo()" alt="Integrity" (error)="branding.logoFailed()" />
+    <nav aria-label="Main">
+      @for (item of items(); track item.label) {
+        <a [routerLink]="item.path" routerLinkActive="active" ariaCurrentWhenActive="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path [attr.d]="item.icon" /></svg>
+          {{ item.label }}
+          @if (item.badge && reviewCount()) {
+            <span class="chip a badge" [attr.aria-label]="reviewCount() + ' waiting'">{{ reviewCount() }}</span>
+          }
+        </a>
+      }
+    </nav>
+    <div class="who">
+      <b>{{ auth.user()?.fullName }}</b>
+      <span class="co">{{ roleLabel() }}</span>
+      <button type="button" class="signout" (click)="auth.logout()">Sign out</button>
+    </div>
+  </aside>
+  <main id="main" tabindex="-1">
+    <router-outlet />
+  </main>
+</div>
+@if (toast.message(); as msg) {
+  <div class="toast" role="status">{{ msg }}</div>
+}

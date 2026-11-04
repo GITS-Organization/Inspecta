@@ -1,0 +1,196 @@
+<div class="head">
+  <div>
+    <span class="direct">Direct certificate · no quotation</span>
+    <h1 class="title">Create certification</h1>
+    <p class="muted">Pick a machine or add a new one, fill the certificate, and it goes straight to your technical manager.</p>
+  </div>
+</div>
+
+@if (submitted(); as msg) {
+  <div class="ok" role="status">{{ msg }}</div>
+}
+@if (error(); as msg) {
+  <div class="error" role="alert">{{ msg }}</div>
+}
+
+<div class="create">
+  <div>
+    <section class="step done">
+      <div class="dot" aria-hidden="true">1</div>
+      <div>
+        <h3 id="s1">Client</h3>
+        <div class="field limit">
+          <label for="cl" class="sr">Client</label>
+          <select id="cl" [value]="clientId()" (change)="pickClient($any($event.target).value)" aria-labelledby="s1">
+            @for (c of clients(); track c.id) {
+              <option [value]="c.id" [selected]="c.id === clientId()">{{ c.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="step">
+      <div class="dot" aria-hidden="true">2</div>
+      <div>
+        <h3>Machine</h3>
+        <div class="seg" role="group" aria-label="Machine source">
+          <button type="button" [attr.aria-pressed]="source() === 'ex'" (click)="source.set('ex')">Pick a registered machine</button>
+          <button type="button" [attr.aria-pressed]="source() === 'new'" (click)="source.set('new')">Add a new machine</button>
+        </div>
+        @if (source() === 'ex') {
+          <div class="field">
+            <label for="q" class="sr">Search machines</label>
+            <input id="q" type="text" placeholder="Search by name or serial number" [value]="query()" (input)="query.set($any($event.target).value)" />
+          </div>
+          <div class="pick" role="group" aria-label="Registered machines">
+            @for (m of filtered(); track m.id) {
+              <button type="button" [attr.aria-pressed]="m.id === machineId()" (click)="machineId.set(m.id)">
+                <span>
+                  <b>{{ m.name }}</b><br />
+                  <span class="muted">
+                    @if (m.kind === 'gear') { Lifting gear · quantity and serial numbers } @else { S/N {{ m.serialNumber || '—' }}{{ m.manufacturer ? ' · ' + m.manufacturer : '' }} }
+                  </span>
+                </span>
+                @if (m.overdue) { <span class="chip r">Overdue</span> }
+                @else if (m.kind === 'gear') { <span class="chip">Gear</span> }
+                @else if (m.lastExaminedOn) { <span class="chip">Last: {{ formatDate(m.lastExaminedOn) }}</span> }
+              </button>
+            } @empty {
+              <p class="muted none">{{ query() ? 'No machine matches your search.' : 'This client has no registered machines. Add a new one.' }}</p>
+            }
+          </div>
+        } @else {
+          <div class="row2">
+            <div class="field">
+              <label for="nn">Machine name</label>
+              <input id="nn" type="text" placeholder="e.g. Scissor lift" [value]="nm().name" (input)="patchNew({ name: $any($event.target).value })" />
+            </div>
+            <div class="field">
+              <label for="nt">Certificate type</label>
+              <select id="nt" [value]="nm().kind" (change)="patchNew({ kind: $any($event.target).value })">
+                <option value="standard">Standard machine</option>
+                <option value="gear">Lifting gear (quantity and serial numbers)</option>
+              </select>
+              <small>The type decides which questions the certificate asks.</small>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="nm">Manufacturer</label>
+              <input id="nm" type="text" [value]="nm().manufacturer" (input)="patchNew({ manufacturer: $any($event.target).value })" />
+            </div>
+            @if (!isGear()) {
+              <div class="field">
+                <label for="ns">Serial number</label>
+                <input id="ns" type="text" [value]="nm().serialNumber" (input)="patchNew({ serialNumber: $any($event.target).value })" />
+              </div>
+            }
+          </div>
+          <small class="muted">The machine is saved to the client's list when you send the certificate.</small>
+        }
+      </div>
+    </section>
+
+    <section class="step">
+      <div class="dot" aria-hidden="true">3</div>
+      <div>
+        <h3>Examination</h3>
+        <div class="row3 top">
+          <div class="field">
+            <label for="d1">Examined on</label>
+            <input id="d1" type="date" [value]="examinedOn()" (input)="examinedOn.set($any($event.target).value)" />
+          </div>
+          <div class="field">
+            <label for="d2">Next examination</label>
+            <input id="d2" type="date" [value]="nextOn()" (input)="nextOn.set($any($event.target).value)" />
+          </div>
+          <div class="field">
+            <label for="rs">Result</label>
+            <select id="rs" [value]="result()" (change)="result.set($any($event.target).value)">
+              <option value="satisfactory">Satisfactory</option>
+              <option value="unsatisfactory">Unsatisfactory</option>
+            </select>
+          </div>
+        </div>
+
+        @if (isGear()) {
+          <div class="row2">
+            <div class="field">
+              <label for="gq">Quantity</label>
+              <input id="gq" type="number" min="0" max="5000" [value]="quantity()" (input)="setQuantity($any($event.target).value)" />
+            </div>
+            <div class="field">
+              <label for="gp">Serial number prefix</label>
+              <input id="gp" type="text" [value]="prefix()" (input)="setPrefix($any($event.target).value)" />
+              <small>Fills the list below with numbered serials. You can edit the list afterwards.</small>
+            </div>
+          </div>
+          <div class="field">
+            <label for="gs">Serial numbers</label>
+            <textarea id="gs" [value]="serialsText()" (input)="editSerials($any($event.target).value)" placeholder="Paste or type one per line, or a range like CS-26-0001 to CS-26-1000" aria-describedby="gsn"></textarea>
+            <small id="gsn">
+              {{ serials().length }} serial numbers@if (parsed().duplicates) { · {{ parsed().duplicates }} repeated and ignored }
+            </small>
+          </div>
+          <div class="splitbox">
+            <div class="muted sm">How many certificates?</div>
+            <div class="big"><span>{{ count() }}</span> {{ count() === 1 ? 'certificate' : 'certificates' }}</div>
+            <input type="range" min="1" [max]="maxCount()" [value]="count()" aria-label="Number of certificates" (input)="setCount($any($event.target).value)" />
+            <div class="muted">
+              @if (serials().length) { {{ serials().length }} items → about {{ parts()[0].length }} serial numbers on each certificate } @else { Add serial numbers to split them }
+            </div>
+            <div class="fit" [class.over]="fill() > 1" aria-hidden="true"><i [style.width.%]="min100(fill())"></i></div>
+            <small class="muted" role="status">
+              @if (fill() > 1) { Too many for one certificate. The serial numbers would not fit, so add certificates. }
+              @else { Fits on the printed certificate ({{ round(fill() * 100) }}% of the serial box). }
+            </small>
+          </div>
+        } @else {
+          <label class="cl-label" id="cl-label">Checklist</label>
+          <div class="checks" role="group" aria-labelledby="cl-label">
+            @for (d of checklistDefs(); track d.key) {
+              <div>
+                <span [id]="'ck-' + d.key">{{ d.label }}</span>
+                <span class="yn" role="group" [attr.aria-labelledby]="'ck-' + d.key">
+                  <button type="button" [attr.aria-pressed]="checks()[d.key] === 'yes'" (click)="setCheck(d.key, 'yes')">Yes</button>
+                  <button type="button" class="bad" [attr.aria-pressed]="checks()[d.key] === 'no'" (click)="setCheck(d.key, 'no')">No</button>
+                  <button type="button" [attr.aria-pressed]="checks()[d.key] === 'na'" (click)="setCheck(d.key, 'na')">N/A</button>
+                </span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </section>
+
+    <div class="submitbar">
+      <button type="button" class="btn go" [disabled]="busy()" (click)="send(true)">Send to technical manager</button>
+      <button type="button" class="btn ghost" [disabled]="busy()" (click)="send(false)">Save draft</button>
+      <span class="muted sm">{{ summary() }}</span>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="muted lp">Live preview @if (isGear() && parts().length > 1) { · certificate {{ page() + 1 }} of {{ parts().length }} }</div>
+    <app-certificate-paper
+      [client]="clientName()"
+      [item]="machineName()"
+      [manufacturer]="manufacturer()"
+      [serialLabel]="isGear() ? 'Quantity' : 'Serial number'"
+      [serial]="serialPreview()"
+      [examined]="formatDate(examinedOn())"
+      [next]="formatDate(nextOn())"
+      [stamp]="unsafe() ? 'no' : 'safe'"
+      [serialsText]="isGear() ? part().join(', ') : ''"
+      [serialsCount]="part().length"
+    />
+    @if (isGear() && parts().length > 1) {
+      <div class="pager">
+        <button type="button" class="btn ghost small" [disabled]="page() === 0" (click)="turn(-1)">Previous</button>
+        <button type="button" class="btn ghost small" [disabled]="page() >= parts().length - 1" (click)="turn(1)">Next</button>
+        <span class="muted sm">Certificate <b>{{ page() + 1 }}</b> of {{ parts().length }}</span>
+      </div>
+    }
+  </div>
+</div>

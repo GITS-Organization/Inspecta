@@ -1,0 +1,40 @@
+<section class="login">
+  <div class="left">
+    <img class="brand" [src]="branding.logo()" alt="Integrity for inspection and engineering solutions" (error)="branding.logoFailed()" />
+    <div>
+      <h1>Every certificate, checked and on file.</h1>
+      <p>Sign in to inspect, review and hand over certificates your clients can verify with a scan.</p>
+      <div class="stage" aria-hidden="true">
+        <app-certificate-paper
+          class="float"
+          client="Al Noor Industries"
+          item="Air compressor"
+          manufacturer="Atlas Copco"
+          serial="AC-2291"
+          examined="14 May 2026"
+          next="14 May 2027"
+          number="CERT-2026-0412"
+        />
+      </div>
+    </div>
+  </div>
+  <div class="right">
+    <form (ngSubmit)="submit()" #f="ngForm">
+      <h2>Sign in</h2>
+      <p class="muted lead">Use the email your technical manager or admin gave you.</p>
+      @if (error(); as msg) {
+        <div class="error" role="alert">{{ msg }}</div>
+      }
+      <div class="field">
+        <label for="em">Email</label>
+        <input id="em" name="email" type="email" autocomplete="username" required [(ngModel)]="email" placeholder="name@integrity-eg.com" />
+      </div>
+      <div class="field">
+        <label for="pw">Password</label>
+        <input id="pw" name="password" type="password" autocomplete="current-password" required [(ngModel)]="password" placeholder="Your password" />
+      </div>
+      <button class="btn" type="submit" [disabled]="busy() || f.invalid">{{ busy() ? 'Signing in…' : 'Sign in' }}</button>
+      <p class="muted forgot">Forgot your password? Ask your technical manager or admin to reset it.</p>
+    </form>
+  </div>
+</section>

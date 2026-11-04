@@ -1,0 +1,76 @@
+<a class="back muted" routerLink="/review">Back to the list</a>
+@if (error(); as msg) {
+  <div class="error" role="alert">{{ msg }}</div>
+}
+@if (job(); as j) {
+  <div class="head">
+    <div>
+      <span class="chip a">{{ j.canReview ? 'Waiting for your review' : 'Not waiting for review' }}</span>
+      <h1 class="title">{{ j.clientName }}</h1>
+      <p class="muted">{{ j.location }} · {{ plural(j.machines.length, 'machine') }}</p>
+    </div>
+  </div>
+
+  <div class="review">
+    <div>
+      <div class="mlist" role="group" aria-label="Machines in this job">
+        @for (m of j.machines; track m.requestItemId) {
+          <button type="button" [attr.aria-pressed]="selected()?.requestItemId === m.requestItemId" (click)="selectedId.set(m.requestItemId)">
+            <b>{{ m.name }}</b>
+            @if (m.result) {
+              <span class="chip" [class]="resultChip(m.result)">{{ resultLabel[m.result] }}</span>
+            } @else {
+              <span class="chip">{{ statusLabel[m.status] }}</span>
+            }
+            <span class="muted">
+              @if (m.quantity > 1) { {{ m.quantity }} pieces } @else if (m.serialNumber) { S/N {{ m.serialNumber }}{{ m.manufacturer ? ' · ' + m.manufacturer : '' }} }
+            </span>
+            <span class="muted">{{ formatDate(m.examinationDate) }}</span>
+          </button>
+        }
+      </div>
+
+      @if (j.reviewBlockers?.length) {
+        <div class="blockers" role="note">
+          <b>This job cannot be approved yet:</b>
+          <ul>@for (b of j.reviewBlockers; track b) { <li>{{ b }}</li> }</ul>
+        </div>
+      }
+
+      <div class="field note">
+        <label for="rn">Note for the inspector</label>
+        <textarea id="rn" [value]="note()" (input)="note.set($any($event.target).value); noteMissing.set(false)" placeholder="Only needed when you send the job back." [attr.aria-invalid]="noteMissing()" aria-describedby="rn-help"></textarea>
+        <small id="rn-help" [class.bad]="noteMissing()">{{ noteMissing() ? 'Write what the inspector should fix before you send the job back.' : 'The note is shown on every machine of the job.' }}</small>
+      </div>
+
+      <div class="bar">
+        <button type="button" class="btn go" [disabled]="busy() || !j.canApprove" (click)="approve()">Approve all {{ plural(certificateCount(), 'certificate') }}</button>
+        <button type="button" class="btn warn" [disabled]="busy() || !j.canReview" (click)="sendBack()">Send back to inspector</button>
+        <button type="button" class="btn ghost" (click)="zip()">Download previews (ZIP)</button>
+      </div>
+    </div>
+
+    @if (selected(); as m) {
+      <div class="side">
+        <app-certificate-paper
+          [client]="j.clientName"
+          [item]="m.name"
+          [manufacturer]="m.manufacturer"
+          [serial]="serialText(m)"
+          [serialLabel]="m.quantity > 1 ? 'Quantity' : 'Serial number'"
+          [examined]="formatDate(m.examinationDate)"
+          [next]="formatDate(m.nextExaminationDate)"
+          [number]="m.certificateNumber"
+          [stamp]="stamp(m)"
+        />
+        <p class="muted small-note">This is how it prints. The number and QR code are added when you approve.</p>
+        <div class="side-actions">
+          <button type="button" class="btn ghost small" (click)="pdf(m)">Open the PDF</button>
+          <a class="btn ghost small" [routerLink]="['/jobs', j.requestId, 'machines', m.requestItemId]">See the answers</a>
+        </div>
+      </div>
+    }
+  </div>
+} @else if (loading()) {
+  <p class="muted empty" role="status">Loading the job…</p>
+}

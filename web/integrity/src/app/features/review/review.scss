@@ -1,0 +1,84 @@
+.back {
+  display: inline-block;
+  margin-bottom: 18px;
+  text-decoration: underline;
+}
+.title {
+  margin-top: 8px;
+}
+.review {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 44px;
+  align-items: start;
+}
+.mlist button {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 4px;
+  cursor: pointer;
+  &[aria-pressed='true'] {
+    background: var(--green-bg);
+    box-shadow: inset 3px 0 0 var(--green);
+    padding-left: 14px;
+  }
+  b {
+    color: var(--ink);
+  }
+}
+.note {
+  margin-top: 14px;
+}
+.bad {
+  color: var(--red) !important;
+}
+.blockers {
+  background: var(--amber-bg);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 16px;
+  b {
+    color: var(--amber);
+  }
+  ul {
+    margin: 4px 0 0 18px;
+    padding: 0;
+  }
+}
+.bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 26px;
+  padding-top: 20px;
+  border-top: 1.5px solid var(--ink);
+}
+.side {
+  position: sticky;
+  top: 24px;
+}
+.small-note {
+  margin-top: 12px;
+  font-size: 13px;
+}
+.side-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1080px) {
+  .review {
+    grid-template-columns: 1fr;
+  }
+  .side {
+    position: static;
+  }
+}

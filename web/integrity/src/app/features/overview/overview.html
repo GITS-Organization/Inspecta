@@ -1,0 +1,112 @@
+<div class="head">
+  <div>
+    <h1>Overview</h1>
+    @if (data(); as d) {
+      <p class="muted">{{ formatDate(d.period.from) }} to {{ formatDate(d.period.to) }} · all clients</p>
+    }
+  </div>
+  <a class="btn go" routerLink="/create">Create certification</a>
+</div>
+
+@if (error(); as msg) {
+  <div class="error" role="alert">{{ msg }} <button class="btn ghost small" type="button" (click)="load()">Try again</button></div>
+} @else if (loading()) {
+  <p class="muted" role="status">Loading the overview…</p>
+} @else if (data(); as d) {
+  @if (pipeline().segments.length) {
+    <div class="pipeline" role="img" [attr.aria-label]="'Requests by stage: ' + pipeline().segments.length + ' stages'">
+      @for (s of pipeline().segments; track s.label) {
+        <i [style.flex]="s.count" [style.background]="s.color">{{ s.label }} {{ s.count }}</i>
+      }
+    </div>
+  } @else {
+    <p class="muted">No requests yet.</p>
+  }
+  <div class="legend">
+    <span>Requests that reached the offer stage or went on: <strong>{{ pipeline().reachedOffer }}</strong></span>
+  </div>
+
+  <div class="section">
+    <header><h2>Needs your attention</h2></header>
+    <div class="attn">
+      <a routerLink="/review"><div class="n a">{{ d.attention.jobsAwaitingReview }}</div><div>Jobs waiting for your review</div></a>
+      <div class="cell"><div class="n r">{{ d.attention.equipmentOverdue }}</div><div>Items past their examination date</div></div>
+      <div class="cell"><div class="n">{{ d.attention.equipmentDueSoon }}</div><div>Items due in the next 30 days</div></div>
+    </div>
+  </div>
+
+  <div class="section cols">
+    <div>
+      <header class="colhead">
+        <h2>Certificates by month</h2>
+        <span class="legend">
+          <span><b style="background: var(--green)"></b>Safe</span>
+          <span><b style="background: var(--amber)"></b>With conditions</span>
+          <span><b style="background: var(--red)"></b>Not safe</span>
+        </span>
+      </header>
+      @if (months().length) {
+        <div class="bars">
+          @for (m of months(); track m.label + $index) {
+            <div role="img" [attr.aria-label]="m.aria">
+              <i [style.height.%]="m.notSafe" style="background: var(--red)"></i>
+              <i [style.height.%]="m.conditions" style="background: var(--amber)"></i>
+              <i [style.height.%]="m.safe" style="background: var(--green)"></i>
+            </div>
+          }
+        </div>
+        <div class="bm" aria-hidden="true">
+          @for (m of months(); track m.label + $index) {
+            <span>{{ m.label }}</span>
+          }
+        </div>
+      }
+      <p class="sum">
+        <b>{{ d.certificates.thisMonth }}</b> certificates this month, <span class="muted">{{ d.certificates.thisMonth >= d.certificates.previousMonth ? 'up from' : 'down from' }} {{ d.certificates.previousMonth }} last month.</span>
+      </p>
+    </div>
+    <div>
+      <header><h2>Inspectors</h2></header>
+      @if (d.inspectorWorkload.length) {
+        <table>
+          <thead><tr><th>Name</th><th class="num">Certificates</th><th class="num">Quotations</th></tr></thead>
+          <tbody>
+            @for (i of d.inspectorWorkload; track i.inspectorId) {
+              <tr>
+                <td>{{ i.name }}<div class="load" aria-hidden="true"><i [style.width.%]="(i.certificates / maxWorkload()) * 100"></i></div></td>
+                <td class="num">{{ i.certificates }}</td>
+                <td class="num">{{ i.quotationsDone }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="empty">No inspectors in your team yet.</p>
+      }
+    </div>
+  </div>
+
+  <div class="section">
+    <header>
+      <h2>Items to examine again</h2>
+      <span class="muted">{{ d.equipmentDue.total }} in all</span>
+    </header>
+    @if (d.equipmentDue.items.length) {
+      <table>
+        <thead><tr><th>Item</th><th>Client</th><th>Due</th><th><span class="sr">Status</span></th></tr></thead>
+        <tbody>
+          @for (it of d.equipmentDue.items; track it.id) {
+            <tr>
+              <td><b>{{ it.name }}</b>@if (it.serialNumber) { <span class="muted"> · {{ it.serialNumber }}</span> }</td>
+              <td>{{ it.clientName }}</td>
+              <td>{{ formatDate(it.dueAt) }}</td>
+              <td><span class="chip" [class.r]="it.overdue" [class.a]="!it.overdue">{{ dueChip(it.daysUntilDue) }}</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <p class="empty">Nothing is due. Every item is up to date.</p>
+    }
+  </div>
+}
