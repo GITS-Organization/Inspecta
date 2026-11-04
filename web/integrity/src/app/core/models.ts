@@ -89,6 +89,12 @@ export interface MachineSummary {
   certificateNumber: string | null;
   canEdit: boolean;
   canReview: boolean;
+  /** The catalogue says this machine is a gear (inspected in numbers). */
+  isGear?: boolean;
+  /** Machines of one gear that was divided into certificates share this id. */
+  divisionGroupId?: string | null;
+  /** The quantity of the gear before the first division. */
+  divisionTotal?: number | null;
   result?: InspectionResult | null;
   type?: string | null;
   templateName?: string | null;
@@ -142,6 +148,12 @@ export interface JobMachineDetails {
 
 /** `POST .../machines`: a registered machine of the client, or a new one by its details. */
 export type AddJobMachine = { equipmentId: string } | JobMachineDetails;
+
+/** One certificate of a divided gear: its own quantity and its serial numbers written together as free text. */
+export interface CertificateShare {
+  quantity: number;
+  serialNumbers: string;
+}
 
 /** A job's machines can change from the assignment until the certificates are submitted. */
 export const MACHINES_OPEN: JobStatus[] = ['assigned', 'task_accepted', 'in_progress', 'certificate_returned'];

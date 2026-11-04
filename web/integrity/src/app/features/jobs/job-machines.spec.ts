@@ -18,6 +18,8 @@ const list = (machines: MachineSummary[], requestStatus: JobStatus = 'in_progres
   canStartInspection: false, canDeliver: false, machines,
 });
 
+const types = [{ name: 'Sling', aliases: ['Web sling'], standards: [], templateKey: 'gear', templateName: 'Gear', isGear: true }];
+
 type Internals = { adding: { set(v: boolean): void }; editing: { set(v: MachineSummary | null): void }; remove(m: MachineSummary): void };
 
 describe('Job: machines added on site', () => {
@@ -37,6 +39,7 @@ describe('Job: machines added on site', () => {
     f.componentRef.setInput('requestId', 'r1');
     f.detectChanges();
     ctrl.expectOne(base + '/machines').flush(list(machines, status));
+    ctrl.match(`${api}/certifications/machine-types`).forEach((r) => r.flush(types));
     f.detectChanges();
     const el = f.nativeElement as HTMLElement;
     return { f, el, c: f.componentInstance as unknown as Internals, text: () => el.textContent ?? '', btn: (t: string) => [...el.querySelectorAll('button')].find((b) => b.textContent?.trim() === t) };
@@ -74,7 +77,6 @@ describe('Job: machines added on site', () => {
       { id: 'e1', clientId: 'c1', name: 'Forklift 3t', serialNumber: 'FL-77', model: 'H30', capacity: '3 t', category: null, manufacturer: null, locationInsideClientLocation: null },
       { id: 'e2', clientId: 'c1', name: 'Hoist', serialNumber: null, model: null, capacity: null, category: null, manufacturer: null, locationInsideClientLocation: 'Shed 2' },
     ]);
-    ctrl.expectOne(`${api}/certifications/machine-types`).flush([]);
     f.detectChanges();
     expect(text()).toContain('Forklift 3t');
     const q = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>('#md-q')!;
@@ -99,7 +101,6 @@ describe('Job: machines added on site', () => {
     btn('Add the first machine')!.click();
     f.detectChanges();
     ctrl.expectOne(base + '/available-machines').flush([]);
-    ctrl.expectOne(`${api}/certifications/machine-types`).flush([{ name: 'Sling', aliases: ['Web sling'], standards: [], templateKey: 'gear', templateName: 'Gear', isGear: true }]);
     f.detectChanges();
     const el = f.nativeElement as HTMLElement;
     const set = (id: string, v: string) => {
@@ -142,7 +143,6 @@ describe('Job: machines added on site', () => {
     const { f, btn, text } = open([machine('a', 'draft', { type: 'Crane', capacity: '5 t' })]);
     btn('Edit')!.click();
     f.detectChanges();
-    ctrl.expectOne(`${api}/certifications/machine-types`).flush([]);
     const el = f.nativeElement as HTMLElement;
     expect(el.querySelector<HTMLInputElement>('#md-n')!.value).toBe('Crane a');
     const n = el.querySelector<HTMLInputElement>('#md-n')!;

@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   AddJobMachine,
+  CertificateShare,
   DashboardOverview,
   JobMachineDetails,
   MachineForm,
@@ -15,6 +16,7 @@ import {
 } from '../core/models';
 import { Equipment } from './coordinator.models';
 import { MachineType } from './certification.api';
+import { SerialLimits } from '../shared/serials';
 
 /** Typed wrappers of the endpoints the screens use. Paths are relative to `/api/v1`. */
 @Injectable({ providedIn: 'root' })
@@ -75,6 +77,15 @@ export class BackendApi {
 
   removeMachine(requestId: string, itemId: string): Observable<MachineList> {
     return this.http.delete<MachineList>(`${this.base}/quotation-queue/${requestId}/machines/${itemId}`);
+  }
+
+  /** Divides a gear into certificates (replaces the group until one of them is started). */
+  divideMachine(requestId: string, itemId: string, certificates: CertificateShare[]): Observable<MachineList> {
+    return this.http.put<MachineList>(`${this.base}/quotation-queue/${requestId}/machines/${itemId}/certificates`, { certificates });
+  }
+
+  serialLimits(): Observable<SerialLimits> {
+    return this.http.get<SerialLimits>(`${this.base}/certifications/serial-limits`);
   }
 
   machineTypes(): Observable<MachineType[]> {
