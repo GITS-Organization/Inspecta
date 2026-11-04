@@ -28,7 +28,9 @@ public sealed record QuoteListQuery(
     int Page = 1,
     int PageSize = QuoteListQuery.DefaultPageSize,
     Guid? InspectorId = null,
-    bool? Assigned = null)
+    bool? Assigned = null,
+    DateOnly? From = null,
+    DateOnly? To = null)
 {
     public const int DefaultPageSize = 50;
     public const int MaxPageSize = 100;

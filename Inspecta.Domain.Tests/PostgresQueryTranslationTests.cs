@@ -57,6 +57,9 @@ public sealed class PostgresQueryTranslationTests
                 .SelectMany(
                     item => item.History.Where(entry => entry.ToStatus == JobStatus.CertificateApproved && entry.OccurredAt >= DateTimeOffset.UtcNow && entry.OccurredAt <= DateTimeOffset.UtcNow),
                     (item, entry) => new { item.Id, Inspector = item.InspectorId!.Value, entry.OccurredAt }).ToQueryString(),
+            // The date filters of the request and quotation lists.
+            db.Requests.AsNoTracking().Where(item => item.ReceivedAt >= DateTimeOffset.UtcNow && item.ReceivedAt < DateTimeOffset.UtcNow.AddDays(1)).ToQueryString(),
+            db.Quotes.AsNoTracking().Where(quote => quote.CreatedAt >= DateTimeOffset.UtcNow && quote.CreatedAt < DateTimeOffset.UtcNow.AddDays(1)).ToQueryString(),
             // The clients of the jobs an inspector still has in hand (EfRequestRepository.ListClientIdsInHandAsync).
             db.Requests.AsNoTracking()
                 .Where(item => item.InspectorId == manager && item.ClientId != null && new[] { JobStatus.Assigned, JobStatus.InProgress }.Contains(item.Status))

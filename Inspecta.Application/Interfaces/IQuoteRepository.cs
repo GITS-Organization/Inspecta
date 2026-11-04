@@ -15,6 +15,8 @@ namespace Inspecta.Application.Interfaces;
 /// <param name="Assigned">True for requests that have an inspector, false for those still without one.</param>
 /// <param name="RequestStatuses">Only quotations whose request is in one of these statuses.</param>
 /// <param name="CurrentOnly">Leave out revisions that a newer one replaced.</param>
+/// <param name="CreatedFrom">Only quotations made at or after this moment.</param>
+/// <param name="CreatedUntil">Only quotations made before this moment.</param>
 public sealed record QuoteListFilter(
     Guid? CoordinatorId = null,
     Guid? ManagerId = null,
@@ -27,7 +29,9 @@ public sealed record QuoteListFilter(
     string? Search = null,
     int Skip = 0,
     int Take = int.MaxValue,
-    IReadOnlyCollection<Inspecta.Domain.Enums.JobStatus>? RequestStatuses = null);
+    IReadOnlyCollection<Inspecta.Domain.Enums.JobStatus>? RequestStatuses = null,
+    DateTimeOffset? CreatedFrom = null,
+    DateTimeOffset? CreatedUntil = null);
 
 public interface IQuoteRepository
 {

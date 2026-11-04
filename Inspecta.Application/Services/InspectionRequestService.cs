@@ -1,3 +1,4 @@
+using Inspecta.Application.Contracts;
 using Inspecta.Application.Contracts.Requests;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
@@ -180,8 +181,11 @@ public sealed class InspectionRequestService(
     {
         var pageSize = Math.Clamp(query.PageSize, 1, RequestListQuery.MaxPageSize);
         var page = Math.Max(query.Page, 1);
+        var (receivedFrom, receivedUntil) = DateRange.Bounds(query.From, query.To);
         var filter = ScopeFor(actorId, role, query.ManagerId) with
         {
+            ReceivedFrom = receivedFrom,
+            ReceivedUntil = receivedUntil,
             Triage = query.Triage ?? RequestTriage.Request,
             Status = query.Status,
             ExcludeStatuses = query.Status is null ? InQuotation : null,
@@ -196,9 +200,13 @@ public sealed class InspectionRequestService(
         Guid actorId,
         string role,
         Guid? managerId = null,
+        DateOnly? from = null,
+        DateOnly? to = null,
         CancellationToken cancellationToken = default)
     {
-        var counts = await requestRepository.CountAsync(ScopeFor(actorId, role, managerId), cancellationToken);
+        var (receivedFrom, receivedUntil) = DateRange.Bounds(from, to);
+        var counts = await requestRepository.CountAsync(
+            ScopeFor(actorId, role, managerId) with { ReceivedFrom = receivedFrom, ReceivedUntil = receivedUntil }, cancellationToken);
         return new RequestSummaryResponse(
             counts.Where(item => item.Triage == RequestTriage.Request && !InQuotation.Contains(item.Status)).Sum(item => item.Count),
             counts.Where(item => item.Triage == RequestTriage.Maybe).Sum(item => item.Count),

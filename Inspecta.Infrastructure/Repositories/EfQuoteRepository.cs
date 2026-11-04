@@ -40,6 +40,8 @@ public sealed class EfQuoteRepository(InspectaDbContext dbContext) : IQuoteRepos
             query = query.Where(quote => allowed.Contains(quote.Request!.Status));
         }
         if (filter.CurrentOnly) query = query.Where(quote => quote.SupersededAt == null);
+        if (filter.CreatedFrom is { } createdFrom) query = query.Where(quote => quote.CreatedAt >= createdFrom);
+        if (filter.CreatedUntil is { } createdUntil) query = query.Where(quote => quote.CreatedAt < createdUntil);
         if (filter.Open is true) query = query.Where(quote => quote.Status == QuoteStatus.Open);
         if (filter.Open is false) query = query.Where(quote => quote.Status != QuoteStatus.Open);
         if (filter.Sent is true) query = query.Where(quote => quote.SentAt != null);

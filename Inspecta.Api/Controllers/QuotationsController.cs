@@ -26,7 +26,8 @@ public sealed class QuotationsController(IQuoteService quoteService) : Controlle
     /// <c>GET /requests/{requestId}/quotes/{id}</c> and work on it with <c>PUT</c> there while <c>canEdit</c> is true.
     /// To hand out work: <c>stage=accepted&amp;assigned=false</c> lists the accepted quotations still waiting for an
     /// inspector, and <c>inspectorId=...</c> lists what one inspector has been given. Rows show <c>inspectorName</c> and
-    /// <c>scheduledAt</c> once assigned.
+    /// <c>scheduledAt</c> once assigned. <c>from</c> and <c>to</c> (<c>yyyy-MM-dd</c>, either or both, both days included, UTC) keep only
+    /// the quotations made in that period (<c>createdAt</c>).
     /// </remarks>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<QuoteSummaryResponse>>(StatusCodes.Status200OK)]
@@ -37,6 +38,8 @@ public sealed class QuotationsController(IQuoteService quoteService) : Controlle
         [FromQuery] string? q,
         [FromQuery] Guid? inspectorId,
         [FromQuery] bool? assigned,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
         [FromQuery] bool includeSuperseded = false,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = QuoteListQuery.DefaultPageSize,
@@ -52,7 +55,9 @@ public sealed class QuotationsController(IQuoteService quoteService) : Controlle
             Page: page,
             PageSize: pageSize,
             InspectorId: inspectorId,
-            Assigned: assigned);
+            Assigned: assigned,
+            From: from,
+            To: to);
         return Ok(await quoteService.ListVisibleAsync(actorId, role, query, cancellationToken));
     }
 

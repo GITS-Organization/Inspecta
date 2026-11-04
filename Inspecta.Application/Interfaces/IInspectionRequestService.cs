@@ -11,7 +11,7 @@ public interface IInspectionRequestService
     Task<RequestResponse> AssignWithoutQuotationAsync(Guid requestId, Guid actorId, string role, AssignWithoutQuotationRequest request, CancellationToken cancellationToken = default);
     Task<RequestResponse> CreateFromEmailAsync(CreateInspectionRequest request, string senderEmail, string emailBody, Guid coordinatorId, Guid? managerId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RequestResponse>> ListVisibleAsync(Guid actorId, string role, RequestListQuery query, CancellationToken cancellationToken = default);
-    Task<RequestSummaryResponse> GetSummaryAsync(Guid actorId, string role, Guid? managerId = null, CancellationToken cancellationToken = default);
+    Task<RequestSummaryResponse> GetSummaryAsync(Guid actorId, string role, Guid? managerId = null, DateOnly? from = null, DateOnly? to = null, CancellationToken cancellationToken = default);
     Task<RequestResponse> ConfirmAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MachineSuggestionResponse>> SuggestMachinesAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default);
     Task<RequestResponse> AutofillAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default);

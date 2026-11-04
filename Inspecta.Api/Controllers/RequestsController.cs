@@ -21,7 +21,7 @@ public sealed class RequestsController(IInspectionRequestService requestService,
     /// <c>q</c> searches client, location, subject and sender. <c>pageSize</c> defaults to 50 (max 100).
     /// Requests whose quotation is open (<c>quote_draft</c>, <c>quote_sent</c>, <c>counter_offer_sent</c>, <c>client_countered</c>) are not in the default list: they
     /// are worked on in <c>GET /quotations</c>. Ask for them with an explicit <c>status</c>.
-    /// Admin may narrow the global view with <c>managerId</c>. Use <c>GET /requests/summary</c> for tab counts.
+    /// Admin may narrow the global view with <c>managerId</c>. <c>from</c> and <c>to</c> (<c>yyyy-MM-dd</c>, either or both, both days included, UTC) keep only the requests received in that period; <c>GET /requests/summary</c> takes the same two dates, so the tab counts follow the filter.
     /// </remarks>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<RequestResponse>>(StatusCodes.Status200OK)]
@@ -30,6 +30,8 @@ public sealed class RequestsController(IInspectionRequestService requestService,
         [FromQuery] string? triage,
         [FromQuery] string? status,
         [FromQuery] string? q,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = RequestListQuery.DefaultPageSize,
         CancellationToken cancellationToken = default)
@@ -41,17 +43,20 @@ public sealed class RequestsController(IInspectionRequestService requestService,
             string.IsNullOrWhiteSpace(status) ? null : DomainEnumParser.ParseJobStatus(status),
             q,
             page,
-            pageSize);
+            pageSize,
+            from,
+            to);
         return Ok(await requestService.ListVisibleAsync(actorId, role, query, cancellationToken));
     }
 
     /// <summary>Counts of real requests (in total and per status) and of maybe emails visible to the current user.</summary>
     [HttpGet("summary")]
     [ProducesResponseType<RequestSummaryResponse>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<RequestSummaryResponse>> Summary([FromQuery] Guid? managerId, CancellationToken cancellationToken)
+    public async Task<ActionResult<RequestSummaryResponse>> Summary(
+        [FromQuery] Guid? managerId, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, CancellationToken cancellationToken)
     {
         if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
-        return Ok(await requestService.GetSummaryAsync(actorId, role, managerId, cancellationToken));
+        return Ok(await requestService.GetSummaryAsync(actorId, role, managerId, from, to, cancellationToken));
     }
 
     /// <summary>Turn a maybe email into a real request. Owning coordinator only.</summary>

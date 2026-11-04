@@ -29,7 +29,7 @@ public sealed class QuotationQueueController(IQuoteService quoteService, IInspec
     /// sees their own email requests and the team's manual ones; a manager sees their team; Admin sees everything (narrow
     /// it with <c>managerId</c>). An inspector only gets their own jobs, without prices, so <c>unassigned</c> is always empty
     /// for them. <c>inspectorId</c> narrows to the jobs of one inspector. <c>q</c> searches client, quotation number and
-    /// location. <c>pageSize</c> defaults to 50 (max 100). Every row has <c>requestId</c> for the next calls.
+    /// location. <c>from</c> and <c>to</c> (<c>yyyy-MM-dd</c>, either or both, both days included, UTC) keep only the jobs whose quotation was made in that period. <c>pageSize</c> defaults to 50 (max 100). Every row has <c>requestId</c> for the next calls.
     /// </remarks>
     /// <param name="status">Which queue: <c>unassigned</c>, <c>assigned</c>, <c>certify</c>, or one part of certify: <c>review</c>, <c>returned</c>, <c>approved</c>, <c>delivered</c>. Leave out for all.</param>
     [HttpGet]
@@ -40,6 +40,8 @@ public sealed class QuotationQueueController(IQuoteService quoteService, IInspec
         [FromQuery] Guid? managerId,
         [FromQuery] Guid? inspectorId,
         [FromQuery] string? q,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = QuoteListQuery.DefaultPageSize,
         CancellationToken cancellationToken = default)
@@ -54,7 +56,7 @@ public sealed class QuotationQueueController(IQuoteService quoteService, IInspec
             queue = parsed;
         }
 
-        var query = new QuotationQueueQuery(managerId, inspectorId, q, page, pageSize);
+        var query = new QuotationQueueQuery(managerId, inspectorId, q, page, pageSize, from, to);
         return Ok(await quoteService.ListQueueAsync(actorId, role, queue, query, cancellationToken));
     }
 
@@ -70,13 +72,15 @@ public sealed class QuotationQueueController(IQuoteService quoteService, IInspec
         [FromQuery] Guid? managerId,
         [FromQuery] Guid? inspectorId,
         [FromQuery] string? q,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = QuoteListQuery.DefaultPageSize,
         CancellationToken cancellationToken = default)
     {
         var role = User.FindFirst("role")?.Value ?? string.Empty;
         if (!Guid.TryParse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value, out var actorId)) return Unauthorized();
-        var query = new QuotationQueueQuery(managerId, inspectorId, q, page, pageSize);
+        var query = new QuotationQueueQuery(managerId, inspectorId, q, page, pageSize, from, to);
         return Ok(await quoteService.ListQueueAsync(actorId, role, QuotationQueue.Review, query, cancellationToken));
     }
 

@@ -413,6 +413,22 @@ Content-Type: application/json
 
 { "name": "Test client (renamed)" }
 
+### Lists filtered by dates (both days included): requests, their tab counts, quotations and the queue
+GET {{baseUrl}}/api/v1/requests?from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}
+
+###
+GET {{baseUrl}}/api/v1/requests/summary?from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}
+
+###
+GET {{baseUrl}}/api/v1/quotations?stage=sent&from=2026-11-01
+Authorization: Bearer {{token}}
+
+###
+GET {{baseUrl}}/api/v1/quotation-queue?status=assigned&from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}
+
 ### Client with a contract: give the new request to an inspector without a quotation (request.canAssignWithoutQuotation)
 POST {{baseUrl}}/api/v1/requests/{{requestId}}/assign-without-quotation
 Authorization: Bearer {{token}}

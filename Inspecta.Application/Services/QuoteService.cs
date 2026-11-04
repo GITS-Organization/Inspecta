@@ -1,3 +1,4 @@
+using Inspecta.Application.Contracts;
 using Inspecta.Application.Contracts.Quotations;
 using Inspecta.Application.Contracts.Requests;
 using Inspecta.Application.Exceptions;
@@ -44,6 +45,7 @@ public sealed class QuoteService(
         var isInspector = role == "inspector";
         var pageSize = Math.Clamp(query.PageSize, 1, QuoteListQuery.MaxPageSize);
         var page = Math.Max(query.Page, 1);
+        var (createdFrom, createdUntil) = DateRange.Bounds(query.From, query.To);
         var filter = isInspector
             ? new QuoteListFilter(
                 InspectorId: actorId,
@@ -79,6 +81,7 @@ public sealed class QuoteService(
             Search: string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim(),
             Skip: (page - 1) * pageSize,
             Take: pageSize);
+        filter = filter with { CreatedFrom = createdFrom, CreatedUntil = createdUntil };
         return await ListSummariesAsync(filter, actorId, role, cancellationToken);
     }
 
@@ -93,6 +96,7 @@ public sealed class QuoteService(
         var pageSize = Math.Clamp(query.PageSize, 1, QuoteListQuery.MaxPageSize);
         var page = Math.Max(query.Page, 1);
         var isInspector = role == "inspector";
+        var (queueFrom, queueUntil) = DateRange.Bounds(query.From, query.To);
         var filter = new QuoteListFilter(
             CoordinatorId: role == "coordinator" ? actorId : null,
             ManagerId: role == "admin" ? query.ManagerId : null,
@@ -104,7 +108,9 @@ public sealed class QuoteService(
             Take: pageSize,
             RequestStatuses: queue is { } one
                 ? QuotationQueues.Statuses(one)
-                : QuotationQueues.AllStatuses);
+                : QuotationQueues.AllStatuses,
+            CreatedFrom: queueFrom,
+            CreatedUntil: queueUntil);
         return await ListSummariesAsync(filter, actorId, role, cancellationToken);
     }
 

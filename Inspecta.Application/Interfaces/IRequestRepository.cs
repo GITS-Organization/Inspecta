@@ -13,6 +13,8 @@ namespace Inspecta.Application.Interfaces;
 /// <param name="Status">Only requests in this workflow status.</param>
 /// <param name="ExcludeStatuses">Leave out requests in these workflow statuses.</param>
 /// <param name="Search">Case-insensitive text matched against client, subject, sender and location.</param>
+/// <param name="ReceivedFrom">Only requests received at or after this moment.</param>
+/// <param name="ReceivedUntil">Only requests received before this moment.</param>
 /// <param name="Skip">Rows to skip, for paging.</param>
 /// <param name="Take">Maximum rows to return.</param>
 public sealed record RequestListFilter(
@@ -24,7 +26,9 @@ public sealed record RequestListFilter(
     IReadOnlyCollection<JobStatus>? ExcludeStatuses = null,
     string? Search = null,
     int Skip = 0,
-    int Take = int.MaxValue);
+    int Take = int.MaxValue,
+    DateTimeOffset? ReceivedFrom = null,
+    DateTimeOffset? ReceivedUntil = null);
 
 /// <summary>Number of visible requests in one triage and status bucket.</summary>
 public sealed record RequestCount(RequestTriage Triage, JobStatus Status, int Count);

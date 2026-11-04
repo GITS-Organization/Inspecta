@@ -96,6 +96,40 @@ public sealed class MailTriageTests
     }
 
     [Fact]
+    public void TheDateFilterIncludesBothDaysInUtcAndRefusesAnEndBeforeTheStart()
+    {
+        var (from, until) = Application.Contracts.DateRange.Bounds(new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 3));
+        Assert.Equal(new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero), from);
+        Assert.Equal(new DateTimeOffset(2026, 11, 4, 0, 0, 0, TimeSpan.Zero), until); // the 3rd is included, so the 4th starts the excluded part
+
+        Assert.Equal((null, null), Application.Contracts.DateRange.Bounds(null, null));
+        Assert.Null(Application.Contracts.DateRange.Bounds(new DateOnly(2026, 11, 1), null).Until);
+        Assert.Null(Application.Contracts.DateRange.Bounds(null, new DateOnly(2026, 11, 1)).From);
+        Assert.Equal(Application.Contracts.DateRange.Bounds(new DateOnly(2026, 11, 2), new DateOnly(2026, 11, 2)).From!.Value.AddDays(1),
+            Application.Contracts.DateRange.Bounds(new DateOnly(2026, 11, 2), new DateOnly(2026, 11, 2)).Until);
+        Assert.Throws<ArgumentException>(() => Application.Contracts.DateRange.Bounds(new DateOnly(2026, 11, 3), new DateOnly(2026, 11, 1)));
+    }
+
+    [Fact]
+    public async Task TheDatesReachTheRequestListAndTheTabCounts()
+    {
+        var repository = new FakeRepository();
+        var service = new InspectionRequestService(repository, null!);
+
+        await service.ListVisibleAsync(CoordinatorId, "technical_manager",
+            new Application.Contracts.Requests.RequestListQuery(From: new DateOnly(2026, 11, 1), To: new DateOnly(2026, 11, 3)));
+        Assert.Equal(new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero), repository.LastFilter!.ReceivedFrom);
+        Assert.Equal(new DateTimeOffset(2026, 11, 4, 0, 0, 0, TimeSpan.Zero), repository.LastFilter.ReceivedUntil);
+
+        await service.GetSummaryAsync(CoordinatorId, "technical_manager", null, new DateOnly(2026, 10, 1), null);
+        Assert.Equal(new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero), repository.LastFilter.ReceivedFrom);
+        Assert.Null(repository.LastFilter.ReceivedUntil);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.ListVisibleAsync(CoordinatorId, "technical_manager",
+            new Application.Contracts.Requests.RequestListQuery(From: new DateOnly(2026, 11, 3), To: new DateOnly(2026, 11, 1))));
+    }
+
+    [Fact]
     public async Task ListDefaultsToRealRequestsAndClampsPaging()
     {
         var repository = new FakeRepository();

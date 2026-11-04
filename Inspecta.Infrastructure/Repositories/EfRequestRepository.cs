@@ -119,6 +119,8 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
             query = query.Where(item => item.Source != RequestSource.Email || item.CoordinatorId == coordinatorId);
         if (filter.ManagerId is Guid managerId) query = query.Where(item => item.ManagerId == managerId);
         if (filter.Triage is RequestTriage triage) query = query.Where(item => item.Triage == triage);
+        if (filter.ReceivedFrom is { } receivedFrom) query = query.Where(item => item.ReceivedAt >= receivedFrom);
+        if (filter.ReceivedUntil is { } receivedUntil) query = query.Where(item => item.ReceivedAt < receivedUntil);
         return query;
     }
 

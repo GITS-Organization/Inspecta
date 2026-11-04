@@ -76,4 +76,6 @@ public sealed record QuotationQueueQuery(
     Guid? InspectorId = null,
     string? Search = null,
     int Page = 1,
-    int PageSize = QuoteListQuery.DefaultPageSize);
+    int PageSize = QuoteListQuery.DefaultPageSize,
+    DateOnly? From = null,
+    DateOnly? To = null);
