@@ -17,7 +17,10 @@ public sealed class RequestEquipmentRegistrar(IEquipmentCatalog catalog, bool cr
         if (request.ManagerId is not Guid managerId || !request.CanEditDetails) return;
         await EnsureMachinesBelongToTheClientAsync(request, cancellationToken);
 
-        var unmatched = request.Items.Where(item => item.EquipmentId is null).ToList();
+        // Gears (slings, shackles, hooks...) are inspected in numbers and are not kept as registered items.
+        var unmatched = request.Items
+            .Where(item => item.EquipmentId is null && Certificates.CertificateTemplateCatalog.Resolve(item.Name).Item?.Gear != true)
+            .ToList();
         if (unmatched.Count == 0) return;
 
         var clientId = request.ClientId ?? await ResolveClientAsync(request, managerId, cancellationToken);

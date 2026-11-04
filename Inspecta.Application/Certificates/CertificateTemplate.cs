@@ -23,8 +23,11 @@ public sealed record CertificateTemplate(
         Checklist.SelectMany(section => section.Items.Select(item => $"{section.Key}.{item.Key}"));
 }
 
-/// <summary>A machine kind known to the catalogue, with the standard(s) it is inspected against.</summary>
-public sealed record CatalogItem(string Name, IReadOnlyList<string> Aliases, IReadOnlyList<string> Standards, string Template);
+/// <summary>
+/// A machine kind known to the catalogue, with the standard(s) it is inspected against. A gear is a lifting accessory
+/// (sling, shackle, hook...) inspected in numbers: its certificate carries a quantity and many serial numbers, and it is not registered as an item.
+/// </summary>
+public sealed record CatalogItem(string Name, IReadOnlyList<string> Aliases, IReadOnlyList<string> Standards, string Template, bool Gear = false);
 
 /// <summary>The template chosen for a machine, and the catalogue entry when its name was recognised.</summary>
 public sealed record TemplateMatch(CertificateTemplate Template, CatalogItem? Item);

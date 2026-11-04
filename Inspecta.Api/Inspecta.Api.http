@@ -402,6 +402,34 @@ Content-Type: application/json
 
 { "name": "Test client (renamed)" }
 
+### Certification: the machine kinds the catalogue knows (isGear marks the gears)
+GET {{baseUrl}}/api/v1/certifications/machine-types
+Authorization: Bearer {{token}}
+
+### Certification: how many serial numbers one certificate takes
+GET {{baseUrl}}/api/v1/certifications/serial-limits
+Authorization: Bearer {{token}}
+
+### Certification: create a certificate without a quotation (inspector, technical manager, Admin)
+POST {{baseUrl}}/api/v1/certifications
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clientId": "{{clientId}}",
+  "machines": [
+    { "name": "Chain Sling grade 4", "quantity": 40 },
+    { "name": "Forklift Truck", "equipmentId": "{{equipmentId}}", "capacity": "3 ton" }
+  ]
+}
+
+### Gears: divide a machine over several certificates (certificates is optional)
+POST {{baseUrl}}/api/v1/quotation-queue/{{requestId}}/machines/{{requestItemId}}/split
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "serialNumbers": [ "CS-26-0001", "CS-26-0002", "CS-26-0003" ], "certificates": 2 }
+
 ### Admin: archive a client (default) or delete it for good with ?permanent=true
 DELETE {{baseUrl}}/api/v1/admin/clients/{{clientId}}?permanent=true
 Authorization: Bearer {{token}}

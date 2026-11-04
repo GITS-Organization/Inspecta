@@ -18,6 +18,9 @@ public interface IMachineInspectionService
 
     Task<MachineFormResponse> SaveFormAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, SaveMachineFormRequest form, CancellationToken cancellationToken = default);
 
+    /// <summary>Divides one machine over several certificates, sharing its serial numbers out in order.</summary>
+    Task<MachineListResponse> SplitAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, SplitMachineRequest split, CancellationToken cancellationToken = default);
+
     Task<MachineFormResponse> SubmitAsync(Guid requestId, Guid requestItemId, Guid actorId, string role, CancellationToken cancellationToken = default);
 
     /// <summary>Approves the whole job once every machine is submitted; the technical manager never approves part of a job.</summary>

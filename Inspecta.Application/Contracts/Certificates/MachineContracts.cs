@@ -78,7 +78,8 @@ public sealed record MachineSummaryResponse(
     DateOnly? ExaminationDate = null,
     DateOnly? NextExaminationDate = null,
     string? PdfUrl = null,
-    string? QrUrl = null);
+    string? QrUrl = null,
+    bool IsGear = false);
 
 public sealed record MachineProgress(int Total, int Submitted, int Approved, int Delivered);
 

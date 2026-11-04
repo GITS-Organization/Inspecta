@@ -91,6 +91,36 @@ public sealed class RequestItem
         IssueDescription = string.IsNullOrWhiteSpace(issueDescription) ? null : issueDescription.Trim();
     }
 
+    /// <summary>The same machine with another quantity and serial numbers: one share of a gear that is split over several certificates.</summary>
+    public RequestItem CopyWith(int quantity, string? serialNumber)
+    {
+        if (quantity < 1) throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be at least one.");
+        return new RequestItem
+        {
+            Id = Guid.NewGuid(),
+            EquipmentId = EquipmentId,
+            Name = Name,
+            Type = Type,
+            Category = Category,
+            Manufacturer = Manufacturer,
+            Model = Model,
+            Capacity = Capacity,
+            PrNumber = PrNumber,
+            Location = Location,
+            Quantity = quantity,
+            SerialNumber = serialNumber?.Trim(),
+            IssueDescription = IssueDescription
+        };
+    }
+
+    /// <summary>Gives the item its share of a split: the quantity and the serial numbers it now stands for.</summary>
+    public void SetShare(int quantity, string? serialNumber)
+    {
+        if (quantity < 1) throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be at least one.");
+        Quantity = quantity;
+        SerialNumber = serialNumber?.Trim();
+    }
+
     public void MatchEquipment(Guid equipmentId)
     {
         if (equipmentId == Guid.Empty)

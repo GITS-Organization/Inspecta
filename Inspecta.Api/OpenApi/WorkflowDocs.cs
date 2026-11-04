@@ -159,6 +159,22 @@ public static class WorkflowDocs
             **When:** the inspection has to move. This is the only change an inspector can make to a job; the coordinator, a manager or Admin can do it too.
             **How:** `PUT /quotation-queue/{requestId}/inspection-date` with `scheduledAt` and an optional `note`. Allowed while the job is `assigned` or `task_accepted`; after the work started it is refused with `409`. The change is written to the request history.
             """),
+        [Key<CertificationsController>(nameof(CertificationsController.Create))] = new(4.6, "Queue 4b · Create a certificate without a quotation",
+            """
+            **When:** an inspector (or the technical manager or Admin) inspects a machine for a client with no request and no quotation: the **Create certification** tab.
+            **How:** `POST /certifications` with `clientId`, an optional `location` (the client's when left out) and `machines`: each one a registered machine (`equipmentId`) or a new one (`name`, `quantity`, `capacity`, `serialNumber`... like a request item). New machines are registered for the client, except **gears** (slings, shackles, hooks...: see `GET /certifications/machine-types`), which are not. Admin may pass `managerId`.
+            The answer is the job's machine list (like `start-inspection`): the job is already `in_progress` with the caller as its inspector. Continue with steps 7 to 9 (open, save, submit each machine); when all are submitted the technical manager reviews it in the usual way (step 12). Coordinators get `403`.
+            """),
+        [Key<CertificationsController>(nameof(CertificationsController.MachineTypes))] = new(4.7, "Queue 4c · The machine kinds the catalogue knows",
+            "**How:** `GET /certifications/machine-types` lists each kind (`name`, `aliases`, `standards`, `templateKey`, `templateName`) and `isGear`: a gear is inspected in numbers (a quantity and many serial numbers) and is not registered as an item. Offer it when a new machine is added."),
+        [Key<CertificationsController>(nameof(CertificationsController.SerialLimits))] = new(4.8, "Queue 4d · How many serial numbers a certificate takes",
+            "**How:** `GET /certifications/serial-limits`: `maxCharactersPerCertificate` (the printed serial box), `maxLengthPerSerialNumber` and `maxSerialNumbers` (for one division). A certificate whose `serialNumber` is longer is refused on save, so divide the machine first (step 8b)."),
+        [Key<MachineInspectionController>(nameof(MachineInspectionController.Split))] = new(8.5, "Queue 8b · Divide a machine into several certificates",
+            """
+            **When:** a gear is inspected in numbers (for example 1000 slings with their serial numbers) and one certificate cannot list them all. **Who:** the assigned inspector, before the machine's certificate is started.
+            **How:** `POST /quotation-queue/{requestId}/machines/{requestItemId}/split` with `serialNumbers` (one per entry, no commas, no repeats, at most 60 characters each and 5000 in all) and optionally `certificates`. Without it the fewest certificates that fit are made (a certificate prints at most 600 characters of serial numbers; see `GET /certifications/serial-limits`). The serial numbers are shared out in order, nearly equal; the machine keeps the first share and each other share becomes a new machine of the job (same name, capacity...; `quantity` = its serial numbers, `serialNumber` = them joined by `, `). The answer is the new machine list. Then fill and submit each machine as usual.
+            `400` when the serial numbers do not fit on the chosen number of certificates (the message says the fewest), `409 machine_already_started` once its certificate was saved, `409 not_divisible` for a machine without a serial number field.
+            """),
         [Key<MachineInspectionController>(nameof(MachineInspectionController.StartInspection))] = new(5, "Queue 5 · Inspector: start the inspection",
             """
             **When:** the inspector arrives and begins. **Who:** the assigned inspector (the technical manager and Admin can too).

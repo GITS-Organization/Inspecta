@@ -817,6 +817,216 @@ public sealed class MachineInspectionTests : IDisposable
 
     // ---- Helpers ------------------------------------------------------------------------------------------------
 
+    // ---- Gears: one machine, many serial numbers, shared over several certificates ----------------------------------
+
+    private static IReadOnlyList<string> Serials(int count, string prefix = "CS-26-") =>
+        Enumerable.Range(1, count).Select(number => prefix + number.ToString("0000")).ToArray();
+
+    [Fact]
+    public async Task ADivisionSharesTheSerialNumbersOverCertificatesInOrder()
+    {
+        await Start();
+
+        var list = await Run(service => service.SplitAsync(requestId, chainItemId, inspector.Id, "inspector",
+            new SplitMachineRequest { SerialNumbers = Serials(10), Certificates = 3 }));
+
+        var chains = list.Machines.Where(machine => machine.Name == "Chain Block").OrderBy(machine => machine.SerialNumber).ToList();
+        Assert.Equal(3, chains.Count);
+        Assert.Equal([4, 3, 3], chains.Select(machine => machine.Quantity).ToArray());
+        Assert.Equal("CS-26-0001, CS-26-0002, CS-26-0003, CS-26-0004", chains[0].SerialNumber);
+        Assert.Equal("CS-26-0010", chains[2].SerialNumber!.Split(", ").Last());
+        Assert.Equal(10, chains.SelectMany(machine => machine.SerialNumber!.Split(", ")).Distinct().Count());
+        Assert.Contains(list.Machines, machine => machine.Name == "Forklift Truck");
+        Assert.Equal(4, list.Progress.Total);
+
+        // Every share is its own certificate: it can be filled and submitted like any machine.
+        var second = chains[1].RequestItemId;
+        await Run(service => service.SaveFormAsync(requestId, second, inspector.Id, "inspector", CompleteForm("basic")));
+        Assert.Equal(MachineStatus.Draft, (await Run(service => service.ListMachinesAsync(requestId, inspector.Id, "inspector")))
+            .Machines.Single(machine => machine.RequestItemId == second).Status);
+    }
+
+    [Fact]
+    public async Task WithoutACountTheFewestCertificatesThatFitAreMade()
+    {
+        await Start();
+        var limit = SerialNumbers.PerCertificate(SerialNumbers.MaxLength);
+        var serials = Serials(1000);
+
+        var list = await Run(service => service.SplitAsync(requestId, chainItemId, inspector.Id, "inspector",
+            new SplitMachineRequest { SerialNumbers = serials }));
+
+        var chains = list.Machines.Where(machine => machine.Name == "Chain Block").ToList();
+        var expected = (int)Math.Ceiling(1000 / (double)SerialNumbers.PerCertificate(serials.Max(value => value.Length)));
+        Assert.Equal(expected, chains.Count);
+        Assert.True(expected < 1000 / limit * 3);
+        Assert.All(chains, machine => Assert.True(machine.SerialNumber!.Length <= SerialNumbers.MaxCharacters));
+        Assert.Equal(1000, chains.Sum(machine => machine.Quantity));
+    }
+
+    [Fact]
+    public async Task ADivisionThatWouldOverflowACertificateIsRefused()
+    {
+        await Start();
+
+        var refused = await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.SplitAsync(
+            requestId, chainItemId, inspector.Id, "inspector", new SplitMachineRequest { SerialNumbers = Serials(200), Certificates = 2 })));
+        Assert.Contains("Use at least", refused.Message);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.SplitAsync(
+            requestId, chainItemId, inspector.Id, "inspector", new SplitMachineRequest { SerialNumbers = ["A-1", "a-1"] })));
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.SplitAsync(
+            requestId, chainItemId, inspector.Id, "inspector", new SplitMachineRequest { SerialNumbers = ["A-1", "B,2"] })));
+        await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.SplitAsync(
+            requestId, chainItemId, inspector.Id, "inspector", new SplitMachineRequest { SerialNumbers = [" ", ""] })));
+        Assert.Equal(2, (await Run(service => service.ListMachinesAsync(requestId, inspector.Id, "inspector"))).Machines.Count);
+    }
+
+    [Fact]
+    public async Task AMachineIsDividedOnlyBeforeItsCertificateStartsAndByItsInspector()
+    {
+        var early = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.SplitAsync(
+            requestId, chainItemId, inspector.Id, "inspector", new SplitMachineRequest { SerialNumbers = Serials(4) })));
+        Assert.Equal("inspection_not_started", early.Code);
+
+        await Start();
+        var stranger = await Assert.ThrowsAsync<KeyNotFoundException>(() => Run(service => service.SplitAsync(
+            requestId, chainItemId, otherInspector.Id, "inspector", new SplitMachineRequest { SerialNumbers = Serials(4) })));
+        Assert.NotNull(stranger);
+
+        await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", CompleteForm("basic")));
+        var started = await Assert.ThrowsAsync<AuthException>(() => Run(service => service.SplitAsync(
+            requestId, chainItemId, inspector.Id, "inspector", new SplitMachineRequest { SerialNumbers = Serials(4) })));
+        Assert.Equal("machine_already_started", started.Code);
+    }
+
+    [Fact]
+    public async Task ASerialNumberListLongerThanOneCertificateTakesIsRefusedOnSave()
+    {
+        await Start();
+        var form = CompleteForm("basic") with { Fields = new Dictionary<string, string> { ["serialNumber"] = string.Join(", ", Serials(200)) } };
+
+        var refused = await Assert.ThrowsAsync<ArgumentException>(() => Run(service => service.SaveFormAsync(
+            requestId, chainItemId, inspector.Id, "inspector", form)));
+        Assert.Contains("Divide the machine", refused.Message);
+    }
+
+    [Fact]
+    public async Task GearsAreNotRegisteredAsItemsButOtherMachinesAre()
+    {
+        Assert.Equal(17, CertificateTemplateCatalog.Items.Count(item => item.Gear));
+        Assert.True(CertificateTemplateCatalog.Resolve("Chain Sling grade 4").Item!.Gear);
+        Assert.False(CertificateTemplateCatalog.Resolve("Forklift Truck").Item!.Gear);
+
+        await using var db = CreateContext();
+        var request = InspectionRequest.Create("Al Noor Industries", "Cairo", clientId,
+            [RequestItem.Create("Chain Sling grade 4", 40, serialNumber: "S-1"), RequestItem.Create("Scissor Lift", 1, serialNumber: "SL-9")],
+            coordinator.Id, managerId: manager.Id);
+        await new RequestEquipmentRegistrar(new EfEquipmentCatalog(db)).RegisterAsync(request);
+
+        Assert.Null(request.Items.Single(item => item.Name == "Chain Sling grade 4").EquipmentId);
+        Assert.NotNull(request.Items.Single(item => item.Name == "Scissor Lift").EquipmentId);
+    }
+
+    [Fact]
+    public async Task AGearCertificateWithManySerialNumbersIsDrawnAsOnePdf()
+    {
+        await Start();
+        var list = await Run(service => service.SplitAsync(requestId, chainItemId, inspector.Id, "inspector",
+            new SplitMachineRequest { SerialNumbers = Serials(1000) }));
+        var first = list.Machines.Where(machine => machine.Name == "Chain Block").OrderByDescending(machine => machine.SerialNumber!.Length).First();
+        Assert.True(first.SerialNumber!.Length > 400);
+        await Run(service => service.SaveFormAsync(requestId, first.RequestItemId, inspector.Id, "inspector", CompleteForm("basic")));
+
+        var pdf = await Run(service => service.GetPdfAsync(requestId, first.RequestItemId, inspector.Id, "inspector"));
+
+        Assert.StartsWith("%PDF", Encoding.ASCII.GetString(pdf.Content, 0, 4));
+    }
+
+    // ---- A certificate without a quotation ------------------------------------------------------------------------
+
+    private async Task<T> Direct<T>(Func<DirectCertificationService, Task<T>> action)
+    {
+        await using var db = CreateContext();
+        var inspection = new MachineInspectionService(
+            new EfCertificateRepository(db), new EfRequestRepository(db), new EfUserRepository(db), new EfEquipmentRepository(db),
+            new EfClientRepository(db), pdfServices.GetRequiredService<IPdfGenerator>(), new EfCertificateFileRepository(db),
+            qrCodes: new Inspecta.Infrastructure.Services.QrCodeRenderer(), transactions: new EfTransactionRunner(db));
+        var requests = new InspectionRequestService(new EfRequestRepository(db), new EfUserRepository(db), new RequestEquipmentRegistrar(new EfEquipmentCatalog(db)));
+        return await action(new DirectCertificationService(
+            requests, new EfRequestRepository(db), new EfClientRepository(db), inspection, new RequestEquipmentRegistrar(new EfEquipmentCatalog(db))));
+    }
+
+    [Fact]
+    public async Task ACertificateCreatedDirectlyStartsInProgressForTheInspectorAndReachesReview()
+    {
+        var job = await Direct(service => service.CreateAsync(new CreateCertificationRequest
+        {
+            ClientId = clientId,
+            Machines =
+            [
+                new Inspecta.Application.Contracts.Requests.CreateRequestItem { Name = "Forklift Truck", EquipmentId = forkliftEquipmentId, Capacity = "3 ton" },
+                new Inspecta.Application.Contracts.Requests.CreateRequestItem { Name = "Scissor Lift", SerialNumber = "SL-9" },
+                new Inspecta.Application.Contracts.Requests.CreateRequestItem { Name = "Chain Sling grade 4", Quantity = 12 }
+            ]
+        }, inspector.Id, "inspector", manager.Id));
+
+        Assert.Equal(JobStatus.InProgress, job.RequestStatus);
+        Assert.Equal("Al Noor Industries", job.ClientName);
+        Assert.Equal("Cairo, Industrial City", job.Location);
+        Assert.Equal(3, job.Machines.Count);
+        Assert.All(job.Machines, machine => Assert.True(machine.CanEdit));
+        Assert.Contains(job.Machines, machine => machine.Name == "Chain Sling grade 4" && machine.IsGear);
+
+        await using (var db = CreateContext())
+        {
+            var stored = db.Requests.Include(value => value.Items).Include(value => value.History).Single(value => value.Id == job.RequestId);
+            Assert.Equal(inspector.Id, stored.InspectorId);
+            Assert.Equal(manager.Id, stored.ManagerId);
+            Assert.Equal("Direct certificate", stored.Subject);
+            Assert.Equal(JobStatus.InProgress, stored.History.OrderBy(entry => entry.OccurredAt).Last().ToStatus);
+            // The new machine is registered for the client; the gear is not.
+            Assert.NotNull(stored.Items.Single(item => item.Name == "Scissor Lift").EquipmentId);
+            Assert.Null(stored.Items.Single(item => item.Name == "Chain Sling grade 4").EquipmentId);
+        }
+
+        foreach (var machine in job.Machines)
+        {
+            var key = machine.TemplateKey;
+            await Run(service => service.SaveFormAsync(job.RequestId, machine.RequestItemId, inspector.Id, "inspector", CompleteForm(key)));
+            await Run(service => service.SubmitAsync(job.RequestId, machine.RequestItemId, inspector.Id, "inspector"));
+        }
+
+        var review = await Run(service => service.ListMachinesAsync(job.RequestId, manager.Id, "technical_manager"));
+        Assert.Equal(JobStatus.CertificateSubmitted, review.RequestStatus);
+        Assert.True(review.CanApprove);
+    }
+
+    [Fact]
+    public async Task ADirectCertificateNeedsAMachineAnAllowedRoleAndAClientOfTheTeam()
+    {
+        var item = new Inspecta.Application.Contracts.Requests.CreateRequestItem { Name = "Scissor Lift" };
+        await Assert.ThrowsAsync<ArgumentException>(() => Direct(service => service.CreateAsync(
+            new CreateCertificationRequest { ClientId = clientId }, inspector.Id, "inspector", manager.Id)));
+        var denied = await Assert.ThrowsAsync<AuthException>(() => Direct(service => service.CreateAsync(
+            new CreateCertificationRequest { ClientId = clientId, Machines = [item] }, coordinator.Id, "coordinator", manager.Id)));
+        Assert.Equal(403, denied.StatusCode);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Direct(service => service.CreateAsync(
+            new CreateCertificationRequest { ClientId = Guid.NewGuid(), Machines = [item] }, inspector.Id, "inspector", manager.Id)));
+    }
+
+    [Fact]
+    public async Task TheCatalogueIsListedWithItsGears()
+    {
+        await using var db = CreateContext();
+        var types = new DirectCertificationService(null!, null!, null!, null!).MachineTypes();
+
+        Assert.Equal(58, types.Count);
+        Assert.Equal(17, types.Count(type => type.IsGear));
+        Assert.Equal("basic", types.Single(type => type.Name == "Eye Bolt").TemplateKey);
+        Assert.False(types.Single(type => type.Name == "Forklift Truck").IsGear);
+    }
+
     private async Task Start() => await Run(service => service.StartInspectionAsync(requestId, inspector.Id, "inspector"));
 
     private static string FirstRow(string templateKey)

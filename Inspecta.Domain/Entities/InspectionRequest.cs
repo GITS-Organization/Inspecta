@@ -366,6 +366,49 @@ public sealed class InspectionRequest
         return threadId is { Length: > 256 } ? threadId[..256] : threadId;
     }
 
+    /// <summary>
+    /// Starts the inspection of a request that never had a quotation: a certificate created directly by the person who inspects.
+    /// The job goes from <c>request_received</c> straight to <c>in_progress</c> with that person as its inspector.
+    /// </summary>
+    public void BeginDirectInspection(Guid actorId)
+    {
+        if (actorId == Guid.Empty) throw new ArgumentException("Actor is required.", nameof(actorId));
+        if (Status != JobStatus.RequestReceived || Items.Count == 0)
+            throw new InvalidOperationException("Only a new request with at least one machine can start directly.");
+
+        var previous = Status;
+        InspectorId = actorId;
+        Status = JobStatus.InProgress;
+        UpdatedAt = DateTimeOffset.UtcNow;
+        History.Add(JobStatusHistory.Create(Id, previous, Status, actorId, UpdatedAt, "Certificate created directly, without a quotation."));
+    }
+
+    /// <summary>
+    /// Divides one machine of the job over several certificates: the item keeps the first share and one copy is added for each other share.
+    /// Allowed while the inspector fills the certificates.
+    /// </summary>
+    public IReadOnlyList<RequestItem> SplitItem(Guid itemId, IReadOnlyList<IReadOnlyList<string>> shares, string separator, Guid actorId)
+    {
+        if (Status is not (JobStatus.InProgress or JobStatus.CertificateReturned))
+            throw new InvalidOperationException("A machine can be split while the inspection is in progress.");
+        if (shares.Count < 1 || shares.Any(share => share.Count == 0))
+            throw new ArgumentException("Every certificate needs at least one serial number.", nameof(shares));
+
+        var item = FindItem(itemId);
+        var added = new List<RequestItem>();
+        for (var index = 1; index < shares.Count; index++)
+        {
+            var copy = item.CopyWith(shares[index].Count, string.Join(separator, shares[index]));
+            Items.Add(copy);
+            added.Add(copy);
+        }
+
+        item.SetShare(shares[0].Count, string.Join(separator, shares[0]));
+        UpdatedAt = DateTimeOffset.UtcNow;
+        History.Add(JobStatusHistory.Create(Id, Status, Status, actorId, UpdatedAt, $"{item.Name} was divided into {shares.Count} certificates."));
+        return added;
+    }
+
     public void AssignInspector(Guid inspectorId, DateTimeOffset scheduledAt, Guid coordinatorId, string? note = null)
     {
         if (coordinatorId == Guid.Empty) throw new ArgumentException("Coordinator is required.", nameof(coordinatorId));

@@ -110,6 +110,51 @@ public sealed class MachineInspectionService(
         return await BuildFormAsync(request, item, certificate, actorId, role, cancellationToken, equipment);
     }
 
+    public async Task<MachineListResponse> SplitAsync(
+        Guid requestId, Guid requestItemId, Guid actorId, string role, SplitMachineRequest split,
+        CancellationToken cancellationToken = default)
+    {
+        var request = await LoadAsync(requestId, actorId, role, tracking: true, cancellationToken);
+        if (!CanEdit(request, actorId, role))
+            throw new AuthException("forbidden", "Only the assigned inspector can divide a machine.", 403);
+        if (request.Status is not (JobStatus.InProgress or JobStatus.CertificateReturned))
+            throw new AuthException("inspection_not_started", "Start the inspection before dividing a machine.", 409);
+
+        var item = FindItem(request, requestItemId);
+        var (match, _) = await ResolveAsync(item, cancellationToken);
+        if (match.Template.Fields.All(field => field.Key != "serialNumber"))
+            throw new AuthException("not_divisible", "This kind of machine has no serial number list to divide.", 409);
+        if (await certificateRepository.GetByRequestItemIdAsync(requestId, requestItemId, tracking: false, cancellationToken) is not null)
+            throw new AuthException("machine_already_started", "This machine's certificate was already started; divide it before filling it in.", 409);
+
+        var serials = ReadSerialNumbers(split.SerialNumbers);
+        var longest = serials.Max(value => value.Length);
+        var fewest = (int)Math.Ceiling(serials.Count / (double)SerialNumbers.PerCertificate(longest));
+        var certificates = Math.Min(split.Certificates ?? fewest, serials.Count);
+        var shares = SerialNumbers.Divide(serials, certificates);
+        if (shares.Any(share => SerialNumbers.Join(share).Length > SerialNumbers.MaxCharacters))
+            throw new ArgumentException(
+                $"{serials.Count} serial numbers do not fit on {certificates} certificate(s) ({SerialNumbers.MaxCharacters} characters at most on each). Use at least {fewest}.");
+
+        var added = request.SplitItem(requestItemId, shares, SerialNumbers.Separator, actorId);
+        await requestRepository.SaveRevisionAsync(request, new RequestItemChanges(added, []), cancellationToken);
+        return await BuildListAsync(request, actorId, role, cancellationToken);
+    }
+
+    private static List<string> ReadSerialNumbers(IReadOnlyList<string>? values)
+    {
+        var serials = (values ?? []).Select(value => value?.Trim() ?? string.Empty).Where(value => value.Length > 0).ToList();
+        if (serials.Count == 0) throw new ArgumentException("Give at least one serial number.");
+        if (serials.Count > SerialNumbers.MaxCount) throw new ArgumentException($"At most {SerialNumbers.MaxCount} serial numbers can be divided at once.");
+        if (serials.FirstOrDefault(value => value.Length > SerialNumbers.MaxLength) is { } tooLong)
+            throw new ArgumentException($"The serial number '{tooLong[..20]}...' is longer than {SerialNumbers.MaxLength} characters.");
+        if (serials.Any(value => value.Contains(',')))
+            throw new ArgumentException("A serial number cannot contain a comma; send one serial number per entry.");
+        var repeated = serials.GroupBy(value => value, StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1).Select(group => group.Key).Take(5).ToList();
+        if (repeated.Count > 0) throw new ArgumentException($"These serial numbers are repeated: {string.Join(", ", repeated)}.");
+        return serials;
+    }
+
     public async Task<MachineFormResponse> SubmitAsync(
         Guid requestId, Guid requestItemId, Guid actorId, string role, CancellationToken cancellationToken = default)
     {
@@ -633,7 +678,8 @@ public sealed class MachineInspectionService(
                 dates.TryGetValue("examination", out var examinedOn) ? examinedOn : null,
                 dates.TryGetValue("nextExamination", out var nextOn) ? nextOn : null,
                 certificate is { UsesTemplate: true } ? $"/api/v1/quotation-queue/{request.Id}/machines/{item.Id}/pdf" : null,
-                certificate is { UsesTemplate: true } ? certificate.QrData : null));
+                certificate is { UsesTemplate: true } ? certificate.QrData : null,
+                match.Item?.Gear == true));
         }
 
         var delivered = await DeliveryInfoAsync(request, cancellationToken);
@@ -964,6 +1010,8 @@ public sealed class MachineInspectionService(
             if (template.Fields.All(field => field.Key != key))
                 throw new ArgumentException($"'{key}' is not a field of this certificate.");
             result[key] = Limit(value, key);
+            if (key == "serialNumber" && result[key].Length > SerialNumbers.MaxCharacters)
+                throw new ArgumentException($"The serial numbers are too long for one certificate ({SerialNumbers.MaxCharacters} characters at most). Divide the machine into more certificates.");
         }
 
         return result;

@@ -68,6 +68,19 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     }
 
     /// <summary>Submit a machine's certificate to the technical manager.</summary>
+    [HttpPost("machines/{requestItemId:guid}/split")]
+    [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<MachineListResponse>> Split(
+        Guid requestId, Guid requestItemId, SplitMachineRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await inspectionService.SplitAsync(requestId, requestItemId, actorId, role, request, cancellationToken));
+    }
+
     [HttpPost("machines/{requestItemId:guid}/submit")]
     [ProducesResponseType<MachineFormResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

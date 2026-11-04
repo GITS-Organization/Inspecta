@@ -274,19 +274,36 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
         });
 
     /// <summary>The template's technical fields, four to a row: the labels on one line and the values under them.</summary>
-    private static void ComposeFields(IContainer container, IReadOnlyList<CertificatePdfField> fields) =>
-        container.Table(table =>
+    // A list of serial numbers (a gear certificate) is too long for a quarter of the row: it gets a full-width box under the grid.
+    private const int LongSerialNumbers = 36;
+
+    private static bool IsLongSerialList(CertificatePdfField field) =>
+        field.Label.StartsWith("Serial", StringComparison.OrdinalIgnoreCase) && field.Value?.Length > LongSerialNumbers;
+
+    private static void ComposeFields(IContainer container, IReadOnlyList<CertificatePdfField> allFields) =>
+        container.Column(column =>
         {
-            FourColumns(table);
-            for (var start = 0; start < fields.Count; start += 4)
+            var fields = allFields.Where(field => !IsLongSerialList(field)).ToArray();
+            column.Item().Table(table =>
             {
-                var chunk = fields.Skip(start).Take(4).ToArray();
-                // Short rows are completed with empty cells so the grid keeps its borders.
-                foreach (var field in chunk) Head(table, field.Label.TrimEnd(':') + ":");
-                for (var filler = chunk.Length; filler < 4; filler++) table.Cell().Element(Cell);
-                foreach (var field in chunk) Value(table, field.Value);
-                for (var filler = chunk.Length; filler < 4; filler++) table.Cell().Element(Cell);
-            }
+                FourColumns(table);
+                for (var start = 0; start < fields.Length; start += 4)
+                {
+                    var chunk = fields.Skip(start).Take(4).ToArray();
+                    // Short rows are completed with empty cells so the grid keeps its borders.
+                    foreach (var field in chunk) Head(table, field.Label.TrimEnd(':') + ":");
+                    for (var filler = chunk.Length; filler < 4; filler++) table.Cell().Element(Cell);
+                    foreach (var field in chunk) Value(table, field.Value);
+                    for (var filler = chunk.Length; filler < 4; filler++) table.Cell().Element(Cell);
+                }
+            });
+
+            foreach (var field in allFields.Where(IsLongSerialList))
+                column.Item().Element(Cell).Column(box =>
+                {
+                    box.Item().Text(field.Label.TrimEnd(':') + ":").Bold();
+                    box.Item().PaddingTop(2).Text(field.Value).FontSize(8);
+                });
         });
 
     private static void ComposeQuestionnaire(IContainer container, CertificatePdfQuestionnaire q) =>
