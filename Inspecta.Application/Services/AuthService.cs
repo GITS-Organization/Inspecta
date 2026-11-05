@@ -15,6 +15,9 @@ public class AuthService : IAuthService
     private readonly IAccessTokenService _accessTokenService;
     private readonly ILoginAttemptTracker _attempts;
 
+    // A stand-in account for an email nobody has: its password is checked all the same, so an unknown email takes as long to refuse as a known one.
+    private readonly Lazy<(AppUser User, string Hash)> _standIn;
+
     public AuthService(
         IUserRepository userRepository,
         IPasswordService passwordService,
@@ -25,6 +28,13 @@ public class AuthService : IAuthService
         _passwordService = passwordService;
         _accessTokenService = accessTokenService;
         _attempts = attempts;
+        _standIn = new Lazy<(AppUser, string)>(() =>
+        {
+            var user = AppUser.Create("stand-in@invalid.local", "Stand In", UserRole.Inspector);
+            var hash = passwordService.Hash(user, Guid.NewGuid().ToString("N"));
+            user.SetPasswordHash(hash);
+            return (user, hash);
+        });
     }
 
     public async Task<AuthResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -39,6 +49,12 @@ public class AuthService : IAuthService
         }
 
         var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
+
+        if (user is null)
+        {
+            var (standIn, _) = _standIn.Value;
+            _passwordService.Verify(standIn, request.Password);
+        }
 
         if (user is null || !_passwordService.Verify(user, request.Password))
         {

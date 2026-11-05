@@ -53,10 +53,24 @@ public sealed class LoginThrottleTests : IDisposable
         public (string Token, DateTimeOffset ExpiresAt) Create(AppUser user) => ("token", DateTimeOffset.UtcNow.AddMinutes(10));
     }
 
-    private async Task<AuthResult> Login(LoginAttemptTracker tracker, string email, string password)
+    private sealed class CountingPasswords : IPasswordService
+    {
+        private readonly IdentityPasswordService inner = new();
+        public int Checks { get; private set; }
+
+        public string Hash(AppUser user, string password) => inner.Hash(user, password);
+
+        public bool Verify(AppUser user, string password)
+        {
+            Checks++;
+            return inner.Verify(user, password);
+        }
+    }
+
+    private async Task<AuthResult> Login(LoginAttemptTracker tracker, string email, string password, IPasswordService? passwords = null)
     {
         await using var db = CreateContext();
-        var service = new AuthService(new EfUserRepository(db), new IdentityPasswordService(), new FixedTokens(), tracker);
+        var service = new AuthService(new EfUserRepository(db), passwords ?? new IdentityPasswordService(), new FixedTokens(), tracker);
         return await service.LoginAsync(new LoginRequest { Email = email, Password = password });
     }
 
@@ -97,6 +111,19 @@ public sealed class LoginThrottleTests : IDisposable
         Assert.Equal("too_many_attempts", (await Assert.ThrowsAsync<AuthException>(() => Login(tracker, "nobody@example.com", "x"))).Code);
         // Another email is not affected.
         Assert.Equal("token", (await Login(tracker, "staff@example.com", Password)).AccessToken);
+    }
+
+    [Fact]
+    public async Task AnUnknownEmailCostsTheSamePasswordCheckAsAKnownOneSoTheTimeRevealsNothing()
+    {
+        var passwords = new CountingPasswords();
+
+        await Assert.ThrowsAsync<AuthException>(() => Login(new LoginAttemptTracker(clock), "staff@example.com", "wrong", passwords));
+        var known = passwords.Checks;
+        await Assert.ThrowsAsync<AuthException>(() => Login(new LoginAttemptTracker(clock), "nobody@example.com", "wrong", passwords));
+
+        Assert.Equal(1, known);
+        Assert.Equal(2, passwords.Checks); // the unknown email was checked against a stand-in hash too
     }
 
     [Fact]
