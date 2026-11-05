@@ -819,9 +819,13 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
                     b.HasIndex("EquipmentId");
 
-                    b.HasIndex("VerificationCode");
+                    b.HasIndex("VerificationCode")
+                        .IsUnique();
 
                     b.HasIndex("ClientId", "IssuedAt");
+
+                    b.HasIndex("ManagerId", "CertificateNumber")
+                        .IsUnique();
 
                     b.HasIndex("ManagerId", "IssuedAt");
 

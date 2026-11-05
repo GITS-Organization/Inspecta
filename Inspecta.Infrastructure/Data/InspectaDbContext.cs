@@ -203,7 +203,8 @@ public sealed class InspectaDbContext(
         issued.HasKey(item => item.Id);
         issued.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
         issued.HasIndex(item => item.CertificateId).IsUnique();
-        issued.HasIndex(item => item.VerificationCode);
+        issued.HasIndex(item => item.VerificationCode).IsUnique();
+        issued.HasIndex(item => new { item.ManagerId, item.CertificateNumber }).IsUnique();
         issued.HasIndex(item => new { item.ClientId, item.IssuedAt });
         issued.HasIndex(item => item.EquipmentId);
         issued.HasIndex(item => new { item.ManagerId, item.IssuedAt });
