@@ -69,6 +69,10 @@ public sealed class ApiHttpTests : IClassFixture<ApiHttpTests.Api>
             db.Clients.AddRange(Enumerable.Range(1, 5).Select(number => Client.Create($"Paged client {number}", managerId: c.Id)));
             db.Clients.AddRange(Client.Create("Client of team A", managerId: a.Id), Client.Create("Client of team B", managerId: b.Id));
             db.SaveChanges();
+            db.IssuedCertificateFiles.Add(IssuedCertificateFile.Create(
+                Guid.NewGuid(), Guid.NewGuid(), c.Id, null, "<script>alert(1)</script> Ltd", "Forklift", "CERT-2026-0001", "A1B2C3D4E5F60718",
+                new DateOnly(2026, 11, 1), new DateOnly(2030, 11, 1), "cert.pdf", [37, 80, 68, 70, 45, 49, 46, 52]));
+            db.SaveChanges();
             (ManagerA, ManagerB) = (a.Id, b.Id);
         }
 
