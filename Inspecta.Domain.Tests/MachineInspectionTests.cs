@@ -417,6 +417,9 @@ public sealed class MachineInspectionTests : IDisposable
         Assert.Equal(file.QrData, listed.QrData);
         Assert.Equal(file.CertificateNumber, (await repository.FindByVerificationCodeAsync(file.VerificationCode))!.CertificateNumber);
         Assert.Null(await repository.FindByVerificationCodeAsync("NOPE"));
+        // A job's files can be described (with their size) without reading the PDFs.
+        var described = Assert.Single(await repository.ListSummariesForRequestAsync(requestId));
+        Assert.Equal((file.CertificateNumber, file.Content.Length), (described.CertificateNumber, described.ContentLength));
         Assert.Equal(file.Content, (await repository.GetForClientAsync(clientId, file.Id))!.Content);
         Assert.Null(await repository.GetForClientAsync(Guid.NewGuid(), file.Id));
 

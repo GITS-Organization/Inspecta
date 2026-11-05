@@ -205,7 +205,7 @@ public sealed class MachineInspectionService(
         var problems = new List<string>();
         foreach (var item in request.Items)
         {
-            var certificate = await certificateRepository.GetByRequestItemIdAsync(requestId, item.Id, tracking: true, cancellationToken);
+            var certificate = request.Certificates.SingleOrDefault(value => value.RequestItemId == item.Id); // already loaded with the job: no query per machine
             if (StatusOf(certificate) is MachineStatus.Submitted or MachineStatus.Approved or MachineStatus.Delivered) continue;
 
             var label = item.SerialNumber is { Length: > 0 } serials && item.Quantity > 1
@@ -687,13 +687,13 @@ public sealed class MachineInspectionService(
         Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
     {
         var request = await LoadDeliverableAsync(requestId, actorId, role, cancellationToken);
-        var files = await certificateFiles.ListForRequestAsync(request.Id, cancellationToken);
+        var files = await certificateFiles.ListSummariesForRequestAsync(request.Id, cancellationToken); // no PDF bytes: the preview only describes them
         var certificates = files.Select(file =>
         {
             var requestItemId = request.Certificates.SingleOrDefault(value => value.Id == file.CertificateId)?.RequestItemId;
             return new DeliveryCertificate(
                 requestItemId, file.ItemName, file.CertificateNumber, file.Result.ToInspectionResult(), file.ExaminationDate, file.NextExaminationDate,
-                file.FileName, file.Content.Length,
+                file.FileName, file.ContentLength,
                 requestItemId is Guid itemId ? $"/api/v1/quotation-queue/{request.Id}/machines/{itemId}/pdf" : $"/api/v1/clients/{file.ClientId}/certificates/{file.Id}/pdf",
                 file.QrData);
         }).ToArray();

@@ -19,6 +19,10 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
         dbContext.IssuedCertificateFiles.AsNoTracking()
             .SingleOrDefaultAsync(file => file.CertificateId == certificateId, cancellationToken);
 
+    public async Task<IReadOnlyList<IssuedCertificateSummary>> ListSummariesForRequestAsync(Guid requestId, CancellationToken cancellationToken = default) =>
+        (await Summaries(dbContext.IssuedCertificateFiles.AsNoTracking().Where(file => file.RequestId == requestId)).ToListAsync(cancellationToken))
+            .OrderBy(file => file.CertificateNumber, StringComparer.Ordinal).ToArray();
+
     public async Task<IReadOnlyList<IssuedCertificateFile>> ListForRequestAsync(Guid requestId, CancellationToken cancellationToken = default) =>
         await dbContext.IssuedCertificateFiles.AsNoTracking()
             .Where(file => file.RequestId == requestId)
@@ -78,7 +82,7 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
         files.Select(file => new IssuedCertificateSummary(
             file.Id, file.CertificateId, file.RequestId, file.ClientId, file.ClientName, file.ItemName,
             file.CertificateNumber, file.VerificationCode, file.ExaminationDate, file.NextExaminationDate,
-            file.FileName, file.Sha256, file.IssuedAt, file.EquipmentId, file.QrData, file.PreparedBy, file.Result));
+            file.FileName, file.Sha256, file.IssuedAt, file.EquipmentId, file.QrData, file.PreparedBy, file.Result, file.Content.Length));
 
     public async Task EnsureCounterAsync(Guid managerId, int year, CancellationToken cancellationToken = default)
     {

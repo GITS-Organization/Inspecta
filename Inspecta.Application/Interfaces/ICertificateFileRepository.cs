@@ -20,7 +20,8 @@ public sealed record IssuedCertificateSummary(
     Guid? EquipmentId = null,
     string? QrData = null,
     string? PreparedBy = null,
-    Inspecta.Domain.Enums.CertificateResult? Result = null);
+    Inspecta.Domain.Enums.CertificateResult? Result = null,
+    int ContentLength = 0);
 
 /// <summary>When a certificate was handed to the client, to whom, and (when it went by email) the copies and subject.</summary>
 public sealed record CertificateHandover(Guid CertificateId, DateTimeOffset SentAt, string? SentTo, bool EmailSent, IReadOnlyList<string> Cc, string? Subject);
@@ -32,6 +33,9 @@ public interface ICertificateFileRepository
     Task AddAsync(IssuedCertificateFile file, CancellationToken cancellationToken = default);
 
     Task<IssuedCertificateFile?> GetByCertificateIdAsync(Guid certificateId, CancellationToken cancellationToken = default);
+
+    /// <summary>The job's issued certificates without their PDFs (with the size of each), for previews that only describe the files.</summary>
+    Task<IReadOnlyList<IssuedCertificateSummary>> ListSummariesForRequestAsync(Guid requestId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<IssuedCertificateFile>> ListForRequestAsync(Guid requestId, CancellationToken cancellationToken = default);
 

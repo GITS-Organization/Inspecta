@@ -73,11 +73,29 @@ public sealed class CertificateDeliveryService(
 
     public bool Enabled => options is { Enabled: true };
 
-    public async Task<CertificateDeliveryPlan> PlanAsync(
+    /// <summary>What the email says about one issued certificate: no PDF bytes, only the size.</summary>
+    internal sealed record FileInfo(
+        string ItemName, string CertificateNumber, string FileName, Inspecta.Domain.Enums.CertificateResult? Result,
+        DateOnly? ExaminationDate, DateOnly? NextExaminationDate, string? QrData, long Length);
+
+    public Task<CertificateDeliveryPlan> PlanAsync(
+        InspectionRequest request, IReadOnlyList<IssuedCertificateFile> files, CertificateEmailDraft? draft, CancellationToken cancellationToken = default) =>
+        PlanAsync(request, files.Select(file => new FileInfo(
+            file.ItemName, file.CertificateNumber, file.FileName, file.Result, file.ExaminationDate, file.NextExaminationDate, file.QrData, file.Content.Length)).ToArray(),
+            draft, cancellationToken);
+
+    /// <summary>The same plan from the summaries of the issued certificates, so a preview does not read the PDFs.</summary>
+    public Task<CertificateDeliveryPlan> PlanAsync(
+        InspectionRequest request, IReadOnlyList<IssuedCertificateSummary> files, CertificateEmailDraft? draft, CancellationToken cancellationToken = default) =>
+        PlanAsync(request, files.Select(file => new FileInfo(
+            file.ItemName, file.CertificateNumber, file.FileName, file.Result, file.ExaminationDate, file.NextExaminationDate, file.QrData, file.ContentLength)).ToArray(),
+            draft, cancellationToken);
+
+    private async Task<CertificateDeliveryPlan> PlanAsync(
         InspectionRequest request,
-        IReadOnlyList<IssuedCertificateFile> files,
+        IReadOnlyList<FileInfo> files,
         CertificateEmailDraft? draft,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var source = await requestRepository.GetEmailAsync(request.Id, cancellationToken);
         var replyTo = source is null ? null : QuoteDeliveryService.ResolveRecipient(source);
@@ -291,8 +309,8 @@ public sealed class CertificateDeliveryService(
         return [new EmailAttachment("certificates.zip", Zip(files), "application/zip")];
     }
 
-    private static IReadOnlyList<string> AttachmentNames(IReadOnlyList<IssuedCertificateFile> files) =>
-        files.Sum(file => (long)file.Content.Length) <= MaxAttachedBytes ? files.Select(file => file.FileName).ToArray() : ["certificates.zip"];
+    private static IReadOnlyList<string> AttachmentNames(IReadOnlyList<FileInfo> files) =>
+        files.Sum(file => file.Length) <= MaxAttachedBytes ? files.Select(file => file.FileName).ToArray() : ["certificates.zip"];
 
     /// <summary>A plain address, checked: no names, no line breaks, one address.</summary>
     internal static string NormalizeAddress(string value, string field)
@@ -327,7 +345,7 @@ public sealed class CertificateDeliveryService(
         string.IsNullOrWhiteSpace(clientName) ? "Inspection Certificates" : $"Inspection Certificates - {clientName.Trim()}";
 
     /// <summary>The suggested email: a greeting, one block per certificate with its result, dates and check link, and the sign-off.</summary>
-    internal static string ComposeBody(string? recipientName, string clientName, IReadOnlyList<IssuedCertificateFile> files, string? coordinatorName)
+    internal static string ComposeBody(string? recipientName, string clientName, IReadOnlyList<FileInfo> files, string? coordinatorName)
     {
         var body = new StringBuilder();
         body.AppendLine("Dears,");
