@@ -2,15 +2,15 @@ namespace Inspecta.Domain.Entities;
 
 public class RefreshToken
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid UserId { get; set; }
-    public string TokenHash { get; set; } = string.Empty;
-    public Guid FamilyId { get; set; } = Guid.NewGuid();
-    public DateTimeOffset ExpiresAt { get; set; }
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-    public DateTimeOffset? RevokedAt { get; set; }
-    public string? ReplacedByTokenHash { get; set; }
-    public AppUser? User { get; set; }
+    public Guid Id { get; private set; } = Guid.NewGuid();
+    public Guid UserId { get; private set; }
+    public string TokenHash { get; private set; } = string.Empty;
+    public Guid FamilyId { get; private set; } = Guid.NewGuid();
+    public DateTimeOffset ExpiresAt { get; private set; }
+    public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? RevokedAt { get; private set; }
+    public string? ReplacedByTokenHash { get; private set; }
+    public AppUser? User { get; private set; }
 
     public bool IsExpired => DateTimeOffset.UtcNow >= ExpiresAt;
     public bool IsActive => RevokedAt is null && !IsExpired;

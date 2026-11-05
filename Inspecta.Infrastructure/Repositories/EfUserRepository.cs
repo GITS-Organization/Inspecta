@@ -120,7 +120,7 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
                 .Where(token => token.UserId == userId && token.RevokedAt == null)
                 .ToListAsync(cancellationToken);
             var now = DateTimeOffset.UtcNow;
-            foreach (var token in tokens) token.RevokedAt = now;
+            foreach (var token in tokens) token.Revoke(now);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -190,7 +190,7 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
     {
         if (refreshToken.RevokedAt is null)
         {
-            refreshToken.RevokedAt = DateTimeOffset.UtcNow;
+            refreshToken.Revoke();
             await dbContext.SaveChangesAsync(cancellationToken);
         }
     }
@@ -201,7 +201,7 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
             .Where(token => token.FamilyId == familyId && token.RevokedAt == null)
             .ToListAsync(cancellationToken);
         var now = DateTimeOffset.UtcNow;
-        foreach (var token in tokens) token.RevokedAt = now;
+        foreach (var token in tokens) token.Revoke(now);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -211,7 +211,7 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
             .Where(token => token.UserId == userId && token.RevokedAt == null)
             .ToListAsync(cancellationToken);
         var now = DateTimeOffset.UtcNow;
-        foreach (var token in tokens) token.RevokedAt = now;
+        foreach (var token in tokens) token.Revoke(now);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 }
