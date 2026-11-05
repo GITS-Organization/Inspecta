@@ -290,7 +290,9 @@ var app = builder.Build();
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<InspectaDbContext>();
-    await dbContext.Database.MigrateAsync();
+    // PostgreSQL gets the migrations; a test host that swaps in another provider just creates the schema.
+    if (dbContext.Database.IsNpgsql()) await dbContext.Database.MigrateAsync();
+    else await dbContext.Database.EnsureCreatedAsync();
     await new BootstrapAdminSeeder(dbContext, scope.ServiceProvider.GetRequiredService<IConfiguration>())
         .SeedAsync();
 }
@@ -324,3 +326,6 @@ app.MapHealthChecks("/health").AllowAnonymous();
 app.MapControllers();
 
 app.Run();
+
+/// <summary>Lets the HTTP-level tests start the whole API in memory.</summary>
+public partial class Program;
