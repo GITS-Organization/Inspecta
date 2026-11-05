@@ -60,12 +60,36 @@ public sealed class QuoteDeliveryService(
             draft?.Extra is { Count: > 0 } extra ? extra.Select(file => file.FileName).ToArray() : null);
     }
 
+    // One send per quotation and kind at a time, also across two requests that both read a failed attempt before either retried it.
+    // The service runs as one instance, so a lock in memory is enough.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> InFlight = new();
+
     public async Task<OutboundEmail?> DeliverAsync(
         InspectionRequest request,
         Quote quote,
         OutboundEmailKind kind,
         QuoteEmailDraft? draft = null,
         CancellationToken cancellationToken = default)
+    {
+        var gate = InFlight.GetOrAdd($"{quote.Id}:{kind}", _ => new SemaphoreSlim(1, 1));
+        if (!await gate.WaitAsync(0, cancellationToken))
+            throw new Exceptions.AuthException("delivery_in_progress", "This email is already being sent. Wait for it to finish.", 409);
+        try
+        {
+            return await DeliverOnceAsync(request, quote, kind, draft, cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task<OutboundEmail?> DeliverOnceAsync(
+        InspectionRequest request,
+        Quote quote,
+        OutboundEmailKind kind,
+        QuoteEmailDraft? draft,
+        CancellationToken cancellationToken)
     {
         // Temporarily switched off (QuoteDelivery:Enabled=false): nothing is emailed, the quotation and request still change state.
         if (options is { Enabled: false }) return null;

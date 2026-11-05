@@ -877,6 +877,24 @@ public sealed class QuotationTests
     }
 
     [Fact]
+    public async Task ASecondClickWhileTheQuotationEmailIsGoingOutSendsNothingMore()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Sender.Hold = release.Task;
+
+        var first = fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+        await fixture.Sender.Started.Task;
+        await Assert.ThrowsAnyAsync<Exception>(() => fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator"));
+
+        release.SetResult();
+        await first;
+        Assert.Single(fixture.Sender.Sent);
+    }
+
+    [Fact]
     public async Task ARequestWithoutAnEmailIsOnlyMarkedUnlessTheCoordinatorTypesAnAddress()
     {
         IEnumerable<RequestItem> Items() => [RequestItem.Create("Mobile crane - Liebherr LTM 1100", 1, type: "Mobile crane"), RequestItem.Create("Air receiver - 3000 L", 4, type: "Air receiver")];
@@ -1500,12 +1518,17 @@ public sealed class QuotationTests
         public SmtpSettings? LastSmtp { get; private set; }
         public Exception? Failure { get; set; }
 
-        public Task SendAsync(SmtpSettings smtp, OutgoingEmail email, CancellationToken cancellationToken = default)
+        /// <summary>When set, a send waits for it: the mail server is slow, and a second click can arrive meanwhile.</summary>
+        public Task? Hold { get; set; }
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task SendAsync(SmtpSettings smtp, OutgoingEmail email, CancellationToken cancellationToken = default)
         {
             LastSmtp = smtp;
+            Started.TrySetResult();
+            if (Hold is not null) await Hold;
             if (Failure is not null) throw Failure;
             Sent.Add(email);
-            return Task.CompletedTask;
         }
     }
 

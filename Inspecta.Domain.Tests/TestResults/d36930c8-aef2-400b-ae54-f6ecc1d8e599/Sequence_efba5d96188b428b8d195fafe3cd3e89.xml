@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<TestSequence>
+  <Test Name="Inspecta.Domain.Tests.CertificateDeliveryTests.AnotherClickWhileTheEmailIsStillGoingOutSendsNothingMore" DisplayName="Inspecta.Domain.Tests.CertificateDeliveryTests.AnotherClickWhileTheEmailIsStillGoingOutSendsNothingMore" Source="C:\Projects\Inspecta\Inspecta\Inspecta.Domain.Tests\bin\Debug\net8.0\Inspecta.Domain.Tests.dll" Completed="False" />
+</TestSequence>

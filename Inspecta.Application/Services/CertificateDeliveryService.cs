@@ -139,11 +139,34 @@ public sealed class CertificateDeliveryService(
                 source, EmailLayout.BrandingFor(company, branding), EmailLayout.PreviewLogoFor(request.ManagerId, company)).Html);
     }
 
+    // One email per job at a time: a second click while the first is still being sent is told so instead of sending again.
+    // The service runs as one instance, so a lock in memory is enough (the same assumption as the sign-in counters).
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, SemaphoreSlim> InFlight = new();
+
     public async Task<CertificateDeliveryResult> DeliverAsync(
         InspectionRequest request,
         IReadOnlyList<IssuedCertificateFile> files,
         CertificateEmailDraft? draft,
         CancellationToken cancellationToken = default)
+    {
+        var gate = InFlight.GetOrAdd(request.Id, _ => new SemaphoreSlim(1, 1));
+        if (!await gate.WaitAsync(0, cancellationToken))
+            throw new AuthException("delivery_in_progress", "These certificates are already being emailed. Wait for it to finish.", 409);
+        try
+        {
+            return await DeliverOnceAsync(request, files, draft, cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task<CertificateDeliveryResult> DeliverOnceAsync(
+        InspectionRequest request,
+        IReadOnlyList<IssuedCertificateFile> files,
+        CertificateEmailDraft? draft,
+        CancellationToken cancellationToken)
     {
         if (!Enabled)
             return new CertificateDeliveryResult(false, null, "Email delivery is switched off, so no email was sent. The certificates are marked as handed over.");

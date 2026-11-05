@@ -152,6 +152,31 @@ public sealed class CertificateDeliveryTests : IDisposable
     }
 
     [Fact]
+    public async Task AnotherClickWhileTheEmailIsStillGoingOutSendsNothingMore()
+    {
+        await ApprovedJobAsync(fromEmail: true);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        sender.Hold = release.Task;
+
+        var first = Run(true, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest()));
+        await sender.Started.Task; // the mail server is busy with the first one
+
+        var second = await Assert.ThrowsAsync<AuthException>(() =>
+            Run(true, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest())));
+        Assert.Equal(("delivery_in_progress", 409), (second.Code, second.StatusCode));
+
+        release.SetResult();
+        Assert.True((await first).Delivery!.EmailSent);
+        Assert.Single(sender.Sent);
+
+        // And once it is done, a late click finds the job already handed over.
+        var late = await Assert.ThrowsAsync<AuthException>(() =>
+            Run(true, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest())));
+        Assert.Equal("not_approved", late.Code);
+        Assert.Single(sender.Sent);
+    }
+
+    [Fact]
     public async Task TheCoordinatorCanChooseTheRecipientAndWriteTheText()
     {
         await ApprovedJobAsync(fromEmail: true);
