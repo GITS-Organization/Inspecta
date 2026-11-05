@@ -29,6 +29,18 @@ public sealed class EfEquipmentRepository(InspectaDbContext dbContext) : IEquipm
         return await query.OrderBy(equipment => equipment.Name).ToListAsync(cancellationToken);
     }
 
+    public async Task<(IReadOnlyList<Item> Items, int Total)> ListPageAsync(
+        Guid? clientId, bool includeArchived, int offset, int limit, CancellationToken cancellationToken = default)
+    {
+        var query = dbContext.Items.AsNoTracking().AsQueryable();
+        if (clientId is Guid id) query = query.Where(equipment => equipment.ClientId == id);
+        if (!includeArchived)
+            query = query.Where(equipment => equipment.ArchivedAt == null && (equipment.Client == null || equipment.Client.ArchivedAt == null));
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query.OrderBy(equipment => equipment.Name).ThenBy(equipment => equipment.Id).Skip(offset).Take(limit).ToListAsync(cancellationToken);
+        return (items, total);
+    }
+
     public async Task<int> CountUsagesAsync(Guid equipmentId, CancellationToken cancellationToken = default) =>
         await dbContext.RequestItems.IgnoreQueryFilters().CountAsync(item => item.EquipmentId == equipmentId, cancellationToken) +
         await dbContext.IssuedCertificateFiles.IgnoreQueryFilters().CountAsync(file => file.EquipmentId == equipmentId, cancellationToken);

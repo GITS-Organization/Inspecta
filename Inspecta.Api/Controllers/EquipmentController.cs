@@ -15,8 +15,11 @@ public sealed class EquipmentController(IEquipmentService equipmentService) : Co
     /// <summary>List items, optionally filtered by client and archive status.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<EquipmentResponse>>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<EquipmentResponse>>> List([FromQuery] Guid? clientId, [FromQuery] bool includeArchived, CancellationToken cancellationToken) =>
-        Ok(await equipmentService.ListAsync(clientId, includeArchived, cancellationToken));
+    public async Task<ActionResult<IReadOnlyList<EquipmentResponse>>> List(
+        [FromQuery] Guid? clientId, [FromQuery] bool includeArchived, [FromQuery] int? limit, [FromQuery] int offset, CancellationToken cancellationToken) =>
+        PageRequest.Read(limit, offset) is { } page
+            ? PageRequest.Respond(this, await equipmentService.ListPageAsync(clientId, includeArchived, page.Offset, page.Limit, cancellationToken))
+            : PageRequest.Invalid(this);
 
     /// <summary>Get an item by identifier.</summary>
     [HttpGet("{equipmentId:guid}")]

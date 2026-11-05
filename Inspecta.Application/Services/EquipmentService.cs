@@ -24,6 +24,13 @@ public sealed class EquipmentService(IEquipmentRepository equipmentRepository) :
     public async Task<IReadOnlyList<EquipmentResponse>> ListAsync(Guid? clientId, bool includeArchived, CancellationToken cancellationToken = default) =>
         (await equipmentRepository.ListAsync(clientId, includeArchived, cancellationToken)).Select(Map).ToArray();
 
+    public async Task<Contracts.PagedList<EquipmentResponse>> ListPageAsync(
+        Guid? clientId, bool includeArchived, int offset, int limit, CancellationToken cancellationToken = default)
+    {
+        var (items, total) = await equipmentRepository.ListPageAsync(clientId, includeArchived, offset, limit, cancellationToken);
+        return new Contracts.PagedList<EquipmentResponse>(items.Select(Map).ToArray(), total);
+    }
+
     public async Task<EquipmentResponse?> GetByIdAsync(Guid equipmentId, CancellationToken cancellationToken = default)
     {
         var equipment = await equipmentRepository.GetByIdAsync(equipmentId, tracking: false, cancellationToken);

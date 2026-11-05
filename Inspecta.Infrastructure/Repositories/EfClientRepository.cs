@@ -27,6 +27,17 @@ public sealed class EfClientRepository(InspectaDbContext dbContext) : IClientRep
         return await query.OrderBy(client => client.Name).ToListAsync(cancellationToken);
     }
 
+    public async Task<(IReadOnlyList<Client> Items, int Total)> ListPageAsync(
+        bool includeArchived, int offset, int limit, CancellationToken cancellationToken = default)
+    {
+        var query = dbContext.Clients.AsNoTracking().AsQueryable();
+        if (!includeArchived) query = query.Where(client => client.ArchivedAt == null);
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query.Include(client => client.Contacts).OrderBy(client => client.Name).ThenBy(client => client.Id)
+            .Skip(offset).Take(limit).ToListAsync(cancellationToken);
+        return (items, total);
+    }
+
     public async Task<IReadOnlyList<InspectionRequest>> GetRequestHistoryAsync(Guid clientId, CancellationToken cancellationToken = default) =>
         await dbContext.Requests.AsNoTracking()
             .Where(request => request.ClientId == clientId)

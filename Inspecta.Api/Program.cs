@@ -34,7 +34,7 @@ var allowedOrigins = configuredOrigins
 builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
 {
     if (allowedOrigins.Length > 0)
-        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().WithExposedHeaders(Inspecta.Api.PageRequest.TotalHeader);
 }));
 builder.Services.AddSwaggerGen(options =>
 {

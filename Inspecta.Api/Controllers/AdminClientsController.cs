@@ -15,8 +15,11 @@ public sealed class AdminClientsController(IClientService clientService) : Contr
     /// <summary>List the clients of every team.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<ClientResponse>>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<ClientResponse>>> List([FromQuery] bool includeArchived, CancellationToken cancellationToken) =>
-        Ok(await clientService.ListAsync(includeArchived, cancellationToken));
+    public async Task<ActionResult<IReadOnlyList<ClientResponse>>> List(
+        [FromQuery] bool includeArchived, [FromQuery] int? limit, [FromQuery] int offset, CancellationToken cancellationToken) =>
+        PageRequest.Read(limit, offset) is { } page
+            ? PageRequest.Respond(this, await clientService.ListPageAsync(includeArchived, page.Offset, page.Limit, cancellationToken))
+            : PageRequest.Invalid(this);
 
     /// <summary>Open one client with its contacts.</summary>
     [HttpGet("{clientId:guid}")]

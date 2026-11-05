@@ -63,8 +63,10 @@ public sealed class ApiHttpTests : IClassFixture<ApiHttpTests.Api>
 
             var a = Manager("manager-a@example.com");
             var b = Manager("manager-b@example.com");
-            db.Users.AddRange(a, b);
+            var c = Manager("manager-c@example.com");
+            db.Users.AddRange(a, b, c);
             db.SaveChanges();
+            db.Clients.AddRange(Enumerable.Range(1, 5).Select(number => Client.Create($"Paged client {number}", managerId: c.Id)));
             db.Clients.AddRange(Client.Create("Client of team A", managerId: a.Id), Client.Create("Client of team B", managerId: b.Id));
             db.SaveChanges();
             (ManagerA, ManagerB) = (a.Id, b.Id);

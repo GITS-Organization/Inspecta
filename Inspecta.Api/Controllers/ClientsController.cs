@@ -15,8 +15,11 @@ public sealed class ClientsController(IClientService clientService) : Controller
     /// <summary>List clients, optionally including archived records.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<ClientResponse>>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<ClientResponse>>> List([FromQuery] bool includeArchived, CancellationToken cancellationToken) =>
-        Ok(await clientService.ListAsync(includeArchived, cancellationToken));
+    public async Task<ActionResult<IReadOnlyList<ClientResponse>>> List(
+        [FromQuery] bool includeArchived, [FromQuery] int? limit, [FromQuery] int offset, CancellationToken cancellationToken) =>
+        PageRequest.Read(limit, offset) is { } page
+            ? PageRequest.Respond(this, await clientService.ListPageAsync(includeArchived, page.Offset, page.Limit, cancellationToken))
+            : PageRequest.Invalid(this);
 
     /// <summary>Get a client by identifier.</summary>
     [HttpGet("{clientId:guid}")]

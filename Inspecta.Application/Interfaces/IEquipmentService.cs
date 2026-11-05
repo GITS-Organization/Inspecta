@@ -6,6 +6,7 @@ public interface IEquipmentService
 {
     Task<EquipmentResponse> CreateAsync(SaveEquipmentRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<EquipmentResponse>> ListAsync(Guid? clientId, bool includeArchived, CancellationToken cancellationToken = default);
+    Task<Contracts.PagedList<EquipmentResponse>> ListPageAsync(Guid? clientId, bool includeArchived, int offset, int limit, CancellationToken cancellationToken = default);
     Task<EquipmentResponse?> GetByIdAsync(Guid equipmentId, CancellationToken cancellationToken = default);
     Task<EquipmentResponse> UpdateAsync(Guid equipmentId, SaveEquipmentRequest request, CancellationToken cancellationToken = default);
     Task RecordInspectionAsync(Guid equipmentId, RecordEquipmentInspectionRequest request, CancellationToken cancellationToken = default);

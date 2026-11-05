@@ -43,6 +43,12 @@ public sealed class ClientService(
     public async Task<IReadOnlyList<ClientResponse>> ListAsync(bool includeArchived, CancellationToken cancellationToken = default) =>
         (await clientRepository.ListAsync(includeArchived, cancellationToken)).Select(Map).ToArray();
 
+    public async Task<Contracts.PagedList<ClientResponse>> ListPageAsync(bool includeArchived, int offset, int limit, CancellationToken cancellationToken = default)
+    {
+        var (items, total) = await clientRepository.ListPageAsync(includeArchived, offset, limit, cancellationToken);
+        return new Contracts.PagedList<ClientResponse>(items.Select(Map).ToArray(), total);
+    }
+
     public async Task<ClientResponse?> GetByIdAsync(Guid clientId, CancellationToken cancellationToken = default)
     {
         var client = await clientRepository.GetByIdAsync(clientId, tracking: false, cancellationToken);
