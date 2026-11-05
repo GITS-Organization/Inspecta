@@ -16,7 +16,7 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
     }
 
     public Task<IssuedCertificateFile?> GetByCertificateIdAsync(Guid certificateId, CancellationToken cancellationToken = default) =>
-        dbContext.IssuedCertificateFiles.AsNoTracking()
+        dbContext.IssuedCertificateFiles.AsNoTracking().Include(file => file.Body)
             .SingleOrDefaultAsync(file => file.CertificateId == certificateId, cancellationToken);
 
     public async Task<IReadOnlyList<IssuedCertificateSummary>> ListSummariesForRequestAsync(Guid requestId, CancellationToken cancellationToken = default) =>
@@ -24,7 +24,7 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
             .OrderBy(file => file.CertificateNumber, StringComparer.Ordinal).ToArray();
 
     public async Task<IReadOnlyList<IssuedCertificateFile>> ListForRequestAsync(Guid requestId, CancellationToken cancellationToken = default) =>
-        await dbContext.IssuedCertificateFiles.AsNoTracking()
+        await dbContext.IssuedCertificateFiles.AsNoTracking().Include(file => file.Body)
             .Where(file => file.RequestId == requestId)
             .OrderBy(file => file.CertificateNumber)
             .ToListAsync(cancellationToken);
@@ -56,7 +56,7 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
     }
 
     public Task<IssuedCertificateFile?> GetForClientAsync(Guid clientId, Guid fileId, CancellationToken cancellationToken = default) =>
-        dbContext.IssuedCertificateFiles.AsNoTracking()
+        dbContext.IssuedCertificateFiles.AsNoTracking().Include(file => file.Body)
             .SingleOrDefaultAsync(file => file.ClientId == clientId && file.Id == fileId, cancellationToken);
 
     public async Task<IssuedCertificateSummary?> FindByVerificationCodeAsync(string verificationCode, CancellationToken cancellationToken = default) =>
@@ -65,7 +65,7 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
             .SingleOrDefaultAsync(cancellationToken);
 
     public Task<IssuedCertificateFile?> GetByVerificationCodeAsync(string verificationCode, CancellationToken cancellationToken = default) =>
-        dbContext.IssuedCertificateFiles.IgnoreQueryFilters().AsNoTracking()
+        dbContext.IssuedCertificateFiles.IgnoreQueryFilters().AsNoTracking().Include(file => file.Body)
             .SingleOrDefaultAsync(file => file.VerificationCode == verificationCode, cancellationToken);
 
     public async Task<IssuedCertificateSummary?> FindLatestForEquipmentAsync(
@@ -82,7 +82,7 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
         files.Select(file => new IssuedCertificateSummary(
             file.Id, file.CertificateId, file.RequestId, file.ClientId, file.ClientName, file.ItemName,
             file.CertificateNumber, file.VerificationCode, file.ExaminationDate, file.NextExaminationDate,
-            file.FileName, file.Sha256, file.IssuedAt, file.EquipmentId, file.QrData, file.PreparedBy, file.Result, file.Content.Length));
+            file.FileName, file.Sha256, file.IssuedAt, file.EquipmentId, file.QrData, file.PreparedBy, file.Result, file.ContentLength));
 
     public async Task EnsureCounterAsync(Guid managerId, int year, CancellationToken cancellationToken = default)
     {
@@ -101,7 +101,7 @@ public sealed class EfCertificateFileRepository(InspectaDbContext dbContext) : I
     }
 
     public Task<IssuedCertificateFile?> GetForUpdateAsync(Guid certificateId, CancellationToken cancellationToken = default) =>
-        dbContext.IssuedCertificateFiles.SingleOrDefaultAsync(file => file.CertificateId == certificateId, cancellationToken);
+        dbContext.IssuedCertificateFiles.Include(file => file.Body).SingleOrDefaultAsync(file => file.CertificateId == certificateId, cancellationToken);
 
     public Task<bool> NumberTakenAsync(Guid managerId, string certificateNumber, Guid excludingCertificateId, CancellationToken cancellationToken = default) =>
         dbContext.IssuedCertificateFiles.AnyAsync(

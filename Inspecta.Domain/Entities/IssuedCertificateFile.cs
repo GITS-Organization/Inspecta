@@ -30,7 +30,13 @@ public sealed class IssuedCertificateFile
     public DateOnly? ExaminationDate { get; private set; }
     public DateOnly? NextExaminationDate { get; private set; }
     public string FileName { get; private set; } = string.Empty;
-    public byte[] Content { get; private set; } = [];
+    /// <summary>The PDF's bytes live in their own table (<see cref="IssuedCertificateContent"/>) so that lists of certificates never read them.</summary>
+    public IssuedCertificateContent? Body { get; private set; }
+
+    /// <summary>The PDF itself. Load the file with its body (<c>Include</c>) before reading this; <see cref="ContentLength"/> is always available.</summary>
+    public byte[] Content => Body?.Bytes ?? throw new InvalidOperationException("The certificate file was loaded without its content.");
+
+    public int ContentLength { get; private set; }
     public string Sha256 { get; private set; } = string.Empty;
     public DateTimeOffset IssuedAt { get; private set; }
 
@@ -42,7 +48,9 @@ public sealed class IssuedCertificateFile
         CertificateNumber = certificateNumber.Trim();
         IssuedAt = issuedAt;
         FileName = fileName;
-        Content = content;
+        if (Body is null) throw new InvalidOperationException("Load the certificate file with its content before drawing it again.");
+        Body.Replace(content);
+        ContentLength = content.Length;
         Sha256 = Convert.ToHexString(SHA256.HashData(content)).ToLowerInvariant();
     }
 
@@ -71,9 +79,10 @@ public sealed class IssuedCertificateFile
             throw new ArgumentException("Certificate number and verification code are required.");
         if (content is null || content.Length == 0) throw new ArgumentException("The certificate file is empty.", nameof(content));
 
+        var id = Guid.NewGuid();
         return new IssuedCertificateFile
         {
-            Id = Guid.NewGuid(),
+            Id = id,
             CertificateId = certificateId,
             RequestId = requestId,
             ManagerId = managerId,
@@ -89,7 +98,8 @@ public sealed class IssuedCertificateFile
             ExaminationDate = examinationDate,
             NextExaminationDate = nextExaminationDate,
             FileName = fileName,
-            Content = content,
+            Body = new IssuedCertificateContent(id, content),
+            ContentLength = content.Length,
             Sha256 = Convert.ToHexString(SHA256.HashData(content)).ToLowerInvariant(),
             IssuedAt = issuedAt ?? DateTimeOffset.UtcNow
         };

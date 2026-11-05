@@ -81,7 +81,7 @@ public sealed class CertificateDeliveryService(
     public Task<CertificateDeliveryPlan> PlanAsync(
         InspectionRequest request, IReadOnlyList<IssuedCertificateFile> files, CertificateEmailDraft? draft, CancellationToken cancellationToken = default) =>
         PlanAsync(request, files.Select(file => new FileInfo(
-            file.ItemName, file.CertificateNumber, file.FileName, file.Result, file.ExaminationDate, file.NextExaminationDate, file.QrData, file.Content.Length)).ToArray(),
+            file.ItemName, file.CertificateNumber, file.FileName, file.Result, file.ExaminationDate, file.NextExaminationDate, file.QrData, file.ContentLength)).ToArray(),
             draft, cancellationToken);
 
     /// <summary>The same plan from the summaries of the issued certificates, so a preview does not read the PDFs.</summary>

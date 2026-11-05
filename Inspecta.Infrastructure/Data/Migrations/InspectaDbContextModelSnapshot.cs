@@ -737,6 +737,20 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.ToTable("Requests");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.IssuedCertificateContent", b =>
+                {
+                    b.Property<Guid>("IssuedCertificateFileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Bytes")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("IssuedCertificateFileId");
+
+                    b.ToTable("IssuedCertificateContents", (string)null);
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.IssuedCertificateFile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -758,9 +772,8 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<byte[]>("Content")
-                        .IsRequired()
-                        .HasColumnType("bytea");
+                    b.Property<int>("ContentLength")
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("EquipmentId")
                         .HasColumnType("uuid");
@@ -1613,6 +1626,15 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Navigation("Client");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.IssuedCertificateContent", b =>
+                {
+                    b.HasOne("Inspecta.Domain.Entities.IssuedCertificateFile", null)
+                        .WithOne("Body")
+                        .HasForeignKey("Inspecta.Domain.Entities.IssuedCertificateContent", "IssuedCertificateFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.Item", b =>
                 {
                     b.HasOne("Inspecta.Domain.Entities.Client", "Client")
@@ -1756,6 +1778,11 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Navigation("Items");
 
                     b.Navigation("ReviewComments");
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.IssuedCertificateFile", b =>
+                {
+                    b.Navigation("Body");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.RequestItem", b =>

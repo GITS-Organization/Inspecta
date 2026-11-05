@@ -83,7 +83,7 @@ public sealed class ClientCertificateTests : IDisposable
 
         // The page's button downloads the certificate exactly as it was filed.
         await using (var check = CreateContext())
-            Assert.Equal(check.IssuedCertificateFiles.AsNoTracking().Single().Content, (await service.GetPdfByCodeAsync("a1b2c3d4e5f60718"))!.Content);
+            Assert.Equal(check.IssuedCertificateFiles.AsNoTracking().Include(value => value.Body).Single().Content, (await service.GetPdfByCodeAsync("a1b2c3d4e5f60718"))!.Content);
         Assert.Null(await service.GetPdfByCodeAsync("A1B2C3D4E5F60719"));
         Assert.Null(await service.GetPdfByCodeAsync("short"));
 

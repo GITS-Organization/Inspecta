@@ -385,7 +385,7 @@ public sealed class MachineInspectionTests : IDisposable
         var approved = await Run(service => service.ApproveAsync(requestId, forkliftItemId, manager.Id, "technical_manager"));
 
         await using var db = CreateContext();
-        var file = Assert.Single(db.IssuedCertificateFiles.AsNoTracking().ToList());
+        var file = Assert.Single(db.IssuedCertificateFiles.AsNoTracking().Include(value => value.Body).ToList());
         Assert.Equal(approved.CertificateNumber, file.CertificateNumber);
         Assert.Equal(clientId, file.ClientId);
         Assert.Equal("Al Noor Industries", file.ClientName);
@@ -420,6 +420,8 @@ public sealed class MachineInspectionTests : IDisposable
         // A job's files can be described (with their size) without reading the PDFs.
         var described = Assert.Single(await repository.ListSummariesForRequestAsync(requestId));
         Assert.Equal((file.CertificateNumber, file.Content.Length), (described.CertificateNumber, described.ContentLength));
+        // The PDF sits in its own table: a plain read of the certificate row never brings it along.
+        Assert.Throws<InvalidOperationException>(() => read.IssuedCertificateFiles.AsNoTracking().First(value => value.Id == file.Id).Content);
         Assert.Equal(file.Content, (await repository.GetForClientAsync(clientId, file.Id))!.Content);
         Assert.Null(await repository.GetForClientAsync(Guid.NewGuid(), file.Id));
 

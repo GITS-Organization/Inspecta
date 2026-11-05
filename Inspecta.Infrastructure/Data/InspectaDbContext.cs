@@ -217,6 +217,13 @@ public sealed class InspectaDbContext(
         issued.Property(item => item.Result).HasConversion<string>().HasMaxLength(24);
         issued.Property(item => item.FileName).HasMaxLength(260);
         issued.Property(item => item.Sha256).HasMaxLength(64);
+        issued.HasOne(item => item.Body).WithOne().HasForeignKey<IssuedCertificateContent>(body => body.IssuedCertificateFileId)
+            .IsRequired().OnDelete(DeleteBehavior.Cascade);
+        var issuedContent = modelBuilder.Entity<IssuedCertificateContent>();
+        issuedContent.HasKey(item => item.IssuedCertificateFileId);
+        issuedContent.ToTable("IssuedCertificateContents");
+        issuedContent.Property(item => item.Bytes).IsRequired();
+        // Only ever read through its file, which carries the team filter.
 
         var delivery = modelBuilder.Entity<CertificateDelivery>();
         delivery.HasKey(item => item.Id);
