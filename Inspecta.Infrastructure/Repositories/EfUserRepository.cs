@@ -16,6 +16,14 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
     public Task<AppUser?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         dbContext.Users.SingleOrDefaultAsync(user => user.Id == id, cancellationToken);
 
+    public async Task<IReadOnlyDictionary<Guid, string>> GetFullNamesAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0) return new Dictionary<Guid, string>();
+        var wanted = ids.ToArray();
+        return await dbContext.Users.AsNoTracking().Where(user => wanted.Contains(user.Id))
+            .ToDictionaryAsync(user => user.Id, user => user.FullName, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<AppUser>> ListAsync(
         Guid? managerId = null,
         UserRole? role = null,

@@ -7,6 +7,16 @@ public interface IUserRepository
 {
     Task<AppUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<AppUser?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>The full names of the given users in one query (users that do not exist are left out).</summary>
+    async Task<IReadOnlyDictionary<Guid, string>> GetFullNamesAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        var names = new Dictionary<Guid, string>();
+        foreach (var id in ids)
+            if (await GetByIdAsync(id, cancellationToken) is { } user) names[id] = user.FullName;
+        return names;
+    }
+
     Task<IReadOnlyList<AppUser>> ListAsync(
         Guid? managerId = null,
         UserRole? role = null,

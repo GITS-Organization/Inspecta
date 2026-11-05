@@ -124,12 +124,8 @@ public sealed class QuoteService(
         var quotes = (await quoteRepository.ListAsync(filter, cancellationToken))
             .Where(quote => quote.Request is not null)
             .ToArray();
-        var inspectorNames = new Dictionary<Guid, string>();
-        foreach (var inspectorId in quotes.Select(quote => quote.Request!.InspectorId).OfType<Guid>().Distinct())
-        {
-            if (await userRepository.GetByIdAsync(inspectorId, cancellationToken) is { } inspector)
-                inspectorNames[inspectorId] = inspector.FullName;
-        }
+        var inspectorNames = await userRepository.GetFullNamesAsync(
+            quotes.Select(quote => quote.Request!.InspectorId).OfType<Guid>().Distinct().ToArray(), cancellationToken);
 
         return quotes
             .Select(quote => MapSummary(
