@@ -312,6 +312,78 @@ public sealed class UserManagementTests
         Password = "mail-password"
     };
 
+    private static UpdateStaffProfileRequest Profile(UserRole role, Guid? managerId = null, DateTimeOffset? leaveUntil = null, bool onLeave = false) =>
+        new() { FullName = "Staff Member", Role = role, ManagerId = managerId, IsOnLeave = onLeave, LeaveUntil = leaveUntil };
+
+    [Fact]
+    public async Task AStaffMemberMovesToAnotherActiveTeamAndKeepsTheirRole()
+    {
+        var first = AppUser.Create("first@example.com", "First", UserRole.TechnicalManager);
+        var second = AppUser.Create("second@example.com", "Second", UserRole.TechnicalManager);
+        var member = AppUser.Create("coordinator@example.com", "Coordinator", UserRole.Coordinator, managerId: first.Id);
+        var service = CreateService(new MemoryUserRepository(first, second, member));
+
+        var moved = await service.UpdateProfileAsync(member.Id, Profile(UserRole.Coordinator, second.Id));
+
+        Assert.Equal((UserRole.Coordinator, second.Id), (moved.Role, moved.ManagerId));
+    }
+
+    [Fact]
+    public async Task APromotionToAdminCannotCarryATeam()
+    {
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
+        var member = AppUser.Create("inspector@example.com", "Inspector", UserRole.Inspector, managerId: manager.Id);
+        var service = CreateService(new MemoryUserRepository(manager, member));
+
+        var error = await Assert.ThrowsAsync<AuthException>(() => service.UpdateProfileAsync(member.Id, Profile(UserRole.Admin, manager.Id)));
+
+        Assert.Equal(("admin_manager_not_allowed", 400), (error.Code, error.StatusCode));
+    }
+
+    [Fact]
+    public async Task ATechnicalManagerCannotBecomeStaffAndStaffCannotBecomeATechnicalManager()
+    {
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
+        var other = AppUser.Create("other@example.com", "Other", UserRole.TechnicalManager);
+        var member = AppUser.Create("inspector@example.com", "Inspector", UserRole.Inspector, managerId: manager.Id);
+        var service = CreateService(new MemoryUserRepository(manager, other, member));
+
+        var demote = await Assert.ThrowsAsync<AuthException>(() => service.UpdateProfileAsync(manager.Id, Profile(UserRole.Inspector, other.Id)));
+        var promote = await Assert.ThrowsAsync<AuthException>(() => service.UpdateProfileAsync(member.Id, Profile(UserRole.TechnicalManager)));
+
+        Assert.Equal("technical_manager_role_immutable", demote.Code);
+        Assert.Equal("technical_manager_role_immutable", promote.Code);
+    }
+
+    [Fact]
+    public async Task StaffNeedATeamAndTheTeamMustBeAnActiveTechnicalManager()
+    {
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
+        var coordinator = AppUser.Create("coordinator@example.com", "Coordinator", UserRole.Coordinator, managerId: manager.Id);
+        var loose = AppUser.Create("loose@example.com", "Loose", UserRole.Inspector);
+        var service = CreateService(new MemoryUserRepository(manager, coordinator, loose));
+
+        var none = await Assert.ThrowsAsync<AuthException>(() => service.UpdateProfileAsync(loose.Id, Profile(UserRole.Inspector)));
+        var notAManager = await Assert.ThrowsAsync<AuthException>(() => service.UpdateProfileAsync(loose.Id, Profile(UserRole.Inspector, coordinator.Id)));
+
+        Assert.Equal("manager_required", none.Code);
+        Assert.Equal("manager_invalid", notAManager.Code);
+    }
+
+    [Fact]
+    public async Task AnUnknownUserIsNotFoundAndLeaveMustEndInTheFuture()
+    {
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
+        var member = AppUser.Create("inspector@example.com", "Inspector", UserRole.Inspector, managerId: manager.Id);
+        var service = CreateService(new MemoryUserRepository(manager, member));
+
+        var missing = await Assert.ThrowsAsync<AuthException>(() => service.UpdateProfileAsync(Guid.NewGuid(), Profile(UserRole.Inspector, manager.Id)));
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.UpdateProfileAsync(member.Id, Profile(UserRole.Inspector, manager.Id, DateTimeOffset.UtcNow.AddDays(-1), onLeave: true)));
+
+        Assert.Equal(404, missing.StatusCode);
+    }
+
     private static UserManagementService CreateService(MemoryUserRepository users) =>
         new(users, new FakePasswordService(), new FakeSecretProtector());
 
