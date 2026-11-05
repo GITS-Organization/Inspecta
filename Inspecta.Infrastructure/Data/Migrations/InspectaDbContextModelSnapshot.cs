@@ -730,9 +730,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
                     b.HasIndex("CoordinatorId");
 
-                    b.HasIndex("ManagerId");
-
                     b.HasIndex("Triage", "CreatedAt");
+
+                    b.HasIndex("ManagerId", "Status", "CreatedAt");
 
                     b.ToTable("Requests");
                 });
@@ -822,6 +822,8 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasIndex("VerificationCode");
 
                     b.HasIndex("ClientId", "IssuedAt");
+
+                    b.HasIndex("ManagerId", "IssuedAt");
 
                     b.ToTable("IssuedCertificateFiles");
                 });

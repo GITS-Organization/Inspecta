@@ -105,7 +105,7 @@ public sealed class InspectaDbContext(
 
         var request = modelBuilder.Entity<InspectionRequest>();
         request.HasKey(item => item.Id);
-        request.HasIndex(item => item.ManagerId);
+        request.HasIndex(item => new { item.ManagerId, item.Status, item.CreatedAt });
         request.HasIndex(item => item.CoordinatorId);
         request.Property(item => item.EmailFromName).HasMaxLength(500);
         request.HasOne(item => item.Email).WithOne(item => item.Request)
@@ -206,6 +206,7 @@ public sealed class InspectaDbContext(
         issued.HasIndex(item => item.VerificationCode);
         issued.HasIndex(item => new { item.ClientId, item.IssuedAt });
         issued.HasIndex(item => item.EquipmentId);
+        issued.HasIndex(item => new { item.ManagerId, item.IssuedAt });
         issued.Property(item => item.ClientName).HasMaxLength(200);
         issued.Property(item => item.ItemName).HasMaxLength(200);
         issued.Property(item => item.CertificateNumber).HasMaxLength(64);
