@@ -48,6 +48,24 @@ public sealed class ListPagingHttpTests : IClassFixture<ApiHttpTests.Api>
     }
 
     [Fact]
+    public async Task AClientsCertificatesCanBePagedNewestFirstAndAnswerInFullWithoutAPage()
+    {
+        var client = await SignedIn();
+        var url = $"/api/v1/clients/{api.PagedClientId}/certificates";
+
+        var whole = await client.GetAsync(url);
+        Assert.Equal(3, (await whole.Content.ReadFromJsonAsync<JsonElement>()).GetArrayLength());
+        Assert.Equal("3", whole.Headers.GetValues("X-Total-Count").Single());
+
+        var page = await client.GetAsync(url + "?limit=2&offset=1");
+        var numbers = (await page.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray()
+            .Select(item => item.GetProperty("certificateNumber").GetString()).ToArray();
+        Assert.Equal(["CERT-2026-1002", "CERT-2026-1001"], numbers);
+        Assert.Equal("3", page.Headers.GetValues("X-Total-Count").Single());
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync(url + "?limit=0")).StatusCode);
+    }
+
+    [Fact]
     public async Task ABadPageIsRefusedWithAClearMessage()
     {
         var client = await SignedIn();

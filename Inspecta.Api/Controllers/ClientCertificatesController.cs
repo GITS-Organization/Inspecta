@@ -22,8 +22,11 @@ public sealed class ClientCertificatesController(ClientCertificateService certif
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<ClientCertificateResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<IReadOnlyList<ClientCertificateResponse>>> List(Guid clientId, CancellationToken cancellationToken) =>
-        Ok(await certificates.ListAsync(clientId, cancellationToken));
+    public async Task<ActionResult<IReadOnlyList<ClientCertificateResponse>>> List(
+        Guid clientId, [FromQuery] int? limit, [FromQuery] int offset, CancellationToken cancellationToken) =>
+        PageRequest.Read(limit, offset) is { } page
+            ? PageRequest.Respond(this, await certificates.ListPageAsync(clientId, page.Offset, page.Limit, cancellationToken))
+            : PageRequest.Invalid(this);
 
     /// <summary>Download an issued certificate as PDF.</summary>
     [HttpGet("{certificateFileId:guid}/pdf")]

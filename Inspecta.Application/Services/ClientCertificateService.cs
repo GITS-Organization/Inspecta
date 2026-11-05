@@ -19,6 +19,17 @@ public sealed class ClientCertificateService(
         return await MapAsync(certificateFiles, await certificateFiles.ListForClientAsync(clientId, cancellationToken), cancellationToken);
     }
 
+    /// <summary>One page of the client's archive (newest first) with the total; the rows after the page are never mapped.</summary>
+    public async Task<Contracts.PagedList<ClientCertificateResponse>> ListPageAsync(
+        Guid clientId, int offset, int limit, CancellationToken cancellationToken = default)
+    {
+        if (await clientRepository.GetByIdAsync(clientId, tracking: false, cancellationToken) is null)
+            throw new KeyNotFoundException("Client was not found.");
+        var all = await certificateFiles.ListForClientAsync(clientId, cancellationToken);
+        var page = all.Skip(offset).Take(limit).ToArray();
+        return new Contracts.PagedList<ClientCertificateResponse>(await MapAsync(certificateFiles, page, cancellationToken), all.Count);
+    }
+
     /// <summary>The rows of the archive, each with how and when it reached the client (empty until it is handed over).</summary>
     public static async Task<IReadOnlyList<ClientCertificateResponse>> MapAsync(
         ICertificateFileRepository certificateFiles, IReadOnlyList<IssuedCertificateSummary> files, CancellationToken cancellationToken = default)

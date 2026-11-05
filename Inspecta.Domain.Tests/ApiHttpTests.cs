@@ -29,6 +29,7 @@ public sealed class ApiHttpTests : IClassFixture<ApiHttpTests.Api>
         private readonly SqliteConnection connection = new("Data Source=:memory:");
         public Guid ManagerA { get; private set; }
         public Guid ManagerB { get; private set; }
+        public Guid PagedClientId { get; private set; }
 
         public Api() => connection.Open();
 
@@ -66,7 +67,12 @@ public sealed class ApiHttpTests : IClassFixture<ApiHttpTests.Api>
             var c = Manager("manager-c@example.com");
             db.Users.AddRange(a, b, c);
             db.SaveChanges();
-            db.Clients.AddRange(Enumerable.Range(1, 5).Select(number => Client.Create($"Paged client {number}", managerId: c.Id)));
+            var pagedClients = Enumerable.Range(1, 5).Select(number => Client.Create($"Paged client {number}", managerId: c.Id)).ToList();
+            db.Clients.AddRange(pagedClients);
+            PagedClientId = pagedClients[0].Id;
+            db.IssuedCertificateFiles.AddRange(Enumerable.Range(1, 3).Select(number => IssuedCertificateFile.Create(
+                Guid.NewGuid(), Guid.NewGuid(), c.Id, pagedClients[0].Id, pagedClients[0].Name, "Crane", $"CERT-2026-1{number:000}", $"B1B2C3D4E5F6071{number}",
+                new DateOnly(2026, 11, number), new DateOnly(2027, 11, number), $"crane-{number}.pdf", [1, 2, 3], new DateTimeOffset(2026, 11, number, 9, 0, 0, TimeSpan.Zero))));
             db.Clients.AddRange(Client.Create("Client of team A", managerId: a.Id), Client.Create("Client of team B", managerId: b.Id));
             db.SaveChanges();
             db.IssuedCertificateFiles.Add(IssuedCertificateFile.Create(
