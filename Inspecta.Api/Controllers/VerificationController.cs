@@ -27,6 +27,8 @@ public sealed class VerificationController(ClientCertificateService certificates
     {
         var result = await certificates.VerifyAsync(code, DateOnly.FromDateTime(DateTime.UtcNow), cancellationToken);
         Response.Headers.CacheControl = "no-store";
+        // A page of text with one inline style: no scripts, no framing, nothing fetched from elsewhere.
+        Response.Headers.ContentSecurityPolicy = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
         return new ContentResult
         {
             Content = Render(result),

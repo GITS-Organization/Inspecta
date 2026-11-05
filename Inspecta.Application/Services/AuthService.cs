@@ -8,29 +8,45 @@ namespace Inspecta.Application.Services;
 
 public class AuthService : IAuthService
 {
+    private const int StatusCodes429 = 429;
+
     private readonly IUserRepository _userRepository;
     private readonly IPasswordService _passwordService;
     private readonly IAccessTokenService _accessTokenService;
+    private readonly ILoginAttemptTracker _attempts;
 
     public AuthService(
         IUserRepository userRepository,
         IPasswordService passwordService,
-        IAccessTokenService accessTokenService)
+        IAccessTokenService accessTokenService,
+        ILoginAttemptTracker attempts)
     {
         _userRepository = userRepository;
         _passwordService = passwordService;
         _accessTokenService = accessTokenService;
+        _attempts = attempts;
     }
 
     public async Task<AuthResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
         var email = request.Email.Trim().ToLowerInvariant();
+        // Guessing is slowed down per email, known or not, so the lock tells an attacker nothing about who has an account.
+        if (_attempts.LockedFor(email) is { } wait)
+        {
+            var minutes = Math.Max(1, (int)Math.Ceiling(wait.TotalMinutes));
+            throw new AuthException(
+                "too_many_attempts", $"Too many failed sign-in attempts. Try again in {minutes} minute(s).", StatusCodes429);
+        }
+
         var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
 
         if (user is null || !_passwordService.Verify(user, request.Password))
         {
+            _attempts.RecordFailure(email);
             throw new AuthException("invalid_credentials", "Email or password is incorrect.");
         }
+
+        _attempts.RecordSuccess(email);
 
         if (!user.IsActive)
         {

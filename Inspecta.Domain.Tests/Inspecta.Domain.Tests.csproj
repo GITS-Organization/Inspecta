@@ -29,6 +29,7 @@
     <ProjectReference Include="..\Inspecta.Domain\Inspecta.Domain.csproj" />
     <ProjectReference Include="..\Inspecta.Application\Inspecta.Application.csproj" />
     <ProjectReference Include="..\Inspecta.Infrastructure\Inspecta.Infrastructure.csproj" />
+    <ProjectReference Include="..\Inspecta.Api\Inspecta.Api.csproj" />
   </ItemGroup>
 
 </Project>

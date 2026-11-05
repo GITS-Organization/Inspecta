@@ -8,9 +8,18 @@ ASP.NET Core 8 REST API for Inspecta. This repository contains the backend only;
 - OpenAPI JSON: `/swagger/v1/swagger.json`
 - Health check: `/health`
 
-Swagger is enabled by default in every environment so a separately hosted frontend and API consumers can discover the contract. Set `Swagger__Enabled=false` to disable it. Authenticated endpoints use JWT bearer tokens; use **Authorize** in Swagger UI and paste an access token.
+Swagger is enabled by default (and in `render.yaml`) so the frontends can read the contract; set `Swagger__Enabled=false` to close it. Authenticated endpoints use JWT bearer tokens; use **Authorize** in Swagger UI and paste an access token.
 
 In Swagger the whole request and quotation workflow is one section, **Requests & Quotations**, listed first. Its endpoints are in the order a coordinator uses them (`Step 1 · List requests` … `Step 12 · Reject`), each with a short "when / how / next" guide, followed by the rarely needed extras. The titles and guides live in `Inspecta.Api/OpenApi/WorkflowDocs.cs`; when a workflow endpoint is added, add its step there. The legacy quotation drafts are listed last and labelled. The Certificates, PDF diagnostics and email test endpoints are hidden from Swagger (`ApiExplorerSettings(IgnoreApi = true)`) but still work; remove the attribute from their controllers to show them again.
+
+## Security and limits
+
+- **Sign-in is throttled.** Five wrong passwords for one email within 15 minutes lock that email for 15 minutes: `POST /auth/login` answers `429` with code `too_many_attempts` (even for the right password), unknown emails are counted the same way, and a successful sign-in clears the count. The counters are in memory (one instance; a restart forgets them). Per caller address, `/auth/login` allows 10 requests a minute and `/auth/refresh` 60; the public certificate page allows 60. Over the limit the answer is `429`.
+- **Caller address.** Behind the host's proxy, the address is the one the proxy appended to `X-Forwarded-For` (a client-sent header cannot change it).
+- **Authentication is the default.** An endpoint without `[Authorize]` is still closed; the public ones (sign-in, refresh, logos, certificate verification) say `[AllowAnonymous]`, and a test pins that exact list.
+- **Headers.** `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` on every response, HSTS outside Development, and a strict `Content-Security-Policy` on the public verification page.
+- **Compression.** JSON and HTML responses are gzip/brotli compressed; PDFs and zips are not.
+- **PDF rendering** runs at most two documents at a time; a request waits up to 60 seconds for its turn.
 
 ## API surface
 
@@ -208,7 +217,7 @@ The repository includes a [`render.yaml`](./render.yaml) Blueprint for the `back
 
 Create a PostgreSQL database in Render in the same region as the web service. Copy its internal connection details into `ConnectionStrings__Inspecta` using the ADO.NET format `Host=<host>;Port=5432;Database=<database>;Username=<user>;Password=<password>;SSL Mode=Require`. Review Render's current database pricing and free-tier limits before creating it. The API creates/updates schema from its PostgreSQL migrations on startup; this starts with an empty database and does not copy data from the old SQLite file. The Render Blueprint creates the web service, not the database: create PostgreSQL in the same region first and then provide its internal connection string in the Blueprint settings. Review Render's current database pricing, free-tier limits, and database retention before creating it.
 
-If creating the service manually instead of using the Blueprint, select the `backend` branch and Docker runtime with `Dockerfile` at the repository root. Set `ASPNETCORE_HTTP_PORTS=8080`, `PORT=8080`, `ConnectionStrings__Inspecta` to the PostgreSQL connection string, `Jwt__Issuer=Inspecta.Api`, `Jwt__Audience=Inspecta.Client`, and `Swagger__Enabled=true` if you want Swagger exposed. Set `Jwt__SigningKey` to a unique secret with at least 32 UTF-8 bytes. Bootstrap Admin settings are optional, but set `BootstrapAdmin__Email`, `BootstrapAdmin__FullName`, and `BootstrapAdmin__Password` together for the first deployment. Never commit these secrets. For Flutter Web, add `Cors__AllowedOriginsCsv` with the exact HTTPS origin of the deployed frontend; native Flutter apps do not need CORS.
+If creating the service manually instead of using the Blueprint, select the `backend` branch and Docker runtime with `Dockerfile` at the repository root. Set `ASPNETCORE_HTTP_PORTS=8080`, `PORT=8080`, `ConnectionStrings__Inspecta` to the PostgreSQL connection string, `Jwt__Issuer=Inspecta.Api`, `Jwt__Audience=Inspecta.Client`, and `Swagger__Enabled=false` if you want Swagger closed. Optionally set `Database__MaxPoolSize` (default 20) to cap the Npgsql connection pool. Set `Jwt__SigningKey` to a unique secret with at least 32 UTF-8 bytes. Bootstrap Admin settings are optional, but set `BootstrapAdmin__Email`, `BootstrapAdmin__FullName`, and `BootstrapAdmin__Password` together for the first deployment. Never commit these secrets. For Flutter Web, add `Cors__AllowedOriginsCsv` with the exact HTTPS origin of the deployed frontend; native Flutter apps do not need CORS.
 
 After deployment, verify the Render service is healthy, check its logs for successful database migrations, call `/health`, and test login plus one protected endpoint. Confirm that tenant users see only their own assigned data and that Admin can see legacy unassigned records. Rotate or remove the bootstrap Admin password setting after the initial account is created, and keep a separate database backup/restore plan.
 

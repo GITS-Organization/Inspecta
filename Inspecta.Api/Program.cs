@@ -71,11 +71,16 @@ builder.Services.AddScoped<CurrentTenant>();
 
 var connectionString = builder.Configuration.GetConnectionString("Inspecta")
     ?? throw new InvalidOperationException("Set the ConnectionStrings:Inspecta PostgreSQL connection string.");
-builder.Services.AddDbContext<InspectaDbContext>(options => options.UseNpgsql(connectionString));
+// The pool is capped explicitly (Npgsql's default is 100 per instance, more than a small Postgres plan allows) unless the connection string says otherwise.
+var connectionBuilder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString);
+if (connectionString.IndexOf("Pool Size", StringComparison.OrdinalIgnoreCase) < 0 && connectionString.IndexOf("MaxPoolSize", StringComparison.OrdinalIgnoreCase) < 0)
+    connectionBuilder.MaxPoolSize = builder.Configuration.GetValue("Database:MaxPoolSize", 20);
+builder.Services.AddDbContext<InspectaDbContext>(options => options.UseNpgsql(connectionBuilder.ConnectionString));
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
 builder.Services.AddScoped<ICoordinatorEmailConfigRepository, EfCoordinatorEmailConfigRepository>();
 builder.Services.AddScoped<IEmailSyncRepository, EfEmailSyncRepository>();
 builder.Services.AddScoped<IQuotationDraftRepository, EfQuotationDraftRepository>();
+builder.Services.AddSingleton<ILoginAttemptTracker, LoginAttemptTracker>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<ICoordinatorEmailConfigService, CoordinatorEmailConfigService>();
@@ -124,23 +129,33 @@ builder.Services.AddScoped<IJobMachineService, JobMachineService>();
 builder.Services.AddScoped<Inspecta.Application.Services.ClientCertificateService>();
 builder.Services.AddSingleton(new Inspecta.Application.Services.CertificateDeliveryOptions(builder.Configuration.GetValue("CertificateDelivery:Enabled", false)));
 builder.Services.AddScoped<Inspecta.Application.Services.CertificateDeliveryService>();
-// The public page behind a certificate's QR code is open to everyone, so it is limited per address
-// (the first X-Forwarded-For address when behind the host's proxy).
+// Behind the host's proxy the caller's address is the one the proxy appended to X-Forwarded-For (the last hop): the middleware takes exactly
+// that one (ForwardLimit 1), so a client cannot choose its own address by sending the header itself. The proxy's address is not fixed, so the
+// trusted lists are cleared; the app is only reachable through the proxy.
+builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+// JSON lists can be large; the PDFs and zips are already compressed and are left alone.
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.MimeTypes = ["application/json", "application/problem+json", "text/html"];
+});
+// Limits per caller address. The public certificate page is open to everyone; sign-in and token refresh are limited so that a password cannot be guessed quickly.
 builder.Services.AddRateLimiter(limiter =>
 {
     limiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    limiter.AddPolicy(Inspecta.Api.Controllers.VerificationController.RateLimitPolicy, context =>
-    {
-        var forwarded = context.Request.Headers["X-Forwarded-For"].ToString().Split(',')[0].Trim();
-        var key = forwarded.Length > 0 ? forwarded : context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        return System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(key, _ =>
-            new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 60,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0
-            });
-    });
+    static System.Threading.RateLimiting.RateLimitPartition<string> PerAddress(HttpContext context, int permits) =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = permits, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });
+    limiter.AddPolicy(Inspecta.Api.Controllers.VerificationController.RateLimitPolicy, context => PerAddress(context, 60));
+    limiter.AddPolicy(Inspecta.Api.Controllers.AuthController.LoginRateLimitPolicy, context => PerAddress(context, 10));
+    limiter.AddPolicy(Inspecta.Api.Controllers.AuthController.RefreshRateLimitPolicy, context => PerAddress(context, 60));
 });
 builder.Services.AddScoped<IPasswordService, IdentityPasswordService>();
 builder.Services.AddSingleton<IAccessTokenService, JwtAccessTokenService>();
@@ -286,6 +301,17 @@ if (app.Configuration.GetValue("Swagger:Enabled", true))
     app.UseSwaggerUI(options => options.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None));
 }
 
+app.UseForwardedHeaders();
+if (!app.Environment.IsDevelopment()) app.UseHsts();
+app.Use(async (context, next) =>
+{
+    // Nothing of the API is meant to be framed, sniffed or to leak the address of the page that linked to it.
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    await next();
+});
+app.UseResponseCompression();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseHttpsRedirection();

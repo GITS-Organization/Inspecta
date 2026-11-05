@@ -11,6 +11,8 @@ public static class AuthorizationPolicies
     {
         services.AddAuthorization(options =>
         {
+            // A controller or endpoint that forgets its [Authorize] is closed, not open: public ones say [AllowAnonymous] on purpose.
+            options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
             options.AddPolicy(AdminOnly, policy =>
                 policy.RequireRole("admin"));
             options.AddPolicy(TenantManagement, policy =>

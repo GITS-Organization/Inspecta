@@ -246,6 +246,42 @@ public sealed class PdfInfrastructureTests
         protected override void ComposeContent(IContainer container, UnknownModel model) => container.Text("Hello");
     }
 
+    private sealed class SlowTemplate : IPdfTemplate<UnknownModel>
+    {
+        public static int Running;
+        public static int MostAtOnce;
+
+        public string FileName(UnknownModel model) => "slow.pdf";
+
+        public byte[] Render(UnknownModel model)
+        {
+            var now = Interlocked.Increment(ref Running);
+            lock (typeof(SlowTemplate)) MostAtOnce = Math.Max(MostAtOnce, now);
+            Thread.Sleep(80);
+            Interlocked.Decrement(ref Running);
+            return [37, 80, 68, 70];
+        }
+    }
+
+    [Fact]
+    public void PdfRenderingNeverExceedsThePermitCountAndEveryDocumentIsStillDrawn()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddPdfGeneration(Configuration());
+        services.AddPdfTemplate<UnknownModel, SlowTemplate>();
+        using var provider = services.BuildServiceProvider();
+        var generator = provider.GetRequiredService<IPdfGenerator>();
+        SlowTemplate.Running = 0;
+        SlowTemplate.MostAtOnce = 0;
+
+        var files = Enumerable.Range(0, 8).Select(_ => Task.Run(() => generator.Generate(new UnknownModel()))).ToArray();
+        Task.WaitAll(files);
+
+        Assert.Equal(8, files.Count(task => task.Result.Content.Length == 4));
+        Assert.InRange(SlowTemplate.MostAtOnce, 1, Inspecta.Infrastructure.Pdf.PdfGenerator.MaxConcurrentRenders);
+    }
+
     private sealed class ExplodingTemplate : IPdfTemplate<UnknownModel>
     {
         public string FileName(UnknownModel model) => "boom.pdf";
