@@ -806,6 +806,25 @@ public sealed class MachineInspectionTests : IDisposable
     }
 
     [Fact]
+    public async Task TheQuotationListReadsOnlyTheStateOfACertificateNotItsFormData()
+    {
+        await using (var db = CreateContext())
+        {
+            db.Certificates.Add(InspectionCertificate.Create(requestId, inspector.Id, requestItemId: chainItemId));
+            await db.SaveChangesAsync();
+        }
+
+        await using var read = CreateContext();
+        var states = await new EfQuoteRepository(read).ListCertificateStatesAsync([requestId]);
+
+        var state = Assert.Single(states[requestId]);
+        Assert.Equal(chainItemId, state.RequestItemId);
+        Assert.Equal(MachineStatus.Draft, MachineInspectionService.StatusOf(state));
+        Assert.Empty(await new EfQuoteRepository(read).ListCertificateStatesAsync([Guid.NewGuid()]));
+        Assert.Empty(read.ChangeTracker.Entries<InspectionCertificate>()); // nothing was loaded as an entity
+    }
+
+    [Fact]
     public async Task AnOlderCertificateWithoutATemplateIsLeftAlone()
     {
         await using (var db = CreateContext())

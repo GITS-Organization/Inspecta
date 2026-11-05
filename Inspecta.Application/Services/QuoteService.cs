@@ -124,6 +124,8 @@ public sealed class QuoteService(
         var quotes = (await quoteRepository.ListAsync(filter, cancellationToken))
             .Where(quote => quote.Request is not null)
             .ToArray();
+        var certificateStates = await quoteRepository.ListCertificateStatesAsync(
+            quotes.Select(quote => quote.Request!.Id).Distinct().ToArray(), cancellationToken);
         var inspectorNames = await userRepository.GetFullNamesAsync(
             quotes.Select(quote => quote.Request!.InspectorId).OfType<Guid>().Distinct().ToArray(), cancellationToken);
 
@@ -133,16 +135,19 @@ public sealed class QuoteService(
                 quote.Request!,
                 !isInspector && RequestAccess.CanManageQuotes(quote.Request!, actorId, role),
                 showPrices: !isInspector,
-                quote.Request!.InspectorId is Guid id && inspectorNames.TryGetValue(id, out var name) ? name : null))
+                quote.Request!.InspectorId is Guid id && inspectorNames.TryGetValue(id, out var name) ? name : null,
+                certificateStates.TryGetValue(quote.Request!.Id, out var states) ? states : null))
             .ToArray();
     }
 
     // How far the certificates of an assigned job are; not shown before the job is given to an inspector.
-    private static Contracts.Certificates.MachineProgress? CertificateProgressOf(InspectionRequest request)
+    private static Contracts.Certificates.MachineProgress? CertificateProgressOf(InspectionRequest request, IReadOnlyList<CertificateState>? loaded)
     {
         if (QuotationQueues.Of(request.Status) is not (QuotationQueue.Assigned or QuotationQueue.Certify)) return null;
+        // The list reads only the states of the certificates; a repository that already put the certificates on the request is read as before.
+        var certificates = loaded ?? request.Certificates.Select(CertificateState.Of).ToArray();
         var states = request.Items
-            .Select(item => MachineInspectionService.StatusOf(request.Certificates.SingleOrDefault(value => value.RequestItemId == item.Id)))
+            .Select(item => MachineInspectionService.StatusOf(certificates.SingleOrDefault(value => value.RequestItemId == item.Id)))
             .ToArray();
         return new Contracts.Certificates.MachineProgress(
             states.Length,
@@ -156,7 +161,8 @@ public sealed class QuoteService(
         InspectionRequest request,
         bool canManage,
         bool showPrices,
-        string? inspectorName)
+        string? inspectorName,
+        IReadOnlyList<CertificateState>? certificateStates = null)
     {
         var items = quote.GetItems();
         return new QuoteSummaryResponse(
@@ -189,7 +195,7 @@ public sealed class QuoteService(
             inspectorName,
             request.ScheduledAt,
             QuotationQueues.Of(request.Status),
-            CertificateProgressOf(request),
+            CertificateProgressOf(request, certificateStates),
             request.HasUnreadClientReply,
             request.Kind);
     }

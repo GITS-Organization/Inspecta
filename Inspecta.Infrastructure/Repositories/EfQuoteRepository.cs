@@ -25,8 +25,7 @@ public sealed class EfQuoteRepository(InspectaDbContext dbContext) : IQuoteRepos
     {
         var query = dbContext.Quotes.AsNoTracking()
             .Include(quote => quote.Request).ThenInclude(request => request!.Items)
-            .Include(quote => quote.Request).ThenInclude(request => request!.Certificates)
-            .AsSplitQuery() // two collections under each quote: one joined query would repeat every item for every certificate
+            .AsSplitQuery()
             .Where(quote => quote.Request != null);
         if (filter.CoordinatorId is Guid coordinatorId)
             query = query.Where(quote =>
@@ -65,6 +64,24 @@ public sealed class EfQuoteRepository(InspectaDbContext dbContext) : IQuoteRepos
             .Skip(filter.Skip)
             .Take(filter.Take)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, IReadOnlyList<CertificateState>>> ListCertificateStatesAsync(
+        IReadOnlyCollection<Guid> requestIds, CancellationToken cancellationToken = default)
+    {
+        if (requestIds.Count == 0) return new Dictionary<Guid, IReadOnlyList<CertificateState>>();
+        var ids = requestIds.ToArray();
+        var rows = await dbContext.Certificates.AsNoTracking()
+            .Where(certificate => ids.Contains(certificate.RequestId))
+            .Select(certificate => new { certificate.RequestId, certificate.RequestItemId, certificate.SubmittedAt, certificate.ReviewedAt, certificate.CertificateNumber, certificate.SentAt })
+            .ToListAsync(cancellationToken);
+        return rows
+            .GroupBy(row => row.RequestId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<CertificateState>)group
+                    .Select(row => new CertificateState(row.RequestId, row.RequestItemId, row.SubmittedAt, row.ReviewedAt, row.CertificateNumber, row.SentAt))
+                    .ToArray());
     }
 
     public Task SaveAsync(CancellationToken cancellationToken = default) => dbContext.SaveChangesAsync(cancellationToken);

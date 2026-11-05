@@ -33,6 +33,17 @@ public sealed record QuoteListFilter(
     DateTimeOffset? CreatedFrom = null,
     DateTimeOffset? CreatedUntil = null);
 
+/// <summary>How far one certificate has got, without its form data (which is large): enough to say submitted, approved or delivered.</summary>
+public sealed record CertificateState(
+    Guid RequestId, Guid? RequestItemId, DateTimeOffset? SubmittedAt, DateTimeOffset? ReviewedAt, string? CertificateNumber, DateTimeOffset? SentAt)
+{
+    public bool IsApproved => ReviewedAt is not null && CertificateNumber is not null;
+    public bool IsDelivered => SentAt is not null;
+
+    public static CertificateState Of(InspectionCertificate certificate) =>
+        new(certificate.RequestId, certificate.RequestItemId, certificate.SubmittedAt, certificate.ReviewedAt, certificate.CertificateNumber, certificate.SentAt);
+}
+
 public interface IQuoteRepository
 {
     Task AddAsync(Quote quote, CancellationToken cancellationToken = default);
@@ -41,5 +52,13 @@ public interface IQuoteRepository
 
     /// <summary>Quotations across requests, newest activity first, each with its request loaded.</summary>
     Task<IReadOnlyList<Quote>> ListAsync(QuoteListFilter filter, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The certificate states of the given requests, read without the certificates' form data. A repository whose list already carries the
+    /// certificates on each request can leave this empty: the caller then reads them from the request.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, IReadOnlyList<CertificateState>>> ListCertificateStatesAsync(
+        IReadOnlyCollection<Guid> requestIds, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, IReadOnlyList<CertificateState>>>(new Dictionary<Guid, IReadOnlyList<CertificateState>>());
     Task SaveAsync(CancellationToken cancellationToken = default);
 }

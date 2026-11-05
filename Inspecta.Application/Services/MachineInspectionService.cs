@@ -1147,6 +1147,17 @@ public sealed class MachineInspectionService(
         _ => MachineStatus.Draft
     };
 
+    /// <summary>The same status from the light state of a certificate (no form data).</summary>
+    public static MachineStatus StatusOf(CertificateState? certificate) => certificate switch
+    {
+        null => MachineStatus.NotStarted,
+        { IsApproved: true, IsDelivered: true } => MachineStatus.Delivered,
+        { IsApproved: true } => MachineStatus.Approved,
+        { SubmittedAt: not null, ReviewedAt: null } => MachineStatus.Submitted,
+        { ReviewedAt: not null } => MachineStatus.Returned,
+        _ => MachineStatus.Draft
+    };
+
     // Long enough that a code cannot be guessed from the QR of another certificate.
     private static string NewVerificationCode() => Guid.NewGuid().ToString("N")[..16].ToUpperInvariant();
 
