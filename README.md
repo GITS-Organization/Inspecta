@@ -18,6 +18,8 @@ In Swagger the whole request and quotation workflow is one section, **Requests &
 - **Caller address.** Behind the host's proxy, the address is the one the proxy appended to `X-Forwarded-For` (a client-sent header cannot change it).
 - **Authentication is the default.** An endpoint without `[Authorize]` is still closed; the public ones (sign-in, refresh, logos, certificate verification) say `[AllowAnonymous]`, and a test pins that exact list.
 - **Headers.** `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` on every response, HSTS outside Development, and a strict `Content-Security-Policy` on the public verification page.
+- **Hosts.** `AllowedHosts` is `*` by default. Once the public host names are known, set `AllowedHosts` (environment variable) to them, separated by `;` (for example the API's own domain and its Render address), so that requests with a forged `Host` header are refused.
+- **Incoming email is untrusted.** The HTML of a received email is cut and cleaned under a time limit; a message built to make the cleaning slow is quoted without its text instead of holding a request.
 - **Compression.** JSON and HTML responses are gzip/brotli compressed; PDFs and zips are not.
 - **Paging.** `GET /clients`, `/admin/clients`, `/equipment` and `/clients/{id}/certificates` take optional `limit` (1-5000) and `offset`; without them they answer in full as before (up to 2000 rows), and every answer carries the total in the `X-Total-Count` header (exposed to browsers by CORS). A bad `limit` or `offset` answers `400`.
 - **PDF rendering** runs at most two documents at a time; a request waits up to 60 seconds for its turn.

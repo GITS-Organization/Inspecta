@@ -224,13 +224,30 @@ public static class EmailLayout
         return clean.Length > MaxQuotedLength ? clean[..MaxQuotedLength].TrimEnd() + "..." : clean;
     }
 
+    // The HTML of an incoming email is written by a stranger: a few thousand unclosed tags make these patterns do work that grows with the
+    // square of the length. So the text read is capped, every pattern has a time limit, and when a limit is hit the quote is simply left out.
+    private const int MaxHtmlRead = 100_000;
+    private static readonly TimeSpan HtmlTimeLimit = TimeSpan.FromMilliseconds(250);
+    private static readonly Regex HtmlBreaks = new(@"<(br|/p|/div|/tr|/li)[^>]*>", RegexOptions.IgnoreCase, HtmlTimeLimit);
+    private static readonly Regex HtmlScripts = new(@"<(script|style)[\s\S]*?</\1>", RegexOptions.IgnoreCase, HtmlTimeLimit);
+    private static readonly Regex HtmlTags = new("<[^>]+>", RegexOptions.None, HtmlTimeLimit);
+    private static readonly Regex HtmlSpaces = new(@"[ \t]+", RegexOptions.None, HtmlTimeLimit);
+
     private static string PlainFromHtml(string? html)
     {
         if (string.IsNullOrWhiteSpace(html)) return string.Empty;
-        var withBreaks = Regex.Replace(html, @"<(br|/p|/div|/tr|/li)[^>]*>", "\n", RegexOptions.IgnoreCase);
-        var stripped = Regex.Replace(withBreaks, @"<(script|style)[\s\S]*?</\1>", string.Empty, RegexOptions.IgnoreCase);
-        stripped = Regex.Replace(stripped, "<[^>]+>", string.Empty);
-        return Regex.Replace(WebUtility.HtmlDecode(stripped), @"[ \t]+", " ");
+        try
+        {
+            var read = html.Length > MaxHtmlRead ? html[..MaxHtmlRead] : html;
+            var withBreaks = HtmlBreaks.Replace(read, "\n");
+            var stripped = HtmlScripts.Replace(withBreaks, string.Empty);
+            stripped = HtmlTags.Replace(stripped, string.Empty);
+            return HtmlSpaces.Replace(WebUtility.HtmlDecode(stripped), " ");
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            return string.Empty;
+        }
     }
 
     private static string WebAddress(string website) =>

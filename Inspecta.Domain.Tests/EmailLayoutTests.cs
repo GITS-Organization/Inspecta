@@ -19,6 +19,25 @@ public sealed class EmailLayoutTests
     private static EmailSignatureInfo Signature(string name = "Hager Samy") =>
         new(name, "Business Coordinator", "+20 1035945426", "hager.samy@integrity-intl.com", Branding);
 
+    [Theory]
+    [InlineData("<script ")]
+    [InlineData("<")]
+    [InlineData("<p ")]
+    public void AnEmailMadeToChokeTheHtmlCleanupIsAnsweredQuicklyNotAfterMinutesOfWork(string piece)
+    {
+        // A sender controls this text: thousands of unclosed tags must not turn quoting their email into minutes of CPU.
+        var hostile = string.Concat(Enumerable.Repeat(piece, 150_000 / piece.Length));
+        var source = RequestEmail.Create(
+            Guid.NewGuid(), Guid.NewGuid(), "1", 1, null, hostile, "client@example.com", "Client", "Inspection",
+            null, null, null, null, null, null, null, null, null, DateTimeOffset.UtcNow);
+
+        var started = DateTime.UtcNow;
+        var quoted = EmailLayout.Quote(source);
+
+        Assert.NotNull(quoted);
+        Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(2), $"took {DateTime.UtcNow - started}");
+    }
+
     [Fact]
     public void TheSignatureHasTheNameTitleContactsAddressWebsiteAndTheLogo()
     {
