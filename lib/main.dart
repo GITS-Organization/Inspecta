@@ -12,10 +12,11 @@ Future<void> main() async {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
-      // No status-bar background: screens draw behind it, and each one's
-      // AnnotatedRegion picks the icon brightness.
       SystemChrome.setSystemUIOverlayStyle(
-        const SystemUiOverlayStyle(statusBarColor: Colors.transparent, systemStatusBarContrastEnforced: false),
+        const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          systemStatusBarContrastEnforced: false,
+        ),
       );
 
       await OrientationHelper.lockToPortrait();

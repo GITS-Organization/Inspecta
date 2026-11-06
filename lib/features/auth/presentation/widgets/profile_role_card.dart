@@ -8,8 +8,8 @@ import '../../domain/entities/user.dart';
 import '../../domain/entities/user_role.dart';
 
 /// The card under the "This month" stats that's specific to the signed-in
-/// user's role — or nothing, for a role with no such card (admin, coordinator,
-/// technical manager).
+/// user's role — the inspector's qualifications — or nothing, for a role with
+/// no such card (admin, coordinator, technical manager).
 class ProfileRoleCard extends StatelessWidget {
   final AppUser user;
   final VoidCallback onComingSoon;
@@ -24,7 +24,7 @@ class ProfileRoleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (user.role) {
       UserRole.coordinator => const SizedBox.shrink(),
-      UserRole.inspector => _MyWorkCard(user: user, onComingSoon: onComingSoon),
+      UserRole.inspector => _QualificationsCard(user: user, onComingSoon: onComingSoon),
       UserRole.technicalManager => const SizedBox.shrink(),
       UserRole.admin ||
       UserRole.finance ||
@@ -48,11 +48,13 @@ class _CardTitle extends StatelessWidget {
   }
 }
 
-class _MyWorkCard extends StatelessWidget {
+/// The inspector's qualifications: what they are certified to inspect, one
+/// chip each. The title says what the chips are, so there is no further label.
+class _QualificationsCard extends StatelessWidget {
   final AppUser user;
   final VoidCallback onComingSoon;
 
-  const _MyWorkCard({required this.user, required this.onComingSoon});
+  const _QualificationsCard({required this.user, required this.onComingSoon});
 
   @override
   Widget build(BuildContext context) {
@@ -61,13 +63,8 @@ class _MyWorkCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CardTitle(t.myWorkTitle),
+          _CardTitle(t.qualifications),
           const SizedBox(height: 10),
-          Text(
-            t.qualifiedForLabel,
-            style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
           user.qualifications.isEmpty
               ? Text(t.notSet, style: AppTextStyles.caption)
               : Wrap(
@@ -76,24 +73,33 @@ class _MyWorkCard extends StatelessWidget {
                   children: [
                     for (final q in user.qualifications)
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
+                        padding: const EdgeInsetsDirectional.fromSTEB(10, 6, 12, 6),
                         decoration: BoxDecoration(
                           color: AppColours.primaryTint,
                           borderRadius: BorderRadius.circular(999),
                         ),
-                        child: Text(
-                          q.name,
-                          style: AppTextStyles.badge.copyWith(
-                            color: AppColours.primaryDark,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.workspace_premium_outlined,
+                              size: 15,
+                              color: AppColours.primaryDark,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                q.name,
+                                style: AppTextStyles.badge.copyWith(
+                                  color: AppColours.primaryDark,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                   ],
                 ),
-          const SizedBox(height: 12),
         ],
       ),
     );

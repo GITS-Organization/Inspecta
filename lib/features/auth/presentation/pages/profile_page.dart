@@ -95,24 +95,62 @@ class _ProfileView extends StatelessWidget {
     }
   }
 
-  List<(int? value, String label)> _statsFor(
+  List<ProfileStat> _statsFor(
     UserRole role,
     ProfileStatsState stats,
     AppLocalizations t,
   ) => switch (role) {
     UserRole.coordinator => [
-      (stats.quotesSentThisMonth, t.profileStatQuotesSent),
-      (stats.acceptedThisMonth, t.profileStatAccepted),
+      ProfileStat(
+        value: stats.quotesSentThisMonth,
+        label: t.profileStatQuotesSent,
+        icon: Icons.send_rounded,
+      ),
+      ProfileStat(
+        value: stats.acceptedThisMonth,
+        label: t.profileStatAccepted,
+        icon: Icons.check_circle_outline_rounded,
+        tone: ProfileStatTone.good,
+      ),
     ],
     UserRole.inspector => [
-      (stats.inspectionsThisMonth, t.profileStatInspections),
-      (stats.certificatesThisMonth, t.profileStatCertificates),
-      (stats.returnedThisMonth, t.profileStatReturned),
+      ProfileStat(
+        value: stats.inspectionsThisMonth,
+        label: t.profileStatInspections,
+        icon: Icons.fact_check_outlined,
+      ),
+      ProfileStat(
+        value: stats.certificatesThisMonth,
+        label: t.profileStatCertificates,
+        icon: Icons.workspace_premium_outlined,
+        tone: ProfileStatTone.good,
+      ),
+      // Sent back to the inspector to fix: red while there is any.
+      ProfileStat(
+        value: stats.returnedThisMonth,
+        label: t.profileStatReturned,
+        icon: Icons.undo_rounded,
+        tone: ProfileStatTone.alert,
+      ),
     ],
     UserRole.technicalManager => [
-      (stats.reviewedThisMonth, t.profileStatReviewed),
-      (stats.returnedThisMonth, t.profileStatReturned),
-      (stats.sentThisMonth, t.profileStatSent),
+      ProfileStat(
+        value: stats.reviewedThisMonth,
+        label: t.profileStatReviewed,
+        icon: Icons.rate_review_outlined,
+      ),
+      // The manager sent these back themselves: a count, not an alarm.
+      ProfileStat(
+        value: stats.returnedThisMonth,
+        label: t.profileStatReturned,
+        icon: Icons.undo_rounded,
+      ),
+      ProfileStat(
+        value: stats.sentThisMonth,
+        label: t.profileStatSent,
+        icon: Icons.forward_to_inbox_outlined,
+        tone: ProfileStatTone.good,
+      ),
     ],
     UserRole.admin ||
     UserRole.finance ||

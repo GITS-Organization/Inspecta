@@ -6,9 +6,9 @@ import '../../../../core/shared/m_card.dart';
 import '../../../../core/widgets/language_switcher_widget.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// The Profile screen's "Account" card: Personal info / Change password /
-/// Notifications (not built yet — [onComingSoon]) and Language (wired to
-/// the real [LanguageSwitcherWidget]).
+/// The Profile screen's "Account" card: Personal info / Change password (not
+/// built yet — [onComingSoon]) and Language (wired to the real
+/// [LanguageSwitcherWidget]).
 class ProfileAccountSection extends StatelessWidget {
   final VoidCallback onComingSoon;
 
@@ -34,11 +34,6 @@ class ProfileAccountSection extends StatelessWidget {
           ProfileMenuRow(
             icon: Icons.lock_outline_rounded,
             label: t.changePasswordLabel,
-            onTap: onComingSoon,
-          ),
-          ProfileMenuRow(
-            icon: Icons.notifications_outlined,
-            label: t.notifications,
             onTap: onComingSoon,
           ),
           ProfileMenuRow(
