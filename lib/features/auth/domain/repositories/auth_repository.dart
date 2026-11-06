@@ -25,11 +25,4 @@ abstract interface class AuthRepository {
     required String email,
     required String languageCode,
   });
-
-  /// Changes the signed-in user's own password. This device stays signed in;
-  /// the API signs every other device out. Throws [AuthFailure].
-  Future<void> changePassword({
-    required String currentPassword,
-    required String newPassword,
-  });
 }

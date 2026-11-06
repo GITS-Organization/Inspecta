@@ -179,48 +179,6 @@ class AuthRepositoryImpl implements AuthRepository {
     throw const AuthFailure(AuthFailureCode.unavailable);
   }
 
-  @override
-  Future<void> changePassword({
-    required String currentPassword,
-    required String newPassword,
-  }) async {
-    try {
-      final session = await _local.readSession();
-      final result = await _safeApi(
-            () => _api.changeMyPassword(
-          ChangePasswordRequest(
-            currentPassword: currentPassword,
-            newPassword: newPassword,
-            refreshToken: session?.refreshToken,
-          ),
-        ),
-      );
-      result.fold((_) {}, (f) => throw _mapPasswordError(f));
-    } catch (e) {
-      throw e is AuthFailure ? e : _mapError(e);
-    }
-  }
-
-  /// The API answers a refused change with 400 and a `code`: it is never a
-  /// 401, so a wrong current password does not read as an ended session.
-  AuthFailure _mapPasswordError(Object error) {
-    if (error is ApiFailure) {
-      final body = error.error is ApiErrorModel
-          ? (error.error as ApiErrorModel).response
-          : null;
-      final code = body is Map ? body['code'] : null;
-      switch (code) {
-        case 'current_password_incorrect':
-          return const AuthFailure(AuthFailureCode.currentPasswordIncorrect);
-        case 'password_policy_failed':
-          return const AuthFailure(AuthFailureCode.weakPassword);
-        case 'password_unchanged':
-          return const AuthFailure(AuthFailureCode.passwordUnchanged);
-      }
-    }
-    return _mapError(error);
-  }
-
   /// Best-effort server-side logout; a failure only means the refresh token
   /// stays valid until it expires.
   Future<void> _revoke(AuthSessionModel session) async {
