@@ -131,6 +131,13 @@ public class AppUser
         SetQualifications(values);
     }
 
+    /// <summary>Changes the sign-in email (lower-cased and trimmed, like at creation).</summary>
+    public void ChangeEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) throw new ArgumentException("Email is required.", nameof(email));
+        Email = email.Trim().ToLowerInvariant();
+    }
+
     public void SetPasswordHash(string passwordHash)
     {
         if (string.IsNullOrWhiteSpace(passwordHash))

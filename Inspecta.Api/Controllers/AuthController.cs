@@ -57,6 +57,29 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
         return user is null ? NotFound() : Ok(user);
     }
 
+    /// <summary>Change the signed-in user's own password.</summary>
+    /// <remarks>
+    /// Needs the current password. Send <c>refreshToken</c> (the one this device holds) to stay signed in here while every other device is signed out;
+    /// leave it out and every device is signed out. A wrong current password is <c>400 current_password_incorrect</c> (never 401), repeated wrong guesses
+    /// end in <c>429 too_many_attempts</c>, a weak new password is <c>400 password_policy_failed</c> and the same password again is <c>400 password_unchanged</c>.
+    /// </remarks>
+    [Authorize]
+    [HttpPost("change-my-password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> ChangeMyPassword([FromBody] ChangeMyPasswordRequest request, CancellationToken cancellationToken)
+    {
+        var subject = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        if (!Guid.TryParse(subject, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        await authService.ChangeMyPasswordAsync(userId, request, cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>Revoke the supplied refresh token or all refresh tokens for the current user.</summary>
     [Authorize]
     [HttpPost("logout")]

@@ -530,3 +530,31 @@ Content-Type: application/json
 ### Admin: archive a client (default) or delete it for good with ?permanent=true
 DELETE {{baseUrl}}/api/v1/admin/clients/{{clientId}}?permanent=true
 Authorization: Bearer {{token}}
+
+### Change my own password (any signed-in user). Send this device's refreshToken to stay signed in here and sign every other device out
+POST {{baseUrl}}/api/v1/auth/change-my-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "currentPassword": "{{currentPassword}}", "newPassword": "{{newPassword}}", "refreshToken": "{{refreshToken}}" }
+
+### Technical manager: set a team member's password (they are signed out everywhere)
+PUT {{baseUrl}}/api/v1/manager/team/{{userId}}/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "newPassword": "{{newPassword}}" }
+
+### Technical manager: correct a team member's sign-in email
+PUT {{baseUrl}}/api/v1/manager/team/{{userId}}/email
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "email": "new.address@example.com" }
+
+### Admin: set anyone's password, or change anyone's email
+PUT {{baseUrl}}/api/v1/users/{{userId}}/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "newPassword": "{{newPassword}}" }

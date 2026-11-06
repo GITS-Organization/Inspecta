@@ -80,6 +80,36 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
         return NoContent();
     }
 
+    /// <summary>Set the password of a coordinator or inspector of the team. They are signed out on every device.</summary>
+    /// <remarks>The password must follow the policy (12 characters or more, upper and lower case, a digit and a symbol): <c>400 password_policy_failed</c> otherwise. A lock caused by wrong guesses is lifted.</remarks>
+    [HttpPut("{userId:guid}/password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetPassword(
+        Guid userId,
+        SetPasswordRequest request,
+        [FromQuery] Guid? managerId,
+        CancellationToken cancellationToken)
+    {
+        await userManagementService.SetTeamMemberPasswordAsync(ResolveManagerId(managerId), userId, request.NewPassword, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Change the sign-in email of a member of the team. They are signed out on every device and sign in with the new address.</summary>
+    /// <remarks><c>409 account_exists</c> when the address belongs to another account, <c>400 invalid_email</c> when it is not an email.</remarks>
+    [HttpPut("{userId:guid}/email")]
+    [ProducesResponseType<AuthUserResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<AuthUserResponse>> SetEmail(
+        Guid userId,
+        SetEmailRequest request,
+        [FromQuery] Guid? managerId,
+        CancellationToken cancellationToken) =>
+        Ok(await userManagementService.ChangeTeamMemberEmailAsync(ResolveManagerId(managerId), userId, request.Email, cancellationToken));
+
     /// <summary>Delete a team member for good. <c>409 user_in_use</c> while records still point at them: deactivate instead.</summary>
     [HttpDelete("{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

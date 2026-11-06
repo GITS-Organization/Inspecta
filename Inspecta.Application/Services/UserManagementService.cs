@@ -11,7 +11,8 @@ public sealed class UserManagementService(
     IUserRepository userRepository,
     IPasswordService passwordService,
     ISecretProtector secretProtector,
-    ICompanyProfileService? companyProfiles = null) : IUserManagementService
+    ICompanyProfileService? companyProfiles = null,
+    ILoginAttemptTracker? loginAttempts = null) : IUserManagementService
 {
     public async Task<AuthUserResponse> CreateAsync(
         CreateStaffUserRequest request,
@@ -341,6 +342,58 @@ public sealed class UserManagementService(
         if (!await userRepository.SetActiveAsync(userId, isActive, cancellationToken))
             throw new AuthException("user_not_found", "User was not found.", 404);
     }
+
+    public async Task SetTeamMemberPasswordAsync(Guid managerId, Guid userId, string newPassword, CancellationToken cancellationToken = default)
+    {
+        await GetAuthorizedManagerAsync(managerId, cancellationToken);
+        await SetPasswordAsync(await GetScopedTeamMemberAsync(managerId, userId, cancellationToken), newPassword, cancellationToken);
+    }
+
+    public async Task SetUserPasswordAsync(Guid userId, string newPassword, CancellationToken cancellationToken = default) =>
+        await SetPasswordAsync(await GetUserOrNotFoundAsync(userId, cancellationToken), newPassword, cancellationToken);
+
+    public async Task<AuthUserResponse> ChangeTeamMemberEmailAsync(Guid managerId, Guid userId, string email, CancellationToken cancellationToken = default)
+    {
+        await GetAuthorizedManagerAsync(managerId, cancellationToken);
+        return await ChangeEmailAsync(await GetScopedTeamMemberAsync(managerId, userId, cancellationToken), email, cancellationToken);
+    }
+
+    public async Task<AuthUserResponse> ChangeUserEmailAsync(Guid userId, string email, CancellationToken cancellationToken = default) =>
+        await ChangeEmailAsync(await GetUserOrNotFoundAsync(userId, cancellationToken), email, cancellationToken);
+
+    // A new password ends every sign-in of that person (the old password may be the thing that leaked) and lifts a lock caused by wrong guesses.
+    private async Task SetPasswordAsync(AppUser user, string newPassword, CancellationToken cancellationToken)
+    {
+        ValidatePassword(newPassword);
+        user.SetPasswordHash(passwordService.Hash(user, newPassword));
+        await userRepository.SaveAsync(user, cancellationToken);
+        await userRepository.RevokeAllRefreshTokensAsync(user.Id, cancellationToken);
+        loginAttempts?.RecordSuccess(user.Email);
+    }
+
+    // The email is the sign-in name: it must be a real, free address, and the old sign-ins end (their tokens carry the old address).
+    private async Task<AuthUserResponse> ChangeEmailAsync(AppUser user, string email, CancellationToken cancellationToken)
+    {
+        var normalized = (email ?? string.Empty).Trim().ToLowerInvariant();
+        if (normalized.Length is 0 or > 320 ||
+            !System.Net.Mail.MailAddress.TryCreate(normalized, out var parsed) ||
+            !string.Equals(parsed.Address, normalized, StringComparison.OrdinalIgnoreCase) ||
+            !parsed.Host.Contains('.'))
+            throw new AuthException("invalid_email", "That is not a valid email address.", 400);
+        if (normalized != user.Email)
+        {
+            await EnsureEmailAvailableAsync(normalized, cancellationToken);
+            user.ChangeEmail(normalized);
+            await userRepository.SaveAsync(user, cancellationToken);
+            await userRepository.RevokeAllRefreshTokensAsync(user.Id, cancellationToken);
+        }
+
+        return ToResponse(user);
+    }
+
+    private async Task<AppUser> GetUserOrNotFoundAsync(Guid userId, CancellationToken cancellationToken) =>
+        await userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new AuthException("user_not_found", "User was not found.", 404);
 
     public static void ValidatePassword(string password)
     {

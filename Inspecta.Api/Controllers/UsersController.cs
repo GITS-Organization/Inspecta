@@ -67,6 +67,26 @@ public sealed class UsersController(IUserManagementService userManagementService
         return NoContent();
     }
 
+    /// <summary>Set anyone's password (a technical manager's included). They are signed out on every device.</summary>
+    [HttpPut("{userId:guid}/password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetPassword(Guid userId, SetPasswordRequest request, CancellationToken cancellationToken)
+    {
+        await userManagementService.SetUserPasswordAsync(userId, request.NewPassword, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Change anyone's sign-in email. They are signed out on every device. <c>409 account_exists</c> when the address is taken.</summary>
+    [HttpPut("{userId:guid}/email")]
+    [ProducesResponseType<AuthUserResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<AuthUserResponse>> SetEmail(Guid userId, SetEmailRequest request, CancellationToken cancellationToken) =>
+        Ok(await userManagementService.ChangeUserEmailAsync(userId, request.Email, cancellationToken));
+
     /// <summary>Delete a user for good (their sessions go with them). <c>409 user_in_use</c> while records still point at the user: deactivate instead.</summary>
     [HttpDelete("{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

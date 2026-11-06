@@ -38,4 +38,8 @@ public interface IUserRepository
     Task RevokeRefreshTokenAsync(RefreshToken refreshToken, CancellationToken cancellationToken = default);
     Task RevokeRefreshTokenFamilyAsync(Guid familyId, CancellationToken cancellationToken = default);
     Task RevokeAllRefreshTokensAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>Signs out every device of the user except the one holding the refresh token with this hash.</summary>
+    Task RevokeOtherRefreshTokensAsync(Guid userId, string keepTokenHash, CancellationToken cancellationToken = default) =>
+        RevokeAllRefreshTokensAsync(userId, cancellationToken);
 }

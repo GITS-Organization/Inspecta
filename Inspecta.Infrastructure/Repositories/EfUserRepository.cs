@@ -205,6 +205,16 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task RevokeOtherRefreshTokensAsync(Guid userId, string keepTokenHash, CancellationToken cancellationToken = default)
+    {
+        var tokens = await dbContext.RefreshTokens
+            .Where(token => token.UserId == userId && token.RevokedAt == null && token.TokenHash != keepTokenHash)
+            .ToListAsync(cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        foreach (var token in tokens) token.Revoke(now);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task RevokeAllRefreshTokensAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var tokens = await dbContext.RefreshTokens

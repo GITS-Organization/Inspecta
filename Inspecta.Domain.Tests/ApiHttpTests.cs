@@ -19,7 +19,7 @@ namespace Inspecta.Domain.Tests;
 /// <summary>The whole API started in memory (SQLite instead of PostgreSQL): what a caller really gets over HTTP.</summary>
 public sealed class ApiHttpTests : IClassFixture<ApiHttpTests.Api>
 {
-    private const string Password = "Correct-Horse-Battery-1";
+    public const string Password = "Correct-Horse-Battery-1";
     private readonly Api api;
 
     public ApiHttpTests(Api api) => this.api = api;
@@ -44,6 +44,28 @@ public sealed class ApiHttpTests : IClassFixture<ApiHttpTests.Api>
                     services.Remove(descriptor);
                 services.AddDbContext<InspectaDbContext>(options => options.UseSqlite(connection));
             });
+        }
+
+        private readonly object seedLock = new();
+
+        /// <summary>Starts the host and seeds the shared teams once, whichever test class asks first.</summary>
+        public void EnsureSeeded() { lock (seedLock) if (ManagerA == Guid.Empty) Seed(); }
+
+        /// <summary>Adds one more account (the shared test password), for a test that needs a user nobody else touches.</summary>
+        public AppUser AddUser(string email, UserRole role, Guid? managerId = null)
+        {
+            EnsureSeeded();
+            var options = new DbContextOptionsBuilder<InspectaDbContext>().UseSqlite(connection).Options;
+            var admin = new HttpContextAccessor
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("role", "admin")], "test")) }
+            };
+            using var db = new InspectaDbContext(options, new CurrentTenant(admin));
+            var user = AppUser.Create(email, "Test " + email, role, managerId: managerId);
+            user.SetPasswordHash(new IdentityPasswordService().Hash(user, Password));
+            db.Users.Add(user);
+            db.SaveChanges();
+            return user;
         }
 
         public void Seed()

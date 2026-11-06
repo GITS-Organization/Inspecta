@@ -136,6 +136,36 @@ public class AuthService : IAuthService
         return user is null ? null : ToResponse(user);
     }
 
+    public async Task ChangeMyPasswordAsync(Guid userId, ChangeMyPasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new AuthException("unauthorized", "The account no longer exists.");
+
+        // Guessing the current password from a stolen session is slowed down exactly like guessing at sign-in.
+        if (_attempts.LockedFor(user.Email) is { } wait)
+            throw new AuthException(
+                "too_many_attempts", $"Too many failed attempts. Try again in {Math.Max(1, (int)Math.Ceiling(wait.TotalMinutes))} minute(s).", StatusCodes429);
+        // 400, not 401: a 401 would tell the app its session has ended.
+        if (!_passwordService.Verify(user, request.CurrentPassword))
+        {
+            _attempts.RecordFailure(user.Email);
+            throw new AuthException("current_password_incorrect", "The current password is incorrect.", 400);
+        }
+
+        UserManagementService.ValidatePassword(request.NewPassword);
+        if (request.NewPassword == request.CurrentPassword)
+            throw new AuthException("password_unchanged", "The new password must be different from the current one.", 400);
+
+        user.SetPasswordHash(_passwordService.Hash(user, request.NewPassword));
+        await _userRepository.SaveAsync(user, cancellationToken);
+        _attempts.RecordSuccess(user.Email);
+
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+            await _userRepository.RevokeAllRefreshTokensAsync(user.Id, cancellationToken);
+        else
+            await _userRepository.RevokeOtherRefreshTokensAsync(user.Id, HashToken(request.RefreshToken), cancellationToken);
+    }
+
     public async Task LogoutAsync(Guid userId, string? rawRefreshToken, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(rawRefreshToken))
