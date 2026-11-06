@@ -176,7 +176,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
                     lines.Item().Text("Unauthorized use, reproduction, or distribution is strictly prohibited.").Bold().FontSize(6.8f);
                 });
                 if (Accreditations(model) is { Length: > 0 } accreditations)
-                    row.ConstantItem(150).AlignRight().AlignBottom().Height(46).Image(accreditations).FitArea();
+                    row.ConstantItem(190).AlignRight().AlignBottom().Height(46).Image(accreditations).FitArea();
             });
             column.Item().AlignCenter().Text(text =>
             {
