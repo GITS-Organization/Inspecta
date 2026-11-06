@@ -51,7 +51,6 @@ import 'features/machines/domain/usecases/get_machine_form.dart';
 import 'features/machines/domain/usecases/get_machine_pdf.dart';
 import 'features/machines/domain/usecases/return_machine.dart';
 import 'features/machines/domain/usecases/save_machine_form.dart';
-import 'features/machines/domain/usecases/submit_all_machines.dart';
 import 'features/machines/domain/usecases/submit_machine.dart';
 import 'features/machines/domain/usecases/start_job_inspection.dart';
 import 'features/machines/presentation/bloc/job_machines_cubit.dart';
@@ -249,7 +248,6 @@ void _registerMachines() {
     ..registerLazySingleton(() => StartJobInspection(getIt()))
     ..registerLazySingleton(() => SaveMachineForm(getIt()))
     ..registerLazySingleton(() => SubmitMachine(getIt()))
-    ..registerLazySingleton(() => SubmitAllMachines(getIt()))
     ..registerLazySingleton(() => ApproveMachine(getIt()))
     ..registerLazySingleton(() => ReturnMachine(getIt()))
     ..registerLazySingleton(() => GetDeliveryPreview(getIt()))
@@ -261,7 +259,6 @@ void _registerMachines() {
         requestId: requestId,
         getMachines: getIt(),
         startInspection: getIt(),
-        submitAll: getIt(),
       ),
     );
 }

@@ -94,11 +94,6 @@ abstract class MachinesApiClientServices {
     @Body() Map<String, dynamic> body,
   );
 
-  /// The inspector sends every certificate of the job to the technical
-  /// manager together, all or nothing (no body).
-  @POST('${ApiUrls.quotationQueue}/{requestId}/submit-all')
-  Future<dynamic> submitAll(@Path('requestId') String requestId);
-
   /// Begins the inspection (no body); safe to call again.
   @POST('${ApiUrls.quotationQueue}/{requestId}/start-inspection')
   Future<dynamic> startInspection(@Path('requestId') String requestId);
