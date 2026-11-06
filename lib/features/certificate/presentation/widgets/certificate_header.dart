@@ -42,7 +42,7 @@ class CertificateHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(t.templateLabel(CertificateTemplate.id), style: AppTextStyles.caption),
+                    Text(t.templateLabel(CertificateTemplate.issuer), style: AppTextStyles.caption),
                     Text(
                       t.certificateTitle,
                       overflow: TextOverflow.ellipsis,

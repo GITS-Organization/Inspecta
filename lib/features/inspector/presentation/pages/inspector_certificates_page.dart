@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_layout.dart';
-import '../../../../core/consts/app_text_styles.dart';
-import '../../../../core/shared/loading.dart';
+import '../../../../core/enums/job_status.dart';
 import '../../../../core/shared/m_notice.dart';
 import '../../../../core/shared/m_search_field.dart';
+import '../../../../core/widgets/banner_art.dart';
+import '../../../../core/widgets/empty_widget.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/presentation/widgets/user_app_header.dart';
 import '../../../machines/presentation/pages/job_machines_page.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
+import '../../../requests/domain/entities/request_source.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
 import '../bloc/certificates_list_cubit.dart';
@@ -27,7 +30,8 @@ class InspectorCertificatesPage extends StatefulWidget {
   const InspectorCertificatesPage({super.key, this.onOpenProfile});
 
   @override
-  State<InspectorCertificatesPage> createState() => _InspectorCertificatesPageState();
+  State<InspectorCertificatesPage> createState() =>
+      _InspectorCertificatesPageState();
 }
 
 class _InspectorCertificatesPageState extends State<InspectorCertificatesPage> {
@@ -54,6 +58,7 @@ class _InspectorCertificatesPageState extends State<InspectorCertificatesPage> {
                 builder: (context) => UserAppHeader(
                   title: t.myCertificatesTitle,
                   onOpenProfile: widget.onOpenProfile,
+                  style: AppBannerStyle.rings,
                   bottom: ISearchField(
                     controller: _searchController,
                     onChanged: context.read<CertificatesListCubit>().setQuery,
@@ -81,7 +86,9 @@ class _Body extends StatelessWidget {
   Future<void> _open(BuildContext context, InspectionRequest request) async {
     final cubit = context.read<CertificatesListCubit>();
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => JobMachinesPage(request: request)),
+      MaterialPageRoute<void>(
+        builder: (_) => JobMachinesPage(request: request),
+      ),
     );
     cubit.start();
   }
@@ -92,25 +99,62 @@ class _Body extends StatelessWidget {
     return BlocBuilder<CertificatesListCubit, CertificatesListState>(
       builder: (context, state) {
         if (state.status == CertificatesListStatus.loading) {
-          return Loading.loader(context);
+          return const _Skeleton();
         }
         if (state.status == CertificatesListStatus.error) {
           return _ErrorState(failure: state.failure!);
         }
 
         final visible = state.visible;
+        final cubit = context.read<CertificatesListCubit>();
+
+        // A list with nothing to show still pulls to refresh, and says why it
+        // is empty: a search that matched nothing, a tab with nothing in it,
+        // or no certificates at all.
         if (visible.isEmpty) {
-          return Center(child: Text(t.emptyCertificatesList, style: AppTextStyles.subtitle));
+          final searching = state.query.trim().isNotEmpty;
+          final kind = searching
+              ? EmptyKind.search
+              : state.filter == CertificatesFilter.all
+              ? EmptyKind.nodata
+              : EmptyKind.filter;
+          return RefreshIndicator(
+            color: AppColours.primaryColor,
+            onRefresh: cubit.start,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                16,
+                0,
+                16,
+                AppLayout.bottomNavClearance,
+              ),
+              children: [
+                EmptyState(
+                  kind: kind,
+                  icon: kind == EmptyKind.nodata
+                      ? Icons.workspace_premium_outlined
+                      : null,
+                  title: t.emptyCertificatesList,
+                ),
+              ],
+            ),
+          );
         }
 
         return RefreshIndicator(
           color: AppColours.primaryColor,
-          onRefresh: context.read<CertificatesListCubit>().start,
+          onRefresh: cubit.start,
           child: ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, AppLayout.bottomNavClearance),
+            padding: const EdgeInsets.fromLTRB(
+              16,
+              2,
+              16,
+              AppLayout.bottomNavClearance,
+            ),
             itemCount: visible.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            separatorBuilder: (_, _) => const SizedBox(height: 14),
             itemBuilder: (context, index) {
               final request = visible[index];
               return CertificateListCard(
@@ -122,6 +166,41 @@ class _Body extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// What the skeleton's cards are drawn from; only their shape matters.
+final _placeholder = InspectionRequest(
+  id: 'placeholder',
+  source: RequestSource.email,
+  clientName: 'Client name',
+  subject: 'QT-2026-000000 rev01',
+  receivedAt: DateTime(2026),
+  location: 'Location of the site',
+  status: JobStatus.inProgress,
+  items: const [],
+  scheduledAt: DateTime(2026, 1, 1, 9, 30),
+);
+
+/// The loading state, in the shape of the list: three certificate cards drawn
+/// by the real widget from [_placeholder], shimmering.
+class _Skeleton extends StatelessWidget {
+  const _Skeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Skeletonizer(
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
+        children: [
+          for (var i = 0; i < 3; i++) ...[
+            CertificateListCard(request: _placeholder, onOpen: () {}),
+            const SizedBox(height: 14),
+          ],
+        ],
+      ),
     );
   }
 }

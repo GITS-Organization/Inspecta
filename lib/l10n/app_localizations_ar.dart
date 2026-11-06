@@ -2492,6 +2492,29 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String checklistOfTotal(int answered, int total) {
+    return '$answered من $total';
+  }
+
+  @override
+  String get checklistRowsAnswered => 'بنود تمت الإجابة عنها';
+
+  @override
+  String get machineModelLabel => 'الطراز';
+
+  @override
+  String get machineSerialShort => 'الرقم التسلسلي';
+
+  @override
+  String get machineQtyShort => 'الكمية';
+
+  @override
+  String get certListQuotation => 'عرض السعر';
+
+  @override
+  String get certListCertificate => 'الشهادة';
+
+  @override
   String machineQuantityLabel(int count) {
     return '× $count';
   }

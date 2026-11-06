@@ -12,12 +12,17 @@ import '../../../../core/framework/mtoast.dart';
 import '../../../../core/shared/m_card.dart';
 import '../../../../core/shared/m_notice.dart';
 import '../../../../core/shared/m_primary_button.dart';
+import '../../../../core/widgets/banner_art.dart';
 import '../../../../core/widgets/empty_widget.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../core/widgets/pdf_preview_page.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../auth/presentation/bloc/auth_cubit.dart';
 import '../../../certificate/domain/certificate_number.dart';
 import '../../../certificate/presentation/pages/certificate_page.dart';
+import '../../../inspector/presentation/widgets/inspector_design.dart';
+import '../../../inspector/presentation/widgets/inspector_machine_ticket.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
@@ -61,6 +66,9 @@ final _placeholderJob = JobMachines(
 ///
 /// With [pdfOnly] a machine opens its certificate PDF instead of its form —
 /// for certificates that are already approved and sent.
+///
+/// An inspector sees the redesigned screen (ringed banner, ticket cards); the
+/// other roles that open a job's machines keep the standard cards.
 class JobMachinesPage extends StatelessWidget {
   final InspectionRequest request;
   final bool pdfOnly;
@@ -70,6 +78,7 @@ class JobMachinesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final inspectorLook = context.select((AuthCubit cubit) => cubit.user?.role == UserRole.inspector);
 
     return BlocProvider(
       create: (_) => getIt<JobMachinesCubit>(param1: request.id)..start(),
@@ -82,9 +91,10 @@ class JobMachinesPage extends StatelessWidget {
               MachinesHeader(
                 eyebrow: request.clientName.isEmpty ? request.id : request.clientName,
                 title: t.machinesTitle,
+                style: inspectorLook ? AppBannerStyle.ringsCompact : AppBannerStyle.network,
               ),
               const SizedBox(height: 12),
-              Expanded(child: _Body(request: request, pdfOnly: pdfOnly)),
+              Expanded(child: _Body(request: request, pdfOnly: pdfOnly, inspectorLook: inspectorLook)),
             ],
           ),
         ),
@@ -97,7 +107,10 @@ class _Body extends StatelessWidget {
   final InspectionRequest request;
   final bool pdfOnly;
 
-  const _Body({required this.request, required this.pdfOnly});
+  /// The redesigned look the inspector sees.
+  final bool inspectorLook;
+
+  const _Body({required this.request, required this.pdfOnly, required this.inspectorLook});
 
   /// The machine's certificate as the API renders it (the stored final file
   /// once approved), in the full-screen preview.
@@ -137,6 +150,36 @@ class _Body extends StatelessWidget {
   static bool _isLocked(JobMachines job, MachineSummary machine) =>
       job.canStartInspection && machine.status == MachineStatus.notStarted;
 
+  /// One machine's card: the inspector's ticket, or the standard card for the
+  /// other roles. Tapping it opens the form (or the PDF, with [pdfOnly]); while
+  /// the inspection hasn't started it only says to start first.
+  Widget _card(BuildContext context, JobMachines job, MachineSummary machine) {
+    final t = AppLocalizations.of(context)!;
+    final locked = _isLocked(job, machine);
+    void onTap() {
+      if (locked) {
+        MToast.showInfo(message: t.machineStartFirstHint);
+      } else if (pdfOnly) {
+        _viewPdf(context, machine);
+      } else {
+        _open(context, machine);
+      }
+    }
+
+    final VoidCallback? onViewPdf = pdfOnly ? () => _viewPdf(context, machine) : null;
+
+    if (!inspectorLook) {
+      return MachineCard(machine: machine, locked: locked, onTap: onTap, onViewPdf: onViewPdf);
+    }
+    return InspectorMachineTicket(
+      key: ValueKey(machine.requestItemId),
+      machine: machine,
+      locked: locked,
+      onTap: onTap,
+      onViewPdf: onViewPdf,
+    );
+  }
+
   Future<void> _start(BuildContext context) async {
     final t = AppLocalizations.of(context)!;
     final failure = await context.read<JobMachinesCubit>().startInspection();
@@ -154,7 +197,10 @@ class _Body extends StatelessWidget {
           if (state.status == JobMachinesStatus.error) return _ErrorState(failure: state.failure!);
           // Until the job is read, the steps show as they will when it has not
           // been started: its status tells, so the skeleton is the right shape.
-          return _Skeleton(showSteps: !pdfOnly && request.status != JobStatus.inProgress);
+          return _Skeleton(
+            showSteps: !pdfOnly && request.status != JobStatus.inProgress,
+            inspectorLook: inspectorLook,
+          );
         }
 
         return Column(
@@ -174,8 +220,13 @@ class _Body extends StatelessWidget {
                     job.canStartInspection ? 16 : AppLayout.bottomNavClearance,
                   ),
                   children: [
-                    _Summary(job: job, fallbackLocation: request.location, showClient: request.clientName.isEmpty),
-                    const SizedBox(height: 12),
+                    _Summary(
+                      job: job,
+                      fallbackLocation: request.location,
+                      showClient: request.clientName.isEmpty,
+                      inspectorLook: inspectorLook,
+                    ),
+                    SizedBox(height: inspectorLook ? 14 : 12),
                     // Start first, then the checklists: the two steps, with the
                     // second one locked until the first is done.
                     if (job.canStartInspection) ...[
@@ -186,17 +237,8 @@ class _Body extends StatelessWidget {
                       SizedBox(height: 320, child: EmptyState(title: t.machinesEmpty))
                     else
                       for (final machine in job.machines) ...[
-                        MachineCard(
-                          machine: machine,
-                          locked: _isLocked(job, machine),
-                          onTap: () => _isLocked(job, machine)
-                              ? MToast.showInfo(message: t.machineStartFirstHint)
-                              : pdfOnly
-                              ? _viewPdf(context, machine)
-                              : _open(context, machine),
-                          onViewPdf: pdfOnly ? () => _viewPdf(context, machine) : null,
-                        ),
-                        const SizedBox(height: 12),
+                        _card(context, job, machine),
+                        SizedBox(height: inspectorLook ? 14 : 12),
                       ],
                   ],
                 ),
@@ -343,7 +385,16 @@ class _Summary extends StatelessWidget {
   final String fallbackLocation;
   final bool showClient;
 
-  const _Summary({required this.job, required this.fallbackLocation, required this.showClient});
+  /// The redesigned look the inspector sees: a tighter card whose
+  /// certificates line is an uppercase heading.
+  final bool inspectorLook;
+
+  const _Summary({
+    required this.job,
+    required this.fallbackLocation,
+    required this.showClient,
+    this.inspectorLook = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -356,6 +407,8 @@ class _Summary extends StatelessWidget {
     final hasDetails = client.isNotEmpty || location.isNotEmpty || scheduledAt != null;
 
     return MCard(
+      borderRadius: inspectorLook ? 22 : 24,
+      padding: EdgeInsets.all(inspectorLook ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -379,25 +432,29 @@ class _Summary extends StatelessWidget {
                   ),
               ],
             ),
-          if (hasDetails) const SizedBox(height: 12),
+          if (hasDetails) SizedBox(height: inspectorLook ? 14 : 12),
           Row(
             children: [
               Text(
-                t.certificatesLabel,
-                style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600, color: AppColours.inkSecondary),
+                inspectorLook && !isArabic(context) ? t.certificatesLabel.toUpperCase() : t.certificatesLabel,
+                style: inspectorLook
+                    ? inspectorEyebrow(context)
+                    : AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600, color: AppColours.inkSecondary),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   t.machinesProgress(progress.submitted, progress.total),
-                  style: AppTextStyles.caption,
+                  style: inspectorLook
+                      ? AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.w500, color: AppColours.inkBody)
+                      : AppTextStyles.caption,
                   textAlign: TextAlign.end,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: inspectorLook ? 8 : 6),
           _ProgressSegments(machines: job.machines, progress: progress),
         ],
       ),
@@ -492,25 +549,29 @@ class _ProgressSegments extends StatelessWidget {
 /// all drawn by the real widgets from placeholders, shimmering.
 class _Skeleton extends StatelessWidget {
   final bool showSteps;
+  final bool inspectorLook;
 
-  const _Skeleton({required this.showSteps});
+  const _Skeleton({required this.showSteps, required this.inspectorLook});
 
   @override
   Widget build(BuildContext context) {
+    final gap = SizedBox(height: inspectorLook ? 14 : 12);
     return Skeletonizer(
       child: ListView(
         physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
         children: [
-          _Summary(job: _placeholderJob, fallbackLocation: '', showClient: false),
-          const SizedBox(height: 12),
+          _Summary(job: _placeholderJob, fallbackLocation: '', showClient: false, inspectorLook: inspectorLook),
+          gap,
           if (showSteps) ...[
             const _StartSteps(),
-            const SizedBox(height: 12),
+            gap,
           ],
           for (var i = 0; i < 2; i++) ...[
-            MachineCard(machine: _placeholder, locked: showSteps, onTap: () {}),
-            const SizedBox(height: 12),
+            inspectorLook
+                ? InspectorMachineTicket(machine: _placeholder, locked: showSteps, onTap: () {})
+                : MachineCard(machine: _placeholder, locked: showSteps, onTap: () {}),
+            gap,
           ],
         ],
       ),

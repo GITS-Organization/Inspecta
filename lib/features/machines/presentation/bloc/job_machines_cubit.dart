@@ -50,18 +50,23 @@ class JobMachinesCubit extends Cubit<JobMachinesState> {
 
   /// Begins the inspection, then reloads the machines. Returns the failure's
   /// code when it didn't work, `null` when it did.
+  ///
+  /// [JobMachinesState.isStarting] stays up through the reload too: until the
+  /// machines come back the screen still offers "Start inspection", so the
+  /// button must keep spinning (and ignore taps) rather than flick back to
+  /// idle and let the inspection be started twice.
   Future<RequestsFailureCode?> startInspection() async {
     if (state.isStarting) return null;
     emit(state.copyWith(isStarting: true));
     try {
       await _startInspection(requestId);
-      if (isClosed) return null;
-      emit(state.copyWith(isStarting: false));
+      // Never throws: a failed reload keeps what is on screen.
       await start();
       return null;
     } catch (error) {
-      if (!isClosed) emit(state.copyWith(isStarting: false));
       return _codeOf(error);
+    } finally {
+      if (!isClosed) emit(state.copyWith(isStarting: false));
     }
   }
 

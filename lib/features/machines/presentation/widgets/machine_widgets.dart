@@ -5,6 +5,7 @@ import '../../../../core/consts/app_colors.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/shared/m_back_button.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/banner_art.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/job_machines.dart';
 import '../../domain/entities/machine_status.dart';
@@ -18,21 +19,29 @@ class MachinesHeader extends StatelessWidget {
   /// Shown at the end of the row, e.g. a save indicator.
   final Widget? trailing;
 
+  /// [AppBannerStyle.ringsCompact] is the inspector's.
+  final AppBannerStyle style;
+
   const MachinesHeader({
     super.key,
     required this.eyebrow,
     required this.title,
     this.trailing,
+    this.style = AppBannerStyle.network,
   });
 
   @override
   Widget build(BuildContext context) {
+    final rings = style.isRings;
+    // Arabic letters join: tracking would pull them apart.
+    final arabic = Localizations.localeOf(context).languageCode == 'ar';
     return AppBanner(
       topInset: MediaQuery.paddingOf(context).top,
+      style: style,
       child: Row(
         children: [
           const MBackButton(),
-          const SizedBox(width: 12),
+          SizedBox(width: rings ? 14 : 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,9 +53,9 @@ class MachinesHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.caption.copyWith(
                     fontWeight: FontWeight.w600,
-                    letterSpacing: 0.24,
-                    height: 16 / 12,
-                    fontSize: 12,
+                    letterSpacing: rings ? 0 : 0.24,
+                    height: rings ? 17 / 13 : 16 / 12,
+                    fontSize: rings ? 13 : 12,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -55,9 +64,10 @@ class MachinesHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.sectionTitle.copyWith(
-                    fontSize: 22,
-                    height: 28 / 22,
-                    letterSpacing: -0.22,
+                    fontSize: rings ? 25 : 22,
+                    height: rings ? 1.15 : 28 / 22,
+                    fontWeight: rings ? FontWeight.w700 : null,
+                    letterSpacing: rings ? (arabic ? 0 : -0.5) : -0.22,
                   ),
                 ),
               ],

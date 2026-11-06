@@ -6,7 +6,12 @@
 class CertificateTemplate {
   CertificateTemplate._();
 
+  /// The template's identifier as stored on a certificate. Not for display —
+  /// the screens show [issuer] instead.
   static const String id = 'TUV-RTE-01';
+
+  /// Who issues the report; what the certificate screen shows beside "Template".
+  static const String issuer = 'Integrity Intl';
 
   /// What the "Test type" field starts as — the inspector can change it.
   static const String defaultTestType = 'Visual & function test';

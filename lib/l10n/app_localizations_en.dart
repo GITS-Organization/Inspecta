@@ -2499,6 +2499,29 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String checklistOfTotal(int answered, int total) {
+    return '$answered of $total';
+  }
+
+  @override
+  String get checklistRowsAnswered => 'rows answered';
+
+  @override
+  String get machineModelLabel => 'Model';
+
+  @override
+  String get machineSerialShort => 'S/N';
+
+  @override
+  String get machineQtyShort => 'Qty';
+
+  @override
+  String get certListQuotation => 'Quotation';
+
+  @override
+  String get certListCertificate => 'Certificate';
+
+  @override
   String machineQuantityLabel(int count) {
     return '× $count';
   }

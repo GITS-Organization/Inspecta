@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../../../core/consts/app_colors.dart';
-import '../../../../core/shared/loading.dart';
+import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/shared/m_notice.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -12,6 +13,7 @@ import '../../domain/entities/certificate_failure.dart';
 import '../bloc/certificate_cubit.dart';
 import '../widgets/certificate_footer.dart';
 import '../widgets/certificate_header.dart';
+import '../widgets/certificate_form_fields.dart';
 import '../widgets/certificate_labels.dart';
 import '../widgets/conclusion_section.dart';
 import '../widgets/defects_section.dart';
@@ -68,7 +70,7 @@ class _Body extends StatelessWidget {
           previous.certificate?.reviewNote != current.certificate?.reviewNote,
       builder: (context, state) {
         if (state.status == CertificateStatus.loading) {
-          return Loading.loader(context);
+          return const _FormSkeleton();
         }
         if (state.status == CertificateStatus.error) {
           return _ErrorState(failure: state.failure!);
@@ -96,6 +98,148 @@ class _Body extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// The loading state, in the shape of the form: the first step's card with its
+/// fields, then two more cards, shimmering. Only the shapes matter — Skeletonizer
+/// turns every text into a bar.
+class _FormSkeleton extends StatelessWidget {
+  const _FormSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Skeletonizer(
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        children: const [
+          _SkeletonCard(
+            title: 'Examination details',
+            fields: [
+              _SkeletonValue(label: 'Client and location', value: 'Client name · Location of the site'),
+              certificateFieldGap,
+              _SkeletonValue(label: 'Certificate number', value: 'CERT-2026-0000'),
+              certificateFieldGap,
+              _SkeletonInput(label: 'Client representative'),
+              certificateFieldGap,
+              _SkeletonInput(label: 'Examination date'),
+              certificateFieldGap,
+              _SkeletonInput(label: 'Next examination date'),
+            ],
+          ),
+          SizedBox(height: 14),
+          _SkeletonCard(
+            title: 'Item information',
+            fields: [
+              _SkeletonInput(label: 'Manufacturer'),
+              certificateFieldGap,
+              _SkeletonInput(label: 'Serial number'),
+            ],
+          ),
+          SizedBox(height: 14),
+          _SkeletonCard(
+            title: 'Examination questions',
+            fields: [
+              _SkeletonValue(label: 'First examination', value: 'Yes or no'),
+              certificateFieldGap,
+              _SkeletonValue(label: 'Installed correctly', value: 'Yes or no'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A step's card as [CertificateSectionCard] draws it — white, rounded, a
+/// numbered circle and a title — with the fields under it.
+class _SkeletonCard extends StatelessWidget {
+  final String title;
+  final List<Widget> fields;
+
+  const _SkeletonCard({required this.title, required this.fields});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: AppColours.ink.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 6)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              // One grey disc, not the circle's own colour.
+              Skeleton.leaf(
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: const BoxDecoration(color: AppColours.surfaceMuted, shape: BoxShape.circle),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Text(title, style: AppTextStyles.cardTitle.copyWith(fontSize: 15))),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...fields,
+        ],
+      ),
+    );
+  }
+}
+
+/// A read-only field: a small label over its value.
+class _SkeletonValue extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _SkeletonValue({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: AppTextStyles.caption),
+        const SizedBox(height: 2),
+        Text(value, style: AppTextStyles.cardTitle.copyWith(fontSize: 14)),
+      ],
+    );
+  }
+}
+
+/// An input: its label over a box as tall as the real field.
+class _SkeletonInput extends StatelessWidget {
+  final String label;
+
+  const _SkeletonInput({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: AppTextStyles.fieldLabel.copyWith(fontSize: 13)),
+        const SizedBox(height: 8),
+        Skeleton.leaf(
+          child: Container(
+            height: 48,
+            decoration: BoxDecoration(color: AppColours.surfaceMuted, borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+      ],
     );
   }
 }

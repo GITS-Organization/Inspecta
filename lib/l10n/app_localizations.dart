@@ -4496,6 +4496,48 @@ abstract class AppLocalizations {
   /// **'{answered} of {total} rows'**
   String machineChecklistProgress(int answered, int total);
 
+  /// No description provided for @checklistOfTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{answered} of {total}'**
+  String checklistOfTotal(int answered, int total);
+
+  /// No description provided for @checklistRowsAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'rows answered'**
+  String get checklistRowsAnswered;
+
+  /// No description provided for @machineModelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get machineModelLabel;
+
+  /// No description provided for @machineSerialShort.
+  ///
+  /// In en, this message translates to:
+  /// **'S/N'**
+  String get machineSerialShort;
+
+  /// No description provided for @machineQtyShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Qty'**
+  String get machineQtyShort;
+
+  /// No description provided for @certListQuotation.
+  ///
+  /// In en, this message translates to:
+  /// **'Quotation'**
+  String get certListQuotation;
+
+  /// No description provided for @certListCertificate.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate'**
+  String get certListCertificate;
+
   /// No description provided for @machineQuantityLabel.
   ///
   /// In en, this message translates to:

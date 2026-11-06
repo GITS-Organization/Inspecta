@@ -9,6 +9,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../bloc/certificate_cubit.dart';
 import '../pdf/certificate_pdf_preview.dart';
 import 'certificate_labels.dart';
+import 'certificate_missing_panel.dart';
 
 /// "Preview" (the draft's PDF, full screen) and "Submit to technical
 /// manager" — enabled only once every section of the report is filled in.
@@ -60,64 +61,46 @@ class CertificateFooter extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (blockers.isNotEmpty) ...[
-                Text(
-                  '${t.machineMissingLabel}:',
-                  style: AppTextStyles.caption.copyWith(color: AppColours.dangerText, fontWeight: FontWeight.w700),
-                ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 120),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (final problem in blockers)
-                          Text(
-                            '• $problem',
-                            style: AppTextStyles.caption.copyWith(color: AppColours.dangerText),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
+                CertificateMissingPanel(items: blockers),
                 const SizedBox(height: 10),
               ],
               Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: OutlinedButton(
-                    onPressed: state.certificate == null
-                        ? null
-                        : () => previewCertificatePdf(
-                            context,
-                            request: context.read<CertificateCubit>().request,
-                            certificate: state.certificate!,
-                          ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColours.inkBody,
-                      backgroundColor: Colors.white,
-                      side: const BorderSide(color: AppColours.border, width: 1.5),
-                      textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 14, color: AppColours.inkBody),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: state.certificate == null
+                            ? null
+                            : () => previewCertificatePdf(
+                                context,
+                                request: context.read<CertificateCubit>().request,
+                                certificate: state.certificate!,
+                              ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColours.inkBody,
+                          backgroundColor: Colors.white,
+                          side: const BorderSide(color: AppColours.border, width: 1.5),
+                          textStyle: AppTextStyles.buttonLabel.copyWith(fontSize: 14, color: AppColours.inkBody),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: Text(t.previewAction),
+                      ),
                     ),
-                    child: Text(t.previewAction),
                   ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                flex: 2,
-                child: SizedBox(
-                  height: 52,
-                  child: MPrimaryButton(
-                    label: t.submitToTechnicalManagerAction,
-                    loading: state.isSubmitting,
-                    onPressed: canSubmit ? () => _confirmSubmit(context) : null,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2,
+                    child: SizedBox(
+                      height: 52,
+                      child: MPrimaryButton(
+                        label: t.submitToTechnicalManagerAction,
+                        loading: state.isSubmitting,
+                        onPressed: canSubmit ? () => _confirmSubmit(context) : null,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ],
+                ],
               ),
             ],
           );

@@ -7,15 +7,8 @@ import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/enums/job_status.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
+import 'inspector_design.dart';
 
-/// One task card on the inspector's Tasks tab (Feature 05): the quotation
-/// number as the title with the client under it, one meta line (time, site and
-/// status), how many of the job's certificates are submitted, and the two
-/// things to do — get directions, and carry on with the job. The primary action
-/// follows the stage: "Start inspection" until the inspection is under way,
-/// then "Continue certificate".
-///
-/// The day is the heading the card sits under, so the card shows only the time.
 class InspectorTaskCard extends StatelessWidget {
   final InspectionRequest task;
   final VoidCallback onOpen;
@@ -36,167 +29,170 @@ class InspectorTaskCard extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).languageCode;
     final scheduledAt = task.scheduledAt;
-    final title = (task.subject?.trim().isNotEmpty ?? false)
-        ? task.subject!.trim()
+    final quotation = task.subject?.trim() ?? '';
+    final title = task.senderLabel.isNotEmpty
+        ? task.senderLabel
         : task.equipmentTitle;
     final counts = task.certificates;
+    final units = task.totalUnits;
 
+    return RiseIn(
+      delay: const Duration(milliseconds: 50),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: inspectorCardShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: quotation.isEmpty
+                        ? const SizedBox.shrink()
+                        : Skeleton.leaf(child: _QuotationChip(quotation)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Skeleton.leaf(child: _StatusPill(status: task.status)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: inspectorDisplay(context, 20,),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 18,
+              runSpacing: 8,
+              children: [
+                if (scheduledAt != null)
+                  _Meta(
+                    icon: Icons.schedule_rounded,
+                    label: DateFormat('HH:mm', locale).format(scheduledAt),
+                  ),
+                if (task.location.isNotEmpty)
+                  _Meta(icon: Icons.location_on_outlined, label: task.location),
+                if (units > 0)
+                  _Meta(
+                    icon: Icons.inventory_2_outlined,
+                    label: t.unitsCount(units),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _MapPreview(label: t.directionsAction, onTap: onNavigate),
+            if (counts != null && counts.total > 0) ...[
+              const SizedBox(height: 16),
+              _CertificateProgress(counts: counts),
+            ],
+            const SizedBox(height: 16),
+            InspectorActionButton(
+              label: _notStarted
+                  ? t.startInspectionAction
+                  : t.continueCertificateAction,
+              onPressed: onOpen,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The quotation number, in a quiet outlined chip.
+class _QuotationChip extends StatelessWidget {
+  final String label;
+
+  const _QuotationChip(this.label);
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 11),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppColours.borderSubtle),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // `Skeleton.leaf` on the coloured parts: while loading they are
-              // one grey shape each, not the chip's or tile's own colour.
-              Skeleton.leaf(
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColours.primaryTint,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.build_outlined,
-                    size: 22,
-                    color: AppColours.primaryColor,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTextStyles.sectionTitle.copyWith(
-                        fontSize: 17,
-                        height: 24 / 17,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (task.senderLabel.isNotEmpty)
-                      Text(
-                        task.senderLabel,
-                        style: AppTextStyles.caption.copyWith(
-                          height: 18 / 13,
-                          color: AppColours.inkSecondary,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
-              ),
-            ],
+          const Icon(Icons.tag_rounded, size: 14, color: AppColours.inkMuted),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: inspectorMono.copyWith(fontSize: 12),
+            ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              if (scheduledAt != null) ...[
-                _Meta(
-                  icon: Icons.schedule_rounded,
-                  label: DateFormat('HH:mm', locale).format(scheduledAt),
-                ),
-                const SizedBox(width: 16),
-              ],
-              // The site takes what is left, so the status sits flush with the
-              // card's right edge whatever the site's name is.
-              Expanded(
-                child: task.location.isEmpty
-                    ? const SizedBox.shrink()
-                    : Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: _Meta(
-                          icon: Icons.location_on_outlined,
-                          label: task.location,
-                        ),
-                      ),
-              ),
-              const SizedBox(width: 8),
-              Skeleton.leaf(child: _StatusChip(status: task.status)),
-            ],
-          ),
-          if (counts != null && counts.total > 0) ...[
-            const SizedBox(height: 12),
-            _CertificateProgress(counts: counts),
-          ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Skeleton.replace(
-                replacement: const Bone(width: 140, height: 52, uniRadius: 16),
-                child: SizedBox(
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    onPressed: onNavigate,
-                    icon: const Icon(Icons.near_me_outlined, size: 20),
-                    label: Text(t.directionsAction),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColours.ink,
-                      side: const BorderSide(color: AppColours.border),
-                      textStyle: AppTextStyles.buttonLabel.copyWith(
-                        fontSize: 15,
-                        letterSpacing: 0,
-                        color: AppColours.ink,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Skeleton.leaf(
-                  child: SizedBox(
-                    height: 52,
-                    child: FilledButton(
-                      onPressed: onOpen,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColours.primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _notStarted
-                                  ? t.startInspectionAction
-                                  : t.continueCertificateAction,
-                              style: AppTextStyles.buttonLabel.copyWith(
-                                fontSize: 15,
-                                letterSpacing: 0,
-                              ),
-                            ),
-                            if (_notStarted) ...[
-                              const SizedBox(width: 8),
-                              const Icon(Icons.arrow_forward_rounded, size: 20),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Where the job stands, as a pill with a dot — which pulses while the
+/// inspection is under way.
+class _StatusPill extends StatelessWidget {
+  final JobStatus status;
+
+  const _StatusPill({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final (background, textColor, dot, label) = switch (status) {
+      JobStatus.assigned => (
+        AppColours.chipAmberBackground,
+        AppColours.chipAmberText,
+        const Color(0xFFE0A21B),
+        t.statusAssigned,
+      ),
+      JobStatus.taskAccepted => (
+        AppColours.chipGreenBackground,
+        AppColours.chipGreenText,
+        AppColours.successIcon,
+        t.taskAcceptedBadge,
+      ),
+      _ => (
+        AppColours.chipBlueBackground,
+        AppColours.chipBlueText,
+        const Color(0xFF2F5BFF),
+        t.taskInProgressBadge,
+      ),
+    };
+
+    return Container(
+      height: 30,
+      padding: const EdgeInsetsDirectional.fromSTEB(11, 0, 12, 0),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          PulseDot(color: dot, pulsing: status == JobStatus.inProgress),
+          const SizedBox(width: 7),
+          Text(
+            label,
+            style: AppTextStyles.badge.copyWith(
+              fontSize: 13,
+              height: 16 / 13,
+              color: textColor,
+            ),
           ),
         ],
       ),
@@ -215,13 +211,17 @@ class _Meta extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: AppColours.inkMuted),
-        const SizedBox(width: 4),
+        Icon(icon, size: 16, color: AppColours.inkMuted),
+        const SizedBox(width: 7),
         Flexible(
           child: Text(
             label,
-            style: AppTextStyles.caption.copyWith(height: 18 / 13),
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.subtitle.copyWith(
+              fontWeight: FontWeight.w500,
+              color: AppColours.inkBody,
+            ),
           ),
         ),
       ],
@@ -229,7 +229,7 @@ class _Meta extends StatelessWidget {
   }
 }
 
-/// "Certificates · 0 of 1 submitted" over a bar of the submitted share.
+/// "CERTIFICATES · 0 of 1 submitted" over a segment per certificate.
 class _CertificateProgress extends StatelessWidget {
   final CertificateCounts counts;
 
@@ -238,89 +238,216 @@ class _CertificateProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final value = (counts.submitted / counts.total).clamp(0.0, 1.0);
+    final label = t.certificatesLabel;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
           children: [
             Text(
-              t.certificatesLabel,
-              style: AppTextStyles.caption.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColours.inkSecondary,
-              ),
+              isArabic(context) ? label : label.toUpperCase(),
+              style: inspectorEyebrow(context),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 t.machinesProgress(counts.submitted, counts.total),
-                style: AppTextStyles.caption,
+                style: AppTextStyles.subtitle.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: AppColours.inkBody,
+                ),
                 textAlign: TextAlign.end,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 6),
-        Skeleton.replace(
-          replacement: const Bone(width: double.infinity, height: 6, uniRadius: 3),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: value,
-              minHeight: 6,
-              color: AppColours.successIcon,
-              backgroundColor: AppColours.border,
-            ),
-          ),
-        ),
+        const SizedBox(height: 8),
+        SegmentBar(total: counts.total, done: counts.submitted),
       ],
     );
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  final JobStatus status;
+/// A drawn map of the site — roads, a park and a pin with a halo — with
+/// Directions floating on it. It is a picture, not a live map: the button
+/// hands the address to the phone's maps app.
+class _MapPreview extends StatefulWidget {
+  final String label;
+  final VoidCallback onTap;
 
-  const _StatusChip({required this.status});
+  const _MapPreview({required this.label, required this.onTap});
+
+  @override
+  State<_MapPreview> createState() => _MapPreviewState();
+}
+
+class _MapPreviewState extends State<_MapPreview>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _halo = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2200),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _halo.stop();
+    } else if (!_halo.isAnimating) {
+      _halo.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _halo.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    final (background, textColor, label) = switch (status) {
-      JobStatus.assigned => (
-        AppColours.chipAmberBackground,
-        AppColours.chipAmberText,
-        t.statusAssigned,
+    return Skeleton.replace(
+      replacement: const Bone(
+        width: double.infinity,
+        height: 112,
+        uniRadius: 18,
       ),
-      JobStatus.taskAccepted => (
-        AppColours.chipGreenBackground,
-        AppColours.chipGreenText,
-        t.taskAcceptedBadge,
-      ),
-      _ => (
-        AppColours.chipBlueBackground,
-        AppColours.chipBlueText,
-        t.taskInProgressBadge,
-      ),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.badge.copyWith(
-          fontSize: 13,
-          height: 16 / 13,
-          color: textColor,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: SizedBox(
+          height: 112,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ExcludeSemantics(
+                child: RepaintBoundary(
+                  child: CustomPaint(painter: _MapPainter(_halo)),
+                ),
+              ),
+              PositionedDirectional(
+                end: 10,
+                bottom: 10,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColours.navy.withValues(alpha: 0.25),
+                        offset: const Offset(0, 4),
+                        blurRadius: 14,
+                        spreadRadius: -2,
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.white,
+                    shape: const StadiumBorder(),
+                    child: InkWell(
+                      customBorder: const StadiumBorder(),
+                      onTap: widget.onTap,
+                      child: Container(
+                        height: 44,
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          14,
+                          0,
+                          16,
+                          0,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.near_me_rounded,
+                              size: 17,
+                              color: AppColours.ink,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              widget.label,
+                              style: AppTextStyles.buttonLabel.copyWith(
+                                fontSize: 14,
+                                letterSpacing: 0,
+                                color: AppColours.ink,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// The map picture, drawn on the design's 322 × 112 grid and stretched across
+/// the width it is given (the height is fixed, so the pin never squashes).
+class _MapPainter extends CustomPainter {
+  final Animation<double> halo;
+
+  _MapPainter(this.halo) : super(repaint: halo);
+
+  static const _water = Color(0xFFDCE4F2);
+  static const _park = Color(0xFFCBE5D4);
+  static const _minorRoad = Color(0xFFEDF1F9);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sx = size.width / 322;
+    Offset at(double x, double y) => Offset(x * sx, y);
+
+    canvas.drawRect(Offset.zero & size, Paint()..color = _water);
+    canvas.drawRRect(
+      RRect.fromLTRBR(162 * sx, -4, 240 * sx, 46, const Radius.circular(8)),
+      Paint()..color = _park,
+    );
+
+    void road(List<Offset> points, double width, Color color) {
+      final path = Path()..moveTo(points.first.dx, points.first.dy);
+      for (final p in points.skip(1)) {
+        path.lineTo(p.dx, p.dy);
+      }
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = width
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..color = color,
+      );
+    }
+
+    road(
+      [at(-10, 98), at(110, 72), at(190, 86), at(340, 44)],
+      12,
+      Colors.white,
+    );
+    road([at(58, -10), at(84, 44), at(128, 130)], 8, Colors.white);
+    road([at(252, -10), at(226, 52), at(276, 130)], 8, Colors.white);
+    road([at(-10, 28), at(84, 40), at(226, 24), at(340, 28)], 6, _minorRoad);
+
+    final pin = at(120, 56);
+    final e = Curves.easeOut.transform(halo.value);
+    canvas.drawCircle(
+      pin,
+      24 * (0.7 + 0.9 * e),
+      Paint()..color = AppColours.navy.withValues(alpha: 0.22 * 0.5 * (1 - e)),
+    );
+    canvas.drawCircle(pin, 11, Paint()..color = AppColours.navy);
+    canvas.drawCircle(pin, 4, Paint()..color = Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(_MapPainter old) => old.halo != halo;
 }

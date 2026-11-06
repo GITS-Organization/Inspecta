@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/banner_art.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../bloc/auth_cubit.dart';
 import 'auth_labels.dart';
@@ -14,11 +15,16 @@ class UserAppHeader extends StatelessWidget {
   final VoidCallback? onOpenProfile;
   final Widget? bottom;
 
+  /// How the banner is dressed; the inspector's screens use
+  /// [AppBannerStyle.rings].
+  final AppBannerStyle style;
+
   const UserAppHeader({
     super.key,
     required this.title,
     this.onOpenProfile,
     this.bottom,
+    this.style = AppBannerStyle.network,
   });
 
   static String _greeting(AppLocalizations t) {
@@ -47,6 +53,7 @@ class UserAppHeader extends StatelessWidget {
       notificationsTooltip: t.notifications,
       title: title,
       bottom: bottom,
+      style: style,
     );
   }
 }

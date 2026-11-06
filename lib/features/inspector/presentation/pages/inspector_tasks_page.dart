@@ -10,6 +10,7 @@ import '../../../../core/consts/app_layout.dart';
 import '../../../../core/consts/app_text_styles.dart';
 import '../../../../core/enums/job_status.dart';
 import '../../../../core/shared/m_notice.dart';
+import '../../../../core/widgets/banner_art.dart';
 import '../../../../core/widgets/empty_widget.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -20,6 +21,7 @@ import '../../../requests/domain/entities/request_source.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
 import '../bloc/inspector_tasks_cubit.dart';
+import '../widgets/inspector_design.dart';
 import '../widgets/inspector_task_card.dart';
 import '../widgets/inspector_tasks_filters.dart';
 
@@ -45,6 +47,7 @@ class InspectorTasksPage extends StatelessWidget {
                 title: AppLocalizations.of(context)!.navTasks,
                 onOpenProfile: onOpenProfile,
                 bottom: const InspectorTasksFilters(),
+                style: AppBannerStyle.rings,
               ),
               const Expanded(child: _Body()),
             ],
@@ -110,7 +113,7 @@ class _BodyState extends State<_Body> {
           onRefresh: cubit.start,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, AppLayout.bottomNavClearance),
+            padding: const EdgeInsets.fromLTRB(16, 22, 16, AppLayout.bottomNavClearance),
             children: [
               if (tasks.isEmpty)
                 _empty(t, state.filter)
@@ -119,7 +122,7 @@ class _BodyState extends State<_Body> {
                   // Tasks sit under the day they are scheduled for: one
                   // heading per day, however many tasks it has.
                   if (i == 0 || !DateUtils.isSameDay(tasks[i - 1].scheduledAt, tasks[i].scheduledAt)) ...[
-                    if (i > 0) const SizedBox(height: 8),
+                    if (i > 0) const SizedBox(height: 10),
                     _DayHeading(
                       day: tasks[i].scheduledAt!,
                       filter: state.filter,
@@ -127,7 +130,7 @@ class _BodyState extends State<_Body> {
                     ),
                     const SizedBox(height: 12),
                   ] else
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                   KeyedSubtree(
                     key: _keyFor(tasks[i].id),
                     child: InspectorTaskCard(
@@ -167,16 +170,16 @@ class _DayHeading extends StatelessWidget {
       child: Row(
         children: [
           if (filter == TasksFilter.today) ...[
-            Text(t.todayLabel, style: AppTextStyles.sectionTitle),
-            const SizedBox(width: 6),
+            Text(t.todayLabel, style: inspectorDisplay(context, 22, height: 1.15)),
+            const SizedBox(width: 8),
             Text(
               '· $date',
-              style: AppTextStyles.subtitle.copyWith(fontSize: 15, color: AppColours.inkMuted),
+              style: AppTextStyles.subtitle.copyWith(fontSize: 15, fontWeight: FontWeight.w500, color: AppColours.inkMuted),
             ),
           ] else
             Text(
               filter == TasksFilter.upcoming && DateUtils.isSameDay(day, tomorrow) ? t.tomorrowLabel : date,
-              style: AppTextStyles.sectionTitle,
+              style: inspectorDisplay(context, 22, height: 1.15),
             ),
           if (overdueDays > 0) ...[
             const SizedBox(width: 10),
@@ -226,13 +229,13 @@ class _Skeleton extends StatelessWidget {
     return Skeletonizer(
       child: ListView(
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
         children: [
           _DayHeading(day: _placeholder.scheduledAt!, filter: TasksFilter.today, overdueDays: 0),
           const SizedBox(height: 12),
           for (var i = 0; i < 2; i++) ...[
             InspectorTaskCard(task: _placeholder, onOpen: () {}, onNavigate: () {}),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
           ],
         ],
       ),
