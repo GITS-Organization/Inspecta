@@ -236,6 +236,50 @@ class AppLocalizationsAr extends AppLocalizations {
   String get changePasswordLabel => 'تغيير كلمة المرور';
 
   @override
+  String get changePasswordTitle => 'تغيير كلمة المرور';
+
+  @override
+  String get changePasswordSubtitle =>
+      'اختر كلمة مرور جديدة. ستبقى مسجّل الدخول على هذا الجهاز، وسيتم تسجيل خروجك من أجهزتك الأخرى.';
+
+  @override
+  String get currentPasswordLabel => 'كلمة المرور الحالية';
+
+  @override
+  String get newPasswordLabel => 'كلمة المرور الجديدة';
+
+  @override
+  String get confirmPasswordLabel => 'تأكيد كلمة المرور الجديدة';
+
+  @override
+  String get passwordRulesHint =>
+      '12 حرفًا على الأقل، مع أحرف كبيرة وصغيرة ورقم ورمز.';
+
+  @override
+  String get savePassword => 'حفظ كلمة المرور';
+
+  @override
+  String get passwordChangedTitle => 'تم تغيير كلمة المرور';
+
+  @override
+  String get passwordChangedMessage =>
+      'استخدم كلمة المرور الجديدة عند تسجيل الدخول في المرة القادمة.';
+
+  @override
+  String get errorPasswordsDoNotMatch => 'كلمتا المرور غير متطابقتين.';
+
+  @override
+  String get errorCurrentPasswordIncorrect => 'كلمة المرور الحالية غير صحيحة.';
+
+  @override
+  String get errorWeakPassword =>
+      'استخدم 12 حرفًا على الأقل، مع أحرف كبيرة وصغيرة ورقم ورمز.';
+
+  @override
+  String get errorPasswordUnchanged =>
+      'يجب أن تختلف كلمة المرور الجديدة عن الحالية.';
+
+  @override
   String get languageLabel => 'اللغة';
 
   @override

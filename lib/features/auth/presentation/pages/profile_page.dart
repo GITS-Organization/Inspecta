@@ -16,6 +16,7 @@ import '../../domain/entities/user_role.dart';
 import '../bloc/auth_cubit.dart';
 import '../bloc/my_signature_cubit.dart';
 import '../bloc/profile_stats_cubit.dart';
+import 'change_password_page.dart';
 import '../widgets/auth_labels.dart';
 import '../widgets/profile_menu_section.dart';
 import '../widgets/profile_signature_card.dart';
@@ -213,6 +214,11 @@ class _ProfileView extends StatelessWidget {
                   const SizedBox(height: 12),
                   ProfileAccountSection(
                     onComingSoon: () => _comingSoon(context),
+                    onChangePassword: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ChangePasswordPage(),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   ProfileHelpSection(onComingSoon: () => _comingSoon(context)),

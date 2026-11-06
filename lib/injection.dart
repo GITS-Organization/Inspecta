@@ -10,11 +10,13 @@ import 'features/auth/data/datasources/signature_local_datasource.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/repositories/auth_repository.dart';
 import 'features/auth/domain/usecases/get_current_user.dart';
+import 'features/auth/domain/usecases/change_password.dart';
 import 'features/auth/domain/usecases/reset_password.dart';
 import 'features/auth/domain/usecases/sign_in.dart';
 import 'features/auth/domain/usecases/refresh_session.dart';
 import 'features/auth/domain/usecases/sign_out.dart';
 import 'features/auth/presentation/bloc/auth_cubit.dart';
+import 'features/auth/presentation/bloc/change_password_cubit.dart';
 import 'features/auth/presentation/bloc/forgot_password_cubit.dart';
 import 'features/auth/presentation/bloc/my_signature_cubit.dart';
 import 'features/auth/presentation/bloc/profile_stats_cubit.dart';
@@ -135,9 +137,11 @@ void _registerAuth(FlutterSecureStorage storage) {
     ..registerLazySingleton(() => RefreshSession(getIt()))
     ..registerLazySingleton(() => GetCurrentUser(getIt()))
     ..registerLazySingleton(() => ResetPassword(getIt()))
+    ..registerLazySingleton(() => ChangePassword(getIt()))
     ..registerLazySingleton(() => AuthCubit(getIt(), getIt()))
     ..registerFactory(() => SignInCubit(getIt()))
-    ..registerFactory(() => ForgotPasswordCubit(getIt()));
+    ..registerFactory(() => ForgotPasswordCubit(getIt()))
+    ..registerFactory(() => ChangePasswordCubit(getIt()));
 }
 
 void _registerRequests() {

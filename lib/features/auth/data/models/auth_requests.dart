@@ -16,3 +16,25 @@ class RefreshTokenRequest {
 
   Map<String, dynamic> toJson() => {'refreshToken': refreshToken};
 }
+
+/// The body of `auth/change-my-password`.
+class ChangePasswordRequest {
+  final String currentPassword;
+  final String newPassword;
+
+  /// This device's refresh token: the API keeps this device signed in and
+  /// signs every other device out.
+  final String? refreshToken;
+
+  const ChangePasswordRequest({
+    required this.currentPassword,
+    required this.newPassword,
+    this.refreshToken,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'currentPassword': currentPassword,
+    'newPassword': newPassword,
+    if (refreshToken != null) 'refreshToken': refreshToken,
+  };
+}

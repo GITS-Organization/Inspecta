@@ -11,6 +11,15 @@ enum AuthFailureCode {
   /// screen.
   noProfile,
   tooManyAttempts,
+
+  /// Change password: the current password typed was wrong.
+  currentPasswordIncorrect,
+
+  /// Change password: the new password breaks the API's password rules.
+  weakPassword,
+
+  /// Change password: the new password is the same as the current one.
+  passwordUnchanged,
   network,
 
   /// The API has no endpoint for this yet: the password-reset request.

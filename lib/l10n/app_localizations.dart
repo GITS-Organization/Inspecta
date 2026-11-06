@@ -536,6 +536,84 @@ abstract class AppLocalizations {
   /// **'Change password'**
   String get changePasswordLabel;
 
+  /// No description provided for @changePasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change your password'**
+  String get changePasswordTitle;
+
+  /// No description provided for @changePasswordSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a new password. You stay signed in on this device; your other devices are signed out.'**
+  String get changePasswordSubtitle;
+
+  /// No description provided for @currentPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get currentPasswordLabel;
+
+  /// No description provided for @newPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get newPasswordLabel;
+
+  /// No description provided for @confirmPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new password'**
+  String get confirmPasswordLabel;
+
+  /// No description provided for @passwordRulesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'At least 12 characters, with upper and lower case letters, a number and a symbol.'**
+  String get passwordRulesHint;
+
+  /// No description provided for @savePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Save password'**
+  String get savePassword;
+
+  /// No description provided for @passwordChangedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed'**
+  String get passwordChangedTitle;
+
+  /// No description provided for @passwordChangedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Use your new password the next time you sign in.'**
+  String get passwordChangedMessage;
+
+  /// No description provided for @errorPasswordsDoNotMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The two passwords do not match.'**
+  String get errorPasswordsDoNotMatch;
+
+  /// No description provided for @errorCurrentPasswordIncorrect.
+  ///
+  /// In en, this message translates to:
+  /// **'The current password is incorrect.'**
+  String get errorCurrentPasswordIncorrect;
+
+  /// No description provided for @errorWeakPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Use at least 12 characters, with upper and lower case letters, a number and a symbol.'**
+  String get errorWeakPassword;
+
+  /// No description provided for @errorPasswordUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The new password must be different from the current one.'**
+  String get errorPasswordUnchanged;
+
   /// No description provided for @languageLabel.
   ///
   /// In en, this message translates to:

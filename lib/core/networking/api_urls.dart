@@ -3,7 +3,7 @@ class ApiUrls {
 
   static const String login = "auth/login";
   static const String resetPassword = "auth/reset-password";
-  static const String changeMyPassword = "auvath/change-my-password";
+  static const String changeMyPassword = "auth/change-my-password";
   static const String logout = "auth/logout";
 
   static const String refresh = "auth/refresh";

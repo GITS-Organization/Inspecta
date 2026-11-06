@@ -240,6 +240,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changePasswordLabel => 'Change password';
 
   @override
+  String get changePasswordTitle => 'Change your password';
+
+  @override
+  String get changePasswordSubtitle =>
+      'Choose a new password. You stay signed in on this device; your other devices are signed out.';
+
+  @override
+  String get currentPasswordLabel => 'Current password';
+
+  @override
+  String get newPasswordLabel => 'New password';
+
+  @override
+  String get confirmPasswordLabel => 'Confirm new password';
+
+  @override
+  String get passwordRulesHint =>
+      'At least 12 characters, with upper and lower case letters, a number and a symbol.';
+
+  @override
+  String get savePassword => 'Save password';
+
+  @override
+  String get passwordChangedTitle => 'Password changed';
+
+  @override
+  String get passwordChangedMessage =>
+      'Use your new password the next time you sign in.';
+
+  @override
+  String get errorPasswordsDoNotMatch => 'The two passwords do not match.';
+
+  @override
+  String get errorCurrentPasswordIncorrect =>
+      'The current password is incorrect.';
+
+  @override
+  String get errorWeakPassword =>
+      'Use at least 12 characters, with upper and lower case letters, a number and a symbol.';
+
+  @override
+  String get errorPasswordUnchanged =>
+      'The new password must be different from the current one.';
+
+  @override
   String get languageLabel => 'Language';
 
   @override

@@ -18,6 +18,9 @@ abstract class AuthApiClientServices {
   @POST(ApiUrls.refresh)
   Future<AuthSessionModel> refresh(@Body() RefreshTokenRequest request);
 
+  @POST(ApiUrls.changeMyPassword)
+  Future<void> changeMyPassword(@Body() ChangePasswordRequest request);
+
   @POST(ApiUrls.logout)
   Future<void> logout(
     @Header('Authorization') String authorization,

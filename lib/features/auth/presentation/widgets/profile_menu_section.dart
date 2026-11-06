@@ -6,13 +6,18 @@ import '../../../../core/shared/m_card.dart';
 import '../../../../core/widgets/language_switcher_widget.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// The Profile screen's "Account" card: Personal info / Change password (not
-/// built yet — [onComingSoon]) and Language (wired to the real
-/// [LanguageSwitcherWidget]).
+/// The Profile screen's "Account" card: Personal info (not built yet —
+/// [onComingSoon]), Change password ([onChangePassword]) and Language (wired
+/// to the real [LanguageSwitcherWidget]).
 class ProfileAccountSection extends StatelessWidget {
   final VoidCallback onComingSoon;
+  final VoidCallback? onChangePassword;
 
-  const ProfileAccountSection({super.key, required this.onComingSoon});
+  const ProfileAccountSection({
+    super.key,
+    required this.onComingSoon,
+    this.onChangePassword,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +39,7 @@ class ProfileAccountSection extends StatelessWidget {
           ProfileMenuRow(
             icon: Icons.lock_outline_rounded,
             label: t.changePasswordLabel,
-            onTap: onComingSoon,
+            onTap: onChangePassword ?? onComingSoon,
           ),
           ProfileMenuRow(
             icon: Icons.language_rounded,
