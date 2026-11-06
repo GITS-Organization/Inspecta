@@ -15,7 +15,6 @@ import '../../../machines/domain/usecases/get_machine_pdf.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../bloc/review_detail_cubit.dart';
 import '../widgets/review_detail_header.dart';
-import '../widgets/review_footer.dart';
 import '../widgets/review_summary_card.dart';
 
 /// Feature 06's review screen for one machine of a job: the reviewer reads
@@ -168,7 +167,15 @@ class _ReviewViewState extends State<_ReviewView> {
                 },
               ),
             ),
-            const ReviewFooter(),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: AppColours.border)),
+              ),
+              child: SafeArea(top: false, child: MNotice(type: MNoticeType.info, message: t.reviewWholeJobHint)),
+            ),
           ],
         ),
       ),

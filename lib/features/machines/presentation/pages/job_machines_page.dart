@@ -180,6 +180,55 @@ class _Body extends StatelessWidget {
     );
   }
 
+  /// The inspector sends the whole job in one go.
+  static bool _canSubmitAll(JobMachines job) => !job.canStartInspection && job.machines.any((machine) => machine.canEdit);
+
+  Future<void> _submitAll(BuildContext context) async {
+    final t = AppLocalizations.of(context)!;
+    final cubit = context.read<JobMachinesCubit>();
+    final confirmed = await showAdaptiveDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog.adaptive(
+        title: Text(t.confirmSubmitAllTitle),
+        content: Text(t.confirmSubmitAllMessage),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(t.cancel)),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(t.submitAction)),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final outcome = await cubit.submitAll();
+    if (!context.mounted) return;
+    if (outcome.sent) {
+      MToast.showSuccess(message: t.certificatesSubmittedMessage);
+    } else if (outcome.problems.isNotEmpty) {
+      await showAdaptiveDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog.adaptive(
+          title: Text(t.submitAllIncompleteTitle),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(t.submitAllIncompleteMessage),
+                const SizedBox(height: 8),
+                for (final problem in outcome.problems) Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text('• $problem'),
+                ),
+              ],
+            ),
+          ),
+          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.okAction))],
+        ),
+      );
+    } else if (outcome.failure != null) {
+      MToast.showError(message: outcome.failure!.message(t));
+    }
+  }
+
   Future<void> _start(BuildContext context) async {
     final t = AppLocalizations.of(context)!;
     final failure = await context.read<JobMachinesCubit>().startInspection();
@@ -217,7 +266,7 @@ class _Body extends StatelessWidget {
                     16,
                     // The Start bar below carries its own spacing; without it
                     // the list clears the bottom navigation.
-                    job.canStartInspection ? 16 : AppLayout.bottomNavClearance,
+                    job.canStartInspection || _canSubmitAll(job) ? 16 : AppLayout.bottomNavClearance,
                   ),
                   children: [
                     _Summary(
@@ -267,6 +316,34 @@ class _Body extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         t.startInspectionHint,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.caption.copyWith(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (_canSubmitAll(job))
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: AppColours.borderSubtle)),
+                ),
+                child: SafeArea(
+                  top: false,
+                  minimum: const EdgeInsets.only(bottom: 6),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      MPrimaryButton(
+                        label: t.submitAllAction,
+                        loading: state.isSubmitting,
+                        onPressed: () => _submitAll(context),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        t.submitAllHint,
                         textAlign: TextAlign.center,
                         style: AppTextStyles.caption.copyWith(fontSize: 12),
                       ),

@@ -67,6 +67,15 @@ class MachinesRepositoryImpl implements MachinesRepository {
     result.fold((_) {}, (f) => throw f is CertificateIncompleteFailure ? f : _mapError(f));
   }
 
+  @override
+  Future<void> submitAllMachines(String requestId) async {
+    final result = await _safeApi<void>(
+      () => _api.submitAll(requestId),
+      mapError: _incompleteOf,
+    );
+    result.fold((_) {}, (f) => throw f is CertificateIncompleteFailure ? f : _mapError(f));
+  }
+
   /// The 409 `certificate_incomplete` answer, with its `problems` list.
   static CertificateIncompleteFailure? _incompleteOf(Object error) => _problemsOf(error, 'certificate_incomplete');
 

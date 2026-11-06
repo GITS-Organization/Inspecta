@@ -16,22 +16,11 @@ import 'certificate_missing_panel.dart';
 class CertificateFooter extends StatelessWidget {
   const CertificateFooter({super.key});
 
-  Future<void> _confirmSubmit(BuildContext context) async {
-    final t = AppLocalizations.of(context)!;
-    final confirmed = await showAdaptiveDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog.adaptive(
-        title: Text(t.confirmSubmitCertificateTitle),
-        content: Text(t.confirmSubmitCertificateMessage),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(t.cancel)),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(t.submitAction)),
-        ],
-      ),
-    );
-    if (confirmed == true && context.mounted) {
-      await context.read<CertificateCubit>().submit();
-    }
+  /// The machines are sent together from the job's list ("Submit all"), so a
+  /// machine's screen only keeps what was typed and goes back.
+  Future<void> _saveAndBack(BuildContext context) async {
+    await context.read<CertificateCubit>().persist();
+    if (context.mounted) Navigator.of(context).pop();
   }
 
   @override
@@ -54,7 +43,6 @@ class CertificateFooter extends StatelessWidget {
           }
         },
         builder: (context, state) {
-          final canSubmit = state.canSubmit;
           final blockers = state.machineMode && !state.apiReady ? state.missing : const <String>[];
           return Column(
             mainAxisSize: MainAxisSize.min,
@@ -94,9 +82,8 @@ class CertificateFooter extends StatelessWidget {
                     child: SizedBox(
                       height: 52,
                       child: MPrimaryButton(
-                        label: t.submitToTechnicalManagerAction,
-                        loading: state.isSubmitting,
-                        onPressed: canSubmit ? () => _confirmSubmit(context) : null,
+                        label: t.saveAndBackAction,
+                        onPressed: state.certificate == null ? null : () => _saveAndBack(context),
                       ),
                     ),
                   ),
