@@ -15,6 +15,7 @@ public sealed partial class EmailSyncBackgroundService
 {
     private const int MaxImportAttempts = 5;
     private static readonly ConcurrentDictionary<(Guid CoordinatorId, long Uid), int> FailedImports = new();
+    private static readonly KeyedGate<Guid> TeamPromotion = new();
 
     private async Task SyncMailboxAsync(
         CoordinatorEmailConfig config,
@@ -62,20 +63,25 @@ public sealed partial class EmailSyncBackgroundService
             }
 
             var rules = await repository.ListSenderRulesAsync(config.TenantId, cancellationToken);
-            try
+            // The waiting maybes belong to the whole team, and every coordinator's sync looks at them: with several mailboxes read at
+            // once, two of them would promote the same maybe together and its machines would be added twice. One team at a time.
+            await TeamPromotion.RunAsync(config.TenantId, async () =>
             {
-                var promoted = await repository.PromoteMatchingMaybesAsync(
-                    config.TenantId,
-                    rules,
-                    request => machineSuggestions.AutofillAsync(request, request.Email?.TextBody, request.Email?.HtmlBody, cancellationToken),
-                    cancellationToken);
-                if (promoted > 0)
-                    logger.LogInformation("Moved {Count} waiting maybe emails of team {ManagerId} to requests of their clients.", promoted, config.TenantId);
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                logger.LogWarning(exception, "Could not re-check the waiting maybe emails of team {ManagerId}.", config.TenantId);
-            }
+                try
+                {
+                    var promoted = await repository.PromoteMatchingMaybesAsync(
+                        config.TenantId,
+                        rules,
+                        request => machineSuggestions.AutofillAsync(request, request.Email?.TextBody, request.Email?.HtmlBody, cancellationToken),
+                        cancellationToken);
+                    if (promoted > 0)
+                        logger.LogInformation("Moved {Count} waiting maybe emails of team {ManagerId} to requests of their clients.", promoted, config.TenantId);
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    logger.LogWarning(exception, "Could not re-check the waiting maybe emails of team {ManagerId}.", config.TenantId);
+                }
+            }, cancellationToken);
 
             var newUids = (await inbox.SearchAsync(
                     SearchQuery.Uids(new UniqueIdRange(new UniqueId((uint)(cursor + 1)), UniqueId.MaxValue)),

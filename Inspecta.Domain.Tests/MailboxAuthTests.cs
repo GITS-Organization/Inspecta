@@ -17,8 +17,15 @@ public sealed class MailboxAuthTests
     private sealed class FakeOAuth : IMicrosoftOAuthClient
     {
         public int RefreshCalls { get; private set; }
+        public List<string> RefreshedWith { get; } = [];
         public MicrosoftTokens Next { get; set; } = new("at-1", null, DateTimeOffset.UtcNow.AddHours(1), string.Empty, string.Empty);
         public bool Reject { get; set; }
+
+        /// <summary>Runs inside a refresh (with the call number), before Microsoft answers: the moment something else may change.</summary>
+        public Action<int>? OnRefresh { get; set; }
+
+        /// <summary>Answers a refresh by the plain refresh token it was given; unset, <see cref="Next"/> is the answer.</summary>
+        public Func<string, MicrosoftTokens>? Respond { get; set; }
         public bool IsConfigured => true;
         public string BuildAuthorizationUrl(string state, string codeChallenge) => "https://login.example.test/?state=" + state;
         public Task<MicrosoftTokens> ExchangeCodeAsync(string code, string codeVerifier, CancellationToken cancellationToken = default) =>
@@ -27,21 +34,46 @@ public sealed class MailboxAuthTests
         public Task<MicrosoftTokens> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default)
         {
             RefreshCalls++;
+            RefreshedWith.Add(refreshToken);
+            OnRefresh?.Invoke(RefreshCalls);
             if (Reject) throw new MicrosoftTokenRejectedException("rejected");
-            return Task.FromResult(Next);
+            return Task.FromResult(Respond?.Invoke(refreshToken) ?? Next);
         }
     }
 
-    private sealed class MemoryConfigs(CoordinatorEmailConfig config) : ICoordinatorEmailConfigRepository
+    /// <summary>The stored row. The authenticator is handed another, older copy of it, as the sync does.</summary>
+    private sealed class MemoryConfigs(CoordinatorEmailConfig stored) : ICoordinatorEmailConfigRepository
     {
         public int Saves { get; private set; }
+        public int Rotations { get; private set; }
+        public int Marks { get; private set; }
+
         public Task<CoordinatorEmailConfig?> GetByCoordinatorAsync(Guid coordinatorId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<CoordinatorEmailConfig?>(config.CoordinatorId == coordinatorId ? config : null);
+            Task.FromResult<CoordinatorEmailConfig?>(stored.CoordinatorId == coordinatorId ? stored : null);
+
+        public Task<CoordinatorEmailConfig?> GetByCoordinatorNoTrackingAsync(Guid coordinatorId, CancellationToken cancellationToken = default) =>
+            GetByCoordinatorAsync(coordinatorId, cancellationToken);
 
         public Task SaveAsync(CoordinatorEmailConfig saved, CancellationToken cancellationToken = default)
         {
             Saves++;
             return Task.CompletedTask;
+        }
+
+        public Task<bool> RotateRefreshTokenAsync(Guid coordinatorId, string expected, string replacement, CancellationToken cancellationToken = default)
+        {
+            if (stored.AuthMode != MailboxAuthMode.MicrosoftOAuth || stored.EncryptedRefreshToken != expected) return Task.FromResult(false);
+            stored.RotateRefreshToken(replacement);
+            Rotations++;
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> MarkNeedsReconnectAsync(Guid coordinatorId, string expected, string reason, CancellationToken cancellationToken = default)
+        {
+            if (stored.AuthMode != MailboxAuthMode.MicrosoftOAuth || stored.EncryptedRefreshToken != expected) return Task.FromResult(false);
+            stored.MarkNeedsReconnect(reason);
+            Marks++;
+            return Task.FromResult(true);
         }
 
         public Task DeleteAsync(CoordinatorEmailConfig removed, CancellationToken cancellationToken = default) => Task.CompletedTask;
@@ -178,7 +210,7 @@ public sealed class MailboxAuthTests
 
         await authenticator.GetAsync(config);
 
-        Assert.Equal(1, configs.Saves);
+        Assert.Equal(1, configs.Rotations);
         Assert.NotEqual("rt-2", config.EncryptedRefreshToken);
         Assert.Equal("rt-2", protector.Unprotect(config.EncryptedRefreshToken!));
     }
@@ -196,7 +228,7 @@ public sealed class MailboxAuthTests
         Assert.Equal("mailbox_reconnect_required", exception.Code);
         Assert.Equal(409, exception.StatusCode);
         Assert.Equal(MailboxConnectionStatus.NeedsReconnect, config.ConnectionStatus);
-        Assert.Equal(1, configs.Saves);
+        Assert.Equal(1, configs.Marks);
         Assert.DoesNotContain("rt-1", exception.Message);
     }
 
@@ -211,6 +243,125 @@ public sealed class MailboxAuthTests
         var exception = await Assert.ThrowsAsync<AuthException>(() => authenticator.GetAsync(config));
 
         Assert.Equal("mailbox_reconnect_required", exception.Code);
+        Assert.Equal(0, oauth.RefreshCalls);
+    }
+
+    // ---- the review's findings: the sync hands over an older copy of the row, and the row can change under a refresh ----
+
+    private static CoordinatorEmailConfig StoredReconnected(ISecretProtector protector, string mailbox, string refreshToken)
+    {
+        var row = CoordinatorEmailConfig.CreateMicrosoft(CoordinatorId, ManagerId, "ahmed@integrity.example", protector.Protect("rt-1"), "tenant-1");
+        row.ConnectMicrosoft(mailbox, protector.Protect(refreshToken), "tenant-1");
+        return row;
+    }
+
+    [Fact]
+    public async Task TheStoredRowIsUsedNotTheOlderCopyThatWasHandedIn()
+    {
+        var protector = Protector();
+        var older = CoordinatorEmailConfig.CreateMicrosoft(CoordinatorId, ManagerId, "ahmed@integrity.example", protector.Protect("rt-1"), "tenant-1");
+        var stored = StoredReconnected(protector, "ahmed@integrity.example", "rt-2");
+        var (authenticator, oauth, configs, _, _) = Setup(stored, protector);
+
+        var credential = await authenticator.GetAsync(older);
+
+        Assert.Equal(["rt-2"], oauth.RefreshedWith);
+        Assert.Equal("at-1", credential.AccessToken);
+        Assert.Equal(0, configs.Marks);
+        Assert.Equal(MailboxConnectionStatus.Connected, stored.ConnectionStatus);
+    }
+
+    [Fact]
+    public async Task InvalidGrantOnARowThatWasReconnectedMeanwhileIsRetriedWithTheNewSignIn()
+    {
+        var protector = Protector();
+        var stored = CoordinatorEmailConfig.CreateMicrosoft(CoordinatorId, ManagerId, "ahmed@integrity.example", protector.Protect("rt-1"), "tenant-1");
+        var (authenticator, oauth, configs, _, _) = Setup(stored, protector);
+        oauth.OnRefresh = call =>
+        {
+            // While Microsoft is refusing the old token, the coordinator connects again.
+            if (call == 1) stored.ConnectMicrosoft("ahmed@integrity.example", protector.Protect("rt-2"), "tenant-1");
+        };
+        oauth.Respond = token => token == "rt-1"
+            ? throw new MicrosoftTokenRejectedException("rejected")
+            : new MicrosoftTokens("at-2", null, DateTimeOffset.UtcNow.AddHours(1), string.Empty, string.Empty);
+
+        var credential = await authenticator.GetAsync(stored);
+
+        Assert.Equal("at-2", credential.AccessToken);
+        Assert.Equal(["rt-1", "rt-2"], oauth.RefreshedWith);
+        Assert.Equal(0, configs.Marks);
+        Assert.Equal(MailboxConnectionStatus.Connected, stored.ConnectionStatus);
+    }
+
+    [Fact]
+    public async Task ARotatedTokenIsNotWrittenOverARowThatChangedMeanwhile()
+    {
+        var protector = Protector();
+        var stored = CoordinatorEmailConfig.CreateMicrosoft(CoordinatorId, ManagerId, "ahmed@integrity.example", protector.Protect("rt-1"), "tenant-1");
+        var (authenticator, oauth, configs, _, _) = Setup(stored, protector);
+        oauth.OnRefresh = call =>
+        {
+            if (call == 1) stored.ConnectMicrosoft("sara@integrity.example", protector.Protect("rt-9"), "tenant-1");
+        };
+        oauth.Respond = token => token == "rt-1"
+            ? new MicrosoftTokens("at-of-ahmed", "rt-1b", DateTimeOffset.UtcNow.AddHours(1), string.Empty, string.Empty)
+            : new MicrosoftTokens("at-of-sara", null, DateTimeOffset.UtcNow.AddHours(1), string.Empty, string.Empty);
+
+        var credential = await authenticator.GetAsync(stored);
+
+        Assert.Equal("at-of-sara", credential.AccessToken);
+        Assert.Equal("sara@integrity.example", credential.Username);
+        Assert.Equal(0, configs.Rotations);
+        Assert.Equal("rt-9", protector.Unprotect(stored.EncryptedRefreshToken!));
+    }
+
+    [Fact]
+    public async Task AReconnectedMailboxDoesNotReuseTheOldAccessToken()
+    {
+        var protector = Protector();
+        var stored = CoordinatorEmailConfig.CreateMicrosoft(CoordinatorId, ManagerId, "ahmed@integrity.example", protector.Protect("rt-1"), "tenant-1");
+        var (authenticator, oauth, _, _, _) = Setup(stored, protector);
+        var first = await authenticator.GetAsync(stored);
+        Assert.Equal("at-1", first.AccessToken);
+
+        stored.ConnectMicrosoft("sara@integrity.example", protector.Protect("rt-9"), "tenant-1");
+        oauth.Next = new MicrosoftTokens("at-2", null, DateTimeOffset.UtcNow.AddHours(1), string.Empty, string.Empty);
+        var second = await authenticator.GetAsync(stored);
+
+        Assert.Equal(new MailboxCredential("sara@integrity.example", null, "at-2"), second);
+        Assert.Equal(2, oauth.RefreshCalls);
+    }
+
+    [Fact]
+    public async Task AMailboxSwitchedBackToAPasswordUsesThePasswordAndIsNeverMarked()
+    {
+        var protector = Protector();
+        var older = CoordinatorEmailConfig.CreateMicrosoft(CoordinatorId, ManagerId, "ahmed@integrity.example", protector.Protect("rt-1"), "tenant-1");
+        var stored = CoordinatorEmailConfig.CreateMicrosoft(CoordinatorId, ManagerId, "ahmed@integrity.example", protector.Protect("rt-1"), "tenant-1");
+        stored.Update("imap.gmail.com", 993, "ahmed@gmail.com", protector.Protect("app-pass"), true);
+        var (authenticator, oauth, configs, _, _) = Setup(stored, protector);
+        oauth.Reject = true;
+
+        var credential = await authenticator.GetAsync(older);
+
+        Assert.Equal(new MailboxCredential("ahmed@gmail.com", "app-pass", null), credential);
+        Assert.Equal(0, oauth.RefreshCalls);
+        Assert.Equal(0, configs.Marks);
+    }
+
+    [Fact]
+    public async Task ADeletedMailboxIsNotFoundNotSignedInWithTheOldCopy()
+    {
+        var protector = Protector();
+        var older = CoordinatorEmailConfig.CreateMicrosoft(CoordinatorId, ManagerId, "ahmed@integrity.example", protector.Protect("rt-1"), "tenant-1");
+        var someoneElse = CoordinatorEmailConfig.CreateMicrosoft(Guid.NewGuid(), ManagerId, "other@integrity.example", protector.Protect("rt-3"), "tenant-1");
+        var (authenticator, oauth, _, _, _) = Setup(someoneElse, protector);
+
+        var failure = await Assert.ThrowsAsync<AuthException>(() => authenticator.GetAsync(older));
+
+        Assert.Equal("email_config_not_found", failure.Code);
+        Assert.Equal(404, failure.StatusCode);
         Assert.Equal(0, oauth.RefreshCalls);
     }
 

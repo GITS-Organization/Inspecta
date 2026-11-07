@@ -1598,6 +1598,15 @@ public sealed class QuotationTests
         public Task SaveAsync(CoordinatorEmailConfig value, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task DeleteAsync(CoordinatorEmailConfig value, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task<CoordinatorEmailConfig?> GetByCoordinatorNoTrackingAsync(Guid coordinatorId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(config);
+
+        public Task<bool> RotateRefreshTokenAsync(Guid coordinatorId, string expected, string replacement, CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
+
+        public Task<bool> MarkNeedsReconnectAsync(Guid coordinatorId, string expected, string reason, CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
     }
 
     internal sealed class FakeOutbox : IOutboundEmailRepository
