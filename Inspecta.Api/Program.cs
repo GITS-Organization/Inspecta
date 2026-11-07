@@ -165,6 +165,8 @@ builder.Services.AddSingleton(builder.Configuration.GetSection("MicrosoftOAuth")
     ?? new Inspecta.Application.Services.MicrosoftOAuthOptions());
 builder.Services.AddHttpClient<IMicrosoftOAuthClient, Inspecta.Infrastructure.Mail.MicrosoftOAuthClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(20));
+builder.Services.AddSingleton<Inspecta.Application.Services.MailboxTokenCache>();
+builder.Services.AddScoped<IMailboxAuthenticator, Inspecta.Application.Services.MailboxAuthenticator>();
 builder.Services.AddHostedService<EmailSyncBackgroundService>();
 builder.Services.AddHostedService<MaybeCleanupBackgroundService>();
 
