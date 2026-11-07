@@ -9,6 +9,7 @@ extension AuthFailureMessage on AuthFailureCode {
     AuthFailureCode.accountDisabled => t.errorAccountDisabled,
     AuthFailureCode.noProfile => t.errorNoProfile,
     AuthFailureCode.tooManyAttempts => t.errorTooManyAttempts,
+    AuthFailureCode.subscriptionInactive => t.errorSubscriptionInactive,
     AuthFailureCode.network => t.errorNetwork,
     AuthFailureCode.unavailable => t.errorUnavailable,
     AuthFailureCode.unknown => t.errorUnknown,

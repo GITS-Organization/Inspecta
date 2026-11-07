@@ -16,14 +16,25 @@ class CertificateTemplate {
   /// What the "Test type" field starts as — the inspector can change it.
   static const String defaultTestType = 'Visual & function test';
 
-  /// How long after an examination the next one is suggested.
+  /// How long after an examination the next one is suggested: six months for
+  /// anything but equipment (gears, non-lifting items).
   static const int defaultIntervalMonths = 6;
 
-  /// The next examination date to suggest: [defaultIntervalMonths] after
-  /// [examination], less a day — 24/09/2026 → 23/03/2027, as on the paper
-  /// certificate.
-  static DateTime suggestedNextExamination(DateTime examination) {
-    final targetMonth = examination.month + defaultIntervalMonths;
+  /// Equipment is examined once a year.
+  static const int equipmentIntervalMonths = 12;
+
+  /// The interval for an item of this kind (`gear`, `equipment` or
+  /// `non_lifting`, as the API says); six months when the kind is not known.
+  static int intervalMonthsFor(String? itemKind) =>
+      itemKind?.trim().toLowerCase() == 'equipment' ? equipmentIntervalMonths : defaultIntervalMonths;
+
+  /// The next examination date to suggest: the item's interval ([itemKind]:
+  /// 12 months for equipment, otherwise [defaultIntervalMonths]) after
+  /// [examination], less a day — 24/09/2026 → 23/03/2027 for six months and
+  /// 23/09/2027 for a year, as on the paper certificate. The inspector can
+  /// change it.
+  static DateTime suggestedNextExamination(DateTime examination, {String? itemKind}) {
+    final targetMonth = examination.month + intervalMonthsFor(itemKind);
     final lastDayOfTarget = DateTime(examination.year, targetMonth + 1, 0).day;
     final day = examination.day > lastDayOfTarget ? lastDayOfTarget : examination.day;
     return DateTime(examination.year, targetMonth, day).subtract(const Duration(days: 1));

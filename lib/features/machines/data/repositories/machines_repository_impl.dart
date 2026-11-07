@@ -67,6 +67,15 @@ class MachinesRepositoryImpl implements MachinesRepository {
     result.fold((_) {}, (f) => throw f is CertificateIncompleteFailure ? f : _mapError(f));
   }
 
+  @override
+  Future<void> submitAllMachines(String requestId) async {
+    final result = await _safeApi<void>(
+      () => _api.submitAll(requestId),
+      mapError: _incompleteOf,
+    );
+    result.fold((_) {}, (f) => throw f is CertificateIncompleteFailure ? f : _mapError(f));
+  }
+
   /// The 409 `certificate_incomplete` answer, with its `problems` list.
   static CertificateIncompleteFailure? _incompleteOf(Object error) => _problemsOf(error, 'certificate_incomplete');
 
@@ -90,23 +99,6 @@ class MachinesRepositoryImpl implements MachinesRepository {
   static String? _problemText(Object? problem) {
     final text = problem is Map ? problem['message'] ?? problem['label'] : problem;
     return text?.toString().trim();
-  }
-
-  @override
-  Future<void> approveMachine(String requestId, String requestItemId) async {
-    // No body: the API signs with the signature it already holds.
-    final result = await _safeApi<void>(
-      () => _api.approveMachine(requestId, requestItemId, const {}),
-    );
-    result.fold((_) {}, (f) => throw _mapError(f));
-  }
-
-  @override
-  Future<void> returnMachine(String requestId, String requestItemId, {required String note}) async {
-    final result = await _safeApi<void>(
-      () => _api.returnMachine(requestId, requestItemId, {'note': note}),
-    );
-    result.fold((_) {}, (f) => throw _mapError(f));
   }
 
   @override

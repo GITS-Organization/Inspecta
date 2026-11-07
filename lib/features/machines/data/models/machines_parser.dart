@@ -143,6 +143,7 @@ class MachinesParser {
           canEdit: _bool(machine['canEdit']),
           canReview: _bool(machine['canReview']),
           type: _nullableString(machine['type']),
+          kind: _nullableString(machine['kind']) ?? _nullableString(machine['itemType']),
           templateName: _nullableString(machine['templateName']),
           manufacturer: _nullableString(machine['manufacturer']),
           capacity: _nullableString(machine['capacity']),

@@ -218,16 +218,28 @@ class AuthRepositoryImpl implements AuthRepository {
           _ => AuthFailureCode.unknown,
         });
       }
-      return AuthFailure(switch (status) {
-        400 || 401 => AuthFailureCode.invalidCredentials,
-        403 => AuthFailureCode.accountDisabled,
-        429 => AuthFailureCode.tooManyAttempts,
+      // The body's `code` says more than the status: a 403 can be a disabled
+      // account or an ended subscription, and a 429 is the lockout.
+      final code = _bodyCode(error);
+      return AuthFailure(switch ((code, status)) {
+        ('subscription_inactive', _) => AuthFailureCode.subscriptionInactive,
+        ('too_many_attempts', _) => AuthFailureCode.tooManyAttempts,
+        (_, 400 || 401) => AuthFailureCode.invalidCredentials,
+        (_, 403) => AuthFailureCode.accountDisabled,
+        (_, 429) => AuthFailureCode.tooManyAttempts,
         _ => AuthFailureCode.unknown,
       });
     }
     debugPrint('Unexpected auth error: $error');
     return const AuthFailure(AuthFailureCode.unknown);
   }
+}
+
+/// The API's machine-readable `code` from an error body, if it sent one.
+String? _bodyCode(ApiErrorModel error) {
+  final data = error.response;
+  final code = data is Map ? data['code'] : null;
+  return code is String ? code : null;
 }
 
 /// How a session renewal ended.

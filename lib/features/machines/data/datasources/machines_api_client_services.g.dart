@@ -109,32 +109,6 @@ class _MachinesApiClientServices implements MachinesApiClientServices {
   }
 
   @override
-  Future<dynamic> approveMachine(
-    String requestId,
-    String requestItemId,
-    Map<String, dynamic> body,
-  ) async {
-    final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{};
-    final _headers = <String, dynamic>{};
-    final _data = <String, dynamic>{};
-    _data.addAll(body);
-    final _options = _setStreamType<dynamic>(
-      Options(method: 'POST', headers: _headers, extra: _extra)
-          .compose(
-            _dio.options,
-            'quotation-queue/${requestId}/machines/${requestItemId}/approve',
-            queryParameters: queryParameters,
-            data: _data,
-          )
-          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
-    );
-    final _result = await _dio.fetch(_options);
-    final _value = _result.data;
-    return _value;
-  }
-
-  @override
   Future<dynamic> approveAll(
     String requestId,
     Map<String, dynamic> body,
@@ -174,32 +148,6 @@ class _MachinesApiClientServices implements MachinesApiClientServices {
           .compose(
             _dio.options,
             'quotation-queue/${requestId}/return-to-inspector',
-            queryParameters: queryParameters,
-            data: _data,
-          )
-          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
-    );
-    final _result = await _dio.fetch(_options);
-    final _value = _result.data;
-    return _value;
-  }
-
-  @override
-  Future<dynamic> returnMachine(
-    String requestId,
-    String requestItemId,
-    Map<String, dynamic> body,
-  ) async {
-    final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{};
-    final _headers = <String, dynamic>{};
-    final _data = <String, dynamic>{};
-    _data.addAll(body);
-    final _options = _setStreamType<dynamic>(
-      Options(method: 'POST', headers: _headers, extra: _extra)
-          .compose(
-            _dio.options,
-            'quotation-queue/${requestId}/machines/${requestItemId}/return',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -281,6 +229,27 @@ class _MachinesApiClientServices implements MachinesApiClientServices {
           .compose(
             _dio.options,
             'quotation-queue/${requestId}/deliver-to-client',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
+    return _value;
+  }
+
+  @override
+  Future<dynamic> submitAll(String requestId) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<dynamic>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            'quotation-queue/${requestId}/submit-all',
             queryParameters: queryParameters,
             data: _data,
           )

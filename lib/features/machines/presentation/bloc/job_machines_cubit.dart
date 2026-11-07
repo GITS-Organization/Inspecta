@@ -2,9 +2,11 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../requests/domain/entities/requests_failure.dart';
+import '../../domain/entities/certificate_incomplete_failure.dart';
 import '../../domain/entities/job_machines.dart';
 import '../../domain/usecases/get_job_machines.dart';
 import '../../domain/usecases/start_job_inspection.dart';
+import '../../domain/usecases/submit_all_machines.dart';
 
 part 'job_machines_state.dart';
 
@@ -14,6 +16,7 @@ class JobMachinesCubit extends Cubit<JobMachinesState> {
   final String requestId;
   final GetJobMachines _getMachines;
   final StartJobInspection _startInspection;
+  final SubmitAllMachines _submitAll;
 
   /// Bumped per fetch so a slow, superseded response can't overwrite a newer
   /// one.
@@ -23,8 +26,10 @@ class JobMachinesCubit extends Cubit<JobMachinesState> {
     required this.requestId,
     required GetJobMachines getMachines,
     required StartJobInspection startInspection,
+    required SubmitAllMachines submitAll,
   }) : _getMachines = getMachines,
        _startInspection = startInspection,
+       _submitAll = submitAll,
        super(const JobMachinesState());
 
   /// Loads the machines — also the pull-to-refresh and the reload on return
@@ -70,6 +75,36 @@ class JobMachinesCubit extends Cubit<JobMachinesState> {
     }
   }
 
+  /// Sends every certificate of the job to the technical manager together,
+  /// then reloads the machines. Nothing is sent unless every machine is ready:
+  /// the outcome then lists what is missing on each one.
+  Future<SubmitAllOutcome> submitAll() async {
+    if (state.isSubmitting) return const SubmitAllOutcome();
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      await _submitAll(requestId);
+      await start();
+      return const SubmitAllOutcome(sent: true);
+    } on CertificateIncompleteFailure catch (incomplete) {
+      return SubmitAllOutcome(problems: incomplete.problems);
+    } catch (error) {
+      return SubmitAllOutcome(failure: _codeOf(error));
+    } finally {
+      if (!isClosed) emit(state.copyWith(isSubmitting: false));
+    }
+  }
+
   static RequestsFailureCode _codeOf(Object error) =>
       error is RequestsFailure ? error.code : RequestsFailureCode.unknown;
+}
+
+/// How "Submit all" ended: [sent], or [problems] (what each unready machine
+/// still needs), or a [failure] of another kind. All empty when a second tap
+/// arrived while one was already running.
+class SubmitAllOutcome {
+  final bool sent;
+  final List<String> problems;
+  final RequestsFailureCode? failure;
+
+  const SubmitAllOutcome({this.sent = false, this.problems = const [], this.failure});
 }

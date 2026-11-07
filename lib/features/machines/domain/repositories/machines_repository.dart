@@ -24,13 +24,10 @@ abstract interface class MachinesRepository {
   /// [CertificateIncompleteFailure] listing what is still missing.
   Future<void> submitMachine(String requestId, String requestItemId);
 
-  /// The technical manager approves the machine's certificate; the API signs
-  /// it with the signature it holds for them.
-  Future<void> approveMachine(String requestId, String requestItemId);
-
-  /// The technical manager sends the machine's certificate back to its
-  /// inspector, with the reason in [note].
-  Future<void> returnMachine(String requestId, String requestItemId, {required String note});
+  /// Submits every certificate of the job to the technical manager together,
+  /// all or nothing. Throws a [CertificateIncompleteFailure] with one entry per
+  /// machine that is not ready ("Machine: what is missing").
+  Future<void> submitAllMachines(String requestId);
 
   /// The technical manager approves every certificate of the job at once —
   /// all or nothing. [signature] is the drawn strokes (flat, 0..1-normalised

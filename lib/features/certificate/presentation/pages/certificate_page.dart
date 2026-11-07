@@ -32,12 +32,16 @@ class CertificatePage extends StatelessWidget {
   /// The machine of the job this form is open on.
   final String requestItemId;
 
-  const CertificatePage({super.key, required this.request, required this.requestItemId});
+  /// The machine's kind (`gear`, `equipment`, `non_lifting`): equipment is next
+  /// examined a year on, everything else six months on.
+  final String? itemKind;
+
+  const CertificatePage({super.key, required this.request, required this.requestItemId, this.itemKind});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => getIt<CertificateCubit>(param1: request, param2: requestItemId)..start(),
+      create: (_) => getIt<CertificateCubit>(param1: request, param2: requestItemId)..start(itemKind: itemKind),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark,
         child: Scaffold(

@@ -11,6 +11,9 @@ enum AuthFailureCode {
   /// screen.
   noProfile,
   tooManyAttempts,
+
+  /// The company's subscription has ended (403 `subscription_inactive`).
+  subscriptionInactive,
   network,
 
   /// The API has no endpoint for this yet: the password-reset request.

@@ -1,8 +1,12 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 class Constants {
-  /// Inspecta API host (auth: login, logout...).
-  static const String baseUrl = 'https://api.gitsplatform.com';
+  /// Inspecta API host (auth: login, logout...). A build can point at another
+  /// server with `--dart-define=API_BASE_URL=https://test.example.com`.
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://api.gitsplatform.com',
+  );
 
   /// Path prefix of every API route, appended to [baseUrl] by the Dio client.
   static const String apiPrefix = '/api/v1/';

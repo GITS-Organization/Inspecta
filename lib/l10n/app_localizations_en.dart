@@ -123,6 +123,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Too many failed attempts. Wait a few minutes and try again.';
 
   @override
+  String get errorSubscriptionInactive =>
+      'Your company\'s subscription has ended. Ask your admin to renew it.';
+
+  @override
   String get errorNetwork =>
       'No connection. Check your internet and try again.';
 
@@ -1722,6 +1726,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get submitAction => 'Submit';
+
+  @override
+  String get okAction => 'OK';
+
+  @override
+  String get submitAllAction => 'Submit all certificates';
+
+  @override
+  String get submitAllHint =>
+      'Sends every certificate to the technical manager together. Every machine must be complete.';
+
+  @override
+  String get confirmSubmitAllTitle => 'Submit all certificates?';
+
+  @override
+  String get confirmSubmitAllMessage =>
+      'Every machine goes to the technical manager at once. You can\'t change them unless they are returned.';
+
+  @override
+  String get submitAllIncompleteTitle => 'Some certificates are not ready';
+
+  @override
+  String get submitAllIncompleteMessage =>
+      'Nothing was sent. Finish these first:';
+
+  @override
+  String get certificatesSubmittedMessage => 'Sent to the technical manager.';
+
+  @override
+  String get saveAndBackAction => 'Save and go back';
+
+  @override
+  String get reviewWholeJobHint =>
+      'Approve or return the whole job from the job summary.';
 
   @override
   String get certificateSubmittedMessage => 'Certificate submitted.';

@@ -33,15 +33,25 @@ class CertificateCubit extends Cubit<CertificateState> {
   bool _started = false;
   Future<void>? _saving;
 
+  /// What sort of item this machine is (`gear`, `equipment`, `non_lifting`):
+  /// equipment is next examined a year on, everything else six months on.
+  String? _itemKind;
+
   static const _saveDelay = Duration(milliseconds: 400);
 
   CertificateCubit({required this.request, required MachineCertificateSource machine})
     : _machine = machine,
       super(const CertificateState());
 
-  void start() {
+  /// The machine of the job this form is open on.
+  String get requestItemId => _machine.requestItemId;
+
+  /// [itemKind] is the machine's `kind` from the job's list; it sets how soon
+  /// the next examination is suggested.
+  void start({String? itemKind}) {
     if (_started) return;
     _started = true;
+    _itemKind = itemKind;
     _load();
   }
 
@@ -60,8 +70,9 @@ class CertificateCubit extends Cubit<CertificateState> {
   }
 
   /// A date is a discrete choice — persist right away. Moving the
-  /// examination date also moves the next-examination date along, as long
-  /// as the inspector hasn't picked a different one themselves.
+  /// examination date also moves the next-examination date along (a year on
+  /// for equipment, six months on for anything else), as long as the
+  /// inspector hasn't picked a different one themselves. Both stay editable.
   void setDate(String key, DateTime? value) {
     final current = state.certificate;
     if (current == null) return;
@@ -69,10 +80,17 @@ class CertificateCubit extends Cubit<CertificateState> {
     if (key == CertDate.examination && value != null) {
       final previous = current.dateOf(CertDate.examination);
       final next = current.dateOf(CertDate.nextExamination);
+      // A next date that is not after the examination is no real choice (the
+      // picker opens on today), so it is replaced too.
       final followsSuggestion =
-          next == null || (previous != null && next == CertificateTemplate.suggestedNextExamination(previous));
+          next == null ||
+          !next.isAfter(value) ||
+          (previous != null && next == CertificateTemplate.suggestedNextExamination(previous, itemKind: _itemKind));
       if (followsSuggestion) {
-        updated = updated.withDate(CertDate.nextExamination, CertificateTemplate.suggestedNextExamination(value));
+        updated = updated.withDate(
+          CertDate.nextExamination,
+          CertificateTemplate.suggestedNextExamination(value, itemKind: _itemKind),
+        );
       }
     }
     _persist(updated);

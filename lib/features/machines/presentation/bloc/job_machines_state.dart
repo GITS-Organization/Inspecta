@@ -10,11 +10,15 @@ class JobMachinesState extends Equatable {
   /// "Start inspection" is in flight.
   final bool isStarting;
 
+  /// "Submit all" is in flight.
+  final bool isSubmitting;
+
   const JobMachinesState({
     this.status = JobMachinesStatus.loading,
     this.machines,
     this.failure,
     this.isStarting = false,
+    this.isSubmitting = false,
   });
 
   JobMachinesState copyWith({
@@ -23,15 +27,17 @@ class JobMachinesState extends Equatable {
     RequestsFailureCode? failure,
     bool clearFailure = false,
     bool? isStarting,
+    bool? isSubmitting,
   }) {
     return JobMachinesState(
       status: status ?? this.status,
       machines: machines ?? this.machines,
       failure: clearFailure ? null : (failure ?? this.failure),
       isStarting: isStarting ?? this.isStarting,
+      isSubmitting: isSubmitting ?? this.isSubmitting,
     );
   }
 
   @override
-  List<Object?> get props => [status, machines, failure, isStarting];
+  List<Object?> get props => [status, machines, failure, isStarting, isSubmitting];
 }

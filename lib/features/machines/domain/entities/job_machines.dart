@@ -45,6 +45,11 @@ class MachineSummary extends Equatable {
   /// template, its important data, the standards printed on it, the
   /// inspection dates and the verdict. All optional on the wire.
   final String? type;
+
+  /// What sort of item it is: `gear`, `equipment` or `non_lifting`. It sets how
+  /// soon the next examination is suggested (equipment: a year, others: six
+  /// months).
+  final String? kind;
   final String? templateName;
   final String? manufacturer;
   final String? capacity;
@@ -70,6 +75,7 @@ class MachineSummary extends Equatable {
     this.canEdit = false,
     this.canReview = false,
     this.type,
+    this.kind,
     this.templateName,
     this.manufacturer,
     this.capacity,
@@ -95,6 +101,7 @@ class MachineSummary extends Equatable {
     canEdit,
     canReview,
     type,
+    kind,
     templateName,
     manufacturer,
     capacity,

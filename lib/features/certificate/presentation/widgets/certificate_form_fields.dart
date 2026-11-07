@@ -163,7 +163,7 @@ class CertificateDateInput extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          value == null ? t.selectDateHint : DateFormat('d MMM yyyy', locale).format(value),
+                          value == null ? t.selectDateHint : DateFormat('d / M / yyyy', locale).format(value),
                           style: AppTextStyles.input.copyWith(
                             fontSize: 15,
                             color: value == null ? AppColours.inkMuted : null,

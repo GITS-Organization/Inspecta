@@ -308,6 +308,12 @@ abstract class AppLocalizations {
   /// **'Too many failed attempts. Wait a few minutes and try again.'**
   String get errorTooManyAttempts;
 
+  /// No description provided for @errorSubscriptionInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Your company\'s subscription has ended. Ask your admin to renew it.'**
+  String get errorSubscriptionInactive;
+
   /// No description provided for @errorNetwork.
   ///
   /// In en, this message translates to:
@@ -3127,6 +3133,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Submit'**
   String get submitAction;
+
+  /// No description provided for @okAction.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get okAction;
+
+  /// No description provided for @submitAllAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit all certificates'**
+  String get submitAllAction;
+
+  /// No description provided for @submitAllHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sends every certificate to the technical manager together. Every machine must be complete.'**
+  String get submitAllHint;
+
+  /// No description provided for @confirmSubmitAllTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit all certificates?'**
+  String get confirmSubmitAllTitle;
+
+  /// No description provided for @confirmSubmitAllMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Every machine goes to the technical manager at once. You can\'t change them unless they are returned.'**
+  String get confirmSubmitAllMessage;
+
+  /// No description provided for @submitAllIncompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Some certificates are not ready'**
+  String get submitAllIncompleteTitle;
+
+  /// No description provided for @submitAllIncompleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was sent. Finish these first:'**
+  String get submitAllIncompleteMessage;
+
+  /// No description provided for @certificatesSubmittedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to the technical manager.'**
+  String get certificatesSubmittedMessage;
+
+  /// No description provided for @saveAndBackAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save and go back'**
+  String get saveAndBackAction;
+
+  /// No description provided for @reviewWholeJobHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve or return the whole job from the job summary.'**
+  String get reviewWholeJobHint;
 
   /// No description provided for @certificateSubmittedMessage.
   ///

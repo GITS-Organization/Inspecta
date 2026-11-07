@@ -42,13 +42,12 @@ import 'features/machines/domain/repositories/machines_repository.dart';
 import 'features/machines/domain/usecases/approve_all_machines.dart';
 import 'features/machines/domain/usecases/deliver_to_client.dart';
 import 'features/machines/domain/usecases/get_delivery_preview.dart';
-import 'features/machines/domain/usecases/approve_machine.dart';
 import 'features/machines/domain/usecases/return_job_to_inspector.dart';
 import 'features/machines/domain/usecases/get_job_machines.dart';
 import 'features/machines/domain/usecases/get_machine_form.dart';
 import 'features/machines/domain/usecases/get_machine_pdf.dart';
-import 'features/machines/domain/usecases/return_machine.dart';
 import 'features/machines/domain/usecases/save_machine_form.dart';
+import 'features/machines/domain/usecases/submit_all_machines.dart';
 import 'features/machines/domain/usecases/submit_machine.dart';
 import 'features/machines/domain/usecases/start_job_inspection.dart';
 import 'features/machines/presentation/bloc/job_machines_cubit.dart';
@@ -244,8 +243,7 @@ void _registerMachines() {
     ..registerLazySingleton(() => StartJobInspection(getIt()))
     ..registerLazySingleton(() => SaveMachineForm(getIt()))
     ..registerLazySingleton(() => SubmitMachine(getIt()))
-    ..registerLazySingleton(() => ApproveMachine(getIt()))
-    ..registerLazySingleton(() => ReturnMachine(getIt()))
+    ..registerLazySingleton(() => SubmitAllMachines(getIt()))
     ..registerLazySingleton(() => GetDeliveryPreview(getIt()))
     ..registerLazySingleton(() => DeliverToClient(getIt()))
     ..registerLazySingleton(() => ApproveAllMachines(getIt()))
@@ -255,6 +253,7 @@ void _registerMachines() {
         requestId: requestId,
         getMachines: getIt(),
         startInspection: getIt(),
+        submitAll: getIt(),
       ),
     );
 }
@@ -352,8 +351,6 @@ void _registerTechnicalManager() {
         requestItemId: requestItemId,
         reviewerName: getIt<AuthCubit>().user?.name ?? '',
         getMachineForm: getIt(),
-        approveMachine: getIt(),
-        returnMachine: getIt(),
       ),
     );
 }

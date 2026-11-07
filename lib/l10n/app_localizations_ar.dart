@@ -121,6 +121,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'محاولات فاشلة كثيرة. انتظر بضع دقائق ثم حاول مرة أخرى.';
 
   @override
+  String get errorSubscriptionInactive =>
+      'انتهى اشتراك شركتك. اطلب من المسؤول تجديده.';
+
+  @override
   String get errorNetwork => 'لا يوجد اتصال. تحقق من الإنترنت وحاول مرة أخرى.';
 
   @override
@@ -1722,6 +1726,38 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get submitAction => 'إرسال';
+
+  @override
+  String get okAction => 'حسنًا';
+
+  @override
+  String get submitAllAction => 'إرسال كل الشهادات';
+
+  @override
+  String get submitAllHint =>
+      'يرسل كل الشهادات إلى المدير الفني معًا. يجب أن تكون كل الماكينات مكتملة.';
+
+  @override
+  String get confirmSubmitAllTitle => 'إرسال كل الشهادات؟';
+
+  @override
+  String get confirmSubmitAllMessage =>
+      'تذهب كل الماكينات إلى المدير الفني دفعة واحدة. لا يمكنك تعديلها إلا إذا أعادها إليك.';
+
+  @override
+  String get submitAllIncompleteTitle => 'بعض الشهادات غير جاهزة';
+
+  @override
+  String get submitAllIncompleteMessage => 'لم يُرسل شيء. أكمل هذه أولًا:';
+
+  @override
+  String get certificatesSubmittedMessage => 'تم الإرسال إلى المدير الفني.';
+
+  @override
+  String get saveAndBackAction => 'حفظ والعودة';
+
+  @override
+  String get reviewWholeJobHint => 'اعتمد الشغل كله أو أعده من ملخص الشغل.';
 
   @override
   String get certificateSubmittedMessage => 'تم إرسال الشهادة.';

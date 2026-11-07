@@ -38,23 +38,6 @@ abstract class MachinesApiClientServices {
     @Path('requestItemId') String requestItemId,
   );
 
-  /// The technical manager approves the machine's certificate, signing it.
-  @POST('${ApiUrls.quotationQueue}/{requestId}/machines/{requestItemId}/approve')
-  Future<dynamic> approveMachine(
-    @Path('requestId') String requestId,
-    @Path('requestItemId') String requestItemId,
-    @Body() Map<String, dynamic> body,
-  );
-
-  /// The technical manager sends the machine's certificate back to its
-  /// inspector with a note.
-  @POST('${ApiUrls.quotationQueue}/{requestId}/machines/{requestItemId}/return')
-  Future<dynamic> returnMachine(
-    @Path('requestId') String requestId,
-    @Path('requestItemId') String requestItemId,
-    @Body() Map<String, dynamic> body,
-  );
-
   /// The machine's certificate as a PDF: marked DRAFT until it is approved,
   /// then the stored final file.
   @GET('${ApiUrls.quotationQueue}/{requestId}/machines/{requestItemId}/pdf')
@@ -93,6 +76,11 @@ abstract class MachinesApiClientServices {
     @Path('requestId') String requestId,
     @Body() Map<String, dynamic> body,
   );
+
+  /// The inspector sends every certificate of the job to the technical
+  /// manager together, all or nothing (no body).
+  @POST('${ApiUrls.quotationQueue}/{requestId}/submit-all')
+  Future<dynamic> submitAll(@Path('requestId') String requestId);
 
   /// Begins the inspection (no body); safe to call again.
   @POST('${ApiUrls.quotationQueue}/{requestId}/start-inspection')
