@@ -30,7 +30,10 @@ public sealed class CoordinatorEmailConfigService(
         ? new CoordinatorEmailConfigResponse(false, null, null, null, null, null, null, null, CoordinatorEmailConfig.DefaultSyncFromUtc, null)
         : new CoordinatorEmailConfigResponse(
             true, config.ImapServer, config.ImapPort, config.EmailUsername, config.UseSsl,
-            config.SmtpServer, config.SmtpPort, config.SmtpUseSsl, config.SyncFromUtc, config.UpdatedAt);
+            config.SmtpServer, config.SmtpPort, config.SmtpUseSsl, config.SyncFromUtc, config.UpdatedAt,
+            config.AuthMode == MailboxAuthMode.MicrosoftOAuth ? "microsoft_oauth" : "password",
+            config.ConnectionStatus == MailboxConnectionStatus.NeedsReconnect ? "needs_reconnect" : "connected",
+            config.LastAuthError);
 
     public async Task<CoordinatorEmailConfigResponse> GetAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken = default)
     {

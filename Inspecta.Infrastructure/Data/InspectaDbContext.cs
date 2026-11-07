@@ -244,6 +244,9 @@ public sealed class InspectaDbContext(
         emailConfig.Property(item => item.LastUidValidity).HasMaxLength(64);
         emailConfig.Property(item => item.SmtpServer).HasMaxLength(255);
         emailConfig.Property(item => item.EncryptedPassword).HasMaxLength(2048).IsRequired();
+        emailConfig.Property(item => item.EncryptedRefreshToken).HasMaxLength(2048);
+        emailConfig.Property(item => item.MicrosoftTenantId).HasMaxLength(64);
+        emailConfig.Property(item => item.LastAuthError).HasMaxLength(500);
         emailConfig.HasOne<AppUser>()
             .WithOne()
             .HasForeignKey<CoordinatorEmailConfig>(item => item.CoordinatorId)

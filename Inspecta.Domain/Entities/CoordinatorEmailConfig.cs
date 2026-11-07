@@ -1,3 +1,5 @@
+using Inspecta.Domain.Enums;
+
 namespace Inspecta.Domain.Entities;
 
 public sealed class CoordinatorEmailConfig
@@ -29,6 +31,98 @@ public sealed class CoordinatorEmailConfig
 
     /// <summary>Highest mailbox UID already handled.</summary>
     public long LastUid { get; private set; }
+
+    public const string MicrosoftImapServer = "outlook.office365.com";
+    public const int MicrosoftImapPort = 993;
+    public const string MicrosoftSmtpServer = "smtp.office365.com";
+    public const int MicrosoftSmtpPort = 587;
+    private const int MaxAuthErrorLength = 500;
+
+    /// <summary>A stored password (default) or a Microsoft sign-in.</summary>
+    public MailboxAuthMode AuthMode { get; private set; } = MailboxAuthMode.Password;
+
+    /// <summary>The Microsoft refresh token, encrypted; only for <see cref="MailboxAuthMode.MicrosoftOAuth"/>.</summary>
+    public string? EncryptedRefreshToken { get; private set; }
+
+    /// <summary>The Microsoft directory (tenant) the mailbox belongs to.</summary>
+    public string? MicrosoftTenantId { get; private set; }
+
+    public MailboxConnectionStatus ConnectionStatus { get; private set; } = MailboxConnectionStatus.Connected;
+
+    /// <summary>Why the saved sign-in stopped working, for the person who has to connect again.</summary>
+    public string? LastAuthError { get; private set; }
+
+    /// <summary>A mailbox the coordinator connected by signing in to Microsoft: Outlook's servers and no password.</summary>
+    public static CoordinatorEmailConfig CreateMicrosoft(
+        Guid coordinatorId,
+        Guid tenantId,
+        string mailboxAddress,
+        string encryptedRefreshToken,
+        string microsoftTenantId,
+        DateTimeOffset? syncFromUtc = null)
+    {
+        if (coordinatorId == Guid.Empty || tenantId == Guid.Empty)
+            throw new ArgumentException("Coordinator and tenant ids are required.");
+        var now = DateTimeOffset.UtcNow;
+        var config = new CoordinatorEmailConfig
+        {
+            CoordinatorId = coordinatorId,
+            TenantId = tenantId,
+            UpdatedAt = now,
+            SyncFromUtc = syncFromUtc ?? now
+        };
+        config.ApplyMicrosoft(mailboxAddress, encryptedRefreshToken, microsoftTenantId);
+        return config;
+    }
+
+    /// <summary>Connects (or reconnects) the mailbox through Microsoft; a different mailbox starts the import again from now.</summary>
+    public void ConnectMicrosoft(string mailboxAddress, string encryptedRefreshToken, string microsoftTenantId)
+    {
+        var mailboxChanged = !string.Equals(EmailUsername, mailboxAddress?.Trim(), StringComparison.OrdinalIgnoreCase);
+        ApplyMicrosoft(mailboxAddress, encryptedRefreshToken, microsoftTenantId);
+        UpdatedAt = DateTimeOffset.UtcNow;
+        if (mailboxChanged) ResetSync(UpdatedAt);
+    }
+
+    /// <summary>Microsoft handed out a new refresh token while renewing the access token.</summary>
+    public void RotateRefreshToken(string encryptedRefreshToken)
+    {
+        if (string.IsNullOrWhiteSpace(encryptedRefreshToken))
+            throw new ArgumentException("Encrypted refresh token is required.", nameof(encryptedRefreshToken));
+        EncryptedRefreshToken = encryptedRefreshToken;
+    }
+
+    /// <summary>Microsoft refused the saved sign-in; the sync skips the mailbox until the coordinator connects again.</summary>
+    public void MarkNeedsReconnect(string reason)
+    {
+        ConnectionStatus = MailboxConnectionStatus.NeedsReconnect;
+        var text = reason?.Trim() ?? string.Empty;
+        LastAuthError = text.Length > MaxAuthErrorLength ? text[..MaxAuthErrorLength] : text;
+    }
+
+    private void ApplyMicrosoft(string mailboxAddress, string encryptedRefreshToken, string microsoftTenantId)
+    {
+        if (string.IsNullOrWhiteSpace(mailboxAddress))
+            throw new ArgumentException("Mailbox address is required.", nameof(mailboxAddress));
+        if (string.IsNullOrWhiteSpace(encryptedRefreshToken))
+            throw new ArgumentException("Encrypted refresh token is required.", nameof(encryptedRefreshToken));
+        if (string.IsNullOrWhiteSpace(microsoftTenantId))
+            throw new ArgumentException("Microsoft tenant id is required.", nameof(microsoftTenantId));
+
+        AuthMode = MailboxAuthMode.MicrosoftOAuth;
+        ImapServer = MicrosoftImapServer;
+        ImapPort = MicrosoftImapPort;
+        UseSsl = true;
+        SmtpServer = MicrosoftSmtpServer;
+        SmtpPort = MicrosoftSmtpPort;
+        SmtpUseSsl = false;
+        EmailUsername = mailboxAddress.Trim();
+        EncryptedPassword = string.Empty;
+        EncryptedRefreshToken = encryptedRefreshToken;
+        MicrosoftTenantId = microsoftTenantId.Trim();
+        ConnectionStatus = MailboxConnectionStatus.Connected;
+        LastAuthError = null;
+    }
 
     public void Update(
         string imapServer,
@@ -65,6 +159,13 @@ public sealed class CoordinatorEmailConfig
         SmtpPort = ValidateSmtpPort(smtpPort);
         SmtpUseSsl = smtpUseSsl;
         UpdatedAt = updatedAt ?? DateTimeOffset.UtcNow;
+
+        // Setting a password means the mailbox no longer signs in through Microsoft.
+        AuthMode = MailboxAuthMode.Password;
+        EncryptedRefreshToken = null;
+        MicrosoftTenantId = null;
+        ConnectionStatus = MailboxConnectionStatus.Connected;
+        LastAuthError = null;
 
         // A different mailbox has its own UIDs: start again from now instead of importing its history.
         // A date the user chose wins, and moves the start of the import by itself.

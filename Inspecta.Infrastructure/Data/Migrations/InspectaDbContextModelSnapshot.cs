@@ -452,6 +452,12 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<Guid>("CoordinatorId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("AuthMode")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ConnectionStatus")
+                        .HasColumnType("integer");
+
                     b.Property<string>("EmailUsername")
                         .IsRequired()
                         .HasMaxLength(320)
@@ -459,6 +465,10 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
                     b.Property<string>("EncryptedPassword")
                         .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("EncryptedRefreshToken")
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)");
 
@@ -470,10 +480,18 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<string>("LastAuthError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<long>("LastUid")
                         .HasColumnType("bigint");
 
                     b.Property<string>("LastUidValidity")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("MicrosoftTenantId")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 

@@ -45,7 +45,12 @@ public sealed record CoordinatorEmailConfigResponse(
     int? SmtpPort,
     bool? SmtpUseSsl,
     DateTimeOffset SyncFrom,
-    DateTimeOffset? UpdatedAt);
+    DateTimeOffset? UpdatedAt,
+    /// <summary><c>password</c> or <c>microsoft_oauth</c>.</summary>
+    string AuthMode = "password",
+    /// <summary><c>connected</c>, or <c>needs_reconnect</c> when Microsoft no longer accepts the saved sign-in.</summary>
+    string ConnectionStatus = "connected",
+    string? LastAuthError = null);
 
 /// <summary>Chooses the date mail is imported from.</summary>
 public sealed record ChangeSyncFromRequest
