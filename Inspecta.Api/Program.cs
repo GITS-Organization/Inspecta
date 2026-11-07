@@ -156,6 +156,7 @@ builder.Services.AddRateLimiter(limiter =>
     limiter.AddPolicy(Inspecta.Api.Controllers.VerificationController.RateLimitPolicy, context => PerAddress(context, 60));
     limiter.AddPolicy(Inspecta.Api.Controllers.AuthController.LoginRateLimitPolicy, context => PerAddress(context, 10));
     limiter.AddPolicy(Inspecta.Api.Controllers.AuthController.RefreshRateLimitPolicy, context => PerAddress(context, 60));
+    limiter.AddPolicy(Inspecta.Api.Controllers.MicrosoftMailboxController.CallbackRateLimitPolicy, context => PerAddress(context, 30));
 });
 builder.Services.AddScoped<IPasswordService, IdentityPasswordService>();
 builder.Services.AddSingleton<IAccessTokenService, JwtAccessTokenService>();
@@ -167,6 +168,7 @@ builder.Services.AddHttpClient<IMicrosoftOAuthClient, Inspecta.Infrastructure.Ma
     client.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddSingleton<Inspecta.Application.Services.MailboxTokenCache>();
 builder.Services.AddScoped<IMailboxAuthenticator, Inspecta.Application.Services.MailboxAuthenticator>();
+builder.Services.AddScoped<IMicrosoftMailboxConnectionService, Inspecta.Application.Services.MicrosoftMailboxConnectionService>();
 builder.Services.AddHostedService<EmailSyncBackgroundService>();
 builder.Services.AddHostedService<MaybeCleanupBackgroundService>();
 

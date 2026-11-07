@@ -43,6 +43,8 @@ public sealed class MailboxAuthTests
             Saves++;
             return Task.CompletedTask;
         }
+
+        public Task DeleteAsync(CoordinatorEmailConfig removed, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class ManualClock(DateTimeOffset start) : TimeProvider

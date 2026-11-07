@@ -34,6 +34,17 @@ public sealed class CoordinatorEmailConfigsController(
         return NoContent();
     }
 
+    /// <summary>Remove the coordinator's mailbox settings, whether a Microsoft sign-in or a password.</summary>
+    /// <remarks>The mailbox is no longer read or sent from. <c>404 email_config_not_found</c> when none was set.</remarks>
+    [HttpDelete]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid coordinatorId, [FromQuery] Guid? managerId, CancellationToken cancellationToken)
+    {
+        await configService.DeleteAsync(ResolveManagerId(managerId), coordinatorId, cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>The coordinator's mailbox settings (never the password) and the date mail is imported from.</summary>
     /// <remarks><c>configured: false</c> when no mailbox was set yet; <c>syncFrom</c> is then the default, 1 November 2026.</remarks>
     [HttpGet]

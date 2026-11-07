@@ -22,4 +22,10 @@ public sealed class EfCoordinatorEmailConfigRepository(InspectaDbContext dbConte
             dbContext.CoordinatorEmailConfigs.Add(config);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task DeleteAsync(CoordinatorEmailConfig config, CancellationToken cancellationToken = default)
+    {
+        dbContext.CoordinatorEmailConfigs.Remove(config);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
 }

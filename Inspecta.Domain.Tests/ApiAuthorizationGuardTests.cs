@@ -41,12 +41,14 @@ public sealed class ApiAuthorizationGuardTests
             .Order()
             .ToArray();
 
-        // Sign-in and token refresh, the branding logos, and the public certificate check behind the QR code.
+        // Sign-in and token refresh, the branding logos, the public certificate check behind the QR code, and the page
+        // Microsoft sends the browser back to after a coordinator connected an Outlook mailbox (only a valid state does anything).
         Assert.Equal(
             new[]
             {
                 "AuthController.Login", "AuthController.Refresh",
                 "BrandingController.Logo", "BrandingController.TeamLogo",
+                "MicrosoftMailboxController.Callback",
                 "VerificationController.Json", "VerificationController.Pdf", "VerificationController.Page"
             }.Order().ToArray(),
             anonymous);

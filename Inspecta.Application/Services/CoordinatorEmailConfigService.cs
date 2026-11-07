@@ -41,6 +41,14 @@ public sealed class CoordinatorEmailConfigService(
         return Map(await configRepository.GetByCoordinatorAsync(coordinatorId, cancellationToken));
     }
 
+    public async Task DeleteAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken = default)
+    {
+        await EnsureTeamCoordinatorAsync(managerId, coordinatorId, cancellationToken);
+        var config = await configRepository.GetByCoordinatorAsync(coordinatorId, cancellationToken)
+            ?? throw new AuthException("email_config_not_found", "This coordinator has no mailbox set up.", 404);
+        await configRepository.DeleteAsync(config, cancellationToken);
+    }
+
     public async Task<CoordinatorEmailConfigResponse> ChangeSyncFromAsync(
         Guid managerId, Guid coordinatorId, DateTimeOffset syncFrom, CancellationToken cancellationToken = default)
     {

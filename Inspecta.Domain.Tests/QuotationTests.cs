@@ -1596,6 +1596,8 @@ public sealed class QuotationTests
             Task.FromResult(config);
 
         public Task SaveAsync(CoordinatorEmailConfig value, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task DeleteAsync(CoordinatorEmailConfig value, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     internal sealed class FakeOutbox : IOutboundEmailRepository
