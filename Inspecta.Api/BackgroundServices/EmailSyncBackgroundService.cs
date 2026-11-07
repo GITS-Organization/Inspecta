@@ -54,11 +54,9 @@ public sealed partial class EmailSyncBackgroundService(
             return;
         }
 
-        foreach (var config in configs)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            await SyncMailboxAsync(config, cancellationToken);
-        }
+        // Mailboxes are read side by side, a few at a time, so a company with many of them does not wait for each in turn.
+        var maxParallel = Math.Clamp(configuration.GetValue("EmailSync:MaxParallel", 4), 1, 16);
+        await BoundedParallel.ForEachAsync(configs, maxParallel, SyncMailboxAsync, cancellationToken);
     }
 
     private static IncomingEmail ToIncomingEmail(MimeKit.MimeMessage message, string uidValidity, uint uid)

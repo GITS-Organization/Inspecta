@@ -63,7 +63,8 @@ public sealed class CertificateDeliveryService(
     IEmailSender emailSender,
     CertificateDeliveryOptions? options = null,
     IEmailBranding? branding = null,
-    ICompanyBrandingProvider? companyBranding = null)
+    ICompanyBrandingProvider? companyBranding = null,
+    IMailboxAuthenticator? mailboxAuthenticator = null)
 {
     // Above this many bytes the PDFs travel as one ZIP: mail servers refuse very large messages.
     private const int MaxAttachedBytes = 18 * 1024 * 1024;
@@ -184,7 +185,7 @@ public sealed class CertificateDeliveryService(
 
         if (request.CoordinatorId is not Guid coordinatorId || request.ManagerId is not Guid managerId)
             throw new InvalidOperationException("The request has no coordinator to send the email from.");
-        var (config, coordinator, fromAddress) = await MailboxAsync(coordinatorId, cancellationToken);
+        var (_, coordinator, fromAddress, smtp) = await MailboxAsync(coordinatorId, cancellationToken);
         var source = plan.RepliesToOriginalEmail ? await requestRepository.GetEmailAsync(request.Id, cancellationToken) : null;
 
         var attachments = BuildAttachments(files).Concat(draft?.Extra ?? []).ToArray();
@@ -207,7 +208,7 @@ public sealed class CertificateDeliveryService(
 
         try
         {
-            await SendAsync(config, coordinator, fromAddress, plan.ToAddress, plan.ToName, plan.Cc, plan.Subject, plan.Body, row.MessageId, source, attachments, await CompanyAsync(request, cancellationToken), cancellationToken);
+            await SendAsync(smtp, coordinator, fromAddress, plan.ToAddress, plan.ToName, plan.Cc, plan.Subject, plan.Body, row.MessageId, source, attachments, await CompanyAsync(request, cancellationToken), cancellationToken);
         }
         catch (Exception exception)
         {
@@ -239,12 +240,12 @@ public sealed class CertificateDeliveryService(
             throw new InvalidOperationException("The request has no coordinator to send the email from.");
 
         var plan = await PlanAsync(request, files, draft, cancellationToken);
-        var (config, coordinator, fromAddress) = await MailboxAsync(coordinatorId, cancellationToken);
+        var (_, coordinator, fromAddress, smtp) = await MailboxAsync(coordinatorId, cancellationToken);
         var subject = "[TEST] " + plan.Subject;
         var messageId = $"<{Guid.NewGuid():N}@{QuoteDeliveryService.DomainOf(fromAddress)}>";
         try
         {
-            await SendAsync(config, coordinator, fromAddress, toAddress, toName, [], subject, plan.Body, messageId, null, BuildAttachments(files).Concat(draft?.Extra ?? []).ToArray(), await CompanyAsync(request, cancellationToken), cancellationToken);
+            await SendAsync(smtp, coordinator, fromAddress, toAddress, toName, [], subject, plan.Body, messageId, null, BuildAttachments(files).Concat(draft?.Extra ?? []).ToArray(), await CompanyAsync(request, cancellationToken), cancellationToken);
         }
         catch (Exception exception)
         {
@@ -261,17 +262,20 @@ public sealed class CertificateDeliveryService(
     private async Task<CompanyBranding?> CompanyAsync(InspectionRequest request, CancellationToken cancellationToken) =>
         companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
 
-    private async Task<(CoordinatorEmailConfig Config, AppUser Coordinator, string FromAddress)> MailboxAsync(Guid coordinatorId, CancellationToken cancellationToken)
+    // The sign-in is resolved here, before anything is recorded: a mailbox that must be connected again stops the send with
+    // a clear 409 and leaves no half-finished delivery behind.
+    private async Task<(CoordinatorEmailConfig Config, AppUser Coordinator, string FromAddress, SmtpSettings Smtp)> MailboxAsync(Guid coordinatorId, CancellationToken cancellationToken)
     {
         var config = await configRepository.GetByCoordinatorAsync(coordinatorId, cancellationToken)
             ?? throw new ArgumentException("The coordinator mailbox is not configured, so the certificates cannot be emailed. Configure the mailbox first.");
         var coordinator = await userRepository.GetByIdAsync(coordinatorId, cancellationToken)
             ?? throw new KeyNotFoundException("Coordinator was not found.");
-        return (config, coordinator, QuoteDeliveryService.ResolveFromAddress(config, coordinator));
+        var smtp = await QuoteDeliveryService.SmtpSettingsAsync(config, mailboxAuthenticator, secretProtector, cancellationToken);
+        return (config, coordinator, QuoteDeliveryService.ResolveFromAddress(config, coordinator), smtp);
     }
 
     private async Task SendAsync(
-        CoordinatorEmailConfig config,
+        SmtpSettings smtp,
         AppUser coordinator,
         string fromAddress,
         string toAddress,
@@ -286,9 +290,8 @@ public sealed class CertificateDeliveryService(
         CancellationToken cancellationToken)
     {
         var laidOut = EmailLayout.ForCoordinator(body, coordinator, fromAddress, source, EmailLayout.BrandingFor(company, branding));
-        var smtp = config.ResolveSmtp();
         await emailSender.SendAsync(
-            new SmtpSettings(smtp.Server, smtp.Port, smtp.UseSsl, config.EmailUsername, secretProtector.Unprotect(config.EncryptedPassword)),
+            smtp,
             new OutgoingEmail(
                 fromAddress,
                 coordinator.FullName,

@@ -1437,9 +1437,60 @@ public sealed class QuotationTests
     }
 
 
+    [Fact]
+    public async Task SendsWithTheAccessTokenForAMicrosoftMailbox()
+    {
+        var config = CoordinatorEmailConfig.CreateMicrosoft(CoordinatorId, ManagerId, "coordinator@example.com", "enc", "tenant-1");
+        var fixture = Fixture.WithMailbox(config, new StubMailboxAuthenticator("access-token-1"));
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+
+        await fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+
+        Assert.Single(fixture.Sender.Sent);
+        Assert.Equal("access-token-1", fixture.Sender.LastSmtp!.AccessToken);
+        Assert.Equal(string.Empty, fixture.Sender.LastSmtp.Password);
+        Assert.Equal("coordinator@example.com", fixture.Sender.LastSmtp.Username);
+        Assert.Equal("smtp.office365.com", fixture.Sender.LastSmtp.Server);
+        Assert.Equal(587, fixture.Sender.LastSmtp.Port);
+        Assert.False(fixture.Sender.LastSmtp.UseSsl);
+    }
+
+    [Fact]
+    public async Task ASendFromAMailboxThatNeedsReconnectAnswers409AndLeavesNothingStuck()
+    {
+        var config = CoordinatorEmailConfig.CreateMicrosoft(CoordinatorId, ManagerId, "coordinator@example.com", "enc", "tenant-1");
+        var authenticator = new StubMailboxAuthenticator { Reject = true };
+        var fixture = Fixture.WithMailbox(config, authenticator);
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+
+        var failure = await Assert.ThrowsAsync<AuthException>(() =>
+            fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator"));
+
+        Assert.Equal("mailbox_reconnect_required", failure.Code);
+        Assert.Equal(409, failure.StatusCode);
+        Assert.Empty(fixture.Sender.Sent);
+
+        // After the coordinator connects again the very same send goes through: no half-finished row blocks it.
+        authenticator.Reject = false;
+        await fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+        Assert.Single(fixture.Sender.Sent);
+    }
+
     internal sealed class Fixture
     {
+        /// <summary>A fixture whose coordinator mailbox is the given config, signed in through the given authenticator.</summary>
+        public static Fixture WithMailbox(CoordinatorEmailConfig config, IMailboxAuthenticator authenticator) =>
+            new(null, true, null, null, config, authenticator, []);
+
         public Fixture(InspectionRequest? request = null, bool configured = true, IRequestEquipmentRegistrar? registrar = null, QuoteDeliveryOptions? delivery = null, params AppUser[] extraUsers)
+            : this(request, configured, registrar, delivery, null, null, extraUsers)
+        {
+        }
+
+        private Fixture(InspectionRequest? request, bool configured, IRequestEquipmentRegistrar? registrar, QuoteDeliveryOptions? delivery,
+            CoordinatorEmailConfig? mailbox, IMailboxAuthenticator? authenticator, AppUser[] extraUsers)
         {
             Request = request ?? CompleteRequest(out _, out _, Guid.NewGuid());
             Crane = Request.Items.ElementAtOrDefault(0)!;
@@ -1451,14 +1502,15 @@ public sealed class QuotationTests
             Sender = new FakeSender();
             Delivery = new QuoteDeliveryService(
                 Requests,
-                new FakeConfigs(configured ? CoordinatorEmailConfig.Create(
+                new FakeConfigs(configured ? mailbox ?? CoordinatorEmailConfig.Create(
                     CoordinatorId, ManagerId, "imap.example.com", 993, "coordinator@example.com", "encrypted", true) : null),
                 new IncomingEmailRequestTests.FakeUserRepository([Coordinator, .. extraUsers]),
                 Outbox,
                 new FakeProtector(),
                 Pdf,
                 Sender,
-                delivery);
+                delivery,
+                mailboxAuthenticator: authenticator);
             Replies = new FakeReplies();
             Service = new QuoteService(
                 Quotes, Requests, Pdf, Delivery, Outbox, new IncomingEmailRequestTests.FakeUserRepository([Coordinator, .. extraUsers]), registrar,

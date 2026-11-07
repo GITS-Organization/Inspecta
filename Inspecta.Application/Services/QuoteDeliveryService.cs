@@ -18,8 +18,23 @@ public sealed class QuoteDeliveryService(
     IEmailSender emailSender,
     QuoteDeliveryOptions? options = null,
     IEmailBranding? branding = null,
-    ICompanyBrandingProvider? companyBranding = null) : IQuoteDeliveryService
+    ICompanyBrandingProvider? companyBranding = null,
+    IMailboxAuthenticator? mailboxAuthenticator = null) : IQuoteDeliveryService
 {
+    /// <summary>The outgoing server and sign-in of a coordinator mailbox: the password, or a fresh Microsoft access token.</summary>
+    internal static async Task<SmtpSettings> SmtpSettingsAsync(
+        CoordinatorEmailConfig config,
+        IMailboxAuthenticator? authenticator,
+        ISecretProtector secretProtector,
+        CancellationToken cancellationToken)
+    {
+        var smtp = config.ResolveSmtp();
+        var credential = authenticator is null
+            ? new MailboxCredential(config.EmailUsername, secretProtector.Unprotect(config.EncryptedPassword), null)
+            : await authenticator.GetAsync(config, cancellationToken);
+        return new SmtpSettings(smtp.Server, smtp.Port, smtp.UseSsl, credential.Username, credential.Password ?? string.Empty, credential.AccessToken);
+    }
+
     public async Task<QuoteEmailPlan> PlanAsync(
         InspectionRequest request,
         Quote quote,
@@ -115,6 +130,9 @@ public sealed class QuoteDeliveryService(
         var coordinator = await userRepository.GetByIdAsync(coordinatorId, cancellationToken)
             ?? throw new KeyNotFoundException("Coordinator was not found.");
         var fromAddress = ResolveFromAddress(config, coordinator);
+        // Resolved before anything is recorded: a mailbox that must be connected again stops here with a clear 409
+        // and leaves no half-finished email behind that would block the retry.
+        var smtpSettings = await SmtpSettingsAsync(config, mailboxAuthenticator, secretProtector, cancellationToken);
         var plan = await PlanAsync(request, quote, kind, draft, cancellationToken);
 
         var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
@@ -139,11 +157,10 @@ public sealed class QuoteDeliveryService(
         else await outboundEmailRepository.SaveAsync(cancellationToken);
 
         var laidOut = EmailLayout.ForCoordinator(row.BodyText, coordinator, fromAddress, source, EmailLayout.BrandingFor(company, branding));
-        var smtp = config.ResolveSmtp();
         try
         {
             await emailSender.SendAsync(
-                new SmtpSettings(smtp.Server, smtp.Port, smtp.UseSsl, config.EmailUsername, secretProtector.Unprotect(config.EncryptedPassword)),
+                smtpSettings,
                 new OutgoingEmail(
                     row.FromAddress, row.FromName, row.ToAddress, row.ToName, row.Subject, laidOut.Text, row.MessageId,
                     row.InReplyTo, row.References, row.AttachmentFileName, row.AttachmentContent,

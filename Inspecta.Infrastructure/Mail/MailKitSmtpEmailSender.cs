@@ -23,7 +23,10 @@ public sealed class MailKitSmtpEmailSender(ILogger<MailKitSmtpEmailSender> logge
             var message = BuildMessage(email);
             using var client = new SmtpClient { Timeout = (int)Timeout.TotalMilliseconds };
             await ConnectSafelyAsync(client, smtp, cancellationToken);
-            await client.AuthenticateAsync(smtp.Username, smtp.Password, cancellationToken);
+            if (smtp.AccessToken is { Length: > 0 } accessToken)
+                await client.AuthenticateAsync(new SaslMechanismOAuth2(smtp.Username, accessToken), cancellationToken);
+            else
+                await client.AuthenticateAsync(smtp.Username, smtp.Password, cancellationToken);
             await client.SendAsync(message, cancellationToken);
             await client.DisconnectAsync(true, cancellationToken);
         }

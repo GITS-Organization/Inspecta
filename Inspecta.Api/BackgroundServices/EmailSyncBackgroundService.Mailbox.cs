@@ -24,20 +24,23 @@ public sealed partial class EmailSyncBackgroundService
         {
             await using var scope = scopeFactory.CreateAsyncScope();
             var services = scope.ServiceProvider;
-            var protector = services.GetRequiredService<ISecretProtector>();
+            var authenticator = services.GetRequiredService<IMailboxAuthenticator>();
             var repository = services.GetRequiredService<IEmailSyncRepository>();
             var machineSuggestions = services.GetRequiredService<IMachineSuggestionService>();
             var replyService = services.GetRequiredService<IClientReplyService>();
             // An email from the mailbox itself is ours, not the client's.
             IReadOnlyList<string> ownAddresses = config.EmailUsername.Contains('@') ? [config.EmailUsername] : [];
-            var password = protector.Unprotect(config.EncryptedPassword);
+            var credential = await authenticator.GetAsync(config, cancellationToken);
 
             using var client = new ImapClient();
             var secureSocketOptions = config.UseSsl
                 ? SecureSocketOptions.SslOnConnect
                 : SecureSocketOptions.StartTls;
             await ConnectSafelyAsync(client, config, secureSocketOptions, cancellationToken);
-            await client.AuthenticateAsync(config.EmailUsername, password, cancellationToken);
+            if (credential.AccessToken is { Length: > 0 } accessToken)
+                await client.AuthenticateAsync(new SaslMechanismOAuth2(credential.Username, accessToken), cancellationToken);
+            else
+                await client.AuthenticateAsync(credential.Username, credential.Password ?? string.Empty, cancellationToken);
 
             // Read-only: the mailbox is never modified. Progress is tracked by UID instead of the read flag.
             var inbox = client.Inbox;

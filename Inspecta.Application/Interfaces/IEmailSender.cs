@@ -1,7 +1,7 @@
 namespace Inspecta.Application.Interfaces;
 
-/// <summary>Outgoing mail server and the mailbox login used to send through it.</summary>
-public sealed record SmtpSettings(string Server, int Port, bool UseSsl, string Username, string Password);
+/// <summary>Outgoing mail server and the mailbox login used to send through it: the password, or a Microsoft access token (OAuth) instead.</summary>
+public sealed record SmtpSettings(string Server, int Port, bool UseSsl, string Username, string Password, string? AccessToken = null);
 
 /// <summary>A file attached to an outgoing email.</summary>
 public sealed record EmailAttachment(string FileName, byte[] Content, string ContentType);

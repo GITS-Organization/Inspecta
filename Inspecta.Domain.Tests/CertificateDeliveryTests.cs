@@ -33,6 +33,8 @@ public sealed class CertificateDeliveryTests : IDisposable
     private Guid requestId;
     private Guid clientId;
     private Guid[] itemIds = [];
+    private bool microsoftMailbox;
+    private IMailboxAuthenticator? authenticator;
 
     public CertificateDeliveryTests()
     {
@@ -69,6 +71,42 @@ public sealed class CertificateDeliveryTests : IDisposable
         Assert.Empty(sender.Sent);
         await using var db = CreateContext();
         Assert.Empty(db.CertificateDeliveries.ToList());
+    }
+
+    [Fact]
+    public async Task SendsWithTheAccessTokenForAMicrosoftMailbox()
+    {
+        microsoftMailbox = true;
+        authenticator = new StubMailboxAuthenticator("cert-token");
+        await ApprovedJobAsync(fromEmail: true);
+
+        var delivered = await Run(true, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest()));
+
+        Assert.True(delivered.Delivery!.EmailSent);
+        Assert.Equal("cert-token", sender.LastSmtp!.AccessToken);
+        Assert.Equal(string.Empty, sender.LastSmtp.Password);
+        Assert.Equal("smtp.office365.com", sender.LastSmtp.Server);
+    }
+
+    [Fact]
+    public async Task ASendFromAMailboxThatNeedsReconnectAnswers409AndLeavesNothingStuck()
+    {
+        microsoftMailbox = true;
+        var stub = new StubMailboxAuthenticator { Reject = true };
+        authenticator = stub;
+        await ApprovedJobAsync(fromEmail: true);
+
+        var failure = await Assert.ThrowsAsync<AuthException>(() =>
+            Run(true, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest())));
+
+        Assert.Equal("mailbox_reconnect_required", failure.Code);
+        Assert.Empty(sender.Sent);
+        await using (var db = CreateContext()) Assert.Empty(db.CertificateDeliveries.ToList());
+
+        stub.Reject = false;
+        var delivered = await Run(true, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest()));
+        Assert.True(delivered.Delivery!.EmailSent);
+        Assert.Single(sender.Sent);
     }
 
     [Fact]
@@ -519,8 +557,10 @@ public sealed class CertificateDeliveryTests : IDisposable
         await using (var db = CreateContext())
         {
             if (configureMailbox)
-                db.CoordinatorEmailConfigs.Add(CoordinatorEmailConfig.Create(
-                    coordinator.Id, manager.Id, "imap.example.com", 993, "coordinator@example.com", "secret", true));
+                db.CoordinatorEmailConfigs.Add(microsoftMailbox
+                    ? CoordinatorEmailConfig.CreateMicrosoft(coordinator.Id, manager.Id, "coordinator@example.com", "enc-refresh", "tenant-1")
+                    : CoordinatorEmailConfig.Create(
+                        coordinator.Id, manager.Id, "imap.example.com", 993, "coordinator@example.com", "secret", true));
             var items = new[] { RequestItem.Create("Forklift Truck", 1, capacity: "3 ton"), RequestItem.Create("Chain Block", 4) };
             var request = fromEmail
                 ? InspectionRequest.CreateFromEmail(manager.Id, coordinator.Id, new IncomingEmail(
@@ -586,7 +626,8 @@ public sealed class CertificateDeliveryTests : IDisposable
             new EfCertificateDeliveryRepository(db),
             new QuotationTests.FakeProtector(),
             sender,
-            new CertificateDeliveryOptions(emailEnabled));
+            new CertificateDeliveryOptions(emailEnabled),
+            mailboxAuthenticator: authenticator);
         var service = new MachineInspectionService(
             new EfCertificateRepository(db),
             new EfRequestRepository(db),

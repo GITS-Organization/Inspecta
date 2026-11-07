@@ -23,7 +23,8 @@ public sealed class EfEmailSyncRepository(
                 on config.CoordinatorId equals coordinator.Id
             join manager in dbContext.Users.IgnoreQueryFilters().AsNoTracking()
                 on config.TenantId equals manager.Id
-            where coordinator.Role == UserRole.Coordinator &&
+            where config.ConnectionStatus == MailboxConnectionStatus.Connected &&
+                  coordinator.Role == UserRole.Coordinator &&
                   coordinator.IsActive &&
                   !coordinator.IsDeleted &&
                   coordinator.ManagerId == manager.Id &&
