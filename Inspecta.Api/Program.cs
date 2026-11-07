@@ -160,6 +160,11 @@ builder.Services.AddRateLimiter(limiter =>
 builder.Services.AddScoped<IPasswordService, IdentityPasswordService>();
 builder.Services.AddSingleton<IAccessTokenService, JwtAccessTokenService>();
 builder.Services.AddSingleton<ISecretProtector, AesGcmSecretProtector>();
+// The Microsoft sign-in for Outlook mailboxes: off (not configured) until the MicrosoftOAuth settings are set.
+builder.Services.AddSingleton(builder.Configuration.GetSection("MicrosoftOAuth").Get<Inspecta.Application.Services.MicrosoftOAuthOptions>()
+    ?? new Inspecta.Application.Services.MicrosoftOAuthOptions());
+builder.Services.AddHttpClient<IMicrosoftOAuthClient, Inspecta.Infrastructure.Mail.MicrosoftOAuthClient>(client =>
+    client.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddHostedService<EmailSyncBackgroundService>();
 builder.Services.AddHostedService<MaybeCleanupBackgroundService>();
 
