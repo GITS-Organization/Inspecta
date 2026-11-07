@@ -272,6 +272,38 @@ public sealed class MicrosoftConnectionHttpTests : IClassFixture<ApiHttpTests.Ap
     }
 
     [Fact]
+    public async Task ACoordinatorSeesTheirOwnConnectionStatus()
+    {
+        using var host = Host(new FakeMicrosoft());
+        var user = NewCoordinator();
+        var coordinator = As(Client(host), await SignIn(Client(host), user.Email));
+
+        var before = await coordinator.GetAsync("/api/v1/me/email-connection");
+        Assert.Equal(HttpStatusCode.OK, before.StatusCode);
+        Assert.False(JsonDocument.Parse(await before.Content.ReadAsStringAsync()).RootElement.GetProperty("configured").GetBoolean());
+
+        await CallBack(Client(host), await StartAsync(coordinator));
+
+        var after = JsonDocument.Parse(await (await coordinator.GetAsync("/api/v1/me/email-connection")).Content.ReadAsStringAsync()).RootElement;
+        Assert.True(after.GetProperty("configured").GetBoolean());
+        Assert.Equal("microsoft_oauth", after.GetProperty("authMode").GetString());
+        Assert.Equal("connected", after.GetProperty("connectionStatus").GetString());
+        Assert.Equal("ahmed@example.com", after.GetProperty("emailUsername").GetString());
+    }
+
+    [Fact]
+    public async Task OnlyACoordinatorCanReadTheirOwnConnectionStatus()
+    {
+        using var host = Host(new FakeMicrosoft());
+
+        var anonymous = await Client(host).GetAsync("/api/v1/me/email-connection");
+        var manager = await (await ManagerAsync(host)).GetAsync("/api/v1/me/email-connection");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, manager.StatusCode);
+    }
+
+    [Fact]
     public async Task ADisconnectByTheManagerRemovesTheConfig()
     {
         using var host = Host(new FakeMicrosoft());

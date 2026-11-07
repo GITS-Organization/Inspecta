@@ -36,3 +36,10 @@ services:
         sync: false
       - key: BootstrapAdmin__Password
         sync: false
+      # Outlook / Microsoft 365 sign-in for coordinator mailboxes. Leave empty until the Microsoft app exists: the feature stays off.
+      - key: MicrosoftOAuth__ClientId
+        sync: false
+      - key: MicrosoftOAuth__ClientSecret
+        sync: false
+      - key: MicrosoftOAuth__RedirectUri
+        sync: false

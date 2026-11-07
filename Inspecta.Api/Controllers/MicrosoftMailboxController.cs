@@ -11,9 +11,22 @@ namespace Inspecta.Api.Controllers;
 /// <summary>A coordinator connects their Outlook / Microsoft 365 mailbox by signing in to Microsoft.</summary>
 [ApiController]
 [Route("api/v1")]
-public sealed class MicrosoftMailboxController(IMicrosoftMailboxConnectionService connectionService) : ControllerBase
+public sealed class MicrosoftMailboxController(
+    IMicrosoftMailboxConnectionService connectionService,
+    ICoordinatorEmailConfigService configService) : ControllerBase
 {
     public const string CallbackRateLimitPolicy = "microsoft-callback";
+
+    /// <summary>The signed-in coordinator's own mailbox settings and connection status.</summary>
+    /// <remarks>
+    /// <c>authMode</c> is <c>password</c> or <c>microsoft_oauth</c>; <c>connectionStatus</c> is <c>connected</c> or <c>needs_reconnect</c>
+    /// (then <c>lastAuthError</c> says why and the coordinator connects again). Never holds a password or a token.
+    /// </remarks>
+    [HttpGet("me/email-connection")]
+    [Authorize(Roles = "coordinator")]
+    [ProducesResponseType<Inspecta.Application.Contracts.Email.CoordinatorEmailConfigResponse>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<Inspecta.Application.Contracts.Email.CoordinatorEmailConfigResponse>> Status(CancellationToken cancellationToken) =>
+        Ok(await configService.GetOwnAsync(GetActorId(), cancellationToken));
 
     /// <summary>The Microsoft sign-in address to open in a browser.</summary>
     /// <remarks>

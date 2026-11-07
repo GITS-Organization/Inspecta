@@ -41,6 +41,14 @@ public sealed class CoordinatorEmailConfigService(
         return Map(await configRepository.GetByCoordinatorAsync(coordinatorId, cancellationToken));
     }
 
+    public async Task<CoordinatorEmailConfigResponse> GetOwnAsync(Guid coordinatorId, CancellationToken cancellationToken = default)
+    {
+        var coordinator = await userRepository.GetByIdAsync(coordinatorId, cancellationToken);
+        if (coordinator is not { Role: UserRole.Coordinator, ManagerId: Guid managerId })
+            throw new AuthException("coordinator_not_found", "Coordinator was not found.", 404);
+        return await GetAsync(managerId, coordinatorId, cancellationToken);
+    }
+
     public async Task DeleteAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken = default)
     {
         await EnsureTeamCoordinatorAsync(managerId, coordinatorId, cancellationToken);
