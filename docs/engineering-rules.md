@@ -13,6 +13,8 @@ A controller action without `[Authorize]` is closed by default. The short list o
 - When it fails: add the right policy. Only a truly public page goes on the list, with the reason in the pull request.
 - Access is a **permission**: every action says `[RequirePermission(Permissions.X)]` and `RolePermissions` (one table, `Inspecta.Application/Authorization`) says which roles have it. Never write a policy name or a role list on an endpoint, and never compare a role string in new code: ask `RolePermissions.Has(role, permission)`. To change what a role may do, change its line in the table and the frozen expectation in `PermissionGuardTests` in the same commit.
 - Enforced by: `PermissionGuardTests` (one access rule per action, no class-level or old-style attributes, every permission real and used, the policies follow the table, and the frozen list of what each endpoint allows).
+- **Roles.** `admin` is the platform owner and the only role that switches the tenant filters off (`CurrentTenant.IsAdmin`); `company_admin` and the rest belong to a company and never do. A new role starts with no permissions in `RolePermissions`; rights are added one line at a time with the test that freezes them.
+- Enforced by: `CurrentTenantTests`, `PermissionGuardTests`.
 
 ## 3. A tenant-owned entity has a tenant query filter
 An entity with `ManagerId` or `TenantId` has an EF query filter that uses it, so a forgotten `Where` cannot show one company's rows to another. The exceptions (`AppUser`, `CertificateCounter`, `CompanyProfile`, `CoordinatorEmailConfig`) are listed in the test, each with the reason it is safe.
@@ -60,3 +62,4 @@ New behaviour starts with a test that fails. Pushing to the backend branch deplo
 - Certificate PDFs are stored in the database (their own table); object storage comes when the data grows.
 - There is no audit log of who changed what, and no company-wide data export or removal.
 - Mailboxes are not yet bound to a company domain beyond the Outlook connection check.
+- Company admin can reset the password or email of any account of their company (technical managers included), so they can act as that person: there is no audit log yet. One person can inspect and review the same job (a technical manager may name themselves reviewer of a direct certificate). Deactivating or deleting a technical manager is checked and then done in separate steps, not one transaction.

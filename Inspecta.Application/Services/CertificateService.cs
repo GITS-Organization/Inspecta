@@ -118,8 +118,8 @@ public sealed class CertificateService(
     {
         var request = await requestRepository.GetByIdAsync(requestId, tracking: true, cancellationToken)
             ?? throw new KeyNotFoundException("Request was not found.");
-        // A technical manager reviews only the jobs given to them (the platform owner any).
-        if (role == "technical_manager" && request.ReviewerId != actorId)
+        // Only the reviewer decides (the platform owner any job): an allow-list, so a caller that names no role is refused too.
+        if (role != "admin" && request.ReviewerId != actorId)
             throw new AuthException("not_the_reviewer", "This job was given to another technical manager for review.", 403);
         EnsureRequestItemExists(request, requestItemId);
         if (request.Status is not (JobStatus.CertificateSubmitted or JobStatus.CertificateReturned))

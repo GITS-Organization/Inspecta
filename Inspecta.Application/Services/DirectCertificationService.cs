@@ -15,7 +15,8 @@ public sealed class DirectCertificationService(
     IRequestEquipmentRegistrar? equipmentRegistrar = null,
     IEquipmentService? equipment = null,
     IQuoteRepository? quoteRepository = null,
-    ITransactionRunner? transactions = null) : IDirectCertificationService
+    ITransactionRunner? transactions = null,
+    IReviewerService? reviewers = null) : IDirectCertificationService
 {
     public async Task<MachineListResponse> CreateAsync(
         CreateCertificationRequest request, Guid actorId, string role, Guid? tenantId, CancellationToken cancellationToken = default)
@@ -31,6 +32,10 @@ public sealed class DirectCertificationService(
             throw new AuthException("forbidden", "An inspector can create certificates only for the clients of the jobs assigned to them.", 403);
 
         var managerId = role == "admin" ? request.ManagerId ?? client.ManagerId : tenantId;
+        // The job starts in inspection at once, so it needs somebody to review it before anything is created.
+        if (reviewers is not null && managerId is Guid companyId && request.ReviewerId is null &&
+            await reviewers.DefaultReviewerIdAsync(companyId, cancellationToken) is null)
+            throw new AuthException("no_reviewer", "The company has no active technical manager to review the certificates. Create one first.", 409);
         var created = await requests.CreateAsync(
             new CreateInspectionRequest
             {

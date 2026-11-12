@@ -94,6 +94,8 @@ public sealed class CompanyBackfillTests : IDisposable
         await using var check = Context();
         var companies = await check.Companies.AsNoTracking().ToDictionaryAsync(company => company.Id);
         Assert.False(companies[off.Id].IsActive);
+        Assert.Null(companies[off.Id].DefaultReviewerId);
+        Assert.Null(companies[gone.Id].DefaultReviewerId);
         Assert.False(companies[gone.Id].IsActive);
         Assert.True(companies[lapsed.Id].IsActive);
         Assert.Equal(SubscriptionStatus.Suspended, companies[lapsed.Id].SubscriptionStatus);

@@ -15,23 +15,23 @@ public static class CompanyBackfill
                (u."IsActive" AND NOT u."IsDeleted"),
                COALESCE(u."SubscriptionStatus", 'Expired'),
                u."SubscriptionEndDate",
-               u."Id",
+               CASE WHEN u."IsActive" AND NOT u."IsDeleted" THEN u."Id" ELSE NULL END,
                u."CreatedAt"
         FROM "Users" u
         LEFT JOIN "CompanyProfiles" p ON p."ManagerId" = u."Id"
         WHERE u."Role" = 'TechnicalManager'
-          AND NOT EXISTS (SELECT 1 FROM "Companies" c WHERE c."Id" = u."Id")
+          AND NOT EXISTS (SELECT 1 FROM "Companies" c WHERE c."Id" = u."Id");
         """;
 
     /// <summary>A technical manager now belongs to its company too (before, its own id was the company id and the column was empty).</summary>
     public const string AttachManagersToTheirCompany = """
-        UPDATE "Users" SET "ManagerId" = "Id" WHERE "Role" = 'TechnicalManager' AND "ManagerId" IS NULL
+        UPDATE "Users" SET "ManagerId" = "Id" WHERE "Role" = 'TechnicalManager' AND "ManagerId" IS NULL;
         """;
     /// <summary>Every existing request starts with its company's default reviewer, so every answer has a reviewer from the first day.</summary>
     public const string SetReviewerOfExistingRequests = """
         UPDATE "Requests"
         SET "ReviewerId" = (SELECT c."DefaultReviewerId" FROM "Companies" c WHERE c."Id" = "Requests"."ManagerId")
-        WHERE "ReviewerId" IS NULL
+        WHERE "ReviewerId" IS NULL;
         """;
 
 }

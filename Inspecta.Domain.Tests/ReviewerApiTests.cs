@@ -225,6 +225,27 @@ public sealed class ReviewerApiTests : IClassFixture<ApiHttpTests.Api>
     }
 
     [Fact]
+    public async Task AJobCannotBeAssignedInACompanyThatHasNoTechnicalManagerToReviewIt()
+    {
+        var number = Interlocked.Increment(ref sequence);
+        var company = Company.Create($"No reviewers {number}");
+        api.SeedAs(db => db.Companies.Add(company));
+        var coordinator = api.AddUser($"nr-coordinator-{number}@example.com", UserRole.Coordinator, company.Id);
+        var inspector = api.AddUser($"nr-inspector-{number}@example.com", UserRole.Inspector, company.Id);
+        var request = InspectionRequest.Create("Lonely client", "Cairo", null, [RequestItem.Create("Crane", 1)], coordinator.Id, managerId: company.Id);
+        request.TransitionTo(JobStatus.QuoteDraft, coordinator.Id);
+        request.TransitionTo(JobStatus.QuoteSent, coordinator.Id);
+        request.TransitionTo(JobStatus.Unassigned, coordinator.Id);
+        api.SeedAs(db => db.Requests.Add(request));
+
+        var response = await (await SignedInAs(coordinator.Email)).PostAsJsonAsync(
+            $"/api/v1/requests/{request.Id}/assignment", new { inspectorId = inspector.Id, scheduledAt = DateTimeOffset.UtcNow.AddDays(2) });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("no_reviewer", await CodeOf(response));
+    }
+
+    [Fact]
     public async Task ADirectCertificateTakesTheDefaultReviewerAndTheCreatorCanPickAnother()
     {
         var setup = SeedCompany();

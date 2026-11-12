@@ -73,7 +73,9 @@ public sealed class ReviewerService(
             await companies.SaveAsync(cancellationToken);
         }
 
-        await requests.MoveReviewerOfUnstartedRequestsAsync(technicalManager.Id, next?.Id, cancellationToken);
+        // The requests not yet started follow the company default (which may be somebody other than the oldest manager).
+        var replacement = await DefaultReviewerIdAsync(companyId, cancellationToken);
+        await requests.MoveReviewerOfUnstartedRequestsAsync(technicalManager.Id, replacement is { } id && id != technicalManager.Id ? id : next?.Id, cancellationToken);
     }
 
     public async Task<RequestResponse> ChangeAsync(

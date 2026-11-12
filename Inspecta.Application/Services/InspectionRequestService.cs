@@ -59,6 +59,8 @@ public sealed class InspectionRequestService(
             request.ScheduledAt,
             request.Note);
         await UseReviewerAsync(manDay, teamId, request.ReviewerId, cancellationToken);
+        if (reviewers is not null && manDay.ReviewerId is null)
+            throw new AuthException("no_reviewer", "The company has no active technical manager to review the certificates. Create one first.", 409);
         async Task<bool> Save()
         {
             await requestRepository.AddAsync(manDay, cancellationToken);
@@ -70,7 +72,8 @@ public sealed class InspectionRequestService(
 
         if (transactions is null) await Save();
         else await transactions.RunAsync(Save, cancellationToken);
-        return RequestResponseMapper.Map(await requestRepository.GetByIdAsync(manDay.Id, tracking: false, cancellationToken) ?? manDay);
+        var created = await requestRepository.GetByIdAsync(manDay.Id, tracking: false, cancellationToken) ?? manDay;
+        return RequestResponseMapper.Map(created, await ReviewerNameAsync(created, cancellationToken));
     }
 
     public async Task<RequestResponse> AssignWithoutQuotationAsync(
@@ -96,7 +99,7 @@ public sealed class InspectionRequestService(
         if (inspector.IsOnLeave && (inspector.LeaveUntil is null || inspector.LeaveUntil >= request.ScheduledAt))
             throw new InvalidOperationException("The selected inspector is on leave at the scheduled time.");
 
-        await ApplyReviewerAsync(job, request.ReviewerId, actorId, cancellationToken);
+        await ApplyReviewerAsync(job, request.ReviewerId, actorId, role, cancellationToken);
         job.AssignWithoutQuotation(inspector.Id, request.ScheduledAt, actorId, request.Note);
         async Task<bool> Save()
         {
@@ -109,7 +112,7 @@ public sealed class InspectionRequestService(
 
         if (transactions is null) await Save();
         else await transactions.RunAsync(Save, cancellationToken);
-        return RequestResponseMapper.Map(job);
+        return RequestResponseMapper.Map(job, await ReviewerNameAsync(job, cancellationToken));
     }
 
     public async Task<RequestResponse> CreateFromEmailAsync(
@@ -175,7 +178,8 @@ public sealed class InspectionRequestService(
         if (managerId is Guid companyForReviewer)
             await UseReviewerAsync(aggregate, companyForReviewer, request.ReviewerId, cancellationToken);
         await requestRepository.AddAsync(aggregate, cancellationToken);
-        return RequestResponseMapper.Map(await requestRepository.GetByIdAsync(aggregate.Id, tracking: false, cancellationToken) ?? aggregate);
+        var saved = await requestRepository.GetByIdAsync(aggregate.Id, tracking: false, cancellationToken) ?? aggregate;
+        return RequestResponseMapper.Map(saved, await ReviewerNameAsync(saved, cancellationToken));
     }
 
     public async Task<IReadOnlyList<RequestResponse>> ListVisibleAsync(
@@ -466,10 +470,10 @@ public sealed class InspectionRequestService(
         if (inspector.IsOnLeave && (inspector.LeaveUntil is null || inspector.LeaveUntil >= scheduledAt))
             throw new InvalidOperationException("The selected inspector is on leave at the scheduled time.");
 
-        await ApplyReviewerAsync(request, reviewerId, actorId, cancellationToken);
+        await ApplyReviewerAsync(request, reviewerId, actorId, role, cancellationToken);
         request.AssignInspector(inspectorId, scheduledAt, actorId, note);
         await requestRepository.SaveAsync(request, cancellationToken);
-        return RequestResponseMapper.Map(request);
+        return RequestResponseMapper.Map(request, await ReviewerNameAsync(request, cancellationToken));
     }
 
     /// <summary>
@@ -563,13 +567,15 @@ public sealed class InspectionRequestService(
     }
 
     // When a job is given to an inspector its reviewer is settled: the one named, else the one it has if still usable, else the default.
-    private async Task ApplyReviewerAsync(InspectionRequest job, Guid? requested, Guid actorId, CancellationToken cancellationToken)
+    // Only the coordinator that owns the request (or the platform owner) picks a reviewer: a technical manager must not make themselves one.
+    private async Task ApplyReviewerAsync(InspectionRequest job, Guid? requested, Guid actorId, string role, CancellationToken cancellationToken)
     {
         if (reviewers is null || job.ManagerId is not Guid companyId) return;
 
-        if (requested is { } wanted)
+        if (requested is { } wanted && wanted != job.ReviewerId)
         {
-            if (wanted == job.ReviewerId) return;
+            if (role is not ("admin" or "coordinator"))
+                throw new AuthException("forbidden", "Only the coordinator chooses the reviewer of a job.", 403);
             var next = await reviewers.RequireReviewerAsync(companyId, wanted, cancellationToken);
             var previous = job.ReviewerId is { } before ? await userRepository.GetByIdAsync(before, cancellationToken) : null;
             job.ChangeReviewer(next.Id, actorId, previous?.FullName ?? "no reviewer", next.FullName);
@@ -579,6 +585,8 @@ public sealed class InspectionRequestService(
         var stillUsable = job.ReviewerId is { } current &&
             await userRepository.GetByIdAsync(current, cancellationToken) is { Role: UserRole.TechnicalManager, IsActive: true };
         if (!stillUsable) job.UseReviewer(await reviewers.DefaultReviewerIdAsync(companyId, cancellationToken));
+        if (job.ReviewerId is null)
+            throw new AuthException("no_reviewer", "The company has no active technical manager to review the certificates. Create one first.", 409);
     }
 
     private async Task<IReadOnlyDictionary<Guid, string>> ReviewerNamesAsync(IReadOnlyCollection<InspectionRequest> found, CancellationToken cancellationToken)
@@ -586,6 +594,9 @@ public sealed class InspectionRequestService(
         var ids = found.Select(item => item.ReviewerId).OfType<Guid>().Distinct().ToArray();
         return ids.Length == 0 ? new Dictionary<Guid, string>() : await userRepository.GetFullNamesAsync(ids, cancellationToken);
     }
+
+    private async Task<string?> ReviewerNameAsync(InspectionRequest job, CancellationToken cancellationToken) =>
+        job.ReviewerId is { } id ? (await userRepository.GetFullNamesAsync([id], cancellationToken)).GetValueOrDefault(id) : null;
 
     private static string? ReviewerNameOf(InspectionRequest item, IReadOnlyDictionary<Guid, string> names) =>
         item.ReviewerId is { } id && names.TryGetValue(id, out var name) ? name : null;
