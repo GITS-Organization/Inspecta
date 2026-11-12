@@ -78,6 +78,7 @@ public sealed class MachineInspectionTests : IDisposable
             var forklift = RequestItem.Create("Forklift Truck", 1, forkliftEquipmentId, capacity: "3 ton", serialNumber: "FK-100", manufacturer: "Toyota");
             var chain = RequestItem.Create("Chain Block", 4, capacity: "2 ton");
             var request = InspectionRequest.Create("Al Noor Industries", "Cairo, Industrial City", clientId, [forklift, chain], coordinator.Id, managerId: manager.Id);
+            request.UseReviewer(manager.Id);
             request.TransitionTo(JobStatus.QuoteDraft, coordinator.Id);
             request.TransitionTo(JobStatus.QuoteSent, coordinator.Id);
             request.TransitionTo(JobStatus.Unassigned, coordinator.Id);
@@ -1355,6 +1356,7 @@ public sealed class MachineInspectionTests : IDisposable
         await using var save = CreateContext();
         var request = InspectionRequest.Create(contract ? "Contract Client Co." : "Walk-in Client Co.", "Alexandria", clientForRequest,
             [RequestItem.Create("Air Compressor", 1)], coordinator.Id, managerId: manager.Id);
+        request.UseReviewer(manager.Id);
         save.Requests.Add(request);
         await save.SaveChangesAsync();
         return request.Id;
@@ -1440,7 +1442,8 @@ public sealed class MachineInspectionTests : IDisposable
         await using var db = CreateContext();
         var service = new InspectionRequestService(
             new EfRequestRepository(db), new EfUserRepository(db), clientRepository: new EfClientRepository(db),
-            quoteRepository: new EfQuoteRepository(db), transactions: new EfTransactionRunner(db));
+            quoteRepository: new EfQuoteRepository(db), transactions: new EfTransactionRunner(db),
+            reviewers: new ReviewerService(new EfUserRepository(db), new FakeCompanyRepository(TestCompanies.HeadedBy(manager)), new EfRequestRepository(db)));
         return await service.CreateManDayAsync(
             new Inspecta.Application.Contracts.Requests.CreateManDayRequest { ClientId = clientId, InspectorId = inspectorId, ScheduledAt = DateTimeOffset.UtcNow.AddDays(1), Note = "Check the new workshop." },
             actor ?? coordinator.Id, role, manager.Id);
@@ -1564,7 +1567,8 @@ public sealed class MachineInspectionTests : IDisposable
             new EfCertificateRepository(db), new EfRequestRepository(db), new EfUserRepository(db), new EfEquipmentRepository(db),
             new EfClientRepository(db), pdfServices.GetRequiredService<IPdfGenerator>(), new EfCertificateFileRepository(db),
             qrCodes: new Inspecta.Infrastructure.Services.QrCodeRenderer(), transactions: new EfTransactionRunner(db));
-        var requests = new InspectionRequestService(new EfRequestRepository(db), new EfUserRepository(db), new RequestEquipmentRegistrar(new EfEquipmentCatalog(db)));
+        var requests = new InspectionRequestService(new EfRequestRepository(db), new EfUserRepository(db), new RequestEquipmentRegistrar(new EfEquipmentCatalog(db)),
+            reviewers: new ReviewerService(new EfUserRepository(db), new FakeCompanyRepository(TestCompanies.HeadedBy(manager)), new EfRequestRepository(db)));
         return await action(new DirectCertificationService(
             requests, new EfRequestRepository(db), new EfClientRepository(db), inspection, new RequestEquipmentRegistrar(new EfEquipmentCatalog(db)),
             new EquipmentService(new EfEquipmentRepository(db)), new EfQuoteRepository(db), new EfTransactionRunner(db)));

@@ -18,7 +18,8 @@ public sealed class MicrosoftMailboxConnectionService(
     IMicrosoftOAuthClient microsoft,
     MicrosoftOAuthOptions options,
     TimeProvider? clock = null,
-    ICompanyGate? companyGate = null) : IMicrosoftMailboxConnectionService
+    ICompanyGate? companyGate = null,
+    ICompanyRepository? companies = null) : IMicrosoftMailboxConnectionService
 {
     private static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(10);
     private readonly TimeProvider time = clock ?? TimeProvider.System;
@@ -67,8 +68,9 @@ public sealed class MicrosoftMailboxConnectionService(
         if (string.IsNullOrWhiteSpace(tokens.RefreshToken) || string.IsNullOrWhiteSpace(tokens.MailboxAddress))
             return Failed("microsoft_sign_in_failed", "Microsoft did not allow the access the mailbox needs. Try again and accept every permission.");
 
-        if (!options.AllowAnyDomain && !string.Equals(DomainOf(tokens.MailboxAddress), DomainOf(team.Email), StringComparison.OrdinalIgnoreCase))
-            return Failed("mailbox_domain_mismatch", $"This mailbox is on {DomainOf(tokens.MailboxAddress)}, but the company mailboxes are on {DomainOf(team.Email)}.");
+        var companyDomain = DomainOf(await CompanyMailAddressAsync(team, cancellationToken));
+        if (!options.AllowAnyDomain && !string.Equals(DomainOf(tokens.MailboxAddress), companyDomain, StringComparison.OrdinalIgnoreCase))
+            return Failed("mailbox_domain_mismatch", $"This mailbox is on {DomainOf(tokens.MailboxAddress)}, but the company mailboxes are on {companyDomain}.");
 
         var encrypted = secretProtector.Protect(tokens.RefreshToken);
         var microsoftTenant = string.IsNullOrWhiteSpace(tokens.MicrosoftTenantId) ? "unknown" : tokens.MicrosoftTenantId;
@@ -80,6 +82,18 @@ public sealed class MicrosoftMailboxConnectionService(
         await configRepository.SaveAsync(config, cancellationToken);
 
         return new MicrosoftConnectionResult(true, $"The mailbox {tokens.MailboxAddress} is connected. You can close this page.", tokens.MailboxAddress);
+    }
+
+
+    // The company's mailboxes are on the domain of its technical manager (the default reviewer); a company without one falls back to the
+    // coordinator's own address.
+    private async Task<string> CompanyMailAddressAsync(AppUser coordinator, CancellationToken cancellationToken)
+    {
+        if (companies is not null && coordinator.CompanyId is { } id &&
+            await companies.GetByIdAsync(id, tracking: false, cancellationToken) is { DefaultReviewerId: { } reviewerId } &&
+            await userRepository.GetByIdAsync(reviewerId, cancellationToken) is { } reviewer)
+            return reviewer.Email;
+        return coordinator.Email;
     }
 
     private async Task<AppUser?> ActiveTeamAsync(Guid coordinatorId, CancellationToken cancellationToken)

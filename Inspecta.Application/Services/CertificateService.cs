@@ -113,10 +113,14 @@ public sealed class CertificateService(
         Guid requestItemId,
         Guid actorId,
         ReviewCertificateRequest review,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? role = null)
     {
         var request = await requestRepository.GetByIdAsync(requestId, tracking: true, cancellationToken)
             ?? throw new KeyNotFoundException("Request was not found.");
+        // A technical manager reviews only the jobs given to them (the platform owner any).
+        if (role == "technical_manager" && request.ReviewerId != actorId)
+            throw new AuthException("not_the_reviewer", "This job was given to another technical manager for review.", 403);
         EnsureRequestItemExists(request, requestItemId);
         if (request.Status is not (JobStatus.CertificateSubmitted or JobStatus.CertificateReturned))
             throw new InvalidOperationException("Certificates can only be reviewed after all request items are submitted.");

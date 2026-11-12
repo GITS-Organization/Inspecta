@@ -38,6 +38,7 @@ public sealed class DirectCertificationService(
                 ClientName = client.Name,
                 Location = string.IsNullOrWhiteSpace(request.Location) ? client.Location ?? client.Name : request.Location,
                 Subject = "Direct certificate",
+                ReviewerId = request.ReviewerId,
                 Items = request.Machines
             },
             actorId,

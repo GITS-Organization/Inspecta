@@ -58,6 +58,7 @@ public static class RolePermissions
         (Permissions.RequestsTransition, [Admin, Manager, Coordinator, Inspector]),
         (Permissions.RequestsTimeline, [Admin, Manager, Coordinator]),
         (Permissions.RequestsTransfer, [Admin, Manager, Coordinator]),
+        (Permissions.RequestsChangeReviewer, [Admin, Coordinator]),
 
         (Permissions.QuotesView, [Admin, Manager, Coordinator]),
         (Permissions.QuotesListAll, [Admin, Manager, Coordinator, Inspector]),
@@ -67,6 +68,7 @@ public static class RolePermissions
         (Permissions.DraftsWork, [Coordinator]),
 
         (Permissions.TeamDirectory, [Admin, Manager, Coordinator]),
+        (Permissions.TeamReviewers, [Admin, Manager, Coordinator, Inspector]),
 
         (Permissions.MailboxTest, [Admin, Manager, Coordinator]),
         (Permissions.MailboxConnectOwn, [Coordinator])

@@ -65,6 +65,12 @@ public sealed class InspectionRequest
     public JobStatus Status { get; private set; }
     public Guid? CoordinatorId { get; private set; }
     public Guid? InspectorId { get; private set; }
+
+    /// <summary>
+    /// The technical manager who reviews and approves this job's certificates once the inspector submits them. A request starts with the
+    /// company's default reviewer; the coordinator can change it until the job is approved.
+    /// </summary>
+    public Guid? ReviewerId { get; private set; }
     public DateTimeOffset? ScheduledAt { get; private set; }
     public string? AssignmentNote { get; private set; }
     public string? RejectReason { get; private set; }
@@ -621,6 +627,37 @@ public sealed class InspectionRequest
         var change = $"Inspection date changed from {previous:u} to {scheduledAt:u}.";
         History.Add(JobStatusHistory.Create(
             Id, Status, Status, actorId, UpdatedAt, string.IsNullOrWhiteSpace(note) ? change : $"{change} {note.Trim()}"));
+    }
+
+    /// <summary>Starts the note of the history entry that records a change of reviewer; the timeline recognises it by this.</summary>
+    public const string ReviewerNotePrefix = "Reviewer changed from ";
+
+    /// <summary>The reviewer a new request starts with (the company default). No history entry: nothing was changed yet.</summary>
+    public void UseReviewer(Guid? reviewerId)
+    {
+        if (reviewerId == Guid.Empty) throw new ArgumentException("Reviewer id cannot be empty.", nameof(reviewerId));
+        ReviewerId = reviewerId;
+    }
+
+    /// <summary>
+    /// Gives the job to another reviewer. Allowed until the job is approved (the certificates are then final). The history gets one entry
+    /// (from and to the same status, so an event and not a stage) naming both. Whether the new reviewer is a technical manager of the
+    /// company is the service's job.
+    /// </summary>
+    public void ChangeReviewer(Guid newReviewerId, Guid actorId, string fromName, string toName, string? note = null)
+    {
+        if (newReviewerId == Guid.Empty) throw new ArgumentException("The new reviewer is required.", nameof(newReviewerId));
+        if (actorId == Guid.Empty) throw new ArgumentException("Actor is required.", nameof(actorId));
+        if (newReviewerId == ReviewerId) throw new InvalidOperationException("The job already has this reviewer.");
+        if (Triage == RequestTriage.Maybe) throw new InvalidOperationException("Confirm the email as a request before choosing its reviewer.");
+        if (Status is JobStatus.CertificateApproved or JobStatus.SentToClient or JobStatus.QuoteRejected or JobStatus.ClientDeclined)
+            throw new InvalidOperationException("The reviewer cannot change once the certificates are approved or the request is finished.");
+
+        ReviewerId = newReviewerId;
+        UpdatedAt = DateTimeOffset.UtcNow;
+        var text = $"{ReviewerNotePrefix}{fromName} to {toName}.";
+        History.Add(JobStatusHistory.Create(
+            Id, Status, Status, actorId, UpdatedAt, string.IsNullOrWhiteSpace(note) ? text : $"{text} {note.Trim()}"));
     }
 
     /// <summary>Starts the note of the history entry that records a transfer; the timeline recognises it by this.</summary>

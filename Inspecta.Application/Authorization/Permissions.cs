@@ -41,6 +41,7 @@ public static class Permissions
     public const string RequestsTransition = "Requests.Transition";
     public const string RequestsTimeline = "Requests.Timeline";
     public const string RequestsTransfer = "Requests.Transfer";
+    public const string RequestsChangeReviewer = "Requests.ChangeReviewer";
 
     public const string QuotesView = "Quotes.View";
     public const string QuotesListAll = "Quotes.ListAll";
@@ -50,6 +51,7 @@ public static class Permissions
     public const string DraftsWork = "Drafts.Work";
 
     public const string TeamDirectory = "Team.Directory";
+    public const string TeamReviewers = "Team.Reviewers";
 
     public const string MailboxTest = "Mailbox.Test";
     public const string MailboxConnectOwn = "Mailbox.ConnectOwn";

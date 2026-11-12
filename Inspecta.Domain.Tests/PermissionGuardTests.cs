@@ -137,6 +137,8 @@ public sealed class PermissionGuardTests
         ["RequestsController.GetById"] = "admin,technical_manager,coordinator,inspector",
         ["RequestsController.Timeline"] = "admin,technical_manager,coordinator",
         ["RequestsController.Transfer"] = "admin,technical_manager,coordinator",
+        ["RequestsController.ChangeReviewer"] = "admin,coordinator",
+        ["CompanyTechnicalManagersController.List"] = "admin,technical_manager,coordinator,inspector",
         ["RequestsController.Create"] = "admin,technical_manager,coordinator",
         ["RequestsController.AssignWithoutQuotation"] = "admin,technical_manager,coordinator",
         ["RequestsController.CreateManDay"] = "admin,technical_manager,coordinator",

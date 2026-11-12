@@ -36,6 +36,7 @@ public sealed class CompanyBackfillTests : IDisposable
         using var db = Context();
         db.Database.ExecuteSqlRaw(CompanyBackfill.InsertCompanies);
         db.Database.ExecuteSqlRaw(CompanyBackfill.AttachManagersToTheirCompany);
+        db.Database.ExecuteSqlRaw(CompanyBackfill.SetReviewerOfExistingRequests);
     }
 
     [Fact]
@@ -121,6 +122,30 @@ public sealed class CompanyBackfillTests : IDisposable
         await using var check = Context();
         var only = await check.Companies.AsNoTracking().SingleAsync();
         Assert.Equal("Renamed by an admin", only.Name);
+    }
+
+    [Fact]
+    public async Task EveryExistingRequestStartsWithItsCompanysDefaultReviewer()
+    {
+        var manager = AppUser.Create("m@acme.com", "Manager", UserRole.TechnicalManager);
+        var coordinator = AppUser.Create("c@acme.com", "Coordinator", UserRole.Coordinator, managerId: manager.Id);
+        var request = InspectionRequest.Create("Acme", "Cairo", null, [RequestItem.Create("Crane", 1)], coordinator.Id, managerId: manager.Id);
+        var already = InspectionRequest.Create("Acme 2", "Cairo", null, [RequestItem.Create("Crane", 1)], coordinator.Id, managerId: manager.Id);
+        var chosen = Guid.NewGuid();
+        already.UseReviewer(chosen);
+        await using (var seed = Context())
+        {
+            seed.Users.AddRange(manager, coordinator);
+            seed.Requests.AddRange(request, already);
+            await seed.SaveChangesAsync();
+        }
+
+        Run();
+
+        await using var check = Context();
+        var requests = await check.Requests.AsNoTracking().ToDictionaryAsync(item => item.Id);
+        Assert.Equal(manager.Id, requests[request.Id].ReviewerId);
+        Assert.Equal(chosen, requests[already.Id].ReviewerId);
     }
 
     [Fact]

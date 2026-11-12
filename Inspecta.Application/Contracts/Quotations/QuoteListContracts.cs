@@ -70,4 +70,6 @@ public sealed record QuoteSummaryResponse(
     QuotationQueue? Queue = null,
     Inspecta.Application.Contracts.Certificates.MachineProgress? Certificates = null,
     bool HasUnreadClientReply = false,
-    Domain.Enums.RequestKind Kind = Domain.Enums.RequestKind.Standard);
+    Domain.Enums.RequestKind Kind = Domain.Enums.RequestKind.Standard,
+    Guid? ReviewerId = null,
+    string? ReviewerName = null);

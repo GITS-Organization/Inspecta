@@ -13,7 +13,9 @@ public sealed class UserManagementService(
     ISecretProtector secretProtector,
     ICompanyProfileService? companyProfiles = null,
     ILoginAttemptTracker? loginAttempts = null,
-    ICompanyRepository? companies = null) : IUserManagementService
+    ICompanyRepository? companies = null,
+    ITransactionRunner? transactions = null,
+    IReviewerService? reviewers = null) : IUserManagementService
 {
     public async Task<AuthUserResponse> CreateAsync(
         CreateStaffUserRequest request,
@@ -81,15 +83,29 @@ public sealed class UserManagementService(
         var email = request.Email.Trim().ToLowerInvariant();
         await EnsureEmailAvailableAsync(email, cancellationToken);
         if (companies is null) throw new InvalidOperationException("Companies are not available.");
+
+        // A technical manager created here starts a company that carries the manager's own id: that is how every company looked before
+        // companies existed, so the screens and routes that name the company by its manager keep working. The manager is its first
+        // technical manager, so the default reviewer. The company, the account and the profile are saved together or not at all.
+        var manager = CreateUser(email, request.FullName, UserRole.TechnicalManager, request.Password, []);
+        manager.AssignToManager(manager.Id);
         var company = Company.Create(
             request.CompanyProfile?.Name is { Length: > 0 } profileName ? profileName : request.FullName,
-            DateTimeOffset.UtcNow.AddMonths(request.SubscriptionMonths));
-        var manager = CreateUser(email, request.FullName, UserRole.TechnicalManager, request.Password, [], managerId: company.Id);
+            DateTimeOffset.UtcNow.AddMonths(request.SubscriptionMonths),
+            id: manager.Id);
         company.SetDefaultReviewer(manager.Id);
-        await companies.AddAsync(company, cancellationToken);
-        await userRepository.AddAsync(manager, cancellationToken);
-        if (request.CompanyProfile is not null)
-            await companyProfiles!.SaveAsync(company.Id, request.CompanyProfile, cancellationToken);
+
+        async Task<bool> Save()
+        {
+            await companies.AddAsync(company, cancellationToken);
+            await userRepository.AddAsync(manager, cancellationToken);
+            if (request.CompanyProfile is not null)
+                await companyProfiles!.SaveAsync(company.Id, request.CompanyProfile, cancellationToken);
+            return true;
+        }
+
+        if (transactions is null) await Save();
+        else await transactions.RunAsync(Save, cancellationToken);
         return ToResponse(manager, company);
     }
 
@@ -105,10 +121,10 @@ public sealed class UserManagementService(
         if (company is null)
             throw new AuthException("technical_manager_not_found", "Company was not found.", 404);
 
-        company.UpdateSubscription(request.SubscriptionStatus, request.SubscriptionEndDate);
-        await companies!.SaveAsync(cancellationToken);
         var manager = await FirstTechnicalManagerAsync(company, cancellationToken)
             ?? throw new AuthException("company_has_no_technical_manager", "The company has no technical manager yet.", 409);
+        company.UpdateSubscription(request.SubscriptionStatus, request.SubscriptionEndDate);
+        await companies!.SaveAsync(cancellationToken);
         return ToResponse(manager, company);
     }
 
@@ -186,15 +202,19 @@ public sealed class UserManagementService(
             request.IsOnLeave,
             request.LeaveUntil,
             user.SignatureImageId);
-        user.AssignToManager(managerId);
+        if (request.Role != UserRole.TechnicalManager) user.AssignToManager(managerId);
         await userRepository.SaveAsync(user, cancellationToken);
         return await ResponseAsync(user, cancellationToken);
     }
 
     public async Task DeactivateAsync(Guid userId, CancellationToken cancellationToken = default)
     {
+        var user = await userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new AuthException("user_not_found", "User was not found.", 404);
+        if (reviewers is not null) await reviewers.EnsureCanLeaveAsync(user, cancellationToken);
         if (!await userRepository.DeleteAsync(userId, cancellationToken))
             throw new AuthException("user_not_found", "User was not found.", 404);
+        if (reviewers is not null) await reviewers.LeftAsync(user, cancellationToken);
     }
 
     public async Task SetUserActiveAsync(
@@ -202,8 +222,12 @@ public sealed class UserManagementService(
         bool isActive,
         CancellationToken cancellationToken = default)
     {
+        var user = await userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new AuthException("user_not_found", "User was not found.", 404);
+        if (!isActive && reviewers is not null) await reviewers.EnsureCanLeaveAsync(user, cancellationToken);
         if (!await userRepository.SetActiveAsync(userId, isActive, cancellationToken))
             throw new AuthException("user_not_found", "User was not found.", 404);
+        if (!isActive && reviewers is not null) await reviewers.LeftAsync(user, cancellationToken);
     }
 
     public async Task<IReadOnlyList<AuthUserResponse>> ListTeamAsync(
@@ -220,7 +244,8 @@ public sealed class UserManagementService(
     public async Task<AuthUserResponse> CreateTeamMemberAsync(
         Guid managerId,
         CreateTeamMemberRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Guid? createdById = null)
     {
         await EnsureCompanyUsableAsync(managerId, cancellationToken);
         if (!IsTeamRole(request.Role))
@@ -239,7 +264,8 @@ public sealed class UserManagementService(
             request.Role,
             request.Password,
             request.Qualifications,
-            managerId);
+            managerId,
+            createdById: createdById);
         var emailConfig = request.EmailConfig is null
             ? null
             : CreateEmailConfig(user.Id, managerId, request.EmailConfig);

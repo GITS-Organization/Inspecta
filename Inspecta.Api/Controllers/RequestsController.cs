@@ -16,7 +16,8 @@ public sealed class RequestsController(
     IInspectionRequestService requestService,
     IQuoteService quoteService,
     IRequestTimelineService timelineService,
-    IRequestTransferService transferService) : ControllerBase
+    IRequestTransferService transferService,
+    IReviewerService reviewerService) : ControllerBase
 {
     /// <summary>List requests visible to the current user, newest first, one page at a time.</summary>
     /// <remarks>
@@ -157,6 +158,28 @@ public sealed class RequestsController(
     {
         if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
         return Ok(await transferService.TransferAsync(requestId, actorId, role, transfer, cancellationToken));
+    }
+
+    /// <summary>Give a request to another technical manager for review.</summary>
+    /// <remarks>
+    /// Every request starts with the company's default reviewer (<c>reviewerId</c> on the request, <c>reviewerName</c> too); the coordinator that
+    /// owns the request (or the platform owner) can change it with this call until the certificates are approved, whatever the status of the job.
+    /// The new reviewer must be an active technical manager of the same company (<c>GET /company/technical-managers</c> lists them; the default is
+    /// marked). The change is written to the request history ("Reviewer changed from A to B.") and shown in the timeline. From then on only the new
+    /// reviewer can approve or return the job. <c>404</c> for a request or a reviewer of another company, <c>400 reviewer_invalid</c> when the user is
+    /// not an active technical manager, <c>409 reviewer_not_changeable</c> once the certificates are approved or the request is finished.
+    /// </remarks>
+    [HttpPut("{requestId:guid}/reviewer")]
+    [RequirePermission(Permissions.RequestsChangeReviewer)]
+    [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<RequestResponse>> ChangeReviewer(Guid requestId, ChangeReviewerRequest change, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await reviewerService.ChangeAsync(requestId, actorId, role, change, cancellationToken));
     }
 
     /// <summary>Create an inspection request.</summary>
@@ -362,7 +385,7 @@ public sealed class RequestsController(
     public async Task<ActionResult<RequestResponse>> Assign(Guid requestId, AssignInspectorRequest request, CancellationToken cancellationToken)
     {
         if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
-        var updated = await requestService.AssignAsync(requestId, actorId, role, request.InspectorId, request.ScheduledAt, request.Note, cancellationToken);
+        var updated = await requestService.AssignAsync(requestId, actorId, role, request.InspectorId, request.ScheduledAt, request.Note, cancellationToken, request.ReviewerId);
         return Ok(updated);
     }
 
@@ -374,4 +397,5 @@ public sealed class RequestsController(
 }
 
 /// <summary>Payload for scheduling an accepted request with an inspector.</summary>
-public sealed record AssignInspectorRequest(Guid InspectorId, DateTimeOffset ScheduledAt, string? Note);
+/// <param name="ReviewerId">The technical manager who will review the certificates; left out, the request keeps its reviewer (the company default unless the coordinator changed it).</param>
+public sealed record AssignInspectorRequest(Guid InspectorId, DateTimeOffset ScheduledAt, string? Note, Guid? ReviewerId = null);

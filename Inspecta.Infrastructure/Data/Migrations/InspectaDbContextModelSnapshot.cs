@@ -747,6 +747,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<string>("RejectReason")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("ReviewerId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset?>("ScheduledAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1615,12 +1618,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasForeignKey("Inspecta.Domain.Entities.CoordinatorEmailConfig", "CoordinatorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.InspectionCertificate", b =>
@@ -1702,12 +1699,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasOne("Inspecta.Domain.Entities.AppUser", "Coordinator")
                         .WithMany()
                         .HasForeignKey("CoordinatorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

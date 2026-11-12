@@ -172,7 +172,7 @@ public sealed class UserManagementTests
         var account = Assert.Single(await users.ListAsync(role: UserRole.TechnicalManager));
         var company = Assert.Single(companies.Items);
         Assert.Equal(account.Id, created.Id);
-        Assert.Equal(company.Id, created.ManagerId);
+        Assert.Equal(account.Id, company.Id);
         Assert.Equal(account.Id, company.DefaultReviewerId);
         Assert.Equal(SubscriptionStatus.Active, created.SubscriptionStatus);
         Assert.InRange(
@@ -194,7 +194,7 @@ public sealed class UserManagementTests
             Email = "manager@acme.com", FullName = "Acme Manager", Password = "StrongPassword123!", CompanyProfile = profile
         });
 
-        Assert.Equal(created.ManagerId, profiles.SavedFor);
+        Assert.Equal(created.Id, profiles.SavedFor);
         Assert.Same(profile, profiles.Saved);
     }
 

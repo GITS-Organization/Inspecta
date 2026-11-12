@@ -7,6 +7,9 @@ public sealed record CreateInspectionRequest
 {
     public Guid? ClientId { get; init; }
 
+    /// <summary>The technical manager who will review the certificates. Left out: the company's default reviewer.</summary>
+    public Guid? ReviewerId { get; init; }
+
     /// <summary>Technical manager owner; honored only for Admin requests.</summary>
     public Guid? ManagerId { get; init; }
 

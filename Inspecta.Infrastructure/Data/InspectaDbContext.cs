@@ -254,10 +254,6 @@ public sealed class InspectaDbContext(
             .WithOne()
             .HasForeignKey<CoordinatorEmailConfig>(item => item.CoordinatorId)
             .OnDelete(DeleteBehavior.Cascade);
-        emailConfig.HasOne<AppUser>()
-            .WithMany()
-            .HasForeignKey(item => item.TenantId)
-            .OnDelete(DeleteBehavior.Restrict);
 
         var mailRule = modelBuilder.Entity<ClientMailRule>();
         mailRule.HasKey(item => item.Id);
@@ -354,10 +350,6 @@ public sealed class InspectaDbContext(
         quotationDraft.HasOne(item => item.Coordinator)
             .WithMany()
             .HasForeignKey(item => item.CoordinatorId)
-            .OnDelete(DeleteBehavior.Restrict);
-        quotationDraft.HasOne<AppUser>()
-            .WithMany()
-            .HasForeignKey(item => item.TenantId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Every Guid key is created by the application. Left as "generated on add", EF treats a new entity that was added

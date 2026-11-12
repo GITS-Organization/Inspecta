@@ -27,4 +27,11 @@ public static class CompanyBackfill
     public const string AttachManagersToTheirCompany = """
         UPDATE "Users" SET "ManagerId" = "Id" WHERE "Role" = 'TechnicalManager' AND "ManagerId" IS NULL
         """;
+    /// <summary>Every existing request starts with its company's default reviewer, so every answer has a reviewer from the first day.</summary>
+    public const string SetReviewerOfExistingRequests = """
+        UPDATE "Requests"
+        SET "ReviewerId" = (SELECT c."DefaultReviewerId" FROM "Companies" c WHERE c."Id" = "Requests"."ManagerId")
+        WHERE "ReviewerId" IS NULL
+        """;
+
 }

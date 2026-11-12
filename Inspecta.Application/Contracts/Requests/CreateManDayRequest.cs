@@ -8,6 +8,9 @@ public sealed record AssignWithoutQuotationRequest
     [Required]
     public Guid InspectorId { get; init; }
 
+    /// <summary>The technical manager who will review the certificates. Left out: the request's current reviewer (the company default unless the coordinator changed it).</summary>
+    public Guid? ReviewerId { get; init; }
+
     /// <summary>The day (and time) the inspector goes to the client.</summary>
     [Required]
     public DateTimeOffset ScheduledAt { get; init; }
@@ -21,6 +24,9 @@ public sealed record CreateManDayRequest
 {
     /// <summary>Technical manager owner; honored only for Admin.</summary>
     public Guid? ManagerId { get; init; }
+
+    /// <summary>The technical manager who will review the certificates. Left out: the company's default reviewer.</summary>
+    public Guid? ReviewerId { get; init; }
 
     [Required]
     public Guid ClientId { get; init; }

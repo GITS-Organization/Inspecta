@@ -38,6 +38,7 @@ public sealed class ApiHttpTests : IClassFixture<ApiHttpTests.Api>
             builder.UseEnvironment("Testing");
             builder.UseSetting("ConnectionStrings:Inspecta", "Host=unused;Database=unused;Username=unused;Password=unused");
             builder.UseSetting("Jwt:SigningKey", "test-only-signing-key-0123456789-abcdefghij");
+            builder.UseSetting("IMAP_ENCRYPTION_KEY", Convert.ToBase64String(Enumerable.Range(1, 32).Select(index => (byte)index).ToArray()));
             builder.ConfigureServices(services =>
             {
                 foreach (var descriptor in services.Where(value => value.ServiceType == typeof(DbContextOptions<InspectaDbContext>)).ToList())
@@ -50,6 +51,14 @@ public sealed class ApiHttpTests : IClassFixture<ApiHttpTests.Api>
 
         /// <summary>Starts the host and seeds the shared teams once, whichever test class asks first.</summary>
         public void EnsureSeeded() { lock (seedLock) if (ManagerA == Guid.Empty) Seed(); }
+
+        /// <summary>The company a technical manager heads (same id, as migrated companies are), with the manager as its default reviewer.</summary>
+        public static Company CompanyOf(AppUser manager)
+        {
+            var company = Company.Create(manager.FullName, id: manager.Id);
+            company.SetDefaultReviewer(manager.Id);
+            return company;
+        }
 
         /// <summary>Adds one more account (the shared test password), for a test that needs a user nobody else touches.</summary>
         public AppUser AddUser(string email, UserRole role, Guid? managerId = null)
@@ -65,7 +74,7 @@ public sealed class ApiHttpTests : IClassFixture<ApiHttpTests.Api>
             user.SetPasswordHash(new IdentityPasswordService().Hash(user, Password));
             db.Users.Add(user);
             // A technical manager is the head of a company with the same id (how companies that existed before the Companies table were migrated).
-            if (role == UserRole.TechnicalManager && managerId is null) db.Companies.Add(Company.Create(user.FullName, id: user.Id));
+            if (role == UserRole.TechnicalManager && managerId is null) db.Companies.Add(CompanyOf(user));
             db.SaveChanges();
             return user;
         }
@@ -104,7 +113,7 @@ public sealed class ApiHttpTests : IClassFixture<ApiHttpTests.Api>
             var b = Manager("manager-b@example.com");
             var c = Manager("manager-c@example.com");
             db.Users.AddRange(a, b, c);
-            db.Companies.AddRange(new[] { a, b, c }.Select(manager => Company.Create(manager.FullName, id: manager.Id)));
+            db.Companies.AddRange(new[] { a, b, c }.Select(CompanyOf));
             db.SaveChanges();
             var pagedClients = Enumerable.Range(1, 5).Select(number => Client.Create($"Paged client {number}", managerId: c.Id)).ToList();
             db.Clients.AddRange(pagedClients);

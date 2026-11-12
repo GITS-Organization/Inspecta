@@ -285,6 +285,7 @@ public sealed class MachineInspectionService(
     {
         EnsureReviewer(role);
         var request = await LoadAsync(requestId, actorId, role, tracking: true, cancellationToken);
+        EnsureIsTheReviewerOf(request, actorId, role);
         EnsureUnderReview(request);
         var item = FindItem(request, requestItemId);
         var certificate = await certificateRepository.GetByRequestItemIdAsync(requestId, requestItemId, tracking: true, cancellationToken)
@@ -367,6 +368,7 @@ public sealed class MachineInspectionService(
         EnsureReviewer(role);
         if (string.IsNullOrWhiteSpace(note)) throw new ArgumentException("A note explaining what to fix is required.", nameof(note));
         var request = await LoadAsync(requestId, actorId, role, tracking: true, cancellationToken);
+        EnsureIsTheReviewerOf(request, actorId, role);
         EnsureUnderReview(request);
         var item = FindItem(request, requestItemId);
         var certificate = await certificateRepository.GetByRequestItemIdAsync(requestId, requestItemId, tracking: true, cancellationToken)
@@ -393,6 +395,7 @@ public sealed class MachineInspectionService(
     {
         EnsureReviewer(role);
         var request = await LoadAsync(requestId, actorId, role, tracking: false, cancellationToken);
+        EnsureIsTheReviewerOf(request, actorId, role);
         EnsureWholeJobSubmitted(request);
 
         // Everything that can be checked is checked before anything is changed, so a refusal says why and leaves the job as it was.
@@ -494,6 +497,7 @@ public sealed class MachineInspectionService(
         EnsureReviewer(role);
         if (string.IsNullOrWhiteSpace(returned.Note)) throw new ArgumentException("A note explaining what to fix is required.", nameof(returned));
         var request = await LoadAsync(requestId, actorId, role, tracking: true, cancellationToken);
+        EnsureIsTheReviewerOf(request, actorId, role);
         EnsureWholeJobSubmitted(request);
 
         var comments = new Dictionary<Guid, string>();
@@ -810,7 +814,7 @@ public sealed class MachineInspectionService(
                 certificate?.ReviewNote,
                 certificate?.CertificateNumber,
                 CanEditMachine(request, StatusOf(certificate), actorId, role),
-                CanReviewMachine(request, StatusOf(certificate), role),
+                CanReviewMachine(request, StatusOf(certificate), actorId, role),
                 certificate?.FinalResult.ToInspectionResult(),
                 match.Item?.Name ?? item.Type,
                 template.Name,
@@ -830,7 +834,7 @@ public sealed class MachineInspectionService(
         }
 
         var delivered = await DeliveryInfoAsync(request, cancellationToken);
-        var isReviewer = role is "admin" or "technical_manager";
+        var isReviewer = IsTheReviewerOf(request, actorId, role);
         var waitingForDecision = isReviewer && request.Status == JobStatus.CertificateSubmitted;
         var blockers = waitingForDecision ? ReviewBlockers(request) : [];
 
@@ -932,7 +936,7 @@ public sealed class MachineInspectionService(
             request.Status,
             status,
             editable,
-            CanReviewMachine(request, status, role),
+            CanReviewMachine(request, status, actorId, role),
             editable && missing.Count == 0,
             missing,
             template.Key,
@@ -1041,12 +1045,12 @@ public sealed class MachineInspectionService(
             contacts.Coordinator);
     }
 
-    // The header of the certificate shows the technical manager's and the coordinator's email.
+    // The header of the certificate shows the reviewer's (the technical manager the job was given to) and the coordinator's email.
     private async Task<(string? Manager, string? Coordinator)> ContactEmailsAsync(InspectionRequest request, CancellationToken cancellationToken)
     {
-        var manager = request.ManagerId is Guid managerId ? await userRepository.GetByIdAsync(managerId, cancellationToken) : null;
+        var reviewer = request.ReviewerId is Guid reviewerId ? await userRepository.GetByIdAsync(reviewerId, cancellationToken) : null;
         var coordinator = request.CoordinatorId is Guid coordinatorId ? await userRepository.GetByIdAsync(coordinatorId, cancellationToken) : null;
-        return (manager?.Email, coordinator?.Email);
+        return (reviewer?.Email, coordinator?.Email);
     }
 
     // ---- Helpers ------------------------------------------------------------------------------------------------
@@ -1072,6 +1076,16 @@ public sealed class MachineInspectionService(
         if (role is not ("admin" or "technical_manager"))
             throw new AuthException("forbidden", "Only the technical manager can review certificates.", 403);
     }
+
+    // Every job has the technical manager it was given to for review; the others can look but not decide. The platform owner can always decide.
+    private static void EnsureIsTheReviewerOf(InspectionRequest request, Guid actorId, string role)
+    {
+        if (!IsTheReviewerOf(request, actorId, role))
+            throw new AuthException("not_the_reviewer", "This job was given to another technical manager for review.", 403);
+    }
+
+    private static bool IsTheReviewerOf(InspectionRequest request, Guid actorId, string role) =>
+        role == "admin" || role == "technical_manager" && request.ReviewerId == actorId;
 
     private static void EnsureUnderReview(InspectionRequest request)
     {
@@ -1245,8 +1259,8 @@ public sealed class MachineInspectionService(
         CanEdit(request, actorId, role);
 
     // The technical manager reviews the job as a whole, once every machine is submitted.
-    private static bool CanReviewMachine(InspectionRequest request, MachineStatus status, string role) =>
-        role is "admin" or "technical_manager" && status == MachineStatus.Submitted &&
+    private static bool CanReviewMachine(InspectionRequest request, MachineStatus status, Guid actorId, string role) =>
+        IsTheReviewerOf(request, actorId, role) && status == MachineStatus.Submitted &&
         request.Status == JobStatus.CertificateSubmitted;
 
     private static bool CanDeliverJob(InspectionRequest request, Guid actorId, string role) =>

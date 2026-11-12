@@ -37,7 +37,9 @@ public sealed record RequestResponse(
     bool HasUnreadClientReply = false,
     RequestKind Kind = RequestKind.Standard,
     bool CanAssignWithoutQuotation = false,
-    int? ManDayDays = null);
+    int? ManDayDays = null,
+    Guid? ReviewerId = null,
+    string? ReviewerName = null);
 
 /// <summary>The client the request belongs to; null while the request has no client yet.</summary>
 public sealed record RequestClientResponse(Guid Id, string Name, string Location, bool HasContract);

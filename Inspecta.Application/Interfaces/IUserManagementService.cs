@@ -24,7 +24,7 @@ public interface IUserManagementService
     Task SetUserActiveAsync(Guid userId, bool isActive, CancellationToken cancellationToken = default);
     Task DeactivateAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AuthUserResponse>> ListTeamAsync(Guid managerId, CancellationToken cancellationToken = default);
-    Task<AuthUserResponse> CreateTeamMemberAsync(Guid managerId, CreateTeamMemberRequest request, CancellationToken cancellationToken = default);
+    Task<AuthUserResponse> CreateTeamMemberAsync(Guid managerId, CreateTeamMemberRequest request, CancellationToken cancellationToken = default, Guid? createdById = null);
     Task<AuthUserResponse?> GetTeamMemberAsync(Guid managerId, Guid userId, CancellationToken cancellationToken = default);
     Task<AuthUserResponse> UpdateTeamMemberAsync(Guid managerId, Guid userId, UpdateTeamMemberRequest request, CancellationToken cancellationToken = default);
     Task SetTeamMemberActiveAsync(

@@ -109,6 +109,7 @@ builder.Services.AddPdfGeneration(builder.Configuration);
 builder.Services.AddScoped<IInspectionRequestService, InspectionRequestService>();
 builder.Services.AddScoped<IRequestTimelineService, RequestTimelineService>();
 builder.Services.AddScoped<IRequestTransferService, RequestTransferService>();
+builder.Services.AddScoped<IReviewerService, ReviewerService>();
 builder.Services.AddScoped<IClientRepository, EfClientRepository>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IEquipmentRepository, EfEquipmentRepository>();

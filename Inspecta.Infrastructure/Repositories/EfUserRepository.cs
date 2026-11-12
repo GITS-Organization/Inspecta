@@ -34,7 +34,9 @@ public sealed class EfUserRepository(InspectaDbContext dbContext) : IUserReposit
         var query = includeDeleted
             ? dbContext.Users.IgnoreQueryFilters().AsNoTracking()
             : dbContext.Users.AsNoTracking();
-        if (managerId is not null) query = query.Where(user => user.ManagerId == managerId);
+        // A technical manager of a company that existed before companies were recorded may still have no company on the row: their own id is the company.
+        if (managerId is not null)
+            query = query.Where(user => user.ManagerId == managerId || user.ManagerId == null && user.Id == managerId && user.Role == UserRole.TechnicalManager);
         if (role is not null) query = query.Where(user => user.Role == role);
         if (isActive is not null) query = query.Where(user => user.IsActive == isActive);
         return await query.OrderBy(user => user.FullName).ToListAsync(cancellationToken);

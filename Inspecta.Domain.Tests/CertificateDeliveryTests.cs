@@ -567,6 +567,7 @@ public sealed class CertificateDeliveryTests : IDisposable
                     "42", 1, "Please inspect.", null, "buyer@alnoor.com", "Al Noor", "Inspection request",
                     [], [], [], [], [], "<id@alnoor.com>", null, null, DateTimeOffset.UtcNow.AddMinutes(-5)))
                 : InspectionRequest.Create("Al Noor Industries", "Cairo", clientId, items, coordinator.Id, managerId: manager.Id);
+            request.UseReviewer(manager.Id);
             if (fromEmail)
             {
                 request.UpdateDetails("Al Noor Industries", "Cairo", clientId, null, null);

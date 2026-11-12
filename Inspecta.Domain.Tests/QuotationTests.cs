@@ -1881,6 +1881,7 @@ public sealed class QuotationTests
                 .Where(quote => filter.CoordinatorId is not Guid coordinatorId ||
                     quote.Request!.Source != RequestSource.Email || quote.Request.CoordinatorId == coordinatorId)
                 .Where(quote => filter.InspectorId is not Guid inspectorId || quote.Request!.InspectorId == inspectorId)
+                .Where(quote => filter.ReviewerId is not Guid reviewerId || quote.Request!.ReviewerId == reviewerId)
                 .Where(quote => filter.Assigned is not bool assigned || (quote.Request!.InspectorId is not null) == assigned)
                 .Where(quote => filter.RequestStatuses is not { Count: > 0 } statuses || statuses.Contains(quote.Request!.Status))
                 .Where(quote => !filter.CurrentOnly || quote.SupersededAt is null)

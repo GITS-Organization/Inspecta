@@ -101,6 +101,8 @@ public sealed class QuoteService(
             CoordinatorId: role == "coordinator" ? actorId : null,
             ManagerId: role == "admin" ? query.ManagerId : null,
             InspectorId: isInspector ? actorId : query.InspectorId,
+            // The jobs waiting for review are the reviewer's own; the other tabs show the whole company as before.
+            ReviewerId: role == "technical_manager" && queue == QuotationQueue.Review ? actorId : null,
             Open: false,
             Accepted: true,
             Search: string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim(),
@@ -127,7 +129,7 @@ public sealed class QuoteService(
         var certificateStates = await quoteRepository.ListCertificateStatesAsync(
             quotes.Select(quote => quote.Request!.Id).Distinct().ToArray(), cancellationToken);
         var inspectorNames = await userRepository.GetFullNamesAsync(
-            quotes.Select(quote => quote.Request!.InspectorId).OfType<Guid>().Distinct().ToArray(), cancellationToken);
+            quotes.Select(quote => quote.Request!.InspectorId).Concat(quotes.Select(quote => quote.Request!.ReviewerId)).OfType<Guid>().Distinct().ToArray(), cancellationToken);
 
         return quotes
             .Select(quote => MapSummary(
@@ -136,6 +138,7 @@ public sealed class QuoteService(
                 !isInspector && RequestAccess.CanManageQuotes(quote.Request!, actorId, role),
                 showPrices: !isInspector,
                 quote.Request!.InspectorId is Guid id && inspectorNames.TryGetValue(id, out var name) ? name : null,
+                quote.Request!.ReviewerId is Guid reviewerId && inspectorNames.TryGetValue(reviewerId, out var reviewerName) ? reviewerName : null,
                 certificateStates.TryGetValue(quote.Request!.Id, out var states) ? states : null))
             .ToArray();
     }
@@ -162,6 +165,7 @@ public sealed class QuoteService(
         bool canManage,
         bool showPrices,
         string? inspectorName,
+        string? reviewerName,
         IReadOnlyList<CertificateState>? certificateStates = null)
     {
         var items = quote.GetItems();
@@ -197,7 +201,9 @@ public sealed class QuoteService(
             QuotationQueues.Of(request.Status),
             CertificateProgressOf(request, certificateStates),
             request.HasUnreadClientReply,
-            request.Kind);
+            request.Kind,
+            request.ReviewerId,
+            reviewerName);
     }
 
     public async Task<QuoteResponse> GetAsync(

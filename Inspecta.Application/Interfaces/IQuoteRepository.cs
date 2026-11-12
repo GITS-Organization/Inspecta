@@ -31,7 +31,8 @@ public sealed record QuoteListFilter(
     int Take = int.MaxValue,
     IReadOnlyCollection<Inspecta.Domain.Enums.JobStatus>? RequestStatuses = null,
     DateTimeOffset? CreatedFrom = null,
-    DateTimeOffset? CreatedUntil = null);
+    DateTimeOffset? CreatedUntil = null,
+    Guid? ReviewerId = null);
 
 /// <summary>How far one certificate has got, without its form data (which is large): enough to say submitted, approved or delivered.</summary>
 public sealed record CertificateState(

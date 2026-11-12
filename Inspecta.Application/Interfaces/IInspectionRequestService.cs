@@ -24,6 +24,6 @@ public interface IInspectionRequestService
     Task<RequestResponse> RemoveItemAsync(Guid requestId, Guid itemId, Guid actorId, string role, CancellationToken cancellationToken = default);
     Task<RequestResponse> TransitionAsync(Guid requestId, Guid actorId, string role, TransitionRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<InspectorResponse>> ListInspectorsAsync(Guid actorId, string role, Guid? managerId = null, CancellationToken cancellationToken = default);
-    Task<RequestResponse> AssignAsync(Guid requestId, Guid actorId, string role, Guid inspectorId, DateTimeOffset scheduledAt, string? note, CancellationToken cancellationToken = default);
+    Task<RequestResponse> AssignAsync(Guid requestId, Guid actorId, string role, Guid inspectorId, DateTimeOffset scheduledAt, string? note, CancellationToken cancellationToken = default, Guid? reviewerId = null);
     Task<RequestResponse> ChangeInspectionDateAsync(Guid requestId, Guid actorId, string role, DateTimeOffset scheduledAt, string? note, CancellationToken cancellationToken = default);
 }

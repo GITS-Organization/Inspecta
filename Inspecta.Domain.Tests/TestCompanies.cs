@@ -32,5 +32,13 @@ public static class TestCompanies
     /// <summary>A company with the given id (a legacy-style company: same id as its first technical manager).</summary>
     public static Company Of(Guid id, string name = "Acme") => Company.Create(name, id: id);
 
+    /// <summary>The company a technical manager heads (same id), with the manager as its default reviewer.</summary>
+    public static Company HeadedBy(AppUser manager, string name = "Acme")
+    {
+        var company = Company.Create(name, id: manager.Id);
+        company.SetDefaultReviewer(manager.Id);
+        return company;
+    }
+
     public static CompanyGate GateFor(params Company[] companies) => new(new FakeCompanyRepository(companies));
 }

@@ -22,6 +22,9 @@ public sealed record CreateCertificationRequest
     /// <summary>Technical manager owner; honored only for Admin.</summary>
     public Guid? ManagerId { get; init; }
 
+    /// <summary>The technical manager who will review the certificates (the creator picks it: there is no coordinator). Left out: the company's default reviewer.</summary>
+    public Guid? ReviewerId { get; init; }
+
     [Required]
     public Guid ClientId { get; init; }
 

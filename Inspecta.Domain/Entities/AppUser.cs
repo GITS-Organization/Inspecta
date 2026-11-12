@@ -200,7 +200,8 @@ public class AppUser
     {
         if (managerId == Guid.Empty)
             throw new ArgumentException("Manager id cannot be empty.", nameof(managerId));
-        if (managerId == Id)
+        // A technical manager may belong to the company that carries their own id (every company started that way).
+        if (managerId == Id && Role != UserRole.TechnicalManager)
             throw new ArgumentException("A user cannot manage themselves.", nameof(managerId));
         if (managerId is not null && Role == UserRole.Admin)
             throw new ArgumentException("The platform owner does not belong to a company.", nameof(managerId));

@@ -29,6 +29,8 @@ public sealed partial class EmailSyncBackgroundService
             var repository = services.GetRequiredService<IEmailSyncRepository>();
             var machineSuggestions = services.GetRequiredService<IMachineSuggestionService>();
             var replyService = services.GetRequiredService<IClientReplyService>();
+            // Every imported request starts with the company's default reviewer; the coordinator can change it.
+            var defaultReviewerId = await services.GetRequiredService<IReviewerService>().DefaultReviewerIdAsync(config.TenantId, cancellationToken);
             // An email from the mailbox itself is ours, not the client's.
             IReadOnlyList<string> ownAddresses = config.EmailUsername.Contains('@') ? [config.EmailUsername] : [];
             var credential = await authenticator.GetAsync(config, cancellationToken);
@@ -126,6 +128,7 @@ public sealed partial class EmailSyncBackgroundService
                             clientName: clientName,
                             location: clientName is null ? null : sender!.ClientLocation);
                         var request = NewRequest();
+                        request.UseReviewer(defaultReviewerId);
                         logger.LogInformation(
                             "Message UID {Uid} from {Sender} for coordinator {CoordinatorId}: {Triage} ({Rules} senders known to team {ManagerId}, matched {Pattern}, client {Client}).",
                             uid.Id, incoming.FromAddress, config.CoordinatorId, request.Triage, rules.Count, config.TenantId, rule?.Pattern ?? "none", clientName ?? "none");

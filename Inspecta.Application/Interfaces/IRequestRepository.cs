@@ -64,6 +64,14 @@ public interface IRequestRepository
     Task<IReadOnlyList<Guid>> ListClientIdsInHandAsync(Guid inspectorId, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<Guid>>([]);
 
+    /// <summary>The ids of the jobs waiting for this technical manager's review or still being inspected for them (assigned up to returned), up to <paramref name="take"/>.</summary>
+    Task<IReadOnlyList<Guid>> ListIdsAwaitingReviewerAsync(Guid reviewerId, int take, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Guid>>([]);
+
+    /// <summary>Gives the requests that have not reached an inspector yet (still being quoted or waiting for one) to another reviewer.</summary>
+    Task<int> MoveReviewerOfUnstartedRequestsAsync(Guid fromReviewerId, Guid? toReviewerId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(0);
+
     Task<bool> ClientExistsAsync(Guid clientId, CancellationToken cancellationToken = default);
     Task<Guid?> GetClientManagerIdAsync(Guid clientId, CancellationToken cancellationToken = default);
 }

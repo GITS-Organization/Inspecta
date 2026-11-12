@@ -19,12 +19,7 @@ public sealed class CompanyIdGuardTests
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
     /// <summary>File name and why it may still do it. Empty on purpose: add a line only with a reason a reviewer accepts.</summary>
-    private static readonly IReadOnlyDictionary<string, string> Allowed = new Dictionary<string, string>
-    {
-        // The certificate header prints the technical manager's email, found through the request's company id. Replaced by the
-        // request's reviewer when reviewers exist (the next step of the companies work).
-        ["MachineInspectionService.cs"] = "certificate header email until the reviewer replaces it"
-    };
+    private static readonly IReadOnlyDictionary<string, string> Allowed = new Dictionary<string, string>();
 
     private static readonly string[] SourceFolders = ["Inspecta.Application", "Inspecta.Infrastructure", "Inspecta.Api"];
 
@@ -56,11 +51,17 @@ public sealed class CompanyIdGuardTests
             ". A company id is not a user id; ask ICompanyRepository or ICompanyGate, or use the user's own CompanyId.");
     }
 
-    [Fact]
-    public void TheCheckSeesTheOldHabitWhenNothingIsAllowed()
-    {
-        var found = Offences(_ => false).Select(item => item.File).Distinct().Order().ToArray();
+    [Theory]
+    [InlineData("var manager = await userRepository.GetByIdAsync(request.ManagerId, ct);")]
+    [InlineData("var team = await users.GetByIdAsync(managerId, cancellationToken);")]
+    [InlineData("await _userRepository.GetByIdAsync(companyId);")]
+    public void TheCheckSeesTheOldHabit(string line) =>
+        Assert.Contains(UserLookup.Matches(line), match => CompanyNamed.IsMatch(match.Groups[2].Value));
 
-        Assert.Equal(Allowed.Keys.Order(), found);
-    }
+    [Theory]
+    [InlineData("var reviewer = await userRepository.GetByIdAsync(reviewerId, ct);")]
+    [InlineData("var company = await companies.GetByIdAsync(companyId, tracking: false, ct);")]
+    [InlineData("var user = await users.GetByIdAsync(actorId, ct);")]
+    public void TheCheckLeavesCompanyLookupsAndOtherUserLookupsAlone(string line) =>
+        Assert.DoesNotContain(UserLookup.Matches(line), match => CompanyNamed.IsMatch(match.Groups[2].Value));
 }

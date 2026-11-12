@@ -78,8 +78,8 @@ public sealed class CertificatesController(ICertificateService certificateServic
         ReviewCertificateRequest request,
         CancellationToken cancellationToken)
     {
-        if (!TryGetActor(out var actorId, out _)) return Unauthorized();
-        return Ok(await certificateService.ReviewAsync(requestId, requestItemId, actorId, request, cancellationToken));
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await certificateService.ReviewAsync(requestId, requestItemId, actorId, request, cancellationToken, role));
     }
 
     private bool TryGetActor(out Guid actorId, out string role)

@@ -36,7 +36,7 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
         CancellationToken cancellationToken)
     {
         var targetManagerId = ResolveManagerId(managerId);
-        var user = await userManagementService.CreateTeamMemberAsync(targetManagerId, request, cancellationToken);
+        var user = await userManagementService.CreateTeamMemberAsync(targetManagerId, request, cancellationToken, GetActorId());
         return CreatedAtAction(nameof(GetById), new { userId = user.Id, managerId = targetManagerId }, user);
     }
 

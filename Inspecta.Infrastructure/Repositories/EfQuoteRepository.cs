@@ -32,6 +32,7 @@ public sealed class EfQuoteRepository(InspectaDbContext dbContext) : IQuoteRepos
                 quote.Request!.Source != RequestSource.Email || quote.Request.CoordinatorId == coordinatorId);
         if (filter.ManagerId is Guid managerId) query = query.Where(quote => quote.Request!.ManagerId == managerId);
         if (filter.InspectorId is Guid inspectorId) query = query.Where(quote => quote.Request!.InspectorId == inspectorId);
+        if (filter.ReviewerId is Guid reviewerId) query = query.Where(quote => quote.Request!.ReviewerId == reviewerId);
         if (filter.Assigned is true) query = query.Where(quote => quote.Request!.InspectorId != null);
         if (filter.Assigned is false) query = query.Where(quote => quote.Request!.InspectorId == null);
         if (filter.RequestStatuses is { Count: > 0 } statuses)

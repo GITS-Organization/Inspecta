@@ -30,6 +30,29 @@ public sealed class QuotationQueueTests
     }
 
     [Fact]
+    public async Task TheReviewQueueOfATechnicalManagerHoldsOnlyTheJobsGivenToThem()
+    {
+        var fixture = new Fixture();
+        var reviewer = Guid.NewGuid();
+        var colleague = Guid.NewGuid();
+        await fixture.AcceptAsync();
+        await fixture.Requests.AssignAsync(fixture.Request.Id, CoordinatorId, "coordinator", fixture.Karim.Id, fixture.Date(2), null);
+        fixture.Request.TransitionTo(JobStatus.TaskAccepted, fixture.Karim.Id);
+        fixture.Request.TransitionTo(JobStatus.InProgress, fixture.Karim.Id);
+        fixture.Request.TransitionTo(JobStatus.CertificateSubmitted, fixture.Karim.Id);
+        fixture.Request.UseReviewer(reviewer);
+
+        var mine = Assert.Single(await fixture.QueueAsync(reviewer, "technical_manager", QuotationQueue.Review));
+        Assert.Equal(reviewer, mine.ReviewerId);
+        Assert.Empty(await fixture.QueueAsync(colleague, "technical_manager", QuotationQueue.Review));
+        // The platform owner sees every job, and the other tabs of a technical manager are not narrowed.
+        Assert.Single(await fixture.QueueAsync(Guid.NewGuid(), "admin", QuotationQueue.Review));
+        Assert.Null(fixture.Quotes.Repository.LastFilter!.ReviewerId);
+        await fixture.QueueAsync(colleague, "technical_manager", QuotationQueue.Certify);
+        Assert.Null(fixture.Quotes.Repository.LastFilter!.ReviewerId);
+    }
+
+    [Fact]
     public async Task WithoutAStatusTheListReturnsEveryQueueAndEachRowSaysWhichOne()
     {
         var fixture = new Fixture();

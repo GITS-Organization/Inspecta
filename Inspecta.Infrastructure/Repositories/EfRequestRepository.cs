@@ -66,6 +66,27 @@ public sealed class EfRequestRepository(InspectaDbContext dbContext) : IRequestR
         return query.SingleOrDefaultAsync(item => item.Id == requestId, cancellationToken);
     }
 
+
+    // Jobs that are with the inspector or waiting for the reviewer: from assigned until the certificates are approved.
+    private static readonly JobStatus[] AwaitingReview =
+        [JobStatus.Assigned, JobStatus.TaskAccepted, JobStatus.InProgress, JobStatus.CertificateSubmitted, JobStatus.CertificateReturned];
+
+    // Requests that have not reached an inspector yet.
+    private static readonly JobStatus[] Unstarted =
+        [JobStatus.RequestReceived, JobStatus.QuoteDraft, JobStatus.QuoteSent, JobStatus.CounterOfferSent, JobStatus.ClientCountered, JobStatus.Unassigned];
+
+    public async Task<IReadOnlyList<Guid>> ListIdsAwaitingReviewerAsync(Guid reviewerId, int take, CancellationToken cancellationToken = default) =>
+        await dbContext.Requests.AsNoTracking()
+            .Where(item => item.ReviewerId == reviewerId && AwaitingReview.Contains(item.Status))
+            .Select(item => item.Id)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
+    public Task<int> MoveReviewerOfUnstartedRequestsAsync(Guid fromReviewerId, Guid? toReviewerId, CancellationToken cancellationToken = default) =>
+        dbContext.Requests
+            .Where(item => item.ReviewerId == fromReviewerId && Unstarted.Contains(item.Status))
+            .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.ReviewerId, toReviewerId), cancellationToken);
+
     public Task<RequestEmail?> GetEmailAsync(Guid requestId, CancellationToken cancellationToken = default) =>
         dbContext.RequestEmails.AsNoTracking()
             .SingleOrDefaultAsync(item => item.RequestId == requestId, cancellationToken);

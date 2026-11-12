@@ -144,6 +144,8 @@ public static class RequestTimelineBuilder
             return new Raw(entry.At, "status", "Client's reply dismissed, still waiting for the client", entry.Note, entry.ActorId);
         if (entry.From == entry.To && entry.Note?.StartsWith(InspectionRequest.TransferNotePrefix, StringComparison.Ordinal) == true)
             return new Raw(entry.At, "status", "Request transferred", entry.Note, entry.ActorId);
+        if (entry.From == entry.To && entry.Note?.StartsWith(InspectionRequest.ReviewerNotePrefix, StringComparison.Ordinal) == true)
+            return new Raw(entry.At, "status", "Reviewer changed", entry.Note, entry.ActorId);
         if (entry.From == entry.To)
             return new Raw(entry.At, "edit", string.IsNullOrWhiteSpace(entry.Note) ? "Request edited" : entry.Note!, null, entry.ActorId);
         return new Raw(entry.At, "status", Describe(entry.To), entry.Note, entry.ActorId);
@@ -158,7 +160,8 @@ public static class RequestTimelineBuilder
         (entry.From == JobStatus.TaskAccepted ||
          entry.From == JobStatus.Assigned &&
          entry.Note?.StartsWith("Inspection date changed", StringComparison.Ordinal) != true &&
-         entry.Note?.StartsWith(InspectionRequest.TransferNotePrefix, StringComparison.Ordinal) != true);
+         entry.Note?.StartsWith(InspectionRequest.TransferNotePrefix, StringComparison.Ordinal) != true &&
+         entry.Note?.StartsWith(InspectionRequest.ReviewerNotePrefix, StringComparison.Ordinal) != true);
 
     private static TimelineCounters Counters(RequestTimelineSources sources, IReadOnlyList<RequestHistoryResponse> history) => new(
         QuoteRevisions: sources.Quotes.Count(quote => quote.Version > 1),

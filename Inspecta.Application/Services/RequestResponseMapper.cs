@@ -5,7 +5,7 @@ namespace Inspecta.Application.Services;
 
 internal static class RequestResponseMapper
 {
-    public static RequestResponse Map(InspectionRequest request) => new(
+    public static RequestResponse Map(InspectionRequest request, string? reviewerName = null) => new(
         request.Id,
         request.ClientId,
         request.ClientName,
@@ -37,7 +37,9 @@ internal static class RequestResponseMapper
         HasUnreadClientReply: request.HasUnreadClientReply,
         Kind: request.Kind,
         CanAssignWithoutQuotation: request.CanAssignWithoutQuotation,
-        ManDayDays: request.ManDayDays);
+        ManDayDays: request.ManDayDays,
+        ReviewerId: request.ReviewerId,
+        ReviewerName: reviewerName);
 
     // The kind and the standard of inspection follow from the machine's name in the catalogue.
     public static RequestItemResponse MapItem(RequestItem item)
