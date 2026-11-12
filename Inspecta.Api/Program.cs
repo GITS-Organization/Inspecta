@@ -105,6 +105,7 @@ builder.Services.AddSingleton<IEmailSender, MailKitSmtpEmailSender>();
 builder.Services.AddSingleton<IEmailBranding, Inspecta.Infrastructure.Services.EmailBrandingProvider>();
 builder.Services.AddPdfGeneration(builder.Configuration);
 builder.Services.AddScoped<IInspectionRequestService, InspectionRequestService>();
+builder.Services.AddScoped<IRequestTimelineService, RequestTimelineService>();
 builder.Services.AddScoped<IClientRepository, EfClientRepository>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IEquipmentRepository, EfEquipmentRepository>();

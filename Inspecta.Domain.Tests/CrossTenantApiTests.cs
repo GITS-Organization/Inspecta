@@ -129,6 +129,7 @@ public sealed class CrossTenantApiTests : IClassFixture<ApiHttpTests.Api>
         await Denied(await b.GetAsync($"/api/v1/requests/{id}"), "GET request", id.ToString());
         await Denied(await b.GetAsync($"/api/v1/requests/{id}/email"), "GET request email");
         await Denied(await b.GetAsync($"/api/v1/requests/{id}/suggestions"), "GET request suggestions");
+        await Denied(await b.GetAsync($"/api/v1/requests/{id}/timeline"), "GET request timeline");
         await Denied(await b.DeleteAsync($"/api/v1/requests/{id}"), "DELETE request");
         await Denied(await b.PostAsJsonAsync($"/api/v1/requests/{id}/reject", new { reason = "Not needed" }), "reject request");
         await NoLeak(await b.GetAsync("/api/v1/requests"), "request list", id.ToString());
@@ -138,6 +139,7 @@ public sealed class CrossTenantApiTests : IClassFixture<ApiHttpTests.Api>
 
         var a = await ManagerA();
         Assert.Equal(HttpStatusCode.OK, (await a.GetAsync($"/api/v1/requests/{id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await a.GetAsync($"/api/v1/requests/{id}/timeline")).StatusCode);
     }
 
     [Fact]

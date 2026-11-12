@@ -12,7 +12,8 @@ namespace Inspecta.Api.Controllers;
 [ApiController]
 [Authorize(Policy = AuthorizationPolicies.TeamAccess)]
 [Route("api/v1/requests")]
-public sealed class RequestsController(IInspectionRequestService requestService, IQuoteService quoteService) : ControllerBase
+public sealed class RequestsController(
+    IInspectionRequestService requestService, IQuoteService quoteService, IRequestTimelineService timelineService) : ControllerBase
 {
     /// <summary>List requests visible to the current user, newest first, one page at a time.</summary>
     /// <remarks>
@@ -104,6 +105,30 @@ public sealed class RequestsController(IInspectionRequestService requestService,
         if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
         var request = await requestService.GetVisibleAsync(requestId, actorId, role, cancellationToken);
         return request is null ? NotFound() : Ok(request);
+    }
+
+    /// <summary>Everything that happened to a request with its date and time, and how long each stage took.</summary>
+    /// <remarks>
+    /// For the coordinator, the technical manager and the admin; the inspector gets <c>403</c>, and a request that is not visible to the caller
+    /// (another team's, or an email request of another coordinator) is <c>404</c>. Read only, nothing is written.
+    /// <c>stages</c> are always the seven stages in order (<c>quoting</c>, <c>client_decision</c>, <c>scheduling</c>, <c>waiting_to_start</c>,
+    /// <c>inspection</c>, <c>review</c>, <c>delivery</c>) with <c>from</c>, <c>to</c> and <c>seconds</c> (all <c>null</c> when the request skipped
+    /// or has not reached that stage), <c>inProgress</c> for the stage running now (its seconds run until now) and <c>repeats</c> (extra offers,
+    /// certificates returned). <c>totalSeconds</c> runs from the request arriving to <c>finishedAt</c> (sent to the client or turned down), or
+    /// until now. <c>events</c> are oldest first with <c>at</c>, <c>kind</c> (<c>status</c>, <c>edit</c>, <c>quotation</c>, <c>email</c>,
+    /// <c>reply</c>, <c>review</c>, <c>delivery</c>), <c>title</c>, <c>detail</c>, <c>actor</c> (null for the system or the client) and
+    /// <c>sincePreviousSeconds</c>. Times are UTC with the offset; durations are calendar time in whole seconds.
+    /// </remarks>
+    [HttpGet("{requestId:guid}/timeline")]
+    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
+    [ProducesResponseType<RequestTimelineResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<RequestTimelineResponse>> Timeline(Guid requestId, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        var timeline = await timelineService.GetAsync(requestId, actorId, role, cancellationToken);
+        return timeline is null ? NotFound() : Ok(timeline);
     }
 
     /// <summary>Create an inspection request.</summary>

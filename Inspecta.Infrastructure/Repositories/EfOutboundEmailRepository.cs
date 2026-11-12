@@ -15,13 +15,15 @@ public sealed class EfOutboundEmailRepository(InspectaDbContext dbContext) : IOu
         dbContext.OutboundEmails.SingleOrDefaultAsync(email => email.QuoteId == quoteId && email.Kind == kind, cancellationToken);
 
     // The attachment is not loaded: lists only need the delivery state.
+    // A request has a handful of emails, so they are put in order after loading (SQLite, used by the tests, cannot order by a date with an offset).
     public async Task<IReadOnlyList<OutboundEmailSummary>> ListForRequestAsync(Guid requestId, CancellationToken cancellationToken = default) =>
-        await dbContext.OutboundEmails.AsNoTracking()
+        (await dbContext.OutboundEmails.AsNoTracking()
             .Where(email => email.RequestId == requestId)
-            .OrderBy(email => email.CreatedAt)
             .Select(email => new OutboundEmailSummary(
                 email.QuoteId, email.Kind, email.Status, email.ToAddress, email.Attempts, email.SentAt, email.LastError, email.CreatedAt, email.CcAddresses, email.Subject))
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken))
+        .OrderBy(email => email.CreatedAt)
+        .ToArray();
 
     public async Task AddAsync(OutboundEmail email, CancellationToken cancellationToken = default)
     {
