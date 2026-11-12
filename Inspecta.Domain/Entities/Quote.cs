@@ -23,8 +23,27 @@ public sealed class Quote
     public InspectionRequest? Request { get; private set; }
     public string? RequestNumber { get; private set; }
     public int Version { get; private set; }
+    /// <summary>The total the client pays for (before VAT): the subtotal minus the discount. This is the price everything else reads.</summary>
     public long AmountPiastres { get; private set; }
+
+    /// <summary>The total of all lines, before the discount.</summary>
     public long SubtotalPiastres { get; private set; }
+
+    /// <summary>Percentage taken off the subtotal, 0 to 100 with at most two decimals. 0 means no discount.</summary>
+    public decimal DiscountPercent { get; private set; }
+
+    /// <summary>The amount the discount takes off, rounded to the piastre.</summary>
+    public long DiscountPiastres => DiscountOf(SubtotalPiastres, DiscountPercent);
+
+    public const decimal MaxDiscountPercent = 100m;
+
+    /// <summary>
+    /// The discount on a subtotal: <c>subtotal x percent / 100</c> rounded to the nearest piastre, a half going up. The one place
+    /// this is worked out, so the quotation, its response and its PDF show the same number.
+    /// </summary>
+    public static long DiscountOf(long subtotalPiastres, decimal percent) =>
+        (long)Math.Round(subtotalPiastres * percent / 100m, 0, MidpointRounding.AwayFromZero);
+
     public int ValidForDays { get; private set; } = DefaultValidForDays;
     public DateTimeOffset ValidUntil { get; private set; }
     public QuoteType Type { get; private set; } = QuoteType.Offer;
@@ -193,8 +212,7 @@ public sealed class Quote
             throw new ArgumentOutOfRangeException(nameof(validForDays), $"Validity must be between 1 and {MaxValidForDays} days.");
 
         ItemsJson = JsonSerializer.Serialize(quoteItems, JsonOptions);
-        AmountPiastres = ItemsTotalPiastres;
-        SubtotalPiastres = AmountPiastres;
+        Recalculate();
         Message = string.IsNullOrWhiteSpace(message) ? null : message.Trim();
         EquipmentSummary = equipmentSummary?.Trim();
         if (contactName is not null)
@@ -212,6 +230,30 @@ public sealed class Quote
         }
 
         UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Sets the discount, in percent of the subtotal (0 removes it). Only while the quotation is a draft. The amount follows at once, and
+    /// keeps following when the lines change.
+    /// </summary>
+    public void SetDiscount(decimal percent)
+    {
+        EnsureEditable();
+        if (percent < 0m || percent > MaxDiscountPercent)
+            throw new ArgumentOutOfRangeException(nameof(percent), $"The discount must be between 0 and {MaxDiscountPercent} percent.");
+        if (decimal.Round(percent, 2) != percent)
+            throw new ArgumentException("The discount can have at most two decimals.", nameof(percent));
+
+        DiscountPercent = percent;
+        Recalculate();
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    // The subtotal follows the lines; the amount is the subtotal less the discount.
+    private void Recalculate()
+    {
+        SubtotalPiastres = ItemsTotalPiastres;
+        AmountPiastres = SubtotalPiastres - DiscountOf(SubtotalPiastres, DiscountPercent);
     }
 
     /// <summary>Changes the reference printed on the document. Only while the quotation is a draft.</summary>
@@ -258,8 +300,8 @@ public sealed class Quote
             throw new InvalidOperationException("A quote must contain at least one item before it is sent.");
         if (GetUnpricedItems().Count > 0)
             throw new InvalidOperationException("Every item must have a price before the quote is sent.");
-        if (AmountPiastres != ItemsTotalPiastres)
-            throw new InvalidOperationException("Quote total must match its line items.");
+        if (SubtotalPiastres != ItemsTotalPiastres || AmountPiastres != SubtotalPiastres - DiscountPiastres)
+            throw new InvalidOperationException("Quote total must match its line items less the discount.");
 
         SentAt = DateTimeOffset.UtcNow;
         ValidUntil = SentAt.Value.AddDays(ValidForDays);

@@ -180,6 +180,7 @@ public sealed class InspectaDbContext(
         quote.Property(item => item.Type).HasConversion<string>().HasMaxLength(24);
         quote.Property(item => item.ContactName).HasMaxLength(200);
         quote.Property(item => item.QuotationNumber).HasMaxLength(40);
+        quote.Property(item => item.DiscountPercent).HasPrecision(5, 2);
         quote.HasIndex(item => new { item.RequestId, item.Version }).IsUnique();
         quote.HasOne(item => item.Request).WithMany().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
 
