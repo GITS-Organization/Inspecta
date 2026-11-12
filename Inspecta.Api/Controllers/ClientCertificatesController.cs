@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Certificates;
 using Inspecta.Application.Pdf;
@@ -9,7 +10,6 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>The certificates issued for a client, kept exactly as they were issued.</summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TeamOperations)]
 [Route("api/v1/clients/{clientId:guid}/certificates")]
 public sealed class ClientCertificatesController(ClientCertificateService certificates) : ControllerBase
 {
@@ -19,6 +19,7 @@ public sealed class ClientCertificatesController(ClientCertificateService certif
     /// the examination and next examination dates and a SHA-256 of the PDF. Open one with <c>/{id}/pdf</c>. Once the coordinator has sent the job to the client,
     /// each row also has <c>delivery</c>: <c>emailSent</c>, <c>sentTo</c>, <c>cc</c>, <c>subject</c> and <c>sentAt</c> (<c>emailSent</c> is false when it was handed over without an email); it is null until then.
     /// </remarks>
+    [RequirePermission(Permissions.CertificatesViewIssued)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<ClientCertificateResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -29,6 +30,7 @@ public sealed class ClientCertificatesController(ClientCertificateService certif
             : PageRequest.Invalid(this);
 
     /// <summary>Download an issued certificate as PDF.</summary>
+    [RequirePermission(Permissions.CertificatesViewIssued)]
     [HttpGet("{certificateFileId:guid}/pdf")]
     [Produces(PdfFile.ContentType)]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -41,6 +43,7 @@ public sealed class ClientCertificatesController(ClientCertificateService certif
 
     /// <summary>Download the QR code of an issued certificate as a PNG.</summary>
     /// <remarks>The QR printed on the certificate, as an image to send to the client. It opens the public check page with the PDF download (<c>qrUrl</c> of the list).</remarks>
+    [RequirePermission(Permissions.CertificatesViewIssued)]
     [HttpGet("{certificateFileId:guid}/qr.png")]
     [Produces("image/png")]
     [ProducesResponseType(StatusCodes.Status200OK)]

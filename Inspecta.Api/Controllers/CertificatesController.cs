@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Certificates;
@@ -10,11 +11,11 @@ namespace Inspecta.Api.Controllers;
 /// <summary>Manage inspection certificates associated with request items.</summary>
 [ApiController]
 [ApiExplorerSettings(IgnoreApi = true)] // hidden from Swagger; the endpoints keep working
-[Authorize(Policy = AuthorizationPolicies.TeamAccess)]
 [Route("api/v1/requests/{requestId:guid}/certificates")]
 public sealed class CertificatesController(ICertificateService certificateService) : ControllerBase
 {
     /// <summary>List certificates for all items in a request.</summary>
+    [RequirePermission(Permissions.CertificatesView)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<CertificateResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -26,6 +27,7 @@ public sealed class CertificatesController(ICertificateService certificateServic
     }
 
     /// <summary>Get the certificate for one request item.</summary>
+    [RequirePermission(Permissions.CertificatesView)]
     [HttpGet("{requestItemId:guid}")]
     [ProducesResponseType<CertificateResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -40,8 +42,8 @@ public sealed class CertificatesController(ICertificateService certificateServic
     }
 
     /// <summary>Create or update a certificate draft for a request item.</summary>
+    [RequirePermission(Permissions.InspectionWriteLegacy)]
     [HttpPut("{requestItemId:guid}/draft")]
-    [Authorize(Roles = "admin,technical_manager,inspector")]
     [ProducesResponseType<CertificateResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<CertificateResponse>> SaveDraft(
         Guid requestId,
@@ -54,8 +56,8 @@ public sealed class CertificatesController(ICertificateService certificateServic
     }
 
     /// <summary>Submit one item's certificate for technical review.</summary>
+    [RequirePermission(Permissions.InspectionWriteLegacy)]
     [HttpPost("{requestItemId:guid}/submit")]
-    [Authorize(Roles = "admin,technical_manager,inspector")]
     [ProducesResponseType<CertificateResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<CertificateResponse>> Submit(
         Guid requestId,
@@ -67,8 +69,8 @@ public sealed class CertificatesController(ICertificateService certificateServic
     }
 
     /// <summary>Approve or return one submitted item certificate.</summary>
+    [RequirePermission(Permissions.ReviewAct)]
     [HttpPost("{requestItemId:guid}/review")]
-    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
     [ProducesResponseType<CertificateResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<CertificateResponse>> Review(
         Guid requestId,

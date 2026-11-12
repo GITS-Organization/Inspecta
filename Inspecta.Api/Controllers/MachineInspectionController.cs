@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Certificates;
@@ -13,7 +14,6 @@ namespace Inspecta.Api.Controllers;
 /// approves or returns it, and the coordinator hands the approved certificates to the client.
 /// </summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TeamAccess)]
 [Route("api/v1/quotation-queue/{requestId:guid}")]
 public sealed class MachineInspectionController(IMachineInspectionService inspectionService, IJobMachineService jobMachines) : ControllerBase
 {
@@ -22,6 +22,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     /// Accepts the task if the inspector has not yet, and moves the job to <c>in_progress</c>. Calling it again is safe.
     /// The assigned inspector (or the technical manager or Admin) can do it.
     /// </remarks>
+    [RequirePermission(Permissions.InspectionWork)]
     [HttpPost("start-inspection")]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -34,6 +35,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     }
 
     /// <summary>List the machines of a job with the state of each certificate.</summary>
+    [RequirePermission(Permissions.CertificatesView)]
     [HttpGet("machines")]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -44,6 +46,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     }
 
     /// <summary>Open one machine: everything the inspector's screen needs in one call.</summary>
+    [RequirePermission(Permissions.CertificatesView)]
     [HttpGet("machines/{requestItemId:guid}")]
     [ProducesResponseType<MachineFormResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -54,6 +57,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     }
 
     /// <summary>Save what the inspector has entered for a machine (as often as needed).</summary>
+    [RequirePermission(Permissions.InspectionWork)]
     [HttpPut("machines/{requestItemId:guid}")]
     [ProducesResponseType<MachineFormResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -69,6 +73,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
 
     /// <summary>Submit a machine's certificate to the technical manager.</summary>
     /// <summary>The client's registered machines that are not in this job yet, to pick one to add.</summary>
+    [RequirePermission(Permissions.CertificatesView)]
     [HttpGet("available-machines")]
     [ProducesResponseType<IReadOnlyList<Inspecta.Application.Contracts.Equipment.EquipmentResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -84,6 +89,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     /// once (gears are not), so it is in the client's list and can be certified. The inspector of the job, its coordinator, the technical
     /// manager and the admin can do it, from the assignment until the job is submitted.
     /// </remarks>
+    [RequirePermission(Permissions.InspectionWork)]
     [HttpPost("machines")]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -98,6 +104,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     }
 
     /// <summary>Change the details of a machine of the job (name, quantity, serial numbers...).</summary>
+    [RequirePermission(Permissions.InspectionWork)]
     [HttpPut("machines/{requestItemId:guid}/details")]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -116,6 +123,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     /// job; calling it again replaces the earlier division until a certificate of the gear is started. Machines of the group share
     /// <c>divisionGroupId</c> and <c>divisionTotal</c> (the quantity before the first division); a sum of quantities that differs is allowed.
     /// </remarks>
+    [RequirePermission(Permissions.InspectionWork)]
     [HttpPut("machines/{requestItemId:guid}/certificates")]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -129,6 +137,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     }
 
     /// <summary>Take a machine out of the job; only before its certificate was started.</summary>
+    [RequirePermission(Permissions.InspectionWork)]
     [HttpDelete("machines/{requestItemId:guid}")]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -140,6 +149,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
         return Ok(await jobMachines.RemoveAsync(requestId, requestItemId, actorId, role, cancellationToken));
     }
 
+    [RequirePermission(Permissions.InspectionWork)]
     [HttpPost("machines/{requestItemId:guid}/split")]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -162,6 +172,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     /// client's archive and the delivery email show the new number and date. The inspector's examination dates are not touched.
     /// All or nothing: <c>409 certificate_number_taken</c>, <c>409 not_editable</c> (not approved, or already handed over).
     /// </remarks>
+    [RequirePermission(Permissions.InspectionWork)]
     [HttpPut("certificate-details")]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -181,6 +192,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     /// is missing"). Certificates already submitted are left alone. When every certificate is submitted the job goes to the technical manager
     /// (<c>certificate_submitted</c>). The answer is the machine list.
     /// </remarks>
+    [RequirePermission(Permissions.InspectionWork)]
     [HttpPost("submit-all")]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -192,6 +204,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
         return Ok(await inspectionService.SubmitAllAsync(requestId, actorId, role, cancellationToken));
     }
 
+    [RequirePermission(Permissions.InspectionWork)]
     [HttpPost("machines/{requestItemId:guid}/submit")]
     [ProducesResponseType<MachineFormResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -210,8 +223,8 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     /// Unsatisfactory. Optional body: <c>signature</c> and <c>rememberSignature</c>. The job becomes <c>certificate_approved</c> and
     /// reaches the coordinator that owns it.
     /// </remarks>
+    [RequirePermission(Permissions.ReviewAct)]
     [HttpPost("approve-all")]
-    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -229,8 +242,8 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     /// a spelling mistake...). Every comment is kept in the job's <c>reviewHistory</c>. The job becomes <c>certificate_returned</c>;
     /// the inspector fixes the machines and submits them all again.
     /// </remarks>
+    [RequirePermission(Permissions.ReviewAct)]
     [HttpPost("return-to-inspector")]
-    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -245,6 +258,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
 
     /// <summary>Download the QR code of an approved machine certificate as a PNG.</summary>
     /// <remarks>The QR printed on the approved certificate, as an image to send to the client. It opens the public check page with the PDF download.</remarks>
+    [RequirePermission(Permissions.CertificatesView)]
     [HttpGet("machines/{requestItemId:guid}/qr.png")]
     [Produces("image/png")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -262,6 +276,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     /// Marked DRAFT until it is approved. The inspector sees it at any time, the technical manager and Admin too, and the
     /// coordinator once it is approved.
     /// </remarks>
+    [RequirePermission(Permissions.CertificatesView)]
     [HttpGet("machines/{requestItemId:guid}/pdf")]
     [Produces(PdfFile.ContentType)]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -280,6 +295,7 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     /// approved, the stored final file after. The technical manager, Admin and the job's inspector can download it; the coordinator
     /// uses <c>certificates.zip</c> once the job is approved (<c>403</c> here).
     /// </remarks>
+    [RequirePermission(Permissions.CertificatesView)]
     [HttpGet("certificates/preview.zip")]
     [Produces("application/zip")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -300,8 +316,8 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     /// <c>to</c>, <c>cc</c>, <c>subject</c> and <c>body</c> and send them to <c>POST deliver-to-client</c>. <c>canSend</c> says whether
     /// Send works and <c>blockers</c> why not; <c>testEmailTo</c> is where <c>deliver-to-client/test-email</c> goes.
     /// </remarks>
+    [RequirePermission(Permissions.CertificatesDeliver)]
     [HttpGet("deliver-to-client/preview")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<DeliveryPreviewResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -313,8 +329,8 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     }
 
     /// <summary>Download every certificate of the job in one ZIP.</summary>
+    [RequirePermission(Permissions.CertificatesDeliver)]
     [HttpGet("certificates.zip")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [Produces("application/zip")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -338,8 +354,8 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     /// no address to send to it answers <c>409 no_recipient</c>. With email delivery off it only marks the job as handed over. The owning
     /// coordinator, the technical manager or Admin can do it. The answer's <c>delivery</c> says what went out, to whom and when.
     /// </remarks>
+    [RequirePermission(Permissions.CertificatesDeliver)]
     [HttpPost("deliver-to-client")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -357,8 +373,8 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     /// the signed-in user's own address only, with <c>[TEST]</c> in the subject. Nothing is recorded and the job does not change. Answers
     /// <c>409 email_disabled</c> while email delivery is off.
     /// </remarks>
+    [RequirePermission(Permissions.CertificatesDeliver)]
     [HttpPost("deliver-to-client/test-email")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<TestEmailResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -376,8 +392,8 @@ public sealed class MachineInspectionController(IMachineInspectionService inspec
     /// For certificates given on paper, by chat or picked up. Optional body: <c>deliveredTo</c> and a <c>note</c> kept in the job's history.
     /// Marks the certificates delivered and the job <c>sent_to_client</c>; no email is sent whatever the email setting.
     /// </remarks>
+    [RequirePermission(Permissions.CertificatesDeliver)]
     [HttpPost("deliver-to-client/manual")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

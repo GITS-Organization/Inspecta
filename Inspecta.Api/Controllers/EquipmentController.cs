@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using Inspecta.Application.Contracts.Equipment;
 using Inspecta.Application.Interfaces;
 using Inspecta.Api.Authorization;
@@ -8,11 +9,11 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Manage inspection items registered for clients.</summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TeamOperations)]
 [Route("api/v1/equipment")]
 public sealed class EquipmentController(IEquipmentService equipmentService) : ControllerBase
 {
     /// <summary>List items, optionally filtered by client and archive status.</summary>
+    [RequirePermission(Permissions.EquipmentView)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<EquipmentResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<EquipmentResponse>>> List(
@@ -22,6 +23,7 @@ public sealed class EquipmentController(IEquipmentService equipmentService) : Co
             : PageRequest.Invalid(this);
 
     /// <summary>Get an item by identifier.</summary>
+    [RequirePermission(Permissions.EquipmentView)]
     [HttpGet("{equipmentId:guid}")]
     [ProducesResponseType<EquipmentResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -32,6 +34,7 @@ public sealed class EquipmentController(IEquipmentService equipmentService) : Co
     }
 
     /// <summary>Create an item for a client.</summary>
+    [RequirePermission(Permissions.EquipmentEdit)]
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<EquipmentResponse>(StatusCodes.Status201Created)]
@@ -42,12 +45,14 @@ public sealed class EquipmentController(IEquipmentService equipmentService) : Co
     }
 
     /// <summary>Update an item's registration and metadata.</summary>
+    [RequirePermission(Permissions.EquipmentEdit)]
     [HttpPut("{equipmentId:guid}")]
     [ProducesResponseType<EquipmentResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<EquipmentResponse>> Update(Guid equipmentId, SaveEquipmentRequest request, CancellationToken cancellationToken) =>
         Ok(await equipmentService.UpdateAsync(equipmentId, request, cancellationToken));
 
     /// <summary>Record inspection dates for an item.</summary>
+    [RequirePermission(Permissions.EquipmentEdit)]
     [HttpPost("{equipmentId:guid}/inspections")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RecordInspection(Guid equipmentId, RecordEquipmentInspectionRequest request, CancellationToken cancellationToken)
@@ -57,8 +62,8 @@ public sealed class EquipmentController(IEquipmentService equipmentService) : Co
     }
 
     /// <summary>Delete an item for good. Refused with <c>409 equipment_in_use</c> while requests or certificates still use it.</summary>
+    [RequirePermission(Permissions.EquipmentDelete)]
     [HttpDelete("{equipmentId:guid}")]
-    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Archive(Guid equipmentId, CancellationToken cancellationToken)

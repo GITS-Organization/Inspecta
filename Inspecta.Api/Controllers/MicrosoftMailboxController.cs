@@ -1,3 +1,5 @@
+using Inspecta.Api.Authorization;
+using Inspecta.Application.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using Inspecta.Application.Exceptions;
@@ -22,8 +24,8 @@ public sealed class MicrosoftMailboxController(
     /// <c>authMode</c> is <c>password</c> or <c>microsoft_oauth</c>; <c>connectionStatus</c> is <c>connected</c> or <c>needs_reconnect</c>
     /// (then <c>lastAuthError</c> says why and the coordinator connects again). Never holds a password or a token.
     /// </remarks>
+    [RequirePermission(Permissions.MailboxConnectOwn)]
     [HttpGet("me/email-connection")]
-    [Authorize(Roles = "coordinator")]
     [ProducesResponseType<Inspecta.Application.Contracts.Email.CoordinatorEmailConfigResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<Inspecta.Application.Contracts.Email.CoordinatorEmailConfigResponse>> Status(CancellationToken cancellationToken) =>
         Ok(await configService.GetOwnAsync(GetActorId(), cancellationToken));
@@ -33,8 +35,8 @@ public sealed class MicrosoftMailboxController(
     /// For a signed-in coordinator, for their own mailbox. After signing in Microsoft sends the browser to the callback,
     /// which saves the connection and shows a plain page. <c>503 microsoft_not_configured</c> when the server has no Microsoft app settings.
     /// </remarks>
+    [RequirePermission(Permissions.MailboxConnectOwn)]
     [HttpPost("me/email-connection/microsoft/start")]
-    [Authorize(Roles = "coordinator")]
     [ProducesResponseType<StartMicrosoftConnectionResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public async Task<ActionResult<StartMicrosoftConnectionResponse>> Start(CancellationToken cancellationToken) =>

@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Quotations;
@@ -9,7 +10,6 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>The quotations the current user can see, across all requests.</summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TeamAccess)]
 [Route("api/v1/quotations")]
 public sealed class QuotationsController(IQuoteService quoteService) : ControllerBase
 {
@@ -29,6 +29,7 @@ public sealed class QuotationsController(IQuoteService quoteService) : Controlle
     /// <c>scheduledAt</c> once assigned. <c>from</c> and <c>to</c> (<c>yyyy-MM-dd</c>, either or both, both days included, UTC) keep only
     /// the quotations made in that period (<c>createdAt</c>).
     /// </remarks>
+    [RequirePermission(Permissions.QuotesListAll)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<QuoteSummaryResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using Inspecta.Api.Authorization;
@@ -11,7 +12,6 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Accepted quotations, grouped by what has to happen to them next.</summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TeamAccess)]
 [Route("api/v1/quotation-queue")]
 public sealed class QuotationQueueController(IQuoteService quoteService, IInspectionRequestService requestService) : ControllerBase
 {
@@ -32,6 +32,7 @@ public sealed class QuotationQueueController(IQuoteService quoteService, IInspec
     /// location. <c>from</c> and <c>to</c> (<c>yyyy-MM-dd</c>, either or both, both days included, UTC) keep only the jobs whose quotation was made in that period. <c>pageSize</c> defaults to 50 (max 100). Every row has <c>requestId</c> for the next calls.
     /// </remarks>
     /// <param name="status">Which queue: <c>unassigned</c>, <c>assigned</c>, <c>certify</c>, or one part of certify: <c>review</c>, <c>returned</c>, <c>approved</c>, <c>delivered</c>. Leave out for all.</param>
+    [RequirePermission(Permissions.RequestsView)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<QuoteSummaryResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -65,8 +66,8 @@ public sealed class QuotationQueueController(IQuoteService quoteService, IInspec
     /// The same rows as <c>GET /quotation-queue?status=review</c> (request status <c>certificate_submitted</c>), for the technical
     /// manager and Admin. Open a job with <c>GET /quotation-queue/{requestId}/machines</c>.
     /// </remarks>
+    [RequirePermission(Permissions.ReviewViewQueue)]
     [HttpGet("to-review")]
-    [Authorize(Policy = AuthorizationPolicies.TenantManagement)]
     [ProducesResponseType<IReadOnlyList<QuoteSummaryResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<QuoteSummaryResponse>>> ListToReview(
         [FromQuery] Guid? managerId,
@@ -91,6 +92,7 @@ public sealed class QuotationQueueController(IQuoteService quoteService, IInspec
     /// <c>404</c>; a job that already started gets <c>409</c>; a date inside the inspector's leave is refused for the
     /// coordinator side.
     /// </remarks>
+    [RequirePermission(Permissions.InspectionChangeDate)]
     [HttpPut("{requestId:guid}/inspection-date")]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

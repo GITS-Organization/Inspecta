@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Certificates;
@@ -10,7 +11,6 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Create a certificate directly, without a request or a quotation, and look up what the catalogue knows.</summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TeamAccess)]
 [Route("api/v1/certifications")]
 public sealed class CertificationsController(IDirectCertificationService directCertification) : ControllerBase
 {
@@ -21,6 +21,7 @@ public sealed class CertificationsController(IDirectCertificationService directC
     /// manager reviews it like any other job. Each machine is a registered one (<c>equipmentId</c>) or a new one (registered for the
     /// client, except gears). Inspectors, the technical manager and the admin can use it.
     /// </remarks>
+    [RequirePermission(Permissions.CertificatesCreateDirect)]
     [HttpPost]
     [ProducesResponseType<MachineListResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -35,6 +36,7 @@ public sealed class CertificationsController(IDirectCertificationService directC
     }
 
     /// <summary>The clients a certificate can be created for: the team's for the technical manager and the admin, the clients of their current jobs for an inspector.</summary>
+    [RequirePermission(Permissions.CertificatesView)]
     [HttpGet("clients")]
     [ProducesResponseType<IReadOnlyList<CertificationClientResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -46,6 +48,7 @@ public sealed class CertificationsController(IDirectCertificationService directC
     }
 
     /// <summary>The registered machines of one of those clients, to pick one for the certificate.</summary>
+    [RequirePermission(Permissions.CertificatesView)]
     [HttpGet("clients/{clientId:guid}/machines")]
     [ProducesResponseType<IReadOnlyList<Inspecta.Application.Contracts.Equipment.EquipmentResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -57,11 +60,13 @@ public sealed class CertificationsController(IDirectCertificationService directC
     }
 
     /// <summary>The kinds of machine the catalogue knows, with their standards and whether they are gears.</summary>
+    [RequirePermission(Permissions.CertificatesView)]
     [HttpGet("machine-types")]
     [ProducesResponseType<IReadOnlyList<MachineTypeResponse>>(StatusCodes.Status200OK)]
     public ActionResult<IReadOnlyList<MachineTypeResponse>> MachineTypes() => Ok(directCertification.MachineTypes());
 
     /// <summary>How much a printed certificate takes of serial numbers, to plan a split.</summary>
+    [RequirePermission(Permissions.CertificatesView)]
     [HttpGet("serial-limits")]
     [ProducesResponseType<SerialLimitsResponse>(StatusCodes.Status200OK)]
     public ActionResult<SerialLimitsResponse> SerialLimits() =>

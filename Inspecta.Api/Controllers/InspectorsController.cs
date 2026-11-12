@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Requests;
@@ -9,7 +10,6 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>The inspectors a job can be given to.</summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TeamOperations)]
 [Route("api/v1/inspectors")]
 public sealed class InspectorsController(IInspectionRequestService requestService) : ControllerBase
 {
@@ -21,6 +21,7 @@ public sealed class InspectorsController(IInspectionRequestService requestServic
     /// <c>id</c> from here as <c>inspectorId</c> in <c>POST /requests/{requestId}/assignment</c>, and to list what an inspector
     /// was given with <c>GET /quotations?inspectorId=...</c>.
     /// </remarks>
+    [RequirePermission(Permissions.TeamDirectory)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<InspectorResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<InspectorResponse>>> List(

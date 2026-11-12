@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Requests;
@@ -9,7 +10,6 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>The coordinators of a team, for picking the one a request is handed to.</summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TeamOperations)]
 [Route("api/v1/team/coordinators")]
 public sealed class TeamCoordinatorsController(IRequestTransferService transferService) : ControllerBase
 {
@@ -18,6 +18,7 @@ public sealed class TeamCoordinatorsController(IRequestTransferService transferS
     /// For a coordinator, the technical manager or the admin. Only <c>id</c>, <c>fullName</c> and <c>email</c>: no mailbox details. The admin
     /// names the team with <c>managerId</c>; without it the list is empty. Use the <c>id</c> in <c>POST /requests/{requestId}/transfer</c>.
     /// </remarks>
+    [RequirePermission(Permissions.TeamDirectory)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<TeamCoordinatorResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<TeamCoordinatorResponse>>> List([FromQuery] Guid? managerId, CancellationToken cancellationToken)

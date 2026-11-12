@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Quotations;
@@ -10,7 +11,6 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Incoming email quotation drafts scoped to the authenticated user and tenant.</summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TeamOperations)]
 [Route("api/v1/quotation-drafts")]
 public sealed class QuotationDraftsController(IQuotationDraftService quotationDraftService) : ControllerBase
 {
@@ -18,6 +18,7 @@ public sealed class QuotationDraftsController(IQuotationDraftService quotationDr
     /// List quotation drafts: Coordinators see their own, Technical Managers see their team,
     /// and Admins see all tenants or a selected tenant.
     /// </summary>
+    [RequirePermission(Permissions.DraftsView)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<QuotationDraftResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -52,8 +53,8 @@ public sealed class QuotationDraftsController(IQuotationDraftService quotationDr
     }
 
     /// <summary>Update the parsed client and machine details of one of this coordinator's drafts.</summary>
+    [RequirePermission(Permissions.DraftsWork)]
     [HttpPut("{draftId:guid}")]
-    [Authorize(Roles = "coordinator")]
     [ProducesResponseType<QuotationDraftResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<QuotationDraftResponse>> Update(
@@ -73,8 +74,8 @@ public sealed class QuotationDraftsController(IQuotationDraftService quotationDr
     }
 
     /// <summary>Set a draft to CounterOffered, Accepted, or Rejected.</summary>
+    [RequirePermission(Permissions.DraftsWork)]
     [HttpPost("{draftId:guid}/decision")]
-    [Authorize(Roles = "coordinator")]
     [ProducesResponseType<QuotationDraftResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

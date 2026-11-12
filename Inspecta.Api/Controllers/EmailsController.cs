@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using Inspecta.Application.Contracts.Requests;
 using Inspecta.Application.Interfaces;
@@ -10,11 +11,11 @@ namespace Inspecta.Api.Controllers;
 /// <summary>Testing helpers for simulating incoming client emails.</summary>
 [ApiController]
 [ApiExplorerSettings(IgnoreApi = true)] // hidden from Swagger; the endpoints keep working
-[Authorize(Policy = AuthorizationPolicies.TeamOperations)]
 [Route("api/v1/emails")]
 public sealed class EmailsController(IInspectionRequestService requestService) : ControllerBase
 {
     /// <summary>Generate a realistic client email and save its simulated webhook as an inspection request.</summary>
+    [RequirePermission(Permissions.MailboxTest)]
     [HttpPost("send-test")]
     [ProducesResponseType<TestIncomingEmailResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

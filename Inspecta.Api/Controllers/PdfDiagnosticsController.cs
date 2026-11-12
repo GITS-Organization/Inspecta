@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Pdf;
 using Inspecta.Application.Pdf.Models;
@@ -9,11 +10,11 @@ namespace Inspecta.Api.Controllers;
 /// <summary>Checks that PDF generation works in the running environment (native libraries, fonts, license).</summary>
 [ApiController]
 [ApiExplorerSettings(IgnoreApi = true)] // hidden from Swagger; the endpoints keep working
-[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 [Route("api/v1/admin/pdf")]
 public sealed class PdfDiagnosticsController(IPdfGenerator pdfGenerator) : ControllerBase
 {
     /// <summary>Download a sample quotation PDF built from fixed data.</summary>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpGet("sample")]
     [Produces(PdfFile.ContentType)]
     [ProducesResponseType(StatusCodes.Status200OK)]

@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Mail;
 using Inspecta.Application.Interfaces;
@@ -11,11 +12,11 @@ namespace Inspecta.Api.Controllers;
 /// mail from anyone else waits as a "maybe" until the coordinator confirms or deletes it.
 /// </summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TeamOperations)]
 [Route("api/v1/client-mail-rules")]
 public sealed class ClientMailRulesController(IClientMailRuleService ruleService) : ControllerBase
 {
     /// <summary>List the senders of the current team. Admin sees every team, or one with <c>managerId</c>.</summary>
+    [RequirePermission(Permissions.ClientsView)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<ClientMailRuleResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<ClientMailRuleResponse>>> List(
@@ -28,6 +29,7 @@ public sealed class ClientMailRulesController(IClientMailRuleService ruleService
     }
 
     /// <summary>Add a client sender (address or domain) to the team. Admin must pass <c>managerId</c>.</summary>
+    [RequirePermission(Permissions.ClientsEdit)]
     [HttpPost]
     [ProducesResponseType<ClientMailRuleResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -47,6 +49,7 @@ public sealed class ClientMailRulesController(IClientMailRuleService ruleService
     }
 
     /// <summary>Remove a client sender from the team.</summary>
+    [RequirePermission(Permissions.ClientsEdit)]
     [HttpDelete("{ruleId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

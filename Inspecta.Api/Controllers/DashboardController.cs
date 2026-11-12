@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Dashboard;
 using Inspecta.Application.Interfaces;
@@ -8,7 +9,6 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>The overview screen of the technical manager.</summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TenantManagement)]
 [Route("api/v1/dashboard")]
 public sealed class DashboardController(IDashboardService dashboard) : ControllerBase
 {
@@ -27,6 +27,7 @@ public sealed class DashboardController(IDashboardService dashboard) : Controlle
     /// equipment are always as of today. Months are counted in UTC. A technical manager gets their own team; Admin may pass <c>managerId</c> (or none, for every team).
     /// </para>
     /// </remarks>
+    [RequirePermission(Permissions.DashboardView)]
     [HttpGet("overview")]
     [ProducesResponseType<DashboardOverviewResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

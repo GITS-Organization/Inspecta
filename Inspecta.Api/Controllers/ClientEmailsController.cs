@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Mail;
 using Inspecta.Application.Interfaces;
@@ -11,7 +12,6 @@ namespace Inspecta.Api.Controllers;
 /// becomes a real request; the same address also moves the client's waiting "maybe" emails into requests.
 /// </summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TeamOperations)]
 [Route("api/v1/clients/{clientId:guid}/emails")]
 public sealed class ClientEmailsController(IClientMailRuleService ruleService) : ControllerBase
 {
@@ -19,6 +19,7 @@ public sealed class ClientEmailsController(IClientMailRuleService ruleService) :
     /// <remarks>
     /// The emails of the client's contacts and its certificates email are recognised as well, even though they are not in this list.
     /// </remarks>
+    [RequirePermission(Permissions.ClientsView)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<ClientMailRuleResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -33,6 +34,7 @@ public sealed class ClientEmailsController(IClientMailRuleService ruleService) :
     /// <remarks>
     /// <c>promotedRequests</c> in the answer is how many "maybe" emails from this sender became real requests of the client.
     /// </remarks>
+    [RequirePermission(Permissions.ClientsEdit)]
     [HttpPost]
     [ProducesResponseType<ClientMailRuleResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -50,6 +52,7 @@ public sealed class ClientEmailsController(IClientMailRuleService ruleService) :
     }
 
     /// <summary>Remove an address or domain from the client.</summary>
+    [RequirePermission(Permissions.ClientsEdit)]
     [HttpDelete("{ruleId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

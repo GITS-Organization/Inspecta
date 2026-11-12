@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Quotations;
@@ -13,11 +14,11 @@ namespace Inspecta.Api.Controllers;
 /// client), <c>accepted</c> or <c>rejected</c>. Email requests can only be quoted by the coordinator that owns them.
 /// </summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TeamOperations)]
 [Route("api/v1/requests/{requestId:guid}/quotes")]
 public sealed class QuotesController(IQuoteService quoteService) : ControllerBase
 {
     /// <summary>List the quotations of a request, oldest version first.</summary>
+    [RequirePermission(Permissions.QuotesView)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<QuoteResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -28,6 +29,7 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     }
 
     /// <summary>Get one quotation with its priced items.</summary>
+    [RequirePermission(Permissions.QuotesView)]
     [HttpGet("{quoteId:guid}")]
     [ProducesResponseType<QuoteResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -41,6 +43,7 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     /// Open a quotation on a request. The items are copied from the request with empty prices; fill them in with
     /// <c>PUT</c>. The request moves to <c>quote_draft</c> and must have its client, location and items completed.
     /// </summary>
+    [RequirePermission(Permissions.QuotesWork)]
     [HttpPost]
     [ProducesResponseType<QuoteResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -60,6 +63,7 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     /// changes nothing (a thank-you, a question already answered) this clears the replies, marks them read and puts the request back to <c>quote_sent</c>
     /// (<c>counter_offer_sent</c> for a revision). <c>409</c> when there is no reply to dismiss. Accepting, rejecting or sending the next offer clears the replies too.
     /// </remarks>
+    [RequirePermission(Permissions.QuotesWork)]
     [HttpPost("{quoteId:guid}/dismiss-reply")]
     [ProducesResponseType<QuoteResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -82,6 +86,7 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     /// from the second revision on the request becomes <c>counter_offer_sent</c>. The same as <c>POST .../quotes</c> on a sent request, for the
     /// quotation on the screen. <c>409</c> when the quotation cannot be taken back (not sent, already answered, or already replaced).
     /// </remarks>
+    [RequirePermission(Permissions.QuotesWork)]
     [HttpPost("{quoteId:guid}/reopen")]
     [ProducesResponseType<QuoteResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -101,6 +106,7 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     /// <c>vatPercent</c> (0 to 100, new quotations start with 0 = no VAT; the usual rate is 14) is added on the total after the discount: leave it out to keep the current one, send 0 to leave the VAT out. <c>amountPiastres</c> stays before VAT; the answer also has <c>vatPiastres</c> and <c>totalWithVatPiastres</c>.
     /// The answer has <c>subtotalPiastres</c>, <c>discountPercent</c>, <c>discountPiastres</c>, and <c>amountPiastres</c> is the total after the discount.
     /// </summary>
+    [RequirePermission(Permissions.QuotesWork)]
     [HttpPut("{quoteId:guid}")]
     [ProducesResponseType<QuoteResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -114,6 +120,7 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     }
 
     /// <summary>Preview the quotation as the PDF the client would receive.</summary>
+    [RequirePermission(Permissions.QuotesView)]
     [HttpGet("{quoteId:guid}/pdf")]
     [Produces(PdfFile.ContentType)]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -140,6 +147,7 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     /// pdf, images, Word, Excel, PowerPoint, txt, csv and zip; the content must match the type, or <c>400</c>). They go after the quotation PDF.
     /// If sending fails, send the files again with the retry.
     /// </remarks>
+    [RequirePermission(Permissions.QuotesWork)]
     [HttpPost("{quoteId:guid}/send")]
     [ProducesResponseType<QuoteResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -160,6 +168,7 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     /// the attached quotation. The coordinator edits <c>to</c>, <c>cc</c>, <c>subject</c> and <c>body</c> on screen and sends them back in
     /// <c>send</c> or <c>accept</c>.
     /// </remarks>
+    [RequirePermission(Permissions.QuotesView)]
     [HttpGet("{quoteId:guid}/email")]
     [ProducesResponseType<QuoteEmailPreviewResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -177,6 +186,7 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     /// is emailed, as a reply, to the sender of the original request. Works on a draft (it is sent at the same time,
     /// so every item needs a price) and on an already sent quotation. A failed email (<c>502</c>) changes nothing.
     /// </summary>
+    [RequirePermission(Permissions.QuotesWork)]
     [HttpPost("{quoteId:guid}/accept")]
     [ProducesResponseType<QuoteResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -195,6 +205,7 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     /// Record the outcome of a sent quotation as <c>accepted</c> or <c>rejected</c> (a reason is required for a
     /// rejection) without sending any email, for example when the client answered by phone.
     /// </summary>
+    [RequirePermission(Permissions.QuotesWork)]
     [HttpPost("{quoteId:guid}/decision")]
     [ProducesResponseType<QuoteResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

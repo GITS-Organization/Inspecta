@@ -11,6 +11,8 @@ Api and Infrastructure know Application; Application knows Domain; Domain knows 
 A controller action without `[Authorize]` is closed by default. The short list of public actions (sign-in, token refresh, logos, the public certificate check, the Microsoft sign-in callback) is written in the test.
 - Enforced by: `ApiAuthorizationGuardTests`.
 - When it fails: add the right policy. Only a truly public page goes on the list, with the reason in the pull request.
+- Access is a **permission**: every action says `[RequirePermission(Permissions.X)]` and `RolePermissions` (one table, `Inspecta.Application/Authorization`) says which roles have it. Never write a policy name or a role list on an endpoint, and never compare a role string in new code: ask `RolePermissions.Has(role, permission)`. To change what a role may do, change its line in the table and the frozen expectation in `PermissionGuardTests` in the same commit.
+- Enforced by: `PermissionGuardTests` (one access rule per action, no class-level or old-style attributes, every permission real and used, the policies follow the table, and the frozen list of what each endpoint allows).
 
 ## 3. A tenant-owned entity has a tenant query filter
 An entity with `ManagerId` or `TenantId` has an EF query filter that uses it, so a forgotten `Where` cannot show one company's rows to another. The exceptions (`AppUser`, `CertificateCounter`, `CompanyProfile`, `CoordinatorEmailConfig`) are listed in the test, each with the reason it is safe.

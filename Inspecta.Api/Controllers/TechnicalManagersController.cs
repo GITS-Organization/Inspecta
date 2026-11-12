@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Auth;
 using Inspecta.Application.Interfaces;
@@ -8,7 +9,6 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Admin operations for provisioning technical manager accounts and subscriptions.</summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 [Route("api/v1/technical-managers")]
 public sealed class TechnicalManagersController(IUserManagementService userManagementService) : ControllerBase
 {
@@ -19,6 +19,7 @@ public sealed class TechnicalManagersController(IUserManagementService userManag
     /// A profile with only <c>logoBase64</c>, <c>accreditationsBase64</c> or colours keeps the built-in company details (the first customer's) and changes just those.
     /// Left out, the team uses the built-in identity until a profile is set. A profile without its own logo or accreditation marks gets the built-in ones.
     /// </remarks>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpPost]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -31,6 +32,7 @@ public sealed class TechnicalManagersController(IUserManagementService userManag
     }
 
     /// <summary>Activate, suspend, or update a technical manager's subscription end date.</summary>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpPut("{managerId:guid}/subscription")]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

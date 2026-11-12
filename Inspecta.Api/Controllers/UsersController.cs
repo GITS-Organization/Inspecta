@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Auth;
 using Inspecta.Application.Interfaces;
@@ -9,11 +10,11 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Admin-only operations for managing users and their technical manager assignments.</summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 [Route("api/v1/users")]
 public sealed class UsersController(IUserManagementService userManagementService) : ControllerBase
 {
     /// <summary>List users, optionally filtering by technical manager, role, or active status.</summary>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<AuthUserResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<AuthUserResponse>>> List(
@@ -28,6 +29,7 @@ public sealed class UsersController(IUserManagementService userManagementService
     }
 
     /// <summary>Get a user's profile by identifier.</summary>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpGet("{userId:guid}")]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -38,6 +40,7 @@ public sealed class UsersController(IUserManagementService userManagementService
     }
 
     /// <summary>Create an account for any supported role.</summary>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpPost]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -48,6 +51,7 @@ public sealed class UsersController(IUserManagementService userManagementService
     }
 
     /// <summary>Update a user's profile, role, manager assignment, and operational settings.</summary>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpPut("{userId:guid}/profile")]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -55,6 +59,7 @@ public sealed class UsersController(IUserManagementService userManagementService
         Ok(await userManagementService.UpdateProfileAsync(userId, request, cancellationToken));
 
     /// <summary>Enable or disable a user account without deleting the user.</summary>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpPut("{userId:guid}/status")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -68,6 +73,7 @@ public sealed class UsersController(IUserManagementService userManagementService
     }
 
     /// <summary>Set anyone's password (a technical manager's included). They are signed out on every device.</summary>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpPut("{userId:guid}/password")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -79,6 +85,7 @@ public sealed class UsersController(IUserManagementService userManagementService
     }
 
     /// <summary>Change anyone's sign-in email. They are signed out on every device. <c>409 account_exists</c> when the address is taken.</summary>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpPut("{userId:guid}/email")]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -88,6 +95,7 @@ public sealed class UsersController(IUserManagementService userManagementService
         Ok(await userManagementService.ChangeUserEmailAsync(userId, request.Email, cancellationToken));
 
     /// <summary>Delete a user for good (their sessions go with them). <c>409 user_in_use</c> while records still point at the user: deactivate instead.</summary>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpDelete("{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

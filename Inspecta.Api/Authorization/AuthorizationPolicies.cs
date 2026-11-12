@@ -1,36 +1,30 @@
+using Inspecta.Application.Authorization;
+
 namespace Inspecta.Api.Authorization;
 
 public static class AuthorizationPolicies
 {
-    public const string AdminOnly = "AdminOnly";
-    public const string TenantManagement = "TenantManagement";
-    public const string TeamOperations = "TeamOperations";
-    public const string TeamAccess = "TeamAccess";
+    /// <summary>The policy of a permission: one per entry of <see cref="Permissions"/>.</summary>
+    public static string PolicyFor(string permission) => "perm:" + permission;
 
     public static IServiceCollection AddInspectaAuthorization(this IServiceCollection services)
     {
         services.AddAuthorization(options =>
         {
-            // A controller or endpoint that forgets its [Authorize] is closed, not open: public ones say [AllowAnonymous] on purpose.
+            // A controller or endpoint that forgets its access rule is closed, not open: public ones say [AllowAnonymous] on purpose.
             options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
-            options.AddPolicy(AdminOnly, policy =>
-                policy.RequireRole("admin"));
-            options.AddPolicy(TenantManagement, policy =>
-                policy.RequireRole("admin", "technical_manager"));
-            options.AddPolicy(TeamOperations, policy =>
+
+            foreach (var permission in Permissions.All)
             {
-                policy.RequireRole("admin", "technical_manager", "coordinator");
-                policy.RequireAssertion(context =>
-                    context.User.IsInRole("admin") ||
-                    Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _));
-            });
-            options.AddPolicy(TeamAccess, policy =>
-            {
-                policy.RequireRole("admin", "technical_manager", "coordinator", "inspector");
-                policy.RequireAssertion(context =>
-                    context.User.IsInRole("admin") ||
-                    Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _));
-            });
+                options.AddPolicy(PolicyFor(permission), policy =>
+                {
+                    policy.RequireRole(RolePermissions.RolesWith(permission));
+                    // Everyone but the platform owner belongs to a company.
+                    policy.RequireAssertion(context =>
+                        context.User.IsInRole(RoleNames.Admin) ||
+                        Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _));
+                });
+            }
         });
 
         return services;

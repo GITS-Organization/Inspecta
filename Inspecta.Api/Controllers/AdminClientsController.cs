@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Clients;
 using Inspecta.Application.Interfaces;
@@ -8,11 +9,11 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Admin only: add, change and remove clients of any team (used for testing).</summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 [Route("api/v1/admin/clients")]
 public sealed class AdminClientsController(IClientService clientService) : ControllerBase
 {
     /// <summary>List the clients of every team.</summary>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<ClientResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<ClientResponse>>> List(
@@ -22,6 +23,7 @@ public sealed class AdminClientsController(IClientService clientService) : Contr
             : PageRequest.Invalid(this);
 
     /// <summary>Open one client with its contacts.</summary>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpGet("{clientId:guid}")]
     [ProducesResponseType<ClientResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -33,6 +35,7 @@ public sealed class AdminClientsController(IClientService clientService) : Contr
 
     /// <summary>Add a client to a team.</summary>
     /// <remarks><c>managerId</c> (the technical manager whose team the client belongs to) is required.</remarks>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpPost]
     [ProducesResponseType<ClientResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -45,6 +48,7 @@ public sealed class AdminClientsController(IClientService clientService) : Contr
     }
 
     /// <summary>Change a client's details and contacts.</summary>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpPut("{clientId:guid}")]
     [ProducesResponseType<ClientResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -57,6 +61,7 @@ public sealed class AdminClientsController(IClientService clientService) : Contr
     /// <c>permanent=true</c> (default) deletes the client and its contacts for good, and is refused with <c>409 client_in_use</c>
     /// while requests or registered items still use it.
     /// </remarks>
+    [RequirePermission(Permissions.PlatformAdminister)]
     [HttpDelete("{clientId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

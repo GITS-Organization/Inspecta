@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Requests;
@@ -10,7 +11,6 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Manage inspection requests and their workflow transitions.</summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TeamAccess)]
 [Route("api/v1/requests")]
 public sealed class RequestsController(
     IInspectionRequestService requestService,
@@ -27,6 +27,7 @@ public sealed class RequestsController(
     /// are worked on in <c>GET /quotations</c>. Ask for them with an explicit <c>status</c>.
     /// Admin may narrow the global view with <c>managerId</c>. <c>from</c> and <c>to</c> (<c>yyyy-MM-dd</c>, either or both, both days included, UTC) keep only the requests received in that period; <c>GET /requests/summary</c> takes the same two dates, so the tab counts follow the filter.
     /// </remarks>
+    [RequirePermission(Permissions.RequestsView)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<RequestResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<RequestResponse>>> List(
@@ -54,6 +55,7 @@ public sealed class RequestsController(
     }
 
     /// <summary>Counts of real requests (in total and per status) and of maybe emails visible to the current user.</summary>
+    [RequirePermission(Permissions.RequestsView)]
     [HttpGet("summary")]
     [ProducesResponseType<RequestSummaryResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<RequestSummaryResponse>> Summary(
@@ -68,8 +70,8 @@ public sealed class RequestsController(
     /// The sender must already belong to a client (an address added with <c>POST /clients/{clientId}/emails</c>, or the email of one of the client's contacts); the request is then attached to that client.
     /// Otherwise the answer is <c>409</c> with code <c>client_required</c>. Adding the sender to the client moves its waiting maybe emails by itself, so this call is rarely needed.
     /// </remarks>
+    [RequirePermission(Permissions.RequestsWork)]
     [HttpPost("{requestId:guid}/confirm")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -81,8 +83,8 @@ public sealed class RequestsController(
     }
 
     /// <summary>Delete a maybe email now instead of waiting for the automatic cleanup after 7 days. Owning coordinator only.</summary>
+    [RequirePermission(Permissions.RequestsWork)]
     [HttpDelete("{requestId:guid}")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -100,6 +102,7 @@ public sealed class RequestsController(
             : throw new ArgumentException("triage must be 'request' or 'maybe'.");
 
     /// <summary>Get a request visible to the current user.</summary>
+    [RequirePermission(Permissions.RequestsView)]
     [HttpGet("{requestId:guid}")]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -122,8 +125,8 @@ public sealed class RequestsController(
     /// <c>reply</c>, <c>review</c>, <c>delivery</c>), <c>title</c>, <c>detail</c>, <c>actor</c> (null for the system or the client) and
     /// <c>sincePreviousSeconds</c>. Times are UTC with the offset; durations are calendar time in whole seconds.
     /// </remarks>
+    [RequirePermission(Permissions.RequestsTimeline)]
     [HttpGet("{requestId:guid}/timeline")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestTimelineResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -143,8 +146,8 @@ public sealed class RequestsController(
     /// <c>coordinator_inactive</c> or <c>same_coordinator</c>, <c>409 not_transferable</c> for a finished request or an email that is still a
     /// "maybe". An email request then leaves the old coordinator's list and appears in the new one's; the answer is the request.
     /// </remarks>
+    [RequirePermission(Permissions.RequestsTransfer)]
     [HttpPost("{requestId:guid}/transfer")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -157,8 +160,8 @@ public sealed class RequestsController(
     }
 
     /// <summary>Create an inspection request.</summary>
+    [RequirePermission(Permissions.RequestsWork)]
     [HttpPost]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status201Created)]
     public async Task<ActionResult<RequestResponse>> Create(CreateInspectionRequest request, CancellationToken cancellationToken)
     {
@@ -176,8 +179,8 @@ public sealed class RequestsController(
     /// and a placeholder accepted quotation of price 0 (number <c>CT-...</c>), so it shows in the quotation queue like any assigned job.
     /// <c>409 no_contract</c> for a client without a contract, <c>409 not_assignable</c> when the request is not in that stage.
     /// </remarks>
+    [RequirePermission(Permissions.RequestsAssign)]
     [HttpPost("{requestId:guid}/assign-without-quotation")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -195,8 +198,8 @@ public sealed class RequestsController(
     /// given to the inspector straight away (<c>assigned</c>, <c>kind: man_day</c>) and the inspector adds the machines found on site
     /// (<c>POST /quotation-queue/{requestId}/machines</c>) and certifies them. Coordinator, technical manager and Admin.
     /// </remarks>
+    [RequirePermission(Permissions.RequestsAssign)]
     [HttpPost("man-day")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -215,6 +218,7 @@ public sealed class RequestsController(
     /// found (<c>serial</c>, <c>name</c>, <c>model</c>) and the <c>evidence</c> line of the email. Show them as suggestions the coordinator
     /// accepts by adding the machine to the request (<c>equipmentId</c>). A request without a client has none.
     /// </remarks>
+    [RequirePermission(Permissions.RequestsView)]
     [HttpGet("{requestId:guid}/suggestions")]
     [ProducesResponseType<IReadOnlyList<MachineSuggestionResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -230,8 +234,8 @@ public sealed class RequestsController(
     /// items yet, the confident matches (<c>level: high</c>) are added as items linked to the client's machines. A request that
     /// already has items is returned unchanged.
     /// </remarks>
+    [RequirePermission(Permissions.RequestsWork)]
     [HttpPost("{requestId:guid}/autofill")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -243,6 +247,7 @@ public sealed class RequestsController(
 
     /// <summary>Get the original email an email-sourced request was created from.</summary>
     /// <remarks><c>htmlBody</c> is untrusted sender content: sanitize it or render <c>textBody</c> instead.</remarks>
+    [RequirePermission(Permissions.RequestsView)]
     [HttpGet("{requestId:guid}/email")]
     [ProducesResponseType<RequestEmailResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -265,9 +270,9 @@ public sealed class RequestsController(
     /// read as <c>expectedUpdatedAt</c> to get <c>409</c> instead of overwriting newer changes. Owning coordinator only,
     /// before a quote is sent.
     /// </summary>
+    [RequirePermission(Permissions.RequestsWork)]
     [HttpPut("{requestId:guid}")]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -281,8 +286,8 @@ public sealed class RequestsController(
     }
 
     /// <summary>Add an equipment item to a request. Owning coordinator only, before a quote is sent.</summary>
+    [RequirePermission(Permissions.RequestsWork)]
     [HttpPost("{requestId:guid}/items")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -295,8 +300,8 @@ public sealed class RequestsController(
     }
 
     /// <summary>Replace an equipment item of a request. Owning coordinator only, before a quote is sent.</summary>
+    [RequirePermission(Permissions.RequestsWork)]
     [HttpPut("{requestId:guid}/items/{itemId:guid}")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -308,8 +313,8 @@ public sealed class RequestsController(
     }
 
     /// <summary>Remove an equipment item from a request. Owning coordinator only, before a quote is sent.</summary>
+    [RequirePermission(Permissions.RequestsWork)]
     [HttpDelete("{requestId:guid}/items/{itemId:guid}")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -324,8 +329,8 @@ public sealed class RequestsController(
     /// Turn the request down with a reason, from any stage before acceptance (new request, quotation being prepared, or
     /// quotation sent). The open quotation, if any, is closed as rejected. No email is sent. Owning coordinator only.
     /// </summary>
+    [RequirePermission(Permissions.RequestsWork)]
     [HttpPost("{requestId:guid}/reject")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -341,6 +346,7 @@ public sealed class RequestsController(
     /// Move a request through the steps after acceptance (inspector work, certificates). Quotation steps and the inspector
     /// assignment are refused with <c>409</c>: use the quotation endpoints, <c>reject</c> and <c>assignment</c> for those.
     /// </summary>
+    [RequirePermission(Permissions.RequestsTransition)]
     [HttpPost("{requestId:guid}/transitions")]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<RequestResponse>> Transition(Guid requestId, TransitionRequest request, CancellationToken cancellationToken)
@@ -350,8 +356,8 @@ public sealed class RequestsController(
     }
 
     /// <summary>Assign an accepted request to an inspector.</summary>
+    [RequirePermission(Permissions.RequestsAssign)]
     [HttpPost("{requestId:guid}/assignment")]
-    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<RequestResponse>> Assign(Guid requestId, AssignInspectorRequest request, CancellationToken cancellationToken)
     {

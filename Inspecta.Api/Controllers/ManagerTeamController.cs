@@ -1,3 +1,4 @@
+using Inspecta.Application.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Contracts.Auth;
@@ -10,11 +11,11 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Operations for a technical manager's own team.</summary>
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.TenantManagement)]
 [Route("api/v1/manager/team")]
 public sealed class ManagerTeamController(IUserManagementService userManagementService) : ControllerBase
 {
     /// <summary>List coordinators and inspectors assigned to the current manager.</summary>
+    [RequirePermission(Permissions.AccountsManage)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<AuthUserResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<AuthUserResponse>>> List(
@@ -23,6 +24,7 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
         Ok(await userManagementService.ListTeamAsync(ResolveManagerId(managerId), cancellationToken));
 
     /// <summary>Create a coordinator or inspector assigned to the current manager.</summary>
+    [RequirePermission(Permissions.AccountsManage)]
     [HttpPost]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -39,6 +41,7 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
     }
 
     /// <summary>Get a team member assigned to the current manager.</summary>
+    [RequirePermission(Permissions.AccountsManage)]
     [HttpGet("{userId:guid}")]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -52,6 +55,7 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
     }
 
     /// <summary>Update a team member's profile without changing their role or manager.</summary>
+    [RequirePermission(Permissions.AccountsManage)]
     [HttpPut("{userId:guid}")]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -63,6 +67,7 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
         Ok(await userManagementService.UpdateTeamMemberAsync(ResolveManagerId(managerId), userId, request, cancellationToken));
 
     /// <summary>Enable or disable a team member without deleting the account.</summary>
+    [RequirePermission(Permissions.AccountsManage)]
     [HttpPut("{userId:guid}/status")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -82,6 +87,7 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
 
     /// <summary>Set the password of a coordinator or inspector of the team. They are signed out on every device.</summary>
     /// <remarks>The password must follow the policy (12 characters or more, upper and lower case, a digit and a symbol): <c>400 password_policy_failed</c> otherwise. A lock caused by wrong guesses is lifted.</remarks>
+    [RequirePermission(Permissions.AccountsManage)]
     [HttpPut("{userId:guid}/password")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -98,6 +104,7 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
 
     /// <summary>Change the sign-in email of a member of the team. They are signed out on every device and sign in with the new address.</summary>
     /// <remarks><c>409 account_exists</c> when the address belongs to another account, <c>400 invalid_email</c> when it is not an email.</remarks>
+    [RequirePermission(Permissions.AccountsManage)]
     [HttpPut("{userId:guid}/email")]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -111,6 +118,7 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
         Ok(await userManagementService.ChangeTeamMemberEmailAsync(ResolveManagerId(managerId), userId, request.Email, cancellationToken));
 
     /// <summary>Delete a team member for good. <c>409 user_in_use</c> while records still point at them: deactivate instead.</summary>
+    [RequirePermission(Permissions.AccountsManage)]
     [HttpDelete("{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
