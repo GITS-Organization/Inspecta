@@ -13,7 +13,10 @@ namespace Inspecta.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.TeamAccess)]
 [Route("api/v1/requests")]
 public sealed class RequestsController(
-    IInspectionRequestService requestService, IQuoteService quoteService, IRequestTimelineService timelineService) : ControllerBase
+    IInspectionRequestService requestService,
+    IQuoteService quoteService,
+    IRequestTimelineService timelineService,
+    IRequestTransferService transferService) : ControllerBase
 {
     /// <summary>List requests visible to the current user, newest first, one page at a time.</summary>
     /// <remarks>
@@ -129,6 +132,28 @@ public sealed class RequestsController(
         if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
         var timeline = await timelineService.GetAsync(requestId, actorId, role, cancellationToken);
         return timeline is null ? NotFound() : Ok(timeline);
+    }
+
+    /// <summary>Hand a request to another coordinator of the same team.</summary>
+    /// <remarks>
+    /// <c>coordinatorId</c> comes from <c>GET /team/coordinators</c>; <c>note</c> (optional, up to 500 characters) is added to the history entry
+    /// "Transferred from A to B". The status does not change. The coordinator that owns the request can do it until a quotation was sent
+    /// (<c>409 not_transferable</c> after that); the technical manager and the admin can do it at any time before the request is finished.
+    /// <c>403</c> for another coordinator, <c>404</c> for a request or coordinator of another team, <c>400</c> with <c>not_a_coordinator</c>,
+    /// <c>coordinator_inactive</c> or <c>same_coordinator</c>, <c>409 not_transferable</c> for a finished request or an email that is still a
+    /// "maybe". An email request then leaves the old coordinator's list and appears in the new one's; the answer is the request.
+    /// </remarks>
+    [HttpPost("{requestId:guid}/transfer")]
+    [Authorize(Policy = AuthorizationPolicies.TeamOperations)]
+    [ProducesResponseType<RequestResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<RequestResponse>> Transfer(Guid requestId, TransferRequest transfer, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await transferService.TransferAsync(requestId, actorId, role, transfer, cancellationToken));
     }
 
     /// <summary>Create an inspection request.</summary>

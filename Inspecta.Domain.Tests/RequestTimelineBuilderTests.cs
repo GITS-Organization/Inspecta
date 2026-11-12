@@ -162,6 +162,24 @@ public sealed class RequestTimelineBuilderTests
     }
 
     [Fact]
+    public void ATransferIsAnEventNamedAsSuchAndDoesNotChangeTheStages()
+    {
+        var request = NewRequest(
+            (null, JobStatus.RequestReceived, 0, null),
+            (JobStatus.RequestReceived, JobStatus.RequestReceived, 5, "Transferred from Mona to Hassan. Cranes are his."),
+            (JobStatus.RequestReceived, JobStatus.QuoteDraft, 30, null));
+
+        var timeline = RequestTimelineBuilder.Build(Sources(request), Start.AddDays(1));
+
+        var transfer = Assert.Single(timeline.Events, item => item.Title == "Request transferred");
+        Assert.Equal("status", transfer.Kind);
+        Assert.Contains("Mona to Hassan", transfer.Detail);
+        var quoting = timeline.Stages.Single(stage => stage.Key == "quoting");
+        Assert.Equal(Start, quoting.From);
+        Assert.True(quoting.InProgress);
+    }
+
+    [Fact]
     public void ARequestStillOpenCountsItsTotalUntilNow()
     {
         var request = NewRequest((null, JobStatus.RequestReceived, 0, null), (JobStatus.RequestReceived, JobStatus.QuoteDraft, 10, null));

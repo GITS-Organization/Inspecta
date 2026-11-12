@@ -623,6 +623,32 @@ public sealed class InspectionRequest
             Id, Status, Status, actorId, UpdatedAt, string.IsNullOrWhiteSpace(note) ? change : $"{change} {note.Trim()}"));
     }
 
+    /// <summary>Starts the note of the history entry that records a transfer; the timeline recognises it by this.</summary>
+    public const string TransferNotePrefix = "Transferred from ";
+
+    /// <summary>
+    /// Hands the request to another coordinator of the team. The status does not change; the history gets one entry (from and to the same
+    /// status, so it is an event and not a stage) that names both coordinators. Whether the caller may do it, and whether the target is a
+    /// coordinator of the same team, is the service's job: this only guards the request itself.
+    /// </summary>
+    public void TransferTo(Guid newCoordinatorId, Guid actorId, string fromName, string toName, string? note = null)
+    {
+        if (newCoordinatorId == Guid.Empty) throw new ArgumentException("The new coordinator is required.", nameof(newCoordinatorId));
+        if (actorId == Guid.Empty) throw new ArgumentException("Actor is required.", nameof(actorId));
+        if (newCoordinatorId == CoordinatorId)
+            throw new InvalidOperationException("The request already belongs to this coordinator.");
+        if (Triage == RequestTriage.Maybe)
+            throw new InvalidOperationException("Confirm the email as a request before transferring it.");
+        if (Status is JobStatus.SentToClient or JobStatus.QuoteRejected or JobStatus.ClientDeclined)
+            throw new InvalidOperationException("A finished request cannot be transferred.");
+
+        CoordinatorId = newCoordinatorId;
+        UpdatedAt = DateTimeOffset.UtcNow;
+        var text = $"{TransferNotePrefix}{fromName} to {toName}.";
+        History.Add(JobStatusHistory.Create(
+            Id, Status, Status, actorId, UpdatedAt, string.IsNullOrWhiteSpace(note) ? text : $"{text} {note.Trim()}"));
+    }
+
     public void TransitionTo(JobStatus nextStatus, Guid actorId, string? note = null)
     {
         if (actorId == Guid.Empty) throw new ArgumentException("Actor is required.", nameof(actorId));
