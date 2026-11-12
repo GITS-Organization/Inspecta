@@ -34,7 +34,8 @@ internal static class QuotationPdfModelFactory
             quote.GetScopeOfWork(),
             quote.GetNotes(),
             branding?.ToQuotationProfile(),
-            branding);
+            branding,
+            quote.DiscountPercent);
     }
 
     // "Mobile crane, Air receiver": the distinct item types in order.

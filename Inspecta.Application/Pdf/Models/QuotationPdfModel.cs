@@ -7,6 +7,7 @@ namespace Inspecta.Application.Pdf.Models;
 /// <param name="Subject">Short title of what is quoted, for example <c>Mobile crane, Air receiver</c>.</param>
 /// <param name="Company">Company details and fixed texts; the built-in company profile is used when empty.</param>
 /// <param name="Branding">The identity of the team's company (logo, colours); empty means the built-in one.</param>
+/// <param name="DiscountPercent">Percentage taken off the total of the lines; above 0 the budget table shows the discount and a new total under the total.</param>
 public sealed record QuotationPdfModel(
     string ProposalNumber,
     string QuotationNumber,
@@ -23,7 +24,8 @@ public sealed record QuotationPdfModel(
     IReadOnlyList<string> ScopeOfWork,
     IReadOnlyList<string> Notes,
     QuotationCompanyProfile? Company = null,
-    CompanyBranding? Branding = null);
+    CompanyBranding? Branding = null,
+    decimal DiscountPercent = 0);
 
 /// <summary>One line of the scope of work and budget tables.</summary>
 /// <param name="Type">Short name used in the numbered scope list, for example <c>Mobile crane</c>.</param>

@@ -97,6 +97,8 @@ public sealed class QuotesController(IQuoteService quoteService) : ControllerBas
     /// <summary>
     /// Save the draft: a price for every item of the request (each exactly once, prices may stay empty),
     /// validity, scope of work, notes and message. Only while the quotation is open and not sent.
+    /// <c>discountPercent</c> (0 to 100) is taken off the total of all lines, before VAT: leave it out to keep the current one, send 0 to remove it.
+    /// The answer has <c>subtotalPiastres</c>, <c>discountPercent</c>, <c>discountPiastres</c>, and <c>amountPiastres</c> is the total after the discount.
     /// </summary>
     [HttpPut("{quoteId:guid}")]
     [ProducesResponseType<QuoteResponse>(StatusCodes.Status200OK)]

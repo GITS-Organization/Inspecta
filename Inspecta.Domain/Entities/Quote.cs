@@ -239,14 +239,20 @@ public sealed class Quote
     public void SetDiscount(decimal percent)
     {
         EnsureEditable();
-        if (percent < 0m || percent > MaxDiscountPercent)
-            throw new ArgumentOutOfRangeException(nameof(percent), $"The discount must be between 0 and {MaxDiscountPercent} percent.");
-        if (decimal.Round(percent, 2) != percent)
-            throw new ArgumentException("The discount can have at most two decimals.", nameof(percent));
+        ValidateDiscount(percent);
 
         DiscountPercent = percent;
         Recalculate();
         UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>Checks a discount before anything else is changed: 0 to 100 percent, at most two decimals.</summary>
+    public static void ValidateDiscount(decimal percent)
+    {
+        if (percent < 0m || percent > MaxDiscountPercent)
+            throw new ArgumentOutOfRangeException(nameof(percent), $"The discount must be between 0 and {MaxDiscountPercent} percent.");
+        if (decimal.Round(percent, 2) != percent)
+            throw new ArgumentException("The discount can have at most two decimals.", nameof(percent));
     }
 
     // The subtotal follows the lines; the amount is the subtotal less the discount.

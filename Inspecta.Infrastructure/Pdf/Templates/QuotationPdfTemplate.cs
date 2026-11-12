@@ -1,6 +1,7 @@
 using System.Globalization;
 using Inspecta.Application.Pdf;
 using Inspecta.Application.Pdf.Models;
+using Inspecta.Domain.Entities;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -445,9 +446,36 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
                 }
 
                 var total = model.Items.Aggregate(0L, (sum, item) => checked(sum + (item.TotalPiastres ?? 0)));
-                table.Cell().ColumnSpan(4).Background(PdfTheme.Band).Padding(7).Text(string.Empty);
-                table.Cell().Background(PdfTheme.Band).PaddingVertical(7).AlignCenter().Text("Total").Bold();
-                table.Cell().Background(PdfTheme.Band).PaddingVertical(7).AlignCenter().Text(FormatMoney(total)).Bold();
+                if (model.DiscountPercent <= 0m)
+                {
+                    table.Cell().ColumnSpan(4).Background(PdfTheme.Band).Padding(7).Text(string.Empty);
+                    table.Cell().Background(PdfTheme.Band).PaddingVertical(7).AlignCenter().Text("Total").Bold();
+                    table.Cell().Background(PdfTheme.Band).PaddingVertical(7).AlignCenter().Text(FormatMoney(total)).Bold();
+                    return;
+                }
+
+                // With a discount: the total of the lines, the percentage taken off and what it comes to, then the new total. The labels
+                // span two columns because "Total after discount" does not fit the narrow Qty column. The discount is worked out by
+                // the same function as in the quotation, so the PDF and the screen show the same figures.
+                var discount = Quote.DiscountOf(total, model.DiscountPercent);
+                var percent = model.DiscountPercent.ToString("0.##", CultureInfo.InvariantCulture);
+
+                void SummaryRow(string label, string value, bool shaded, bool bold)
+                {
+                    IContainer Shade(IContainer cell) => shaded ? cell.Background(PdfTheme.Band) : cell;
+                    Shade(table.Cell().ColumnSpan(3)).Padding(7).Text(string.Empty);
+                    var labelText = Shade(table.Cell().ColumnSpan(2)).PaddingVertical(7).AlignCenter().Text(label);
+                    var valueText = Shade(table.Cell()).PaddingVertical(7).AlignCenter().Text(value);
+                    if (bold)
+                    {
+                        labelText.Bold();
+                        valueText.Bold();
+                    }
+                }
+
+                SummaryRow("Total", FormatMoney(total), shaded: true, bold: true);
+                SummaryRow($"Discount ({percent}%)", "- " + FormatMoney(discount), shaded: false, bold: false);
+                SummaryRow("Total after discount", FormatMoney(total - discount), shaded: true, bold: true);
             });
 
             column.Item().Background(PdfTheme.DarkGreen).CornerRadius(5).PaddingVertical(7).AlignCenter()

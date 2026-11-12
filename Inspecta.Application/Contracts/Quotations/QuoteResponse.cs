@@ -9,6 +9,8 @@ namespace Inspecta.Application.Contracts.Quotations;
 /// that block sending. <c>supersededAt</c> is set on a sent revision that a newer one (a counter offer) replaced.
 /// <c>emails</c> shows the PDF emails sent for it and whether they were delivered. <c>clientReplies</c> are the emails the client sent back to
 /// the current quotation since the last offer went out (they are cleared when the next one is sent).
+/// <c>subtotalPiastres</c> is the total of all lines, <c>discountPercent</c> the discount taken off it and <c>discountPiastres</c> its amount;
+/// <c>amountPiastres</c> is the total after the discount (the price of the quotation), equal to the subtotal when there is no discount.
 /// </remarks>
 public sealed record QuoteResponse(
     Guid Id,
@@ -36,7 +38,10 @@ public sealed record QuoteResponse(
     IReadOnlyList<QuoteEmailResponse>? Emails = null,
     string? ContactName = null,
     string? QuotationNumber = null,
-    IReadOnlyList<ClientReplyResponse>? ClientReplies = null);
+    IReadOnlyList<ClientReplyResponse>? ClientReplies = null,
+    long SubtotalPiastres = 0,
+    decimal DiscountPercent = 0,
+    long DiscountPiastres = 0);
 
 /// <summary>An email the client sent back as an answer to the quotation (it replies to the email we sent).</summary>
 /// <param name="Text">What the client wrote, without the quoted earlier mails and signatures.</param>

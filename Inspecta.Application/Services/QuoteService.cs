@@ -391,6 +391,9 @@ public sealed class QuoteService(
             previous?.GetNotes() ?? QuotationDefaults.StandardNotes,
             previous?.GetScopeOfWork(),
             validForDays);
+        // A revision starts from the previous discount, like prices and notes; the coordinator can change it.
+        if (previous is { DiscountPercent: > 0m })
+            quote.SetDiscount(previous.DiscountPercent);
         return quote;
     }
 
@@ -422,6 +425,8 @@ public sealed class QuoteService(
         if (request.Status != JobStatus.QuoteDraft)
             throw new InvalidOperationException("The request is not in the quote drafting stage.");
 
+        // Checked first, so a wrong discount changes nothing.
+        if (update.DiscountPercent is { } discount) Quote.ValidateDiscount(discount);
         var prices = MatchPricesToRequestItems(request, update.Items);
         var items = QuoteLines(request, item => prices[item.Id], update.ManDayPricePiastres);
         quote.SetDraftDetails(
@@ -433,6 +438,8 @@ public sealed class QuoteService(
             update.ScopeOfWork,
             update.ValidForDays,
             update.ContactName);
+        if (update.DiscountPercent is { } percent)
+            quote.SetDiscount(percent);
         if (update.ProposalNumber is not null)
             quote.SetProposalNumber(update.ProposalNumber);
 
@@ -792,6 +799,9 @@ public sealed class QuoteService(
                 .ToArray(),
             quote.ContactName,
             quote.QuotationNumber,
-            replies ?? []);
+            replies ?? [],
+            quote.SubtotalPiastres,
+            quote.DiscountPercent,
+            quote.DiscountPiastres);
     }
 }

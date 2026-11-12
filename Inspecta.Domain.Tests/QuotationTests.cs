@@ -608,6 +608,94 @@ public sealed class QuotationTests
         Assert.Equal(first.Notes, revision.Notes);
     }
 
+    // ---- the discount ----
+
+    [Fact]
+    public async Task TheDiscountIsSavedWithTheDraftAndShownInTheResponse()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        var plain = await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+
+        var discounted = await fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { DiscountPercent = 10m });
+
+        Assert.Equal(0m, plain.DiscountPercent);
+        Assert.Equal(plain.AmountPiastres, plain.SubtotalPiastres);
+        Assert.Equal(0, plain.DiscountPiastres);
+        Assert.Equal(plain.AmountPiastres, discounted.SubtotalPiastres);
+        Assert.Equal(10m, discounted.DiscountPercent);
+        Assert.True(discounted.DiscountPiastres > 0);
+        Assert.Equal(Quote.DiscountOf(plain.AmountPiastres, 10m), discounted.DiscountPiastres);
+        Assert.Equal(discounted.SubtotalPiastres - discounted.DiscountPiastres, discounted.AmountPiastres);
+    }
+
+    [Fact]
+    public async Task LeavingTheDiscountOutKeepsItAndZeroTakesItOff()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { DiscountPercent = 10m });
+
+        var kept = await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_300_000, 850_000));
+        var removed = await fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_300_000, 850_000) with { DiscountPercent = 0m });
+
+        Assert.Equal(10m, kept.DiscountPercent);
+        Assert.Equal(kept.SubtotalPiastres - Quote.DiscountOf(kept.SubtotalPiastres, 10m), kept.AmountPiastres);
+        Assert.Equal(0m, removed.DiscountPercent);
+        Assert.Equal(removed.SubtotalPiastres, removed.AmountPiastres);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(100.5)]
+    [InlineData(10.123)]
+    public async Task ADiscountOutsideTheRulesIsRefusedAndNothingIsChanged(double percent)
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        var before = await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 2_000_000, 850_000) with { DiscountPercent = (decimal)percent }));
+
+        var after = await fixture.Service.GetAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+        Assert.Equal(before.AmountPiastres, after.AmountPiastres);
+        Assert.Equal(0m, after.DiscountPercent);
+    }
+
+    [Fact]
+    public async Task ANewRevisionStartsWithThePreviousDiscount()
+    {
+        var fixture = new Fixture();
+        var first = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(
+            fixture.Request.Id, first.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { DiscountPercent = 15m });
+        await fixture.Service.SendAsync(fixture.Request.Id, first.Id, CoordinatorId, "coordinator");
+
+        var revision = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+
+        Assert.Equal(15m, revision.DiscountPercent);
+        Assert.Equal(revision.SubtotalPiastres - Quote.DiscountOf(revision.SubtotalPiastres, 15m), revision.AmountPiastres);
+    }
+
+    [Fact]
+    public async Task ADiscountedQuotationCanBeSentWithItsDiscountedTotal()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        var saved = await fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { DiscountPercent = 20m });
+
+        var sent = await fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+
+        Assert.Equal(saved.AmountPiastres, sent.AmountPiastres);
+        Assert.Equal(20m, sent.DiscountPercent);
+        Assert.NotNull(sent.SentAt);
+    }
+
     [Fact]
     public async Task ThePdfModelCarriesTheCoverDataSubjectAndPreparer()
     {
@@ -628,6 +716,22 @@ public sealed class QuotationTests
         Assert.Equal(QuotationDefaults.StandardNotes, model.Notes);
         Assert.Equal(["Mobile crane", "Air receiver"], model.Items.Select(item => item.Type));
         Assert.Null(model.Company);
+    }
+
+    [Fact]
+    public async Task ThePdfModelCarriesTheDiscountPercentageOrZero()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+        await fixture.Service.GetPdfAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+        Assert.Equal(0m, fixture.Pdf.LastModel!.DiscountPercent);
+
+        await fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { DiscountPercent = 12.5m });
+        await fixture.Service.GetPdfAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+
+        Assert.Equal(12.5m, fixture.Pdf.LastModel!.DiscountPercent);
     }
 
     [Fact]

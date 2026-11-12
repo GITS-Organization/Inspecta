@@ -37,6 +37,23 @@ public sealed class PdfInfrastructureTests
         Assert.True(file.Content.Length < 1_000_000, $"The PDF is {file.Content.Length} bytes.");
     }
 
+    [Theory]
+    [InlineData(10)]
+    [InlineData(12.5)]
+    [InlineData(100)]
+    public void ADiscountedQuotationRendersAValidPdfWithTheSamePageCount(double percent)
+    {
+        using var provider = BuildProvider();
+        var generator = provider.GetRequiredService<IPdfGenerator>();
+        var plain = generator.Generate(Model("INT/417/2026 rev01", "Delta Steel Co."));
+
+        var discounted = generator.Generate(Model("INT/417/2026 rev01", "Delta Steel Co.") with { DiscountPercent = (decimal)percent });
+
+        Assert.Equal("%PDF-", Encoding.ASCII.GetString(discounted.Content, 0, 5));
+        Assert.Equal(PageCount(plain.Content), PageCount(discounted.Content));
+        Assert.NotEqual(plain.Content.Length, discounted.Content.Length);
+    }
+
     [Fact]
     public void ManyItemsAndNotesFlowOntoExtraPagesInsteadOfFailing()
     {
