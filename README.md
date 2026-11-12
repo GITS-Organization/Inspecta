@@ -2,6 +2,8 @@
 
 ASP.NET Core 8 REST API for Inspecta. This repository contains the backend only; web or mobile clients consume the API over HTTP.
 
+The rules that keep many companies (tenants) safe in one API, and the tests that enforce each one, are in [docs/engineering-rules.md](docs/engineering-rules.md).
+
 ## API documentation
 
 - Swagger UI: `/swagger`
