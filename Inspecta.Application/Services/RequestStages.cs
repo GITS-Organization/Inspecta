@@ -33,7 +33,7 @@ public static class RequestStages
         static DateTimeOffset? Earliest(params DateTimeOffset?[] times) => times.Where(time => time is not null).Min();
 
         var startedAt = First(JobStatus.RequestReceived) ?? changes.Select(entry => (DateTimeOffset?)entry.At).FirstOrDefault();
-        var quotingApplies = changes.Any(entry => entry.To is JobStatus.QuoteDraft or JobStatus.QuoteSent or JobStatus.CounterOfferSent);
+        var hadQuotation = changes.Any(entry => entry.To is JobStatus.QuoteDraft or JobStatus.QuoteSent or JobStatus.CounterOfferSent);
         var firstOffer = First(JobStatus.QuoteSent, JobStatus.CounterOfferSent);
         var turnedDown = First(JobStatus.QuoteRejected, JobStatus.ClientDeclined);
         var accepted = First(JobStatus.Unassigned);
@@ -44,14 +44,20 @@ public static class RequestStages
         var sent = First(JobStatus.SentToClient);
         var finishedAt = sent ?? turnedDown;
 
-        var offers = changes.Count(entry => entry.To is JobStatus.QuoteSent or JobStatus.CounterOfferSent);
+        // The job went straight to an inspector or to inspection (man day, contract client, direct certificate): there was no quotation.
+        // A request that has only been received has not skipped anything yet, so its quoting stage is the one running.
+        var skippedQuotation = !hadQuotation && accepted is null && (firstAssigned is not null || inspectionStarted is not null);
+        var quotingApplies = !skippedQuotation && startedAt is not null;
+
+        // A new offer always comes through a draft; going back from "client answered" to "sent" only dismisses the client's reply.
+        var offers = changes.Count(entry => entry.To is JobStatus.QuoteSent or JobStatus.CounterOfferSent && entry.From != JobStatus.ClientCountered);
         var returned = changes.Count(entry => entry.To == JobStatus.CertificateReturned);
 
         var bounds = new (DateTimeOffset? From, DateTimeOffset? To, int Repeats)[]
         {
             (quotingApplies ? startedAt : null, quotingApplies ? Earliest(firstOffer, turnedDown) : null, 0),
             (firstOffer, firstOffer is null ? null : Earliest(accepted, turnedDown), Math.Max(0, offers - 1)),
-            (accepted ?? (quotingApplies ? null : startedAt), firstAssigned, 0),
+            (accepted ?? (skippedQuotation && firstAssigned is not null ? startedAt : null), firstAssigned, 0),
             (firstAssigned, inspectionStarted, 0),
             (inspectionStarted, submitted, 0),
             (submitted, approved, returned),

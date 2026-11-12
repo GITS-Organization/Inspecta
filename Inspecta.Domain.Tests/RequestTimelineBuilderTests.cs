@@ -110,7 +110,8 @@ public sealed class RequestTimelineBuilderTests
             (JobStatus.RequestReceived, JobStatus.QuoteDraft, 1, null),
             (JobStatus.QuoteDraft, JobStatus.QuoteSent, 2, null),
             (JobStatus.QuoteSent, JobStatus.ClientCountered, 3, null),
-            (JobStatus.ClientCountered, JobStatus.CounterOfferSent, 4, null),
+            (JobStatus.ClientCountered, JobStatus.QuoteDraft, 3, null),
+            (JobStatus.QuoteDraft, JobStatus.CounterOfferSent, 4, null),
             (JobStatus.CounterOfferSent, JobStatus.Unassigned, 5, null),
             (JobStatus.Unassigned, JobStatus.Assigned, 6, null),
             (JobStatus.Assigned, JobStatus.Assigned, 7, "Inspection date changed from 2026-11-03 to 2026-11-04."),
@@ -130,6 +131,34 @@ public sealed class RequestTimelineBuilderTests
         Assert.Equal(1, counters.CounterOffers);
         Assert.Equal(2, counters.CertificatesReturned);
         Assert.Equal(2, counters.InspectorChanges);
+    }
+
+    [Fact]
+    public void ThePlaceholderQuotationOfAManDayJobIsNotAnOfferOrAnAnswer()
+    {
+        var request = NewRequest((null, JobStatus.RequestReceived, 0, null), (JobStatus.RequestReceived, JobStatus.Assigned, 0, null));
+        var placeholder = Quote.CreateAccepted(request.Id, Coordinator, "MD");
+
+        var timeline = RequestTimelineBuilder.Build(Sources(request, [placeholder]), Start.AddHours(1));
+
+        Assert.DoesNotContain(timeline.Events, item => item.Kind == "quotation");
+        Assert.Equal("Request received", timeline.Events[0].Title);
+    }
+
+    [Fact]
+    public void DismissingTheClientsReplyIsShownAsThatAndNotCountedAsACounterOffer()
+    {
+        var request = NewRequest(
+            (null, JobStatus.RequestReceived, 0, null),
+            (JobStatus.RequestReceived, JobStatus.QuoteDraft, 1, null),
+            (JobStatus.QuoteDraft, JobStatus.CounterOfferSent, 2, null),
+            (JobStatus.CounterOfferSent, JobStatus.ClientCountered, 3, null),
+            (JobStatus.ClientCountered, JobStatus.CounterOfferSent, 4, "The client's reply was dismissed."));
+
+        var timeline = RequestTimelineBuilder.Build(Sources(request), Start.AddDays(1));
+
+        Assert.Equal(1, timeline.Counters.CounterOffers);
+        Assert.Contains(timeline.Events, item => item.Title.StartsWith("Client's reply dismissed"));
     }
 
     [Fact]

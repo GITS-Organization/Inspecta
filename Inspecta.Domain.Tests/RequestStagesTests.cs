@@ -58,7 +58,8 @@ public sealed class RequestStagesTests
             At(JobStatus.ClientCountered, JobStatus.QuoteDraft, 210),
             At(JobStatus.QuoteDraft, JobStatus.CounterOfferSent, 230),
             At(JobStatus.CounterOfferSent, JobStatus.ClientCountered, 300),
-            At(JobStatus.ClientCountered, JobStatus.CounterOfferSent, 320),
+            At(JobStatus.ClientCountered, JobStatus.QuoteDraft, 310),
+            At(JobStatus.QuoteDraft, JobStatus.CounterOfferSent, 320),
             At(JobStatus.CounterOfferSent, JobStatus.Unassigned, 500));
 
         var decision = Of(result, "client_decision");
@@ -170,6 +171,73 @@ public sealed class RequestStagesTests
             At(JobStatus.QuoteDraft, JobStatus.QuoteSent, 90));
 
         Assert.Equal(plain.Stages, edited.Stages);
+    }
+
+    [Fact]
+    public void AQuotationStillBeingPreparedIsTheRunningStageAndNothingThrows()
+    {
+        var result = Stages(Start.AddMinutes(100),
+            At(null, JobStatus.RequestReceived, 0),
+            At(JobStatus.RequestReceived, JobStatus.QuoteDraft, 10));
+
+        var quoting = Of(result, "quoting");
+
+        Assert.True(quoting.InProgress);
+        Assert.Null(quoting.To);
+        Assert.Equal(100 * 60, quoting.Seconds);
+        Assert.Null(Of(result, "client_decision").From);
+    }
+
+    [Fact]
+    public void ARequestOnlyReceivedIsWaitingForItsQuotationNotForAnInspector()
+    {
+        var result = Stages(Start.AddMinutes(50), At(null, JobStatus.RequestReceived, 0));
+
+        Assert.True(Of(result, "quoting").InProgress);
+        Assert.Equal(50 * 60, Of(result, "quoting").Seconds);
+        Assert.Null(Of(result, "scheduling").From);
+        Assert.Single(result.Stages, stage => stage.InProgress);
+    }
+
+    [Fact]
+    public void ADirectCertificateSkipsQuotingAndSchedulingCompletely()
+    {
+        var result = Stages(Start.AddDays(1),
+            At(null, JobStatus.RequestReceived, 0),
+            At(JobStatus.RequestReceived, JobStatus.InProgress, 5));
+
+        Assert.All(new[] { "quoting", "client_decision", "scheduling", "waiting_to_start" }, key =>
+        {
+            Assert.Null(Of(result, key).From);
+            Assert.Null(Of(result, key).Seconds);
+        });
+        Assert.True(Of(result, "inspection").InProgress);
+    }
+
+    [Fact]
+    public void ARequestTurnedDownAtIntakeEndsInQuotingWithNothingElse()
+    {
+        var result = Stages(Start.AddDays(1),
+            At(null, JobStatus.RequestReceived, 0),
+            At(JobStatus.RequestReceived, JobStatus.QuoteRejected, 20, "Not needed"));
+
+        Assert.Equal(20 * 60, Of(result, "quoting").Seconds);
+        Assert.Null(Of(result, "scheduling").From);
+        Assert.Equal(Start.AddMinutes(20), result.FinishedAt);
+        Assert.DoesNotContain(result.Stages, stage => stage.InProgress);
+    }
+
+    [Fact]
+    public void DismissingTheClientsReplyIsNotAnotherOffer()
+    {
+        var result = Stages(Start.AddDays(1),
+            At(null, JobStatus.RequestReceived, 0),
+            At(JobStatus.RequestReceived, JobStatus.QuoteDraft, 5),
+            At(JobStatus.QuoteDraft, JobStatus.QuoteSent, 10),
+            At(JobStatus.QuoteSent, JobStatus.ClientCountered, 20),
+            At(JobStatus.ClientCountered, JobStatus.QuoteSent, 30, "The client's reply was dismissed."));
+
+        Assert.Equal(0, Of(result, "client_decision").Repeats);
     }
 
     [Fact]

@@ -27,7 +27,8 @@ public static class RequestTimelineBuilder
 
     public static RequestTimelineResponse Build(RequestTimelineSources sources, DateTimeOffset now)
     {
-        var history = sources.Request.History.OrderBy(entry => entry.OccurredAt)
+        // Entries written in the same moment (a man day: received, then assigned) keep their natural order: the first has no earlier status.
+        var history = sources.Request.History.OrderBy(entry => entry.OccurredAt).ThenBy(entry => entry.FromStatus is null ? 0 : 1)
             .Select(entry => new RequestHistoryResponse(entry.FromStatus, entry.ToStatus, entry.ActorId, entry.OccurredAt, entry.Note))
             .ToArray();
         var stages = RequestStages.Calculate(history, now);
@@ -38,7 +39,7 @@ public static class RequestTimelineBuilder
         {
             var item = FromHistory(entry);
             raw.Add(item);
-            if (entry.To is JobStatus.QuoteSent or JobStatus.CounterOfferSent && entry.From != entry.To) offerEvents.Add(item);
+            if (IsNewOffer(entry)) offerEvents.Add(item);
         }
 
         AddQuotations(sources, raw, offerEvents);
@@ -94,6 +95,9 @@ public static class RequestTimelineBuilder
         var unmatched = offerEvents.ToList();
         foreach (var quote in sources.Quotes.OrderBy(quote => quote.Version))
         {
+            // A man day, contract or direct certificate job carries a placeholder quotation (price 0, sent and answered at creation): nothing was offered.
+            if (quote.AmountPiastres == 0 && quote.SentAt is { } created && quote.ClientRespondedAt == created) continue;
+
             if (quote.Version > 1)
                 raw.Add(new Raw(quote.CreatedAt, "quotation", $"Quotation revision {quote.Version} created", null, quote.CreatedBy));
 
@@ -118,7 +122,13 @@ public static class RequestTimelineBuilder
             if (quote.ClientRespondedAt is { } respondedAt)
             {
                 var detail = quote.ClientCounterPricePiastres is { } counter ? $"Client counter price {Money(counter)}" : null;
-                raw.Add(new Raw(respondedAt, "quotation", $"Client answered quotation revision {quote.Version}", detail, null));
+                var title = quote.Status switch
+                {
+                    QuoteStatus.Accepted => $"Quotation revision {quote.Version} accepted",
+                    QuoteStatus.Rejected => $"Quotation revision {quote.Version} turned down",
+                    _ => $"Client answered quotation revision {quote.Version}"
+                };
+                raw.Add(new Raw(respondedAt, "quotation", title, detail, null));
             }
 
             if (quote.LastReminderAt is { } reminderAt)
@@ -130,10 +140,16 @@ public static class RequestTimelineBuilder
     {
         if (IsInspectorChange(entry))
             return new Raw(entry.At, "status", "Job handed to another inspector", entry.Note, entry.ActorId);
+        if (entry.From == JobStatus.ClientCountered && entry.To is JobStatus.QuoteSent or JobStatus.CounterOfferSent)
+            return new Raw(entry.At, "status", "Client's reply dismissed, still waiting for the client", entry.Note, entry.ActorId);
         if (entry.From == entry.To)
             return new Raw(entry.At, "edit", string.IsNullOrWhiteSpace(entry.Note) ? "Request edited" : entry.Note!, null, entry.ActorId);
         return new Raw(entry.At, "status", Describe(entry.To), entry.Note, entry.ActorId);
     }
+
+    // A new offer always comes through a draft; going from "client answered" straight back to "sent" only dismisses the client's reply.
+    private static bool IsNewOffer(RequestHistoryResponse entry) =>
+        entry.To is JobStatus.QuoteSent or JobStatus.CounterOfferSent && entry.From != entry.To && entry.From != JobStatus.ClientCountered;
 
     private static bool IsInspectorChange(RequestHistoryResponse entry) =>
         entry.To == JobStatus.Assigned &&
@@ -142,7 +158,7 @@ public static class RequestTimelineBuilder
 
     private static TimelineCounters Counters(RequestTimelineSources sources, IReadOnlyList<RequestHistoryResponse> history) => new(
         QuoteRevisions: sources.Quotes.Count(quote => quote.Version > 1),
-        CounterOffers: history.Count(entry => entry.To == JobStatus.CounterOfferSent && entry.From != entry.To),
+        CounterOffers: history.Count(entry => entry.To == JobStatus.CounterOfferSent && IsNewOffer(entry)),
         CertificatesReturned: history.Count(entry => entry.To == JobStatus.CertificateReturned),
         InspectorChanges: history.Count(IsInspectorChange));
 
