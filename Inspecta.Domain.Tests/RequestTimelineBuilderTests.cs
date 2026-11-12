@@ -180,6 +180,21 @@ public sealed class RequestTimelineBuilderTests
     }
 
     [Fact]
+    public void ATransferOfAnAssignedJobIsNotCountedAsAnInspectorChange()
+    {
+        var request = NewRequest(
+            (null, JobStatus.RequestReceived, 0, null),
+            (JobStatus.RequestReceived, JobStatus.Assigned, 1, null),
+            (JobStatus.Assigned, JobStatus.Assigned, 5, "Transferred from Mona to Hassan."));
+
+        var timeline = RequestTimelineBuilder.Build(Sources(request), Start.AddDays(1));
+
+        Assert.Equal(0, timeline.Counters.InspectorChanges);
+        Assert.Contains(timeline.Events, item => item.Title == "Request transferred");
+        Assert.DoesNotContain(timeline.Events, item => item.Title == "Job handed to another inspector");
+    }
+
+    [Fact]
     public void ARequestStillOpenCountsItsTotalUntilNow()
     {
         var request = NewRequest((null, JobStatus.RequestReceived, 0, null), (JobStatus.RequestReceived, JobStatus.QuoteDraft, 10, null));

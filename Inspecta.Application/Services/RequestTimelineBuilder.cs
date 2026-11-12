@@ -96,7 +96,7 @@ public static class RequestTimelineBuilder
         foreach (var quote in sources.Quotes.OrderBy(quote => quote.Version))
         {
             // A man day, contract or direct certificate job carries a placeholder quotation (price 0, sent and answered at creation): nothing was offered.
-            if (quote.AmountPiastres == 0 && quote.SentAt is { } created && quote.ClientRespondedAt == created) continue;
+            if (quote.IsPlaceholder) continue;
 
             if (quote.Version > 1)
                 raw.Add(new Raw(quote.CreatedAt, "quotation", $"Quotation revision {quote.Version} created", null, quote.CreatedBy));
@@ -156,7 +156,9 @@ public static class RequestTimelineBuilder
     private static bool IsInspectorChange(RequestHistoryResponse entry) =>
         entry.To == JobStatus.Assigned &&
         (entry.From == JobStatus.TaskAccepted ||
-         entry.From == JobStatus.Assigned && entry.Note?.StartsWith("Inspection date changed", StringComparison.Ordinal) != true);
+         entry.From == JobStatus.Assigned &&
+         entry.Note?.StartsWith("Inspection date changed", StringComparison.Ordinal) != true &&
+         entry.Note?.StartsWith(InspectionRequest.TransferNotePrefix, StringComparison.Ordinal) != true);
 
     private static TimelineCounters Counters(RequestTimelineSources sources, IReadOnlyList<RequestHistoryResponse> history) => new(
         QuoteRevisions: sources.Quotes.Count(quote => quote.Version > 1),

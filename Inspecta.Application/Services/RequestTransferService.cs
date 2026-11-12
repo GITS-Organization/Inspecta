@@ -23,7 +23,7 @@ public sealed class RequestTransferService(
         {
             if (request.CoordinatorId != actorId)
                 throw new AuthException("forbidden", "Only the coordinator that owns the request can transfer it.", 403);
-            if ((await quoteRepository.ListForRequestAsync(requestId, cancellationToken)).Any(quote => quote.SentAt is not null))
+            if ((await quoteRepository.ListForRequestAsync(requestId, cancellationToken)).Any(quote => quote.SentAt is not null && !quote.IsPlaceholder))
                 throw new AuthException(
                     "not_transferable", "A quotation was already sent from the current coordinator's mailbox, so the request stays with them. Ask the technical manager.", 409);
         }

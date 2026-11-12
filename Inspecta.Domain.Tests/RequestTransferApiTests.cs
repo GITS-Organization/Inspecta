@@ -127,6 +127,20 @@ public sealed class RequestTransferApiTests : IClassFixture<ApiHttpTests.Api>
     }
 
     [Fact]
+    public async Task ThePlaceholderQuotationOfAManDayOrContractJobDoesNotCountAsASentQuotation()
+    {
+        var owner = Coordinator();
+        var target = Coordinator();
+        var request = SeedEmailRequest(owner);
+        api.SeedAs(db => db.Quotes.Add(Quote.CreateAccepted(request.Id, owner.Id, "CT")));
+        var client = await SignedInAs(owner.Email);
+
+        var response = await Transfer(client, request.Id, target.Id);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
     public async Task TheTargetMustBeAnActiveCoordinatorOfTheSameTeamAndNotTheOwner()
     {
         var owner = Coordinator();

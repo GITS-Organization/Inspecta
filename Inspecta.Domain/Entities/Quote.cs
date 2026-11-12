@@ -94,6 +94,12 @@ public sealed class Quote
 
     public bool IsSent => SentAt is not null;
 
+    /// <summary>
+    /// The placeholder of a job that never had a quotation (man day, contract client, direct certificate; see <see cref="CreateAccepted"/>):
+    /// it is stamped as sent and answered at creation but has no items and nothing was ever emailed. A real sent quotation always has items.
+    /// </summary>
+    public bool IsPlaceholder => SentAt is not null && GetItems().Count == 0;
+
     /// <summary>The latest revision; older sent revisions are kept as history.</summary>
     public bool IsCurrent => SupersededAt is null;
 
