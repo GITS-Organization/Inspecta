@@ -41,7 +41,10 @@ public sealed record QuoteResponse(
     IReadOnlyList<ClientReplyResponse>? ClientReplies = null,
     long SubtotalPiastres = 0,
     decimal DiscountPercent = 0,
-    long DiscountPiastres = 0);
+    long DiscountPiastres = 0,
+    decimal VatPercent = 0,
+    long VatPiastres = 0,
+    long TotalWithVatPiastres = 0);
 
 /// <summary>An email the client sent back as an answer to the quotation (it replies to the email we sent).</summary>
 /// <param name="Text">What the client wrote, without the quoted earlier mails and signatures.</param>

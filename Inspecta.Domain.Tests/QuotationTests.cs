@@ -681,6 +681,105 @@ public sealed class QuotationTests
         Assert.Equal(revision.SubtotalPiastres - Quote.DiscountOf(revision.SubtotalPiastres, 15m), revision.AmountPiastres);
     }
 
+    // ---- the VAT ----
+
+    [Fact]
+    public async Task TheVatIsFourteenPercentByDefaultAndShownInTheResponseAfterTheDiscount()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+
+        var saved = await fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { DiscountPercent = 10m });
+
+        Assert.Equal(14m, saved.VatPercent);
+        Assert.Equal(Quote.VatOf(saved.AmountPiastres, 14m), saved.VatPiastres);
+        Assert.Equal(saved.AmountPiastres + saved.VatPiastres, saved.TotalWithVatPiastres);
+    }
+
+    [Fact]
+    public async Task LeavingTheVatOutKeepsItAndZeroTakesItOffWithoutTouchingTheAmount()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        var changed = await fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { VatPercent = 5m });
+
+        var kept = await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+        var removed = await fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { VatPercent = 0m });
+
+        Assert.Equal(5m, kept.VatPercent);
+        Assert.Equal(0m, removed.VatPercent);
+        Assert.Equal(0, removed.VatPiastres);
+        Assert.Equal(removed.AmountPiastres, removed.TotalWithVatPiastres);
+        Assert.Equal(changed.AmountPiastres, removed.AmountPiastres);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(100.5)]
+    [InlineData(14.123)]
+    public async Task AVatOutsideTheRulesIsRefusedAndNothingIsChanged(double percent)
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        var before = await fixture.Service.UpdateAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 2_000_000, 850_000) with { VatPercent = (decimal)percent }));
+
+        var after = await fixture.Service.GetAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+        Assert.Equal(before.AmountPiastres, after.AmountPiastres);
+        Assert.Equal(14m, after.VatPercent);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(5)]
+    public async Task ANewRevisionStartsWithThePreviousVat(double percent)
+    {
+        var fixture = new Fixture();
+        var first = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(
+            fixture.Request.Id, first.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { VatPercent = (decimal)percent });
+        await fixture.Service.SendAsync(fixture.Request.Id, first.Id, CoordinatorId, "coordinator");
+
+        var revision = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+
+        Assert.Equal((decimal)percent, revision.VatPercent);
+    }
+
+    [Fact]
+    public async Task TheEmailStatesTheTotalAfterTheDiscountAndTheVatWhenItIsOn()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        var saved = await fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { DiscountPercent = 10m });
+
+        await fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+
+        var body = Assert.Single(fixture.Sender.Sent).BodyText;
+        Assert.Contains($"Total after discount: {saved.AmountPiastres / 100m:N2} EGP", body, StringComparison.Ordinal);
+        Assert.Contains($"VAT (14%): {saved.VatPiastres / 100m:N2} EGP", body, StringComparison.Ordinal);
+        Assert.Contains($"Total including VAT: {saved.TotalWithVatPiastres / 100m:N2} EGP", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TheEmailMentionsNoVatWhenItIsOff()
+    {
+        var fixture = new Fixture();
+        var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { VatPercent = 0m });
+
+        await fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
+
+        var body = Assert.Single(fixture.Sender.Sent).BodyText;
+        Assert.DoesNotContain("VAT", body, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ADiscountedQuotationCanBeSentWithItsDiscountedTotal()
     {

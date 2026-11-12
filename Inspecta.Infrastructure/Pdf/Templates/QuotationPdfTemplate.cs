@@ -446,7 +446,7 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
                 }
 
                 var total = model.Items.Aggregate(0L, (sum, item) => checked(sum + (item.TotalPiastres ?? 0)));
-                if (model.DiscountPercent <= 0m)
+                if (model.DiscountPercent <= 0m && model.VatPercent <= 0m)
                 {
                     table.Cell().ColumnSpan(4).Background(PdfTheme.Band).Padding(7).Text(string.Empty);
                     table.Cell().Background(PdfTheme.Band).PaddingVertical(7).AlignCenter().Text("Total").Bold();
@@ -474,13 +474,20 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
                 }
 
                 SummaryRow("Total", FormatMoney(total), shaded: true, bold: true);
-                SummaryRow($"Discount ({percent}%)", "- " + FormatMoney(discount), shaded: false, bold: false);
-                SummaryRow("Total after discount", FormatMoney(total - discount), shaded: true, bold: true);
-            });
+                if (model.DiscountPercent > 0m)
+                {
+                    SummaryRow($"Discount ({percent}%)", "- " + FormatMoney(discount), shaded: false, bold: false);
+                    SummaryRow("Total after discount", FormatMoney(total - discount), shaded: true, bold: true);
+                }
 
-            column.Item().Background(PdfTheme.DarkGreen).CornerRadius(5).PaddingVertical(7).AlignCenter()
-                .Text($"{QuotationDefaults.VatRatePercent}% VAT will be added")
-                .Bold().FontColor(PdfTheme.White);
+                // The VAT is optional (0 leaves it out). It is on the total after the discount, by the same function as in the quotation.
+                if (model.VatPercent > 0m)
+                {
+                    var vat = Quote.VatOf(total - discount, model.VatPercent);
+                    SummaryRow($"VAT ({model.VatPercent.ToString("0.##", CultureInfo.InvariantCulture)}%)", FormatMoney(vat), shaded: false, bold: false);
+                    SummaryRow("Total including VAT", FormatMoney(total - discount + vat), shaded: true, bold: true);
+                }
+            });
 
             var notes = model.Notes.Append(QuotationDefaults.ValidityNote(model.ValidForDays)).ToList();
             column.Item().PaddingTop(8).Element(content => ComposeNotes(content, notes));

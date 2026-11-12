@@ -36,6 +36,13 @@ public sealed record UpdateQuoteRequest
     public decimal? DiscountPercent { get; init; }
 
     /// <summary>
+    /// VAT in percent of the total after the discount, 0 to 100 with at most two decimals. New quotations start with 14. Send <c>0</c> to
+    /// leave the VAT out; leave the field out to keep the current one.
+    /// </summary>
+    [Range(typeof(decimal), "0", "100")]
+    public decimal? VatPercent { get; init; }
+
+    /// <summary>
     /// Reference printed on the document and in the email, for example <c>INT/417/2026 rev01</c>. Leave empty to keep
     /// the current one (generated as <c>QT-year-code revNN</c>).
     /// </summary>

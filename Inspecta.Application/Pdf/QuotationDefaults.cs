@@ -3,7 +3,6 @@ namespace Inspecta.Application.Pdf;
 /// <summary>Fixed values of the quotation that are not entered per quotation.</summary>
 public static class QuotationDefaults
 {
-    public const int VatRatePercent = 14;
     public const string UnitOfMeasure = "AU";
     public const string PreparedByTitle = "Coordinator";
 

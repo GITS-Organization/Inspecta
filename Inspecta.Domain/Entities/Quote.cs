@@ -37,6 +37,24 @@ public sealed class Quote
 
     public const decimal MaxDiscountPercent = 100m;
 
+    /// <summary>The VAT a new quotation starts with. The coordinator can change it or switch it off (0).</summary>
+    public const decimal DefaultVatPercent = 14m;
+
+    public const decimal MaxVatPercent = 100m;
+
+    /// <summary>VAT in percent of <see cref="AmountPiastres"/> (the total after the discount), 0 to 100 with at most two decimals. 0 means no VAT.</summary>
+    public decimal VatPercent { get; private set; } = DefaultVatPercent;
+
+    /// <summary>The VAT amount, rounded to the piastre. <see cref="AmountPiastres"/> itself stays before VAT.</summary>
+    public long VatPiastres => VatOf(AmountPiastres, VatPercent);
+
+    /// <summary>What the client pays with the VAT: the amount plus the VAT.</summary>
+    public long TotalWithVatPiastres => AmountPiastres + VatPiastres;
+
+    /// <summary>The VAT on an amount: <c>amount x percent / 100</c> rounded to the nearest piastre, a half going up.</summary>
+    public static long VatOf(long amountPiastres, decimal percent) =>
+        (long)Math.Round(amountPiastres * percent / 100m, 0, MidpointRounding.AwayFromZero);
+
     /// <summary>
     /// The discount on a subtotal: <c>subtotal x percent / 100</c> rounded to the nearest piastre, a half going up. The one place
     /// this is worked out, so the quotation, its response and its PDF show the same number.
@@ -174,6 +192,7 @@ public sealed class Quote
             RequestNumber = $"{number} rev01",
             AmountPiastres = 0,
             SubtotalPiastres = 0,
+            VatPercent = 0m,
             ValidUntil = now.AddDays(DefaultValidForDays),
             Type = QuoteType.Offer,
             Status = QuoteStatus.Accepted,
@@ -253,6 +272,25 @@ public sealed class Quote
             throw new ArgumentOutOfRangeException(nameof(percent), $"The discount must be between 0 and {MaxDiscountPercent} percent.");
         if (decimal.Round(percent, 2) != percent)
             throw new ArgumentException("The discount can have at most two decimals.", nameof(percent));
+    }
+
+    /// <summary>Sets the VAT in percent (0 switches it off). Only while the quotation is a draft; the amount before VAT does not change.</summary>
+    public void SetVat(decimal percent)
+    {
+        EnsureEditable();
+        ValidateVat(percent);
+
+        VatPercent = percent;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>Checks a VAT before anything else is changed: 0 to 100 percent, at most two decimals.</summary>
+    public static void ValidateVat(decimal percent)
+    {
+        if (percent < 0m || percent > MaxVatPercent)
+            throw new ArgumentOutOfRangeException(nameof(percent), $"The VAT must be between 0 and {MaxVatPercent} percent.");
+        if (decimal.Round(percent, 2) != percent)
+            throw new ArgumentException("The VAT can have at most two decimals.", nameof(percent));
     }
 
     // The subtotal follows the lines; the amount is the subtotal less the discount.

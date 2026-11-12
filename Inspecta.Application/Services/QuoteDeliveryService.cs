@@ -243,7 +243,24 @@ public sealed class QuoteDeliveryService(
         foreach (var item in quote.GetItems())
             body.AppendLine($"- {item.Description ?? item.Type} x {item.Quantity.ToString(CultureInfo.InvariantCulture)}");
         body.AppendLine();
-        body.AppendLine($"Total (excluding VAT): {(quote.ItemsTotalPiastres / 100m).ToString("N2", CultureInfo.InvariantCulture)} EGP");
+        string Egp(long piastres) => $"{(piastres / 100m).ToString("N2", CultureInfo.InvariantCulture)} EGP";
+        var percent = (decimal value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+        if (quote.DiscountPercent > 0m)
+        {
+            body.AppendLine($"Total: {Egp(quote.SubtotalPiastres)}");
+            body.AppendLine($"Discount ({percent(quote.DiscountPercent)}%): - {Egp(quote.DiscountPiastres)}");
+            body.AppendLine($"Total after discount: {Egp(quote.AmountPiastres)}");
+        }
+        else
+        {
+            body.AppendLine($"Total: {Egp(quote.AmountPiastres)}");
+        }
+
+        if (quote.VatPercent > 0m)
+        {
+            body.AppendLine($"VAT ({percent(quote.VatPercent)}%): {Egp(quote.VatPiastres)}");
+            body.AppendLine($"Total including VAT: {Egp(quote.TotalWithVatPiastres)}");
+        }
         body.AppendLine($"Valid for {quote.ValidForDays.ToString(CultureInfo.InvariantCulture)} days from the date of this email.");
         if (!string.IsNullOrWhiteSpace(quote.Message))
         {

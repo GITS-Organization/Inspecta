@@ -54,6 +54,22 @@ public sealed class PdfInfrastructureTests
         Assert.NotEqual(plain.Content.Length, discounted.Content.Length);
     }
 
+    [Theory]
+    [InlineData(14)]
+    [InlineData(5.5)]
+    public void TheVatChangesThePdfAndKeepsItAValidDocument(double percent)
+    {
+        using var provider = BuildProvider();
+        var generator = provider.GetRequiredService<IPdfGenerator>();
+        var none = generator.Generate(Model("INT/417/2026 rev01", "Delta Steel Co.") with { VatPercent = 0m });
+
+        var withVat = generator.Generate(Model("INT/417/2026 rev01", "Delta Steel Co.") with { VatPercent = (decimal)percent });
+
+        Assert.Equal("%PDF-", Encoding.ASCII.GetString(withVat.Content, 0, 5));
+        Assert.NotEqual(none.Content.Length, withVat.Content.Length);
+        Assert.Equal(PageCount(none.Content), PageCount(withVat.Content));
+    }
+
     [Fact]
     public void ManyItemsAndNotesFlowOntoExtraPagesInsteadOfFailing()
     {
