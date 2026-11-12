@@ -68,6 +68,20 @@ public sealed class ApiHttpTests : IClassFixture<ApiHttpTests.Api>
             return user;
         }
 
+        /// <summary>Writes rows straight to the database (as an admin, outside any tenant), for a test that needs a team's records to exist.</summary>
+        public void SeedAs(Action<InspectaDbContext> seed)
+        {
+            EnsureSeeded();
+            var options = new DbContextOptionsBuilder<InspectaDbContext>().UseSqlite(connection).Options;
+            var admin = new HttpContextAccessor
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("role", "admin")], "test")) }
+            };
+            using var db = new InspectaDbContext(options, new CurrentTenant(admin));
+            seed(db);
+            db.SaveChanges();
+        }
+
         public void Seed()
         {
             _ = Services; // starts the host, which creates the schema
