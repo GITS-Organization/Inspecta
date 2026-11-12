@@ -200,7 +200,8 @@ public class AuthService : IAuthService
             user.ManagerId,
             user.CreatedById,
             company?.GetEffectiveSubscriptionStatus(),
-            company?.SubscriptionEndDate);
+            company?.SubscriptionEndDate,
+            Authorization.RolePermissions.For(Authorization.RoleNames.Of(user.Role)));
 
     // Everyone but the platform owner works inside a company, and the company must be on with a valid subscription.
     private async Task EnsureManagerSubscriptionActiveAsync(

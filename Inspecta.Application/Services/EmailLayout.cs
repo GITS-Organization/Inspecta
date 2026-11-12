@@ -33,6 +33,8 @@ public static class EmailLayout
     {
         UserRole.Coordinator => "Business Coordinator",
         UserRole.TechnicalManager => "Technical Manager",
+        UserRole.GeneralManager => "General Manager",
+        UserRole.FinancialManager => "Financial Manager",
         _ => null
     };
 

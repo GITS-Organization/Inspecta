@@ -32,7 +32,7 @@ public sealed class ReviewerApiTests : IClassFixture<ApiHttpTests.Api>
         return client;
     }
 
-    private sealed record Setup(Company Company, AppUser First, AppUser Second, AppUser Coordinator, AppUser Inspector);
+    private sealed record Setup(Company Company, AppUser First, AppUser Second, AppUser Coordinator, AppUser Inspector, AppUser Admin);
 
     /// <summary>A company with its own id, two technical managers (the first is the default reviewer), a coordinator and an inspector.</summary>
     private Setup SeedCompany()
@@ -44,8 +44,9 @@ public sealed class ReviewerApiTests : IClassFixture<ApiHttpTests.Api>
         var second = api.AddUser($"rev-second-{number}@example.com", UserRole.TechnicalManager, company.Id);
         var coordinator = api.AddUser($"rev-coordinator-{number}@example.com", UserRole.Coordinator, company.Id);
         var inspector = api.AddUser($"rev-inspector-{number}@example.com", UserRole.Inspector, company.Id);
+        var admin = api.AddUser($"rev-admin-{number}@example.com", UserRole.CompanyAdmin, company.Id);
         api.SeedAs(db => db.Companies.Single(item => item.Id == company.Id).SetDefaultReviewer(first.Id));
-        return new Setup(company, first, second, coordinator, inspector);
+        return new Setup(company, first, second, coordinator, inspector, admin);
     }
 
     private InspectionRequest SeedRequest(Setup setup, Action<InspectionRequest>? shape = null)
@@ -276,7 +277,7 @@ public sealed class ReviewerApiTests : IClassFixture<ApiHttpTests.Api>
     public async Task ACompanyWithItsOwnIdCanHaveACoordinatorWithMailSettingsAndTheSettingsCanBeChanged()
     {
         var setup = SeedCompany();
-        var manager = await SignedInAs(setup.First.Email);
+        var manager = await SignedInAs(setup.Admin.Email);
         var email = $"new-coordinator-{Interlocked.Increment(ref sequence)}@example.com";
 
         var created = await manager.PostAsJsonAsync("/api/v1/manager/team", new
@@ -292,7 +293,7 @@ public sealed class ReviewerApiTests : IClassFixture<ApiHttpTests.Api>
         using var json = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
         var coordinatorId = json.RootElement.GetProperty("id").GetGuid();
         Assert.Equal(setup.Company.Id, json.RootElement.GetProperty("managerId").GetGuid());
-        Assert.Equal(setup.First.Id, json.RootElement.GetProperty("createdById").GetGuid());
+        Assert.Equal(setup.Admin.Id, json.RootElement.GetProperty("createdById").GetGuid());
         var changed = await manager.PutAsJsonAsync($"/api/v1/manager/team/{coordinatorId}/email-config", new
         {
             imapServer = "imap.other.com", imapPort = 993, emailUsername = email, password = "mail-secret-2"

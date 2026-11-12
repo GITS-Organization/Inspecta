@@ -11,6 +11,7 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Configure IMAP access for a coordinator mailbox.</summary>
 [ApiController]
+[Route("api/v1/company/users/{coordinatorId:guid}/email-config")]
 [Route("api/v1/manager/team/{coordinatorId:guid}/email-config")]
 public sealed class CoordinatorEmailConfigsController(
     ICoordinatorEmailConfigService configService) : ControllerBase

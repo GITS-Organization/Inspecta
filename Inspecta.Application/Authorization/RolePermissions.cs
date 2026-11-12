@@ -9,7 +9,29 @@ public static class RoleNames
     public const string Coordinator = "coordinator";
     public const string Inspector = "inspector";
 
-    public static readonly IReadOnlyList<string> All = [Admin, TechnicalManager, Coordinator, Inspector];
+    /// <summary>The account a company is handed over with: its identity and its accounts, no business data.</summary>
+    public const string CompanyAdmin = "company_admin";
+
+    /// <summary>Reserved: no rights decided yet.</summary>
+    public const string GeneralManager = "general_manager";
+
+    /// <summary>Reserved: no rights decided yet.</summary>
+    public const string FinancialManager = "financial_manager";
+
+    public static readonly IReadOnlyList<string> All = [Admin, TechnicalManager, Coordinator, Inspector, CompanyAdmin, GeneralManager, FinancialManager];
+
+    /// <summary>The role string carried in the token and shown by the API.</summary>
+    public static string Of(Inspecta.Domain.Enums.UserRole role) => role switch
+    {
+        Inspecta.Domain.Enums.UserRole.Admin => Admin,
+        Inspecta.Domain.Enums.UserRole.TechnicalManager => TechnicalManager,
+        Inspecta.Domain.Enums.UserRole.Coordinator => Coordinator,
+        Inspecta.Domain.Enums.UserRole.Inspector => Inspector,
+        Inspecta.Domain.Enums.UserRole.CompanyAdmin => CompanyAdmin,
+        Inspecta.Domain.Enums.UserRole.GeneralManager => GeneralManager,
+        Inspecta.Domain.Enums.UserRole.FinancialManager => FinancialManager,
+        _ => throw new ArgumentOutOfRangeException(nameof(role), role, "Unknown user role.")
+    };
 }
 
 /// <summary>
@@ -23,12 +45,15 @@ public static class RolePermissions
     private const string Manager = RoleNames.TechnicalManager;
     private const string Coordinator = RoleNames.Coordinator;
     private const string Inspector = RoleNames.Inspector;
+    private const string CompanyAdmin = RoleNames.CompanyAdmin;
 
     private static readonly (string Permission, string[] Roles)[] Grants =
     [
         (Permissions.PlatformAdminister, [Admin]),
-        (Permissions.CompanyEditIdentity, [Admin]),
-        (Permissions.AccountsManage, [Admin, Manager]),
+        (Permissions.CompanyEditIdentity, [Admin, CompanyAdmin]),
+        (Permissions.AccountsManage, [Admin, CompanyAdmin]),
+        (Permissions.CompanyView, [Admin, Manager, Coordinator, Inspector, CompanyAdmin]),
+        (Permissions.CompanySetDefaultReviewer, [Admin, CompanyAdmin]),
 
         (Permissions.DashboardView, [Admin, Manager]),
 
@@ -68,7 +93,7 @@ public static class RolePermissions
         (Permissions.DraftsWork, [Coordinator]),
 
         (Permissions.TeamDirectory, [Admin, Manager, Coordinator]),
-        (Permissions.TeamReviewers, [Admin, Manager, Coordinator, Inspector]),
+        (Permissions.TeamReviewers, [Admin, Manager, Coordinator, Inspector, CompanyAdmin]),
 
         (Permissions.MailboxTest, [Admin, Manager, Coordinator]),
         (Permissions.MailboxConnectOwn, [Coordinator])

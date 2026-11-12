@@ -127,6 +127,14 @@ public sealed class ApiHttpTests : IClassFixture<ApiHttpTests.Api>
                 Guid.NewGuid(), Guid.NewGuid(), c.Id, null, "<script>alert(1)</script> Ltd", "Forklift", "CERT-2026-0001", "A1B2C3D4E5F60718",
                 new DateOnly(2026, 11, 1), new DateOnly(2030, 11, 1), "cert.pdf", [37, 80, 68, 70, 45, 49, 46, 52]));
             db.SaveChanges();
+            // Each company is handed over with its company admin, who manages the accounts (a technical manager no longer does).
+            foreach (var (head, name) in new[] { (a, "a"), (b, "b"), (c, "c") })
+            {
+                var companyAdmin = AppUser.Create($"company-admin-{name}@example.com", $"Company admin {name}", UserRole.CompanyAdmin, managerId: head.Id);
+                companyAdmin.SetPasswordHash(new IdentityPasswordService().Hash(companyAdmin, Password));
+                db.Users.Add(companyAdmin);
+            }
+            db.SaveChanges();
             (ManagerA, ManagerB) = (a.Id, b.Id);
         }
 

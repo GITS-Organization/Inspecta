@@ -106,7 +106,7 @@ public sealed class MicrosoftConnectionHttpTests : IClassFixture<ApiHttpTests.Ap
         return JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.Clone();
     }
 
-    private async Task<HttpClient> ManagerAsync(WebApplicationFactory<Program> host, string email = "manager-a@example.com") =>
+    private async Task<HttpClient> ManagerAsync(WebApplicationFactory<Program> host, string email = "company-admin-a@example.com") =>
         As(Client(host), await SignIn(Client(host), email));
 
     [Fact]
@@ -325,7 +325,7 @@ public sealed class MicrosoftConnectionHttpTests : IClassFixture<ApiHttpTests.Ap
         var user = NewCoordinator();
         var coordinator = As(Client(host), await SignIn(Client(host), user.Email));
         await CallBack(Client(host), await StartAsync(coordinator));
-        var other = await ManagerAsync(host, "manager-b@example.com");
+        var other = await ManagerAsync(host, "company-admin-b@example.com");
 
         var response = await other.DeleteAsync($"/api/v1/manager/team/{user.Id}/email-config");
 

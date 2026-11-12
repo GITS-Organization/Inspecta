@@ -15,4 +15,6 @@ public sealed record AuthUserResponse(
 	Guid? ManagerId,
 	Guid? CreatedById,
 	SubscriptionStatus? SubscriptionStatus,
-	DateTimeOffset? SubscriptionEndDate);
+	DateTimeOffset? SubscriptionEndDate,
+	/// <summary>What the user may do (see the permission map): the screens show or hide their buttons by it.</summary>
+	IReadOnlyList<string>? Permissions = null);

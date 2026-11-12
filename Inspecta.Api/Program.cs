@@ -110,6 +110,7 @@ builder.Services.AddScoped<IInspectionRequestService, InspectionRequestService>(
 builder.Services.AddScoped<IRequestTimelineService, RequestTimelineService>();
 builder.Services.AddScoped<IRequestTransferService, RequestTransferService>();
 builder.Services.AddScoped<IReviewerService, ReviewerService>();
+builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IClientRepository, EfClientRepository>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IEquipmentRepository, EfEquipmentRepository>();
@@ -253,14 +254,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
             }
 
             var tokenRole = context.Principal?.FindFirst("role")?.Value;
-            var currentRole = currentUser.Role switch
-            {
-                Inspecta.Domain.Enums.UserRole.Coordinator => "coordinator",
-                Inspecta.Domain.Enums.UserRole.Inspector => "inspector",
-                Inspecta.Domain.Enums.UserRole.TechnicalManager => "technical_manager",
-                Inspecta.Domain.Enums.UserRole.Admin => "admin",
-                _ => string.Empty
-            };
+            var currentRole = Inspecta.Application.Authorization.RoleNames.Of(currentUser.Role);
             if (!string.Equals(tokenRole, currentRole, StringComparison.Ordinal))
             {
                 context.Fail("Account role has changed. Sign in again.");

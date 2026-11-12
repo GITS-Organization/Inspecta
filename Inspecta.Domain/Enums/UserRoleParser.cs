@@ -13,6 +13,9 @@ public static class UserRoleParser
             "inspector" => UserRole.Inspector,
             "technical_manager" => UserRole.TechnicalManager,
             "admin" => UserRole.Admin,
+            "company_admin" => UserRole.CompanyAdmin,
+            "general_manager" => UserRole.GeneralManager,
+            "financial_manager" => UserRole.FinancialManager,
             _ => throw new ArgumentException($"Unsupported user role '{role}'.", nameof(role))
         };
     }

@@ -11,6 +11,8 @@ public static class Permissions
     public const string PlatformAdminister = "Platform.Administer";
     public const string CompanyEditIdentity = "Company.EditIdentity";
     public const string AccountsManage = "Accounts.Manage";
+    public const string CompanyView = "Company.View";
+    public const string CompanySetDefaultReviewer = "Company.SetDefaultReviewer";
 
     public const string DashboardView = "Dashboard.View";
 

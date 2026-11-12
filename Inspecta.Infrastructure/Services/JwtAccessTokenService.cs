@@ -31,7 +31,7 @@ public sealed class JwtAccessTokenService(IConfiguration configuration) : IAcces
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim("user_id", user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim("role", RoleName(user.Role)),
+            new Claim("role", Inspecta.Application.Authorization.RoleNames.Of(user.Role)),
         };
         if (user.ManagerId is Guid managerId)
             claims.Add(new Claim("manager_id", managerId.ToString()));
@@ -50,12 +50,4 @@ public sealed class JwtAccessTokenService(IConfiguration configuration) : IAcces
             ? value
             : throw new InvalidOperationException($"Required configuration '{key}' is missing.");
 
-    private static string RoleName(Inspecta.Domain.Enums.UserRole role) => role switch
-    {
-        Inspecta.Domain.Enums.UserRole.Coordinator => "coordinator",
-        Inspecta.Domain.Enums.UserRole.Inspector => "inspector",
-        Inspecta.Domain.Enums.UserRole.TechnicalManager => "technical_manager",
-        Inspecta.Domain.Enums.UserRole.Admin => "admin",
-        _ => throw new ArgumentOutOfRangeException(nameof(role), role, "Unknown user role.")
-    };
 }

@@ -158,7 +158,8 @@ public sealed class UserManagementService(
 
         var user = await userRepository.GetByIdAsync(userId, cancellationToken)
             ?? throw new AuthException("user_not_found", "User was not found.", 404);
-        if ((user.Role == UserRole.TechnicalManager || request.Role == UserRole.TechnicalManager) &&
+        static bool Locked(UserRole role) => role is UserRole.TechnicalManager or UserRole.CompanyAdmin;
+        if ((Locked(user.Role) || Locked(request.Role)) &&
             user.Role != request.Role)
         {
             throw new AuthException(
@@ -249,10 +250,10 @@ public sealed class UserManagementService(
     {
         await EnsureCompanyUsableAsync(managerId, cancellationToken);
         if (!IsTeamRole(request.Role))
-            throw new AuthException("role_forbidden", "Technical managers may only create coordinators and inspectors.", 403);
+            throw new AuthException("role_forbidden", "A company can have coordinators, inspectors, technical managers, general managers and financial managers.", 403);
         if (request.Role == UserRole.Coordinator && request.EmailConfig is null)
             throw new AuthException("coordinator_email_config_required", "IMAP settings are required when creating a coordinator.", 400);
-        if (request.Role == UserRole.Inspector && request.EmailConfig is not null)
+        if (request.Role != UserRole.Coordinator && request.EmailConfig is not null)
             throw new AuthException("email_config_coordinator_only", "IMAP settings can only be assigned to coordinators.", 400);
         ValidatePassword(request.Password);
 
@@ -270,6 +271,16 @@ public sealed class UserManagementService(
             ? null
             : CreateEmailConfig(user.Id, managerId, request.EmailConfig);
         await userRepository.AddTeamMemberAsync(user, emailConfig, cancellationToken);
+        // The first technical manager of a company is its default reviewer.
+        if (request.Role == UserRole.TechnicalManager && companies is not null)
+        {
+            var company = await companies.GetByIdAsync(managerId, tracking: true, cancellationToken);
+            if (company is { DefaultReviewerId: null })
+            {
+                company.SetDefaultReviewer(user.Id);
+                await companies.SaveAsync(cancellationToken);
+            }
+        }
         return await ResponseAsync(user, cancellationToken);
     }
 
@@ -349,9 +360,11 @@ public sealed class UserManagementService(
         CancellationToken cancellationToken = default)
     {
         await EnsureCompanyUsableAsync(managerId, cancellationToken);
-        await GetScopedTeamMemberAsync(managerId, userId, cancellationToken);
+        var member = await GetScopedTeamMemberAsync(managerId, userId, cancellationToken);
+        if (reviewers is not null) await reviewers.EnsureCanLeaveAsync(member, cancellationToken);
         if (!await userRepository.DeleteAsync(userId, cancellationToken))
             throw new AuthException("user_not_found", "User was not found.", 404);
+        if (reviewers is not null) await reviewers.LeftAsync(member, cancellationToken);
     }
 
     public async Task SetTeamMemberActiveAsync(
@@ -361,9 +374,11 @@ public sealed class UserManagementService(
         CancellationToken cancellationToken = default)
     {
         await EnsureCompanyUsableAsync(managerId, cancellationToken);
-        await GetScopedTeamMemberAsync(managerId, userId, cancellationToken);
+        var member = await GetScopedTeamMemberAsync(managerId, userId, cancellationToken);
+        if (!isActive && reviewers is not null) await reviewers.EnsureCanLeaveAsync(member, cancellationToken);
         if (!await userRepository.SetActiveAsync(userId, isActive, cancellationToken))
             throw new AuthException("user_not_found", "User was not found.", 404);
+        if (!isActive && reviewers is not null) await reviewers.LeftAsync(member, cancellationToken);
     }
 
     public async Task SetTeamMemberPasswordAsync(Guid managerId, Guid userId, string newPassword, CancellationToken cancellationToken = default)
@@ -446,7 +461,8 @@ public sealed class UserManagementService(
         user.ManagerId,
         user.CreatedById,
         company?.GetEffectiveSubscriptionStatus(),
-        company?.SubscriptionEndDate);
+        company?.SubscriptionEndDate,
+        Authorization.RolePermissions.For(Authorization.RoleNames.Of(user.Role)));
 
     private async Task<AuthUserResponse> ResponseAsync(AppUser user, CancellationToken cancellationToken) =>
         ToResponse(user, companies is not null && user.CompanyId is { } id ? await companies.GetByIdAsync(id, tracking: false, cancellationToken) : null);
@@ -537,6 +553,7 @@ public sealed class UserManagementService(
             .Select(value => UserQualification.Create(value))
             .ToArray();
 
+    // The accounts a company manages itself: everyone but the platform owner and the company admin (only the platform owner hands those out).
     private static bool IsTeamRole(UserRole role) =>
-        role is UserRole.Coordinator or UserRole.Inspector;
+        role is UserRole.Coordinator or UserRole.Inspector or UserRole.TechnicalManager or UserRole.GeneralManager or UserRole.FinancialManager;
 }

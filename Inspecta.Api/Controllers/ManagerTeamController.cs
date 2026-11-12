@@ -11,6 +11,7 @@ namespace Inspecta.Api.Controllers;
 
 /// <summary>Operations for a technical manager's own team.</summary>
 [ApiController]
+[Route("api/v1/company/users")]
 [Route("api/v1/manager/team")]
 public sealed class ManagerTeamController(IUserManagementService userManagementService) : ControllerBase
 {

@@ -147,7 +147,7 @@ public sealed class PasswordHttpTests : IClassFixture<ApiHttpTests.Api>
         var memberClient = Client();
         var old = await SignIn(memberClient, member.Email, ApiHttpTests.Password);
         var manager = Client();
-        As(manager, (await SignIn(manager, "manager-a@example.com", ApiHttpTests.Password)).Access);
+        As(manager, (await SignIn(manager, "company-admin-a@example.com", ApiHttpTests.Password)).Access);
 
         var response = await manager.PutAsJsonAsync($"/api/v1/manager/team/{member.Id}/password", new { newPassword = Fresh });
 
@@ -164,7 +164,7 @@ public sealed class PasswordHttpTests : IClassFixture<ApiHttpTests.Api>
         for (var attempt = 0; attempt < 6; attempt++) await SignIn(Client(), member.Email, "wrong-" + attempt);
         Assert.Equal(HttpStatusCode.TooManyRequests, (await SignIn(Client(), member.Email, ApiHttpTests.Password)).Status);
         var manager = Client();
-        As(manager, (await SignIn(manager, "manager-a@example.com", ApiHttpTests.Password)).Access);
+        As(manager, (await SignIn(manager, "company-admin-a@example.com", ApiHttpTests.Password)).Access);
 
         await manager.PutAsJsonAsync($"/api/v1/manager/team/{member.Id}/password", new { newPassword = Fresh });
 
@@ -177,7 +177,7 @@ public sealed class PasswordHttpTests : IClassFixture<ApiHttpTests.Api>
         var other = api.AddUser("team-other@example.com", UserRole.Inspector, api.ManagerB);
         var admin = api.AddUser("team-admin@example.com", UserRole.Admin);
         var manager = Client();
-        As(manager, (await SignIn(manager, "manager-a@example.com", ApiHttpTests.Password)).Access);
+        As(manager, (await SignIn(manager, "company-admin-a@example.com", ApiHttpTests.Password)).Access);
 
         foreach (var target in new[] { other.Id, api.ManagerB, admin.Id })
         {
@@ -208,7 +208,7 @@ public sealed class PasswordHttpTests : IClassFixture<ApiHttpTests.Api>
     {
         var member = api.AddUser("team-email-old@example.com", UserRole.Coordinator, api.ManagerA);
         var manager = Client();
-        As(manager, (await SignIn(manager, "manager-a@example.com", ApiHttpTests.Password)).Access);
+        As(manager, (await SignIn(manager, "company-admin-a@example.com", ApiHttpTests.Password)).Access);
 
         var response = await manager.PutAsJsonAsync($"/api/v1/manager/team/{member.Id}/email", new { email = "  Team-Email-New@Example.com " });
 
@@ -224,7 +224,7 @@ public sealed class PasswordHttpTests : IClassFixture<ApiHttpTests.Api>
     {
         var member = api.AddUser("team-email-dup@example.com", UserRole.Coordinator, api.ManagerA);
         var manager = Client();
-        As(manager, (await SignIn(manager, "manager-a@example.com", ApiHttpTests.Password)).Access);
+        As(manager, (await SignIn(manager, "company-admin-a@example.com", ApiHttpTests.Password)).Access);
 
         var taken = await manager.PutAsJsonAsync($"/api/v1/manager/team/{member.Id}/email", new { email = "manager-b@example.com" });
         var invalid = await manager.PutAsJsonAsync($"/api/v1/manager/team/{member.Id}/email", new { email = "not-an-email" });
