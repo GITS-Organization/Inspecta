@@ -24,8 +24,7 @@ public sealed class JwtAccessTokenService(IConfiguration configuration) : IAcces
         var tenantId = user.Role switch
         {
             Inspecta.Domain.Enums.UserRole.Admin => null,
-            Inspecta.Domain.Enums.UserRole.TechnicalManager => user.Id,
-            _ => user.ManagerId
+            _ => user.CompanyId
         };
         var claims = new List<Claim>
         {

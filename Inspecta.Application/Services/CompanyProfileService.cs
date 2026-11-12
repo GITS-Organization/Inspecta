@@ -8,7 +8,8 @@ namespace Inspecta.Application.Services;
 
 public sealed class CompanyProfileService(
     ICompanyProfileRepository profileRepository,
-    IUserRepository userRepository) : ICompanyProfileService, ICompanyBrandingProvider
+    IUserRepository userRepository,
+    ICompanyRepository? companies = null) : ICompanyProfileService, ICompanyBrandingProvider
 {
     public async Task<CompanyProfileResponse?> GetAsync(Guid managerId, CancellationToken cancellationToken = default) =>
         (await profileRepository.GetByManagerAsync(managerId, tracking: false, cancellationToken)) is { } profile ? Map(profile) : null;
@@ -18,9 +19,8 @@ public sealed class CompanyProfileService(
         SaveCompanyProfileRequest request,
         CancellationToken cancellationToken = default)
     {
-        var manager = await userRepository.GetByIdAsync(managerId, cancellationToken);
-        if (manager is null || manager.Role != UserRole.TechnicalManager)
-            throw new KeyNotFoundException("Technical manager was not found.");
+        if (companies is not null && await companies.GetByIdAsync(managerId, tracking: false, cancellationToken) is null)
+            throw new KeyNotFoundException("Company was not found.");
 
         // Checked before anything is written: a bad image or colour saves nothing.
         var logo = Decode(request.LogoBase64, "logo");

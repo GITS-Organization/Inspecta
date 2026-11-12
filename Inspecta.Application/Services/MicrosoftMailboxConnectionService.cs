@@ -17,7 +17,8 @@ public sealed class MicrosoftMailboxConnectionService(
     ISecretProtector secretProtector,
     IMicrosoftOAuthClient microsoft,
     MicrosoftOAuthOptions options,
-    TimeProvider? clock = null) : IMicrosoftMailboxConnectionService
+    TimeProvider? clock = null,
+    ICompanyGate? companyGate = null) : IMicrosoftMailboxConnectionService
 {
     private static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(10);
     private readonly TimeProvider time = clock ?? TimeProvider.System;
@@ -27,13 +28,13 @@ public sealed class MicrosoftMailboxConnectionService(
         if (!microsoft.IsConfigured)
             throw new AuthException("microsoft_not_configured", "Connecting an Outlook mailbox is not set up on this server yet.", 503);
 
-        var (_, manager) = await ActiveTeamAsync(coordinatorId, cancellationToken)
+        var coordinator = await ActiveTeamAsync(coordinatorId, cancellationToken)
             ?? throw new AuthException("coordinator_not_found", "An active coordinator of an active team is needed.", 404);
 
         var verifier = Base64Url(RandomNumberGenerator.GetBytes(48));
         var challenge = Base64Url(SHA256.HashData(Encoding.ASCII.GetBytes(verifier)));
         var state = secretProtector.Protect(JsonSerializer.Serialize(
-            new MicrosoftConnectionState(coordinatorId, manager.Id, verifier, time.GetUtcNow().Add(StateLifetime))));
+            new MicrosoftConnectionState(coordinatorId, coordinator.ManagerId!.Value, verifier, time.GetUtcNow().Add(StateLifetime))));
         return new StartMicrosoftConnectionResponse(microsoft.BuildAuthorizationUrl(state, challenge));
     }
 
@@ -50,7 +51,7 @@ public sealed class MicrosoftMailboxConnectionService(
             return Failed("microsoft_sign_in_failed", "The Microsoft sign-in was cancelled or refused. Nothing was connected.");
 
         var team = await ActiveTeamAsync(remembered.CoordinatorId, cancellationToken);
-        if (team is null || team.Value.Manager.Id != remembered.ManagerId)
+        if (team is null || team.ManagerId != remembered.ManagerId)
             return Failed("invalid_oauth_state", "This sign-in link is not valid any more. Start connecting the mailbox again.");
 
         MicrosoftTokens tokens;
@@ -66,8 +67,8 @@ public sealed class MicrosoftMailboxConnectionService(
         if (string.IsNullOrWhiteSpace(tokens.RefreshToken) || string.IsNullOrWhiteSpace(tokens.MailboxAddress))
             return Failed("microsoft_sign_in_failed", "Microsoft did not allow the access the mailbox needs. Try again and accept every permission.");
 
-        if (!options.AllowAnyDomain && !string.Equals(DomainOf(tokens.MailboxAddress), DomainOf(team.Value.Manager.Email), StringComparison.OrdinalIgnoreCase))
-            return Failed("mailbox_domain_mismatch", $"This mailbox is on {DomainOf(tokens.MailboxAddress)}, but the company mailboxes are on {DomainOf(team.Value.Manager.Email)}.");
+        if (!options.AllowAnyDomain && !string.Equals(DomainOf(tokens.MailboxAddress), DomainOf(team.Email), StringComparison.OrdinalIgnoreCase))
+            return Failed("mailbox_domain_mismatch", $"This mailbox is on {DomainOf(tokens.MailboxAddress)}, but the company mailboxes are on {DomainOf(team.Email)}.");
 
         var encrypted = secretProtector.Protect(tokens.RefreshToken);
         var microsoftTenant = string.IsNullOrWhiteSpace(tokens.MicrosoftTenantId) ? "unknown" : tokens.MicrosoftTenantId;
@@ -81,13 +82,12 @@ public sealed class MicrosoftMailboxConnectionService(
         return new MicrosoftConnectionResult(true, $"The mailbox {tokens.MailboxAddress} is connected. You can close this page.", tokens.MailboxAddress);
     }
 
-    private async Task<(AppUser Coordinator, AppUser Manager)?> ActiveTeamAsync(Guid coordinatorId, CancellationToken cancellationToken)
+    private async Task<AppUser?> ActiveTeamAsync(Guid coordinatorId, CancellationToken cancellationToken)
     {
         var coordinator = await userRepository.GetByIdAsync(coordinatorId, cancellationToken);
         if (coordinator is not { Role: UserRole.Coordinator, IsActive: true, ManagerId: Guid managerId }) return null;
-        var manager = await userRepository.GetByIdAsync(managerId, cancellationToken);
-        if (manager is null || manager.Role != UserRole.TechnicalManager || !manager.HasActiveSubscription()) return null;
-        return (coordinator, manager);
+        if (companyGate is not null && !await companyGate.IsUsableAsync(managerId, cancellationToken)) return null;
+        return coordinator;
     }
 
     // A state that cannot be read (changed, cut short, or made by another key) is simply not ours.

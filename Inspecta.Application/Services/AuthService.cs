@@ -14,6 +14,7 @@ public class AuthService : IAuthService
     private readonly IPasswordService _passwordService;
     private readonly IAccessTokenService _accessTokenService;
     private readonly ILoginAttemptTracker _attempts;
+    private readonly ICompanyRepository? _companies;
 
     // A stand-in account for an email nobody has: its password is checked all the same, so an unknown email takes as long to refuse as a known one.
     private readonly Lazy<(AppUser User, string Hash)> _standIn;
@@ -22,8 +23,10 @@ public class AuthService : IAuthService
         IUserRepository userRepository,
         IPasswordService passwordService,
         IAccessTokenService accessTokenService,
-        ILoginAttemptTracker attempts)
+        ILoginAttemptTracker attempts,
+        ICompanyRepository? companies = null)
     {
+        _companies = companies;
         _userRepository = userRepository;
         _passwordService = passwordService;
         _accessTokenService = accessTokenService;
@@ -81,7 +84,7 @@ public class AuthService : IAuthService
         user.RecordLogin();
         await _userRepository.SaveAsync(user, cancellationToken);
 
-        return new AuthResult(accessToken, rawRefreshToken, accessTokenExpiresAt, ToResponse(user));
+        return new AuthResult(accessToken, rawRefreshToken, accessTokenExpiresAt, await ResponseAsync(user, cancellationToken));
     }
 
     public async Task<AuthResult> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default)
@@ -127,13 +130,13 @@ public class AuthService : IAuthService
         }
 
         var (accessToken, accessTokenExpiresAt) = _accessTokenService.Create(user);
-        return new AuthResult(accessToken, rawRefreshToken, accessTokenExpiresAt, ToResponse(user));
+        return new AuthResult(accessToken, rawRefreshToken, accessTokenExpiresAt, await ResponseAsync(user, cancellationToken));
     }
 
     public async Task<AuthUserResponse?> GetUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
-        return user is null ? null : ToResponse(user);
+        return user is null ? null : await ResponseAsync(user, cancellationToken);
     }
 
     public async Task ChangeMyPasswordAsync(Guid userId, ChangeMyPasswordRequest request, CancellationToken cancellationToken = default)
@@ -181,7 +184,10 @@ public class AuthService : IAuthService
         }
     }
 
-    private static AuthUserResponse ToResponse(AppUser user) =>
+    private async Task<AuthUserResponse> ResponseAsync(AppUser user, CancellationToken cancellationToken) =>
+        ToResponse(user, _companies is not null && user.CompanyId is { } id ? await _companies.GetByIdAsync(id, tracking: false, cancellationToken) : null);
+
+    private static AuthUserResponse ToResponse(AppUser user, Company? company) =>
         new(
             user.Id,
             user.Email,
@@ -193,29 +199,25 @@ public class AuthService : IAuthService
             user.LeaveUntil,
             user.ManagerId,
             user.CreatedById,
-            user.GetEffectiveSubscriptionStatus(),
-            user.SubscriptionEndDate);
+            company?.GetEffectiveSubscriptionStatus(),
+            company?.SubscriptionEndDate);
 
+    // Everyone but the platform owner works inside a company, and the company must be on with a valid subscription.
     private async Task EnsureManagerSubscriptionActiveAsync(
         AppUser user,
         CancellationToken cancellationToken)
     {
-        if (user.Role == UserRole.Admin)
+        if (user.Role == UserRole.Admin || _companies is null)
             return;
 
-        var manager = user.Role == UserRole.TechnicalManager
-            ? user
-            : user.ManagerId is Guid managerId
-                ? await _userRepository.GetByIdAsync(managerId, cancellationToken)
-                : null;
-        if (manager is null ||
-            !manager.IsActive ||
-            manager.Role != UserRole.TechnicalManager ||
-            !manager.HasActiveSubscription())
+        var company = user.CompanyId is Guid companyId
+            ? await _companies.GetByIdAsync(companyId, tracking: false, cancellationToken)
+            : null;
+        if (company is null || !company.IsUsable())
         {
             throw new AuthException(
                 "subscription_inactive",
-                "The technical manager subscription is suspended or expired.",
+                "The company subscription is suspended or expired.",
                 403);
         }
     }

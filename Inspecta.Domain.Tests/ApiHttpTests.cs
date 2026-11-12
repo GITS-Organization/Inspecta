@@ -64,6 +64,8 @@ public sealed class ApiHttpTests : IClassFixture<ApiHttpTests.Api>
             var user = AppUser.Create(email, "Test " + email, role, managerId: managerId);
             user.SetPasswordHash(new IdentityPasswordService().Hash(user, Password));
             db.Users.Add(user);
+            // A technical manager is the head of a company with the same id (how companies that existed before the Companies table were migrated).
+            if (role == UserRole.TechnicalManager && managerId is null) db.Companies.Add(Company.Create(user.FullName, id: user.Id));
             db.SaveChanges();
             return user;
         }
@@ -102,6 +104,7 @@ public sealed class ApiHttpTests : IClassFixture<ApiHttpTests.Api>
             var b = Manager("manager-b@example.com");
             var c = Manager("manager-c@example.com");
             db.Users.AddRange(a, b, c);
+            db.Companies.AddRange(new[] { a, b, c }.Select(manager => Company.Create(manager.FullName, id: manager.Id)));
             db.SaveChanges();
             var pagedClients = Enumerable.Range(1, 5).Select(number => Client.Create($"Paged client {number}", managerId: c.Id)).ToList();
             db.Clients.AddRange(pagedClients);

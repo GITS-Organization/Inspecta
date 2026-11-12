@@ -21,19 +21,17 @@ public sealed class EfEmailSyncRepository(
             from config in dbContext.CoordinatorEmailConfigs.AsNoTracking()
             join coordinator in dbContext.Users.IgnoreQueryFilters().AsNoTracking()
                 on config.CoordinatorId equals coordinator.Id
-            join manager in dbContext.Users.IgnoreQueryFilters().AsNoTracking()
-                on config.TenantId equals manager.Id
+            join company in dbContext.Companies.AsNoTracking()
+                on config.TenantId equals company.Id
             where config.ConnectionStatus == MailboxConnectionStatus.Connected &&
                   coordinator.Role == UserRole.Coordinator &&
                   coordinator.IsActive &&
                   !coordinator.IsDeleted &&
-                  coordinator.ManagerId == manager.Id &&
-                  manager.Role == UserRole.TechnicalManager &&
-                  manager.IsActive &&
-                  !manager.IsDeleted &&
-                  manager.SubscriptionStatus == SubscriptionStatus.Active &&
-                  (manager.SubscriptionEndDate == null ||
-                   manager.SubscriptionEndDate > DateTimeOffset.UtcNow)
+                  coordinator.ManagerId == company.Id &&
+                  company.IsActive &&
+                  company.SubscriptionStatus == SubscriptionStatus.Active &&
+                  (company.SubscriptionEndDate == null ||
+                   company.SubscriptionEndDate > DateTimeOffset.UtcNow)
             select config)
             .ToListAsync(cancellationToken);
 

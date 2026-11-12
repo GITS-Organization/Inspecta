@@ -260,7 +260,8 @@ public sealed class MailTriageTests
     {
         var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
         var repository = new FakeRuleRepository { ClientManagerId = Guid.NewGuid() };
-        var service = new ClientMailRuleService(repository, new IncomingEmailRequestTests.FakeUserRepository(manager));
+        var service = new ClientMailRuleService(
+            repository, new IncomingEmailRequestTests.FakeUserRepository(manager), companyGate: TestCompanies.GateFor(TestCompanies.Of(manager.Id)));
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(
             Guid.NewGuid(), CoordinatorId, new CreateClientMailRuleRequest { Pattern = "alnoor.com" }));

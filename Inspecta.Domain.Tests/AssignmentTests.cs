@@ -91,7 +91,7 @@ public sealed class AssignmentTests
     {
         var fixture = new Fixture();
 
-        var inspectors = await fixture.Service.ListInspectorsAsync(ManagerId, "technical_manager");
+        var inspectors = await fixture.Service.ListInspectorsAsync(fixture.Manager.Id, "technical_manager");
 
         Assert.Equal(fixture.Inspector.Id, Assert.Single(inspectors).Id);
     }
@@ -113,15 +113,18 @@ public sealed class AssignmentTests
             }
 
             Inspector = AppUser.Create("inspector@example.com", "Karim", UserRole.Inspector, managerId: ManagerId);
+            // A technical manager works for a company; the company id is not the manager id.
+            Manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager, managerId: ManagerId);
             var coordinator = AppUser.Create("coordinator@example.com", "Coordinator", UserRole.Coordinator, managerId: ManagerId);
             typeof(AppUser).GetProperty(nameof(AppUser.Id))!.SetValue(coordinator, CoordinatorId);
             Service = new InspectionRequestService(
                 new QuotationTests.FakeRequests(Request),
-                new IncomingEmailRequestTests.FakeUserRepository([Inspector, coordinator, .. extraUsers]));
+                new IncomingEmailRequestTests.FakeUserRepository([Inspector, Manager, coordinator, .. extraUsers]));
         }
 
         public InspectionRequest Request { get; }
         public AppUser Inspector { get; }
+        public AppUser Manager { get; }
         public InspectionRequestService Service { get; }
     }
 }

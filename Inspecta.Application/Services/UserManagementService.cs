@@ -12,7 +12,8 @@ public sealed class UserManagementService(
     IPasswordService passwordService,
     ISecretProtector secretProtector,
     ICompanyProfileService? companyProfiles = null,
-    ILoginAttemptTracker? loginAttempts = null) : IUserManagementService
+    ILoginAttemptTracker? loginAttempts = null,
+    ICompanyRepository? companies = null) : IUserManagementService
 {
     public async Task<AuthUserResponse> CreateAsync(
         CreateStaffUserRequest request,
@@ -39,8 +40,8 @@ public sealed class UserManagementService(
         else
         {
             if (managerId is null)
-                throw new AuthException("manager_required", "A technical manager is required for staff accounts.", 400);
-            await GetActiveSubscribedManagerAsync(managerId.Value, cancellationToken);
+                throw new AuthException("manager_required", "A company is required for staff accounts.", 400);
+            await EnsureStaffCompanyAsync(managerId.Value, cancellationToken);
         }
 
         var email = request.Email.Trim().ToLowerInvariant();
@@ -59,7 +60,7 @@ public sealed class UserManagementService(
             await userRepository.AddAsync(user, cancellationToken);
         else
             await userRepository.AddTeamMemberAsync(user, emailConfig, cancellationToken);
-        return ToResponse(user);
+        return await ResponseAsync(user, cancellationToken);
     }
 
     public async Task<AuthUserResponse> CreateTechnicalManagerAsync(
@@ -79,17 +80,17 @@ public sealed class UserManagementService(
 
         var email = request.Email.Trim().ToLowerInvariant();
         await EnsureEmailAvailableAsync(email, cancellationToken);
-        var manager = CreateUser(
-            email,
-            request.FullName,
-            UserRole.TechnicalManager,
-            request.Password,
-            [],
-            subscriptionEndDate: DateTimeOffset.UtcNow.AddMonths(request.SubscriptionMonths));
+        if (companies is null) throw new InvalidOperationException("Companies are not available.");
+        var company = Company.Create(
+            request.CompanyProfile?.Name is { Length: > 0 } profileName ? profileName : request.FullName,
+            DateTimeOffset.UtcNow.AddMonths(request.SubscriptionMonths));
+        var manager = CreateUser(email, request.FullName, UserRole.TechnicalManager, request.Password, [], managerId: company.Id);
+        company.SetDefaultReviewer(manager.Id);
+        await companies.AddAsync(company, cancellationToken);
         await userRepository.AddAsync(manager, cancellationToken);
         if (request.CompanyProfile is not null)
-            await companyProfiles!.SaveAsync(manager.Id, request.CompanyProfile, cancellationToken);
-        return ToResponse(manager);
+            await companyProfiles!.SaveAsync(company.Id, request.CompanyProfile, cancellationToken);
+        return ToResponse(manager, company);
     }
 
     public async Task<AuthUserResponse> UpdateTechnicalManagerSubscriptionAsync(
@@ -100,13 +101,15 @@ public sealed class UserManagementService(
         if (!Enum.IsDefined(request.SubscriptionStatus))
             throw new ArgumentException("Subscription status is invalid.", nameof(request.SubscriptionStatus));
 
-        var manager = await userRepository.GetByIdAsync(managerId, cancellationToken);
-        if (manager is null || manager.Role != UserRole.TechnicalManager)
-            throw new AuthException("technical_manager_not_found", "Technical manager was not found.", 404);
+        var company = companies is null ? null : await companies.GetByIdAsync(managerId, tracking: true, cancellationToken);
+        if (company is null)
+            throw new AuthException("technical_manager_not_found", "Company was not found.", 404);
 
-        manager.UpdateSubscription(request.SubscriptionStatus, request.SubscriptionEndDate);
-        await userRepository.SaveAsync(manager, cancellationToken);
-        return ToResponse(manager);
+        company.UpdateSubscription(request.SubscriptionStatus, request.SubscriptionEndDate);
+        await companies!.SaveAsync(cancellationToken);
+        var manager = await FirstTechnicalManagerAsync(company, cancellationToken)
+            ?? throw new AuthException("company_has_no_technical_manager", "The company has no technical manager yet.", 409);
+        return ToResponse(manager, company);
     }
 
     public async Task<IReadOnlyList<AuthUserResponse>> ListAsync(
@@ -118,15 +121,13 @@ public sealed class UserManagementService(
     {
         if (role is not null && !Enum.IsDefined(role.Value))
             throw new ArgumentOutOfRangeException(nameof(role));
-        return (await userRepository.ListAsync(managerId, role, isActive, cancellationToken, includeDeleted))
-            .Select(ToResponse)
-            .ToArray();
+        return await ResponsesAsync(await userRepository.ListAsync(managerId, role, isActive, cancellationToken, includeDeleted), cancellationToken);
     }
 
     public async Task<AuthUserResponse?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var user = await userRepository.GetByIdAsync(userId, cancellationToken);
-        return user is null ? null : ToResponse(user);
+        return user is null ? null : await ResponseAsync(user, cancellationToken);
     }
 
     public async Task<AuthUserResponse> UpdateProfileAsync(
@@ -159,16 +160,16 @@ public sealed class UserManagementService(
         }
         else if (request.Role == UserRole.TechnicalManager)
         {
-            if (request.ManagerId is not null)
-                throw new AuthException("manager_assignment_not_allowed", "Technical managers cannot be assigned to another manager.", 400);
-            managerId = null;
+            if (request.ManagerId is not null && request.ManagerId != user.ManagerId)
+                throw new AuthException("manager_assignment_not_allowed", "A technical manager cannot be moved to another company.", 400);
+            managerId = user.ManagerId;
         }
         else
         {
             managerId = request.ManagerId ?? user.ManagerId;
             if (managerId is null)
-                throw new AuthException("manager_required", "A technical manager is required for staff accounts.", 400);
-            await GetActiveSubscribedManagerAsync(managerId.Value, cancellationToken);
+                throw new AuthException("manager_required", "A company is required for staff accounts.", 400);
+            await EnsureStaffCompanyAsync(managerId.Value, cancellationToken);
         }
 
         var qualifications = request.Qualifications
@@ -187,7 +188,7 @@ public sealed class UserManagementService(
             user.SignatureImageId);
         user.AssignToManager(managerId);
         await userRepository.SaveAsync(user, cancellationToken);
-        return ToResponse(user);
+        return await ResponseAsync(user, cancellationToken);
     }
 
     public async Task DeactivateAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -209,14 +210,11 @@ public sealed class UserManagementService(
         Guid managerId,
         CancellationToken cancellationToken = default)
     {
-        var manager = await GetAuthorizedManagerAsync(managerId, cancellationToken);
+        await EnsureCompanyUsableAsync(managerId, cancellationToken);
         var members = await userRepository.ListAsync(
-            managerId: manager.Id,
+            managerId: managerId,
             cancellationToken: cancellationToken);
-        return members
-            .Where(user => IsTeamRole(user.Role))
-            .Select(ToResponse)
-            .ToArray();
+        return await ResponsesAsync(members.Where(user => IsTeamRole(user.Role)), cancellationToken);
     }
 
     public async Task<AuthUserResponse> CreateTeamMemberAsync(
@@ -224,7 +222,7 @@ public sealed class UserManagementService(
         CreateTeamMemberRequest request,
         CancellationToken cancellationToken = default)
     {
-        var manager = await GetAuthorizedManagerAsync(managerId, cancellationToken);
+        await EnsureCompanyUsableAsync(managerId, cancellationToken);
         if (!IsTeamRole(request.Role))
             throw new AuthException("role_forbidden", "Technical managers may only create coordinators and inspectors.", 403);
         if (request.Role == UserRole.Coordinator && request.EmailConfig is null)
@@ -241,13 +239,12 @@ public sealed class UserManagementService(
             request.Role,
             request.Password,
             request.Qualifications,
-            manager.Id,
-            createdById: manager.Id);
+            managerId);
         var emailConfig = request.EmailConfig is null
             ? null
-            : CreateEmailConfig(user.Id, manager.Id, request.EmailConfig);
+            : CreateEmailConfig(user.Id, managerId, request.EmailConfig);
         await userRepository.AddTeamMemberAsync(user, emailConfig, cancellationToken);
-        return ToResponse(user);
+        return await ResponseAsync(user, cancellationToken);
     }
 
     private CoordinatorEmailConfig CreateEmailConfig(
@@ -288,12 +285,12 @@ public sealed class UserManagementService(
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        await GetAuthorizedManagerAsync(managerId, cancellationToken);
+        await EnsureCompanyUsableAsync(managerId, cancellationToken);
         var user = await userRepository.GetByIdAsync(userId, cancellationToken);
         return user is not null &&
                user.ManagerId == managerId &&
                IsTeamRole(user.Role)
-            ? ToResponse(user)
+            ? await ResponseAsync(user, cancellationToken)
             : null;
     }
 
@@ -303,7 +300,7 @@ public sealed class UserManagementService(
         UpdateTeamMemberRequest request,
         CancellationToken cancellationToken = default)
     {
-        await GetAuthorizedManagerAsync(managerId, cancellationToken);
+        await EnsureCompanyUsableAsync(managerId, cancellationToken);
         var user = await GetScopedTeamMemberAsync(managerId, userId, cancellationToken);
         if (request.IsOnLeave && request.LeaveUntil is not null && request.LeaveUntil <= DateTimeOffset.UtcNow)
             throw new ArgumentException("Leave end date must be in the future.", nameof(request.LeaveUntil));
@@ -317,7 +314,7 @@ public sealed class UserManagementService(
             request.LeaveUntil,
             user.SignatureImageId);
         await userRepository.SaveAsync(user, cancellationToken);
-        return ToResponse(user);
+        return await ResponseAsync(user, cancellationToken);
     }
 
     public async Task DeactivateTeamMemberAsync(
@@ -325,7 +322,7 @@ public sealed class UserManagementService(
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        await GetAuthorizedManagerAsync(managerId, cancellationToken);
+        await EnsureCompanyUsableAsync(managerId, cancellationToken);
         await GetScopedTeamMemberAsync(managerId, userId, cancellationToken);
         if (!await userRepository.DeleteAsync(userId, cancellationToken))
             throw new AuthException("user_not_found", "User was not found.", 404);
@@ -337,7 +334,7 @@ public sealed class UserManagementService(
         bool isActive,
         CancellationToken cancellationToken = default)
     {
-        await GetAuthorizedManagerAsync(managerId, cancellationToken);
+        await EnsureCompanyUsableAsync(managerId, cancellationToken);
         await GetScopedTeamMemberAsync(managerId, userId, cancellationToken);
         if (!await userRepository.SetActiveAsync(userId, isActive, cancellationToken))
             throw new AuthException("user_not_found", "User was not found.", 404);
@@ -345,7 +342,7 @@ public sealed class UserManagementService(
 
     public async Task SetTeamMemberPasswordAsync(Guid managerId, Guid userId, string newPassword, CancellationToken cancellationToken = default)
     {
-        await GetAuthorizedManagerAsync(managerId, cancellationToken);
+        await EnsureCompanyUsableAsync(managerId, cancellationToken);
         await SetPasswordAsync(await GetScopedTeamMemberAsync(managerId, userId, cancellationToken), newPassword, cancellationToken);
     }
 
@@ -354,7 +351,7 @@ public sealed class UserManagementService(
 
     public async Task<AuthUserResponse> ChangeTeamMemberEmailAsync(Guid managerId, Guid userId, string email, CancellationToken cancellationToken = default)
     {
-        await GetAuthorizedManagerAsync(managerId, cancellationToken);
+        await EnsureCompanyUsableAsync(managerId, cancellationToken);
         return await ChangeEmailAsync(await GetScopedTeamMemberAsync(managerId, userId, cancellationToken), email, cancellationToken);
     }
 
@@ -388,7 +385,7 @@ public sealed class UserManagementService(
             await userRepository.RevokeAllRefreshTokensAsync(user.Id, cancellationToken);
         }
 
-        return ToResponse(user);
+        return await ResponseAsync(user, cancellationToken);
     }
 
     private async Task<AppUser> GetUserOrNotFoundAsync(Guid userId, CancellationToken cancellationToken) =>
@@ -410,7 +407,8 @@ public sealed class UserManagementService(
         }
     }
 
-    private static AuthUserResponse ToResponse(AppUser user) => new(
+    // The subscription shown for a user is the one of their company (it used to be the technical manager's own).
+    private static AuthUserResponse ToResponse(AppUser user, Company? company) => new(
         user.Id,
         user.Email,
         user.FullName,
@@ -421,31 +419,48 @@ public sealed class UserManagementService(
         user.LeaveUntil,
         user.ManagerId,
         user.CreatedById,
-        user.GetEffectiveSubscriptionStatus(),
-        user.SubscriptionEndDate);
+        company?.GetEffectiveSubscriptionStatus(),
+        company?.SubscriptionEndDate);
 
-    private async Task<AppUser> GetAuthorizedManagerAsync(Guid managerId, CancellationToken cancellationToken)
+    private async Task<AuthUserResponse> ResponseAsync(AppUser user, CancellationToken cancellationToken) =>
+        ToResponse(user, companies is not null && user.CompanyId is { } id ? await companies.GetByIdAsync(id, tracking: false, cancellationToken) : null);
+
+    private async Task<IReadOnlyList<AuthUserResponse>> ResponsesAsync(IEnumerable<AppUser> users, CancellationToken cancellationToken)
     {
-        var manager = await userRepository.GetByIdAsync(managerId, cancellationToken);
-        if (manager is null || !manager.IsActive || manager.Role != UserRole.TechnicalManager)
-            throw new AuthException("forbidden", "An active technical manager account is required.", 403);
-        if (!manager.HasActiveSubscription())
-            throw new AuthException("subscription_inactive", "The technical manager subscription is suspended or expired.", 403);
-        return manager;
+        var list = users.ToArray();
+        var found = companies is null
+            ? new Dictionary<Guid, Company>()
+            : await companies.GetByIdsAsync(list.Select(user => user.CompanyId).OfType<Guid>().Distinct().ToArray(), cancellationToken);
+        return list.Select(user => ToResponse(user, user.CompanyId is { } id && found.TryGetValue(id, out var company) ? company : null)).ToArray();
     }
 
-    private async Task<AppUser> GetActiveSubscribedManagerAsync(Guid managerId, CancellationToken cancellationToken)
+    /// <summary>The company's default reviewer, or else its oldest technical manager (the platform owner's calls answer with a user).</summary>
+    private async Task<AppUser?> FirstTechnicalManagerAsync(Company company, CancellationToken cancellationToken)
     {
-        var manager = await userRepository.GetByIdAsync(managerId, cancellationToken);
-        if (manager is null || !manager.IsActive || manager.Role != UserRole.TechnicalManager ||
-            !manager.HasActiveSubscription())
-        {
-            throw new AuthException(
-                "manager_invalid",
-                "An active technical manager with an active subscription is required.",
-                400);
-        }
-        return manager;
+        if (company.DefaultReviewerId is { } reviewerId &&
+            await userRepository.GetByIdAsync(reviewerId, cancellationToken) is { Role: UserRole.TechnicalManager } reviewer)
+            return reviewer;
+        return (await userRepository.ListAsync(company.Id, UserRole.TechnicalManager, cancellationToken: cancellationToken))
+            .OrderBy(user => user.CreatedAt).FirstOrDefault();
+    }
+
+    // Team calls (a company admin or the platform owner on behalf of a company): the company must be on and its subscription valid.
+    private async Task EnsureCompanyUsableAsync(Guid companyId, CancellationToken cancellationToken)
+    {
+        if (companies is null) return;
+        var company = await companies.GetByIdAsync(companyId, tracking: false, cancellationToken);
+        if (company is null || !company.IsActive)
+            throw new AuthException("forbidden", "An active company account is required.", 403);
+        if (!company.HasActiveSubscription())
+            throw new AuthException("subscription_inactive", "The company subscription is suspended or expired.", 403);
+    }
+
+    // Creating or moving staff: the company named must exist, be on, and have a valid subscription.
+    private async Task EnsureStaffCompanyAsync(Guid companyId, CancellationToken cancellationToken)
+    {
+        if (companies is null) return;
+        if (await companies.GetByIdAsync(companyId, tracking: false, cancellationToken) is not { } company || !company.IsUsable())
+            throw new AuthException("manager_invalid", "An active company with an active subscription is required.", 400);
     }
 
     private async Task<AppUser> GetScopedTeamMemberAsync(

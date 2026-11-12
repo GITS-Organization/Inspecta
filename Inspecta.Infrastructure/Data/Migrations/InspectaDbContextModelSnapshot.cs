@@ -368,6 +368,38 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.ToTable("ClientReplies");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.Company", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DefaultReviewerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset?>("SubscriptionEndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SubscriptionStatus")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Companies");
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.CompanyProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1540,19 +1572,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .WithMany()
                         .HasForeignKey("CreatedById")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
-                        .WithMany()
-                        .HasForeignKey("ManagerId")
-                        .OnDelete(DeleteBehavior.Restrict);
-                });
-
-            modelBuilder.Entity("Inspecta.Domain.Entities.Client", b =>
-                {
-                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
-                        .WithMany()
-                        .HasForeignKey("ManagerId")
-                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.ClientContact", b =>
@@ -1578,12 +1597,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasForeignKey("CreatedById")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
-                        .WithMany()
-                        .HasForeignKey("ManagerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.ClientReply", b =>
@@ -1592,15 +1605,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .WithMany()
                         .HasForeignKey("RequestId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Inspecta.Domain.Entities.CompanyProfile", b =>
-                {
-                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
-                        .WithMany()
-                        .HasForeignKey("ManagerId")
-                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -1642,11 +1646,6 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.HasOne("Inspecta.Domain.Entities.Client", "Client")
                         .WithMany("Requests")
                         .HasForeignKey("ClientId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Inspecta.Domain.Entities.AppUser", null)
-                        .WithMany()
-                        .HasForeignKey("ManagerId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Client");

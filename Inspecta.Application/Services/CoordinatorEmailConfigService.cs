@@ -9,13 +9,13 @@ namespace Inspecta.Application.Services;
 public sealed class CoordinatorEmailConfigService(
     IUserRepository userRepository,
     ICoordinatorEmailConfigRepository configRepository,
-    ISecretProtector secretProtector) : ICoordinatorEmailConfigService
+    ISecretProtector secretProtector,
+    ICompanyGate? companyGate = null) : ICoordinatorEmailConfigService
 {
     private async Task EnsureTeamCoordinatorAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken)
     {
-        var manager = await userRepository.GetByIdAsync(managerId, cancellationToken);
-        if (manager is null || manager.Role != UserRole.TechnicalManager || !manager.HasActiveSubscription())
-            throw new AuthException("manager_not_found", "Active technical manager was not found.", 404);
+        if (companyGate is not null && !await companyGate.IsUsableAsync(managerId, cancellationToken))
+            throw new AuthException("manager_not_found", "An active company was not found.", 404);
 
         var coordinator = await userRepository.GetByIdAsync(coordinatorId, cancellationToken);
         if (coordinator is null ||

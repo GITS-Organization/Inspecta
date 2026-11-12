@@ -58,8 +58,7 @@ public sealed class RequestTransferService(
         var team = role switch
         {
             "admin" => managerId,
-            "technical_manager" => actorId,
-            _ => (await userRepository.GetByIdAsync(actorId, cancellationToken))?.ManagerId
+            _ => (await userRepository.GetByIdAsync(actorId, cancellationToken))?.CompanyId
         };
         if (team is null) return [];
 

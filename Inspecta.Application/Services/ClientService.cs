@@ -9,7 +9,8 @@ namespace Inspecta.Application.Services;
 public sealed class ClientService(
     IClientRepository clientRepository,
     IUserRepository userRepository,
-    ICertificateFileRepository? certificateFiles = null) : IClientService
+    ICertificateFileRepository? certificateFiles = null,
+    ICompanyGate? companyGate = null) : IClientService
 {
     public async Task<ClientResponse> CreateAsync(CreateClientRequest request, Guid? managerId, CancellationToken cancellationToken = default)
     {
@@ -17,9 +18,8 @@ public sealed class ClientService(
             throw new ArgumentException("A client can have only one primary contact.");
         if (managerId is Guid managerIdValue)
         {
-            var manager = await userRepository.GetByIdAsync(managerIdValue, cancellationToken);
-            if (manager is null || !manager.IsActive || manager.Role != Inspecta.Domain.Enums.UserRole.TechnicalManager)
-                throw new ArgumentException("The selected technical manager is unavailable.", nameof(managerId));
+            if (companyGate is not null && !await companyGate.IsActiveAsync(managerIdValue, cancellationToken))
+                throw new ArgumentException("The selected company is unavailable.", nameof(managerId));
         }
         var client = Client.Create(
             request.Name,

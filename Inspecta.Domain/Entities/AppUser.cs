@@ -12,7 +12,16 @@ public class AppUser
     private AppUser() { }
 
     public Guid Id { get; private set; } = Guid.NewGuid();
+    /// <summary>
+    /// The id of the company the user belongs to (null only for the platform owner). The name is historical: before companies existed it was
+    /// the id of the technical manager the user worked for, and for those companies the company id is that same value. For a technical
+    /// manager created before companies existed it may still be empty: see <see cref="CompanyId"/>.
+    /// </summary>
     public Guid? ManagerId { get; private set; }
+
+    /// <summary>The company of the user: <see cref="ManagerId"/>, or for a legacy technical manager without one, the manager own id (the old company id).</summary>
+    [NotMapped]
+    public Guid? CompanyId => ManagerId ?? (Role == UserRole.TechnicalManager ? Id : null);
     public Guid? CreatedById { get; private set; }
     public string Email { get; private set; } = string.Empty;
     public string FullName { get; private set; } = string.Empty;
@@ -75,8 +84,8 @@ public class AppUser
             throw new ArgumentOutOfRangeException(nameof(role));
         if (managerId == Guid.Empty)
             throw new ArgumentException("Manager id cannot be empty.", nameof(managerId));
-        if (managerId is not null && role is (UserRole.Admin or UserRole.TechnicalManager))
-            throw new ArgumentException("Only a team member can be assigned to a technical manager.", nameof(managerId));
+        if (managerId is not null && role == UserRole.Admin)
+            throw new ArgumentException("The platform owner does not belong to a company.", nameof(managerId));
         if (subscriptionEndDate is not null && role != UserRole.TechnicalManager)
             throw new ArgumentException("Only a technical manager can have a subscription.", nameof(subscriptionEndDate));
 
@@ -183,7 +192,7 @@ public class AppUser
             SubscriptionEndDate = null;
         }
         Role = role;
-        if (role is UserRole.Admin or UserRole.TechnicalManager)
+        if (role == UserRole.Admin)
             ManagerId = null;
     }
 
@@ -193,8 +202,8 @@ public class AppUser
             throw new ArgumentException("Manager id cannot be empty.", nameof(managerId));
         if (managerId == Id)
             throw new ArgumentException("A user cannot manage themselves.", nameof(managerId));
-        if (managerId is not null && Role is (UserRole.Admin or UserRole.TechnicalManager))
-            throw new ArgumentException("Admins and technical managers cannot be assigned to another manager.", nameof(managerId));
+        if (managerId is not null && Role == UserRole.Admin)
+            throw new ArgumentException("The platform owner does not belong to a company.", nameof(managerId));
 
         ManagerId = managerId;
     }

@@ -35,6 +35,7 @@ public sealed class CompanyProfileTests : IDisposable
         using var db = Context();
         db.Database.EnsureCreated();
         db.AddRange(manager, coordinator);
+        db.Companies.Add(Company.Create("Acme", id: manager.Id));
         db.SaveChanges();
     }
 
@@ -60,7 +61,7 @@ public sealed class CompanyProfileTests : IDisposable
     public async Task AProfileIsSavedChangedAndItsImagesKeptOrRemovedOnRequest()
     {
         await using var db = Context();
-        var service = new CompanyProfileService(new EfCompanyProfileRepository(db), new EfUserRepository(db));
+        var service = new CompanyProfileService(new EfCompanyProfileRepository(db), new EfUserRepository(db), new EfCompanyRepository(db));
         Assert.Null(await service.GetAsync(manager.Id));
 
         var saved = await service.SaveAsync(manager.Id, Request());
@@ -97,7 +98,7 @@ public sealed class CompanyProfileTests : IDisposable
     public async Task OnlyATechnicalManagerCanHaveOneAndABadImageOrColourSavesNothing()
     {
         await using var db = Context();
-        var service = new CompanyProfileService(new EfCompanyProfileRepository(db), new EfUserRepository(db));
+        var service = new CompanyProfileService(new EfCompanyProfileRepository(db), new EfUserRepository(db), new EfCompanyRepository(db));
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.SaveAsync(coordinator.Id, Request()));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.SaveAsync(Guid.NewGuid(), Request()));
@@ -117,7 +118,7 @@ public sealed class CompanyProfileTests : IDisposable
     public async Task AProfileWithOnlyImagesAndColoursKeepsTheBuiltInCompanyDetails()
     {
         await using var db = Context();
-        var service = new CompanyProfileService(new EfCompanyProfileRepository(db), new EfUserRepository(db));
+        var service = new CompanyProfileService(new EfCompanyProfileRepository(db), new EfUserRepository(db), new EfCompanyRepository(db));
 
         var saved = await service.SaveAsync(manager.Id, new SaveCompanyProfileRequest
         {
@@ -151,7 +152,7 @@ public sealed class CompanyProfileTests : IDisposable
     public async Task ATeamWithAProfileGetsItsBrandingAndATeamWithoutOneGetsNone()
     {
         await using var db = Context();
-        var service = new CompanyProfileService(new EfCompanyProfileRepository(db), new EfUserRepository(db));
+        var service = new CompanyProfileService(new EfCompanyProfileRepository(db), new EfUserRepository(db), new EfCompanyRepository(db));
         await service.SaveAsync(manager.Id, Request());
 
         var branding = await ((ICompanyBrandingProvider)service).GetAsync(manager.Id);

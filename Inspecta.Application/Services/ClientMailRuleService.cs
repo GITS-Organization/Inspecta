@@ -9,7 +9,8 @@ namespace Inspecta.Application.Services;
 public sealed class ClientMailRuleService(
     IClientMailRuleRepository ruleRepository,
     IUserRepository userRepository,
-    IMachineSuggestionService? machineSuggestions = null) : IClientMailRuleService
+    IMachineSuggestionService? machineSuggestions = null,
+    ICompanyGate? companyGate = null) : IClientMailRuleService
 {
     public async Task<IReadOnlyList<ClientMailRuleResponse>> ListAsync(
         Guid? managerId,
@@ -25,9 +26,8 @@ public sealed class ClientMailRuleService(
         CreateClientMailRuleRequest request,
         CancellationToken cancellationToken = default)
     {
-        var manager = await userRepository.GetByIdAsync(managerId, cancellationToken);
-        if (manager is null || !manager.IsActive || manager.Role != UserRole.TechnicalManager)
-            throw new ArgumentException("The selected technical manager is unavailable.", nameof(managerId));
+        if (companyGate is not null && !await companyGate.IsActiveAsync(managerId, cancellationToken))
+            throw new ArgumentException("The selected company is unavailable.", nameof(managerId));
 
         if (request.ClientId is Guid clientId &&
             await ruleRepository.GetClientManagerIdAsync(clientId, cancellationToken) != managerId)

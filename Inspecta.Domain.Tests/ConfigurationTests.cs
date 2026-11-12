@@ -27,6 +27,7 @@ public sealed class ConfigurationTests : IDisposable
         using var db = CreateContext();
         db.Database.EnsureCreated();
         db.Users.Add(manager);
+        db.Companies.Add(Company.Create("Acme", id: manager.Id));
         db.SaveChanges();
     }
 
@@ -275,7 +276,7 @@ public sealed class ConfigurationTests : IDisposable
     }
 
     [Fact]
-    public async Task AUserWithClientsCannotBeDeletedForGoodButAFreeOneCan()
+    public async Task DeletingTheHeadOfACompanyLeavesTheCompanysClientsAndAFreeUserCanBeDeletedToo()
     {
         await CreateClientAsync();
         var spare = Inspecta.Domain.Entities.AppUser.Create("spare@example.com", "Spare Person", Inspecta.Domain.Enums.UserRole.Inspector);
@@ -283,15 +284,22 @@ public sealed class ConfigurationTests : IDisposable
 
         await using var attempt = CreateContext();
         var users = new EfUserRepository(attempt);
-        var refused = await Assert.ThrowsAsync<Inspecta.Application.Exceptions.AuthException>(() => users.DeleteAsync(manager.Id));
-        Assert.Equal("user_in_use", refused.Code);
-        Assert.Equal(409, refused.StatusCode);
+        // The clients belong to the company, not to the manager user, so deleting the manager does not touch them.
+        var clientsBefore = await CountClientsAsync();
+        Assert.True(await users.DeleteAsync(manager.Id));
+        Assert.Equal(clientsBefore, await CountClientsAsync());
 
         Assert.True(await users.DeleteAsync(spare.Id));
         Assert.False(await users.DeleteAsync(spare.Id));
         await using var check = CreateContext();
         Assert.Null(await new EfUserRepository(check).GetByIdAsync(spare.Id));
-        Assert.NotNull(await new EfUserRepository(check).GetByIdAsync(manager.Id));
+        Assert.Null(await new EfUserRepository(check).GetByIdAsync(manager.Id));
+    }
+
+    private async Task<int> CountClientsAsync()
+    {
+        await using var db = CreateContext();
+        return await db.Clients.IgnoreQueryFilters().CountAsync();
     }
 
     [Fact]

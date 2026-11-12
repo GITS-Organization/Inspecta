@@ -66,7 +66,7 @@ public sealed class UserManagementTests
 
         Assert.Equal(UserRole.Inspector, created.Role);
         Assert.Equal(manager.Id, created.ManagerId);
-        Assert.Equal(manager.Id, created.CreatedById);
+        Assert.Null(created.CreatedById);
     }
 
     [Fact]
@@ -158,7 +158,8 @@ public sealed class UserManagementTests
     public async Task TechnicalManagerProvisioningCreatesAccountWithSubscription()
     {
         var users = new MemoryUserRepository();
-        var service = CreateService(users);
+        var companies = new FakeCompanyRepository();
+        var service = CreateService(users, companies);
 
         var created = await service.CreateTechnicalManagerAsync(new CreateTechnicalManagerRequest
         {
@@ -169,7 +170,10 @@ public sealed class UserManagementTests
         });
 
         var account = Assert.Single(await users.ListAsync(role: UserRole.TechnicalManager));
+        var company = Assert.Single(companies.Items);
         Assert.Equal(account.Id, created.Id);
+        Assert.Equal(company.Id, created.ManagerId);
+        Assert.Equal(account.Id, company.DefaultReviewerId);
         Assert.Equal(SubscriptionStatus.Active, created.SubscriptionStatus);
         Assert.InRange(
             created.SubscriptionEndDate!.Value,
@@ -182,7 +186,7 @@ public sealed class UserManagementTests
     {
         var users = new MemoryUserRepository();
         var profiles = new RecordingProfiles();
-        var service = new UserManagementService(users, new FakePasswordService(), new FakeSecretProtector(), profiles);
+        var service = new UserManagementService(users, new FakePasswordService(), new FakeSecretProtector(), profiles, companies: new FakeCompanyRepository());
         var profile = new Inspecta.Application.Contracts.Company.SaveCompanyProfileRequest { Name = "Acme", Address = "Cairo" };
 
         var created = await service.CreateTechnicalManagerAsync(new CreateTechnicalManagerRequest
@@ -190,7 +194,7 @@ public sealed class UserManagementTests
             Email = "manager@acme.com", FullName = "Acme Manager", Password = "StrongPassword123!", CompanyProfile = profile
         });
 
-        Assert.Equal(created.Id, profiles.SavedFor);
+        Assert.Equal(created.ManagerId, profiles.SavedFor);
         Assert.Same(profile, profiles.Saved);
     }
 
@@ -199,7 +203,7 @@ public sealed class UserManagementTests
     {
         var users = new MemoryUserRepository();
         var profiles = new RecordingProfiles { Fail = true };
-        var service = new UserManagementService(users, new FakePasswordService(), new FakeSecretProtector(), profiles);
+        var service = new UserManagementService(users, new FakePasswordService(), new FakeSecretProtector(), profiles, companies: new FakeCompanyRepository());
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateTechnicalManagerAsync(new CreateTechnicalManagerRequest
         {
@@ -247,11 +251,14 @@ public sealed class UserManagementTests
     public async Task SuspendedOrExpiredManagerCannotAccessManagerOperations()
     {
         var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
-        var service = CreateService(new MemoryUserRepository(manager));
+        var users = new MemoryUserRepository(manager);
+        var companies = CompaniesOf(users);
+        var service = CreateService(users, companies);
+        var company = companies.Items.Single();
 
-        manager.UpdateSubscription(SubscriptionStatus.Suspended, DateTimeOffset.UtcNow.AddDays(10));
+        company.UpdateSubscription(SubscriptionStatus.Suspended, DateTimeOffset.UtcNow.AddDays(10));
         var suspended = await Assert.ThrowsAsync<AuthException>(() => service.ListTeamAsync(manager.Id));
-        manager.UpdateSubscription(SubscriptionStatus.Active, DateTimeOffset.UtcNow.AddSeconds(-1));
+        company.UpdateSubscription(SubscriptionStatus.Active, DateTimeOffset.UtcNow.AddSeconds(-1));
         var expired = await Assert.ThrowsAsync<AuthException>(() => service.ListTeamAsync(manager.Id));
 
         Assert.Equal("subscription_inactive", suspended.Code);
@@ -262,7 +269,9 @@ public sealed class UserManagementTests
     public async Task AdminCanUpdateTechnicalManagerSubscription()
     {
         var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
-        var service = CreateService(new MemoryUserRepository(manager));
+        var users = new MemoryUserRepository(manager);
+        var companies = CompaniesOf(users);
+        var service = CreateService(users, companies);
 
         var updated = await service.UpdateTechnicalManagerSubscriptionAsync(
             manager.Id,
@@ -273,7 +282,7 @@ public sealed class UserManagementTests
             });
 
         Assert.Equal(SubscriptionStatus.Suspended, updated.SubscriptionStatus);
-        Assert.False(manager.HasActiveSubscription());
+        Assert.False(companies.Items.Single().HasActiveSubscription());
     }
 
     [Fact]
@@ -384,8 +393,17 @@ public sealed class UserManagementTests
         Assert.Equal(404, missing.StatusCode);
     }
 
-    private static UserManagementService CreateService(MemoryUserRepository users) =>
-        new(users, new FakePasswordService(), new FakeSecretProtector());
+    // Every technical manager of the repository heads a company with the same id (a company that existed before the Companies table).
+    private static UserManagementService CreateService(MemoryUserRepository users, FakeCompanyRepository? companies = null) =>
+        new(users, new FakePasswordService(), new FakeSecretProtector(), companies: companies ?? CompaniesOf(users));
+
+    private static FakeCompanyRepository CompaniesOf(MemoryUserRepository users) =>
+        new(users.Users.Where(user => user.Role == UserRole.TechnicalManager).Select(manager =>
+        {
+            var company = Company.Create(manager.FullName, id: manager.Id);
+            company.SetDefaultReviewer(manager.Id);
+            return company;
+        }).ToArray());
 
     private sealed class RecordingProfiles : ICompanyProfileService
     {
@@ -426,6 +444,7 @@ public sealed class UserManagementTests
     private sealed class MemoryUserRepository(params AppUser[] initialUsers) : IUserRepository
     {
         private readonly List<AppUser> _users = initialUsers.ToList();
+        public IReadOnlyList<AppUser> Users => _users;
         public List<CoordinatorEmailConfig> EmailConfigs { get; } = [];
 
         public Task<AppUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default) =>

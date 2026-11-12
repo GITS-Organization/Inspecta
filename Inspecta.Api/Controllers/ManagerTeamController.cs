@@ -139,10 +139,11 @@ public sealed class ManagerTeamController(IUserManagementService userManagementS
             return requestedManagerId
                 ?? throw new AuthException("manager_required", "Admins must provide a managerId.", 400);
 
-        if (requestedManagerId is Guid managerId && managerId != actorId)
-            throw new AuthException("forbidden", "Technical managers can only manage their own team.", 403);
+        var companyId = User.GetTenantId() ?? throw new AuthException("forbidden", "The account does not belong to a company.", 403);
+        if (requestedManagerId is Guid managerId && managerId != companyId)
+            throw new AuthException("forbidden", "You can only manage your own company.", 403);
 
-        return actorId;
+        return companyId;
     }
 
     private Guid GetActorId()

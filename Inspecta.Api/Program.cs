@@ -78,6 +78,8 @@ if (connectionString.IndexOf("Pool Size", StringComparison.OrdinalIgnoreCase) < 
 builder.Services.AddDbContext<InspectaDbContext>(options => options.UseNpgsql(connectionBuilder.ConnectionString));
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
 builder.Services.AddScoped<ICoordinatorEmailConfigRepository, EfCoordinatorEmailConfigRepository>();
+builder.Services.AddScoped<ICompanyRepository, EfCompanyRepository>();
+builder.Services.AddScoped<ICompanyGate, CompanyGate>();
 builder.Services.AddScoped<IEmailSyncRepository, EfEmailSyncRepository>();
 builder.Services.AddScoped<IQuotationDraftRepository, EfQuotationDraftRepository>();
 builder.Services.AddSingleton<ILoginAttemptTracker, LoginAttemptTracker>();
@@ -217,9 +219,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
                     user.Id,
                     user.IsActive,
                     user.Role,
-                    user.ManagerId,
-                    user.SubscriptionStatus,
-                    user.SubscriptionEndDate
+                    user.ManagerId
                 })
                 .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
             if (currentUser is null || !currentUser.IsActive)
@@ -228,34 +228,25 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
                 return;
             }
 
-            if (currentUser.Role == Inspecta.Domain.Enums.UserRole.TechnicalManager)
+            // Everyone but the platform owner works inside a company that must be switched on with a valid subscription.
+            var companyId = currentUser.ManagerId ?? (currentUser.Role == Inspecta.Domain.Enums.UserRole.TechnicalManager ? currentUser.Id : (Guid?)null);
+            if (currentUser.Role != Inspecta.Domain.Enums.UserRole.Admin)
             {
-                if (currentUser.SubscriptionStatus != Inspecta.Domain.Enums.SubscriptionStatus.Active ||
-                    currentUser.SubscriptionEndDate is { } managerEndDate && managerEndDate <= DateTimeOffset.UtcNow)
+                if (companyId is not Guid ownCompanyId)
                 {
-                    context.Fail("The technical manager subscription is suspended or expired.");
-                    return;
-                }
-            }
-            else if (currentUser.Role != Inspecta.Domain.Enums.UserRole.Admin)
-            {
-                if (currentUser.ManagerId is not Guid managerId)
-                {
-                    context.Fail("The account is not assigned to a technical manager.");
+                    context.Fail("The account does not belong to a company.");
                     return;
                 }
 
-                var manager = await dbContext.Users.AsNoTracking()
-                    .Where(user => user.Id == managerId &&
-                        user.IsActive &&
-                        user.Role == Inspecta.Domain.Enums.UserRole.TechnicalManager)
-                    .Select(user => new { user.SubscriptionStatus, user.SubscriptionEndDate })
+                var company = await dbContext.Companies.AsNoTracking()
+                    .Where(item => item.Id == ownCompanyId && item.IsActive)
+                    .Select(item => new { item.SubscriptionStatus, item.SubscriptionEndDate })
                     .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
-                if (manager is null ||
-                    manager.SubscriptionStatus != Inspecta.Domain.Enums.SubscriptionStatus.Active ||
-                    manager.SubscriptionEndDate is { } teamEndDate && teamEndDate <= DateTimeOffset.UtcNow)
+                if (company is null ||
+                    company.SubscriptionStatus != Inspecta.Domain.Enums.SubscriptionStatus.Active ||
+                    company.SubscriptionEndDate is { } endDate && endDate <= DateTimeOffset.UtcNow)
                 {
-                    context.Fail("The technical manager subscription is suspended or expired.");
+                    context.Fail("The company subscription is suspended or expired.");
                     return;
                 }
             }
@@ -278,12 +269,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
             var expectedTenantId = currentUser.Role switch
             {
                 Inspecta.Domain.Enums.UserRole.Admin => (Guid?)null,
-                Inspecta.Domain.Enums.UserRole.TechnicalManager => currentUser.Id,
-                _ => currentUser.ManagerId
+                _ => companyId
             };
             var tokenTenantId = context.Principal?.FindFirst("tenant_id")?.Value;
-            var expectedManagerId = currentUser.ManagerId?.ToString();
             var tokenManagerId = context.Principal?.FindFirst("manager_id")?.Value;
+            // A technical manager signed in before companies existed holds a token without this claim: it is accepted until it expires.
+            var expectedManagerId = currentUser.Role == Inspecta.Domain.Enums.UserRole.TechnicalManager && tokenManagerId is null ? null : currentUser.ManagerId?.ToString();
             var tokenUserId = context.Principal?.FindFirst("user_id")?.Value;
             if (!string.Equals(tokenUserId, currentUser.Id.ToString(), StringComparison.Ordinal) ||
                 !string.Equals(tokenTenantId, expectedTenantId?.ToString(), StringComparison.Ordinal) ||

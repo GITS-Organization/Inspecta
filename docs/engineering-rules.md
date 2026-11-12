@@ -19,6 +19,8 @@ An entity with `ManagerId` or `TenantId` has an EF query filter that uses it, so
 - Enforced by: `TenantGuardTests`.
 - When it fails: give the new entity a filter like the others in `InspectaDbContext`. Add it to the exceptions only if it is read strictly by manager id and the reason is written down.
 - Adding an entity: tenant column, filter, a row in the isolation matrix (rule 5), then the migration.
+- **The tenant column is the id of a company, whatever it is still called.** `ManagerId` (and `TenantId`, the `tenant_id` claim) is a `Companies.Id`. It used to be the id of the company's technical manager; it no longer is, so never load a user with it: ask `ICompanyRepository` / `ICompanyGate` (company exists, is on, subscription valid), or use the user's `CompanyId`. Renaming the column to `CompanyId` is a later, separate release (the migration guard forbids renames in the same step).
+- Enforced by: `CompanyIdGuardTests` (no user lookup with a company or team id).
 
 ## 4. Switching the filter off is a registered act
 `IgnoreQueryFilters()` removes the company separation for one query. It is needed for the mail sync (it reads every team), for sign-in (it finds the user before a tenant is known) and a few public reads. Each file and its count is in the register.

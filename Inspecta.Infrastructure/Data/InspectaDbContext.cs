@@ -13,6 +13,7 @@ public sealed class InspectaDbContext(
     private Guid? TenantId => currentTenant.TenantId;
 
     public DbSet<AppUser> Users => Set<AppUser>();
+    public DbSet<Company> Companies => Set<Company>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<ClientContact> ClientContacts => Set<ClientContact>();
@@ -36,14 +37,16 @@ public sealed class InspectaDbContext(
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // A company is the tenant itself, so it has no tenant filter: who may read it is decided by the services.
+        var company = modelBuilder.Entity<Company>();
+        company.HasKey(item => item.Id);
+        company.Property(item => item.Name).HasMaxLength(Company.MaxNameLength).IsRequired();
+        company.Property(item => item.SubscriptionStatus).HasConversion<string>().HasMaxLength(24);
+
         var user = modelBuilder.Entity<AppUser>();
         user.HasKey(item => item.Id);
         user.HasIndex(item => new { item.ManagerId, item.Role });
         user.HasQueryFilter(item => !item.IsDeleted);
-        user.HasOne<AppUser>()
-            .WithMany()
-            .HasForeignKey(item => item.ManagerId)
-            .OnDelete(DeleteBehavior.Restrict);
         user.HasOne<AppUser>()
             .WithMany()
             .HasForeignKey(item => item.CreatedById)
@@ -71,7 +74,6 @@ public sealed class InspectaDbContext(
         client.HasKey(item => item.Id);
         client.HasIndex(item => item.ManagerId);
         client.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
-        client.HasOne<AppUser>().WithMany().HasForeignKey(item => item.ManagerId).OnDelete(DeleteBehavior.Restrict);
         client.Property(item => item.Name).HasMaxLength(200).IsRequired();
         client.HasMany(item => item.Contacts).WithOne().HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.Cascade);
         client.HasMany(item => item.Requests).WithOne(item => item.Client)
@@ -111,7 +113,6 @@ public sealed class InspectaDbContext(
         request.HasOne(item => item.Email).WithOne(item => item.Request)
             .HasForeignKey<RequestEmail>(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
         request.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
-        request.HasOne<AppUser>().WithMany().HasForeignKey(item => item.ManagerId).OnDelete(DeleteBehavior.Restrict);
         request.Property(item => item.ClientName).HasMaxLength(200).IsRequired();
         request.Property(item => item.Location).HasMaxLength(500).IsRequired();
         request.Property(item => item.Status).HasConversion<string>().HasMaxLength(32);
@@ -264,7 +265,6 @@ public sealed class InspectaDbContext(
         mailRule.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
         mailRule.Property(item => item.Pattern).HasMaxLength(320).IsRequired();
         mailRule.Ignore(item => item.IsDomain);
-        mailRule.HasOne<AppUser>().WithMany().HasForeignKey(item => item.ManagerId).OnDelete(DeleteBehavior.Restrict);
         mailRule.HasOne<AppUser>().WithMany().HasForeignKey(item => item.CreatedById).OnDelete(DeleteBehavior.Restrict);
         mailRule.HasOne<Client>().WithMany().HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.SetNull);
 
@@ -286,7 +286,6 @@ public sealed class InspectaDbContext(
         companyProfile.Property(item => item.UsesBuiltInDetails).HasDefaultValue(false);
         companyProfile.Property(item => item.PrimaryColor).HasMaxLength(7).IsRequired();
         companyProfile.Property(item => item.AccentColor).HasMaxLength(7).IsRequired();
-        companyProfile.HasOne<AppUser>().WithMany().HasForeignKey(item => item.ManagerId).OnDelete(DeleteBehavior.Restrict);
 
         var clientReply = modelBuilder.Entity<ClientReply>();
         clientReply.HasKey(item => item.Id);

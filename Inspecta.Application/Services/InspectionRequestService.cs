@@ -15,7 +15,8 @@ public sealed class InspectionRequestService(
     IMachineSuggestionService? suggestions = null,
     IClientRepository? clientRepository = null,
     IQuoteRepository? quoteRepository = null,
-    ITransactionRunner? transactions = null) : IInspectionRequestService
+    ITransactionRunner? transactions = null,
+    ICompanyGate? companyGate = null) : IInspectionRequestService
 {
     public async Task<RequestResponse> CreateAsync(
         CreateInspectionRequest request,
@@ -150,9 +151,8 @@ public sealed class InspectionRequestService(
 
         if (managerId is Guid managerIdValue)
         {
-            var manager = await userRepository.GetByIdAsync(managerIdValue, cancellationToken);
-            if (manager is null || !manager.IsActive || manager.Role != UserRole.TechnicalManager)
-                throw new ArgumentException("The selected technical manager is unavailable.", nameof(managerId));
+            if (companyGate is not null && !await companyGate.IsActiveAsync(managerIdValue, cancellationToken))
+                throw new ArgumentException("The selected company is unavailable.", nameof(managerId));
         }
 
         var aggregate = InspectionRequest.Create(
@@ -412,11 +412,10 @@ public sealed class InspectionRequestService(
         // A coordinator sees the inspectors of their own team, a manager their own, Admin any team (or all).
         Guid? team = role switch
         {
-            "technical_manager" => actorId,
-            "coordinator" => (await userRepository.GetByIdAsync(actorId, cancellationToken))?.ManagerId,
+            "technical_manager" or "coordinator" => (await userRepository.GetByIdAsync(actorId, cancellationToken))?.CompanyId,
             _ => managerId
         };
-        if (role == "coordinator" && team is null) return [];
+        if (role is "coordinator" or "technical_manager" && team is null) return [];
 
         var inspectors = await userRepository.ListAsync(team, UserRole.Inspector, isActive: true, cancellationToken);
         var active = await requestRepository.CountActiveByInspectorAsync(
