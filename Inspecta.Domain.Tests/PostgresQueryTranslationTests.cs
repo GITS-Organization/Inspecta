@@ -81,4 +81,24 @@ public sealed class PostgresQueryTranslationTests
 
         Assert.All(queries, sql => Assert.False(string.IsNullOrWhiteSpace(sql)));
     }
+
+    /// <summary>The same expression as <c>EfDashboardRepository.ListNextEquipmentDueAsync</c>: sorted and cut to ten in the database, not in memory.</summary>
+    [Fact]
+    public void TheNearestMachinesDueQueryIsOrderedAndLimitedByPostgres()
+    {
+        using var db = Background();
+        var sql = db.Items.AsNoTracking()
+            .Where(item => item.NextInspectionDueAt != null && item.Status == EquipmentStatus.Active &&
+                           !item.IsArchived && item.ArchivedAt == null && item.Client!.ArchivedAt == null)
+            .Where(item => item.Client!.ManagerId == Guid.NewGuid()).Where(item => item.ClientId == Guid.NewGuid())
+            .Where(item => item.NextInspectionDueAt > DateTimeOffset.UtcNow)
+            .OrderBy(item => item.NextInspectionDueAt).ThenBy(item => item.Name).ThenBy(item => item.Id)
+            .Take(10)
+            .Select(item => new { item.Id, item.Name, item.SerialNumber, item.ClientId, ClientName = item.Client!.Name, Due = item.NextInspectionDueAt!.Value })
+            .ToQueryString();
+
+        Assert.Contains("ORDER BY", sql);
+        Assert.Contains("LIMIT", sql);
+        Assert.Contains("NextInspectionDueAt", sql);
+    }
 }

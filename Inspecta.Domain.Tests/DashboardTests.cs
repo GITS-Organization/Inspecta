@@ -65,6 +65,23 @@ public sealed class DashboardTests : IDisposable
                                item.Row.DueAt <= cutoff)
                 .Select(item => item.Row)
                 .ToArray());
+
+        /// <summary>How many times the "nearest upcoming" query ran: it must run only when nothing is due soon.</summary>
+        public int NextCalls { get; private set; }
+
+        public Task<IReadOnlyList<DueEquipmentRow>> ListNextEquipmentDueAsync(
+            DashboardFilter filter, DateTimeOffset after, int take, CancellationToken cancellationToken = default)
+        {
+            NextCalls++;
+            return Task.FromResult<IReadOnlyList<DueEquipmentRow>>(Items
+                .Where(item => (filter.ManagerId is null || item.Team == filter.ManagerId) &&
+                               (filter.ClientId is null || item.Client == filter.ClientId) &&
+                               item.Row.DueAt > after)
+                .Select(item => item.Row)
+                .OrderBy(row => row.DueAt).ThenBy(row => row.Name, StringComparer.OrdinalIgnoreCase).ThenBy(row => row.Id)
+                .Take(take)
+                .ToArray());
+        }
     }
 
     private readonly SqliteConnection connection = new("Data Source=:memory:");
@@ -315,6 +332,90 @@ public sealed class DashboardTests : IDisposable
         Assert.Equal(2, all.Attention.JobsAwaitingReview);
         Assert.Equal(3, all.EquipmentDue.Total);
         Assert.Equal(6, all.Certificates.ByMonth.Sum(month => month.Total));
+    }
+
+    // ---- the machines due list: when nothing is due soon it shows the nearest upcoming ones ----
+
+    private Equipment Machine(string name, int daysFromNow, Guid? team = null) =>
+        new(team ?? manager.Id, alNoor.Id, new DueEquipmentRow(Guid.NewGuid(), name, null, alNoor.Id, "Al Noor", now.AddDays(daysFromNow)));
+
+    private async Task<(Inspecta.Application.Contracts.Dashboard.DashboardOverviewResponse Overview, Repository Repository)> OverviewOf(params Equipment[] machines)
+    {
+        await using var db = Context();
+        var repository = new Repository(db);
+        repository.Items.AddRange(machines);
+        var overview = await Service(db, repository).GetOverviewAsync(manager.Id, null, null, null, null);
+        return (overview, repository);
+    }
+
+    [Fact]
+    public async Task WhenNothingIsDueSoonTheNextTenUpcomingMachinesAreShown()
+    {
+        var machines = Enumerable.Range(40, 12).Select(day => Machine($"M{day}", day)).ToList();
+        machines.Add(Machine("Other team machine", 35, otherManager.Id));
+
+        var (overview, _) = await OverviewOf([.. machines]);
+
+        Assert.Equal("upcoming", overview.EquipmentDue.Mode);
+        Assert.Equal(0, overview.EquipmentDue.Total);
+        Assert.Equal(0, overview.EquipmentDue.Overdue);
+        Assert.Equal(Enumerable.Range(40, 10).Select(day => $"M{day}"), overview.EquipmentDue.Items.Select(item => item.Name));
+        Assert.Equal(40, overview.EquipmentDue.Items[0].DaysUntilDue);
+        Assert.All(overview.EquipmentDue.Items, item => Assert.False(item.Overdue));
+        Assert.Equal(0, overview.Attention.EquipmentDueSoon);
+        Assert.Equal(0, overview.Attention.EquipmentOverdue);
+    }
+
+    [Fact]
+    public async Task WhenSomethingIsDueSoonNoUpcomingMachinesAreAdded()
+    {
+        var (overview, repository) = await OverviewOf(Machine("Soon", 10), Machine("Later 1", 40), Machine("Later 2", 41));
+
+        Assert.Equal("due_soon", overview.EquipmentDue.Mode);
+        Assert.Equal(1, overview.EquipmentDue.Total);
+        Assert.Equal(["Soon"], overview.EquipmentDue.Items.Select(item => item.Name));
+        Assert.Equal(0, repository.NextCalls);
+    }
+
+    [Fact]
+    public async Task AnOverdueMachineCountsAsDueSoonSoThereIsNoFallback()
+    {
+        var (overview, repository) = await OverviewOf(Machine("Overdue", -3), Machine("Later", 60));
+
+        Assert.Equal("due_soon", overview.EquipmentDue.Mode);
+        Assert.Equal(1, overview.EquipmentDue.Overdue);
+        Assert.Equal(["Overdue"], overview.EquipmentDue.Items.Select(item => item.Name));
+        Assert.Equal(0, repository.NextCalls);
+    }
+
+    [Fact]
+    public async Task WithNoDueDatesTheListIsEmptyAndTheModeIsNone()
+    {
+        var (overview, _) = await OverviewOf();
+
+        Assert.Equal("none", overview.EquipmentDue.Mode);
+        Assert.Empty(overview.EquipmentDue.Items);
+        Assert.Equal(0, overview.EquipmentDue.Total);
+    }
+
+    [Fact]
+    public async Task ThirtyDaysAheadIsStillDueSoonAndThirtyOneIsOnlyUpcoming()
+    {
+        var (soon, _) = await OverviewOf(Machine("Day 30", 30), Machine("Day 31", 31));
+        var (later, _) = await OverviewOf(Machine("Day 31", 31), Machine("Day 45", 45));
+
+        Assert.Equal("due_soon", soon.EquipmentDue.Mode);
+        Assert.Equal(["Day 30"], soon.EquipmentDue.Items.Select(item => item.Name));
+        Assert.Equal("upcoming", later.EquipmentDue.Mode);
+        Assert.Equal(["Day 31", "Day 45"], later.EquipmentDue.Items.Select(item => item.Name));
+    }
+
+    [Fact]
+    public async Task UpcomingMachinesWithTheSameDueDateAreOrderedByName()
+    {
+        var (overview, _) = await OverviewOf(Machine("Beta crane", 50), Machine("Alpha crane", 50), Machine("Soonest crane", 45));
+
+        Assert.Equal(["Soonest crane", "Alpha crane", "Beta crane"], overview.EquipmentDue.Items.Select(item => item.Name));
     }
 
     public void Dispose() => connection.Dispose();

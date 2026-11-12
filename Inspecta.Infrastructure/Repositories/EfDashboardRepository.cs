@@ -1,5 +1,6 @@
 using Inspecta.Application.Contracts.Requests;
 using Inspecta.Application.Interfaces;
+using Inspecta.Domain.Entities;
 using Inspecta.Domain.Enums;
 using Inspecta.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -57,17 +58,30 @@ public sealed class EfDashboardRepository(InspectaDbContext dbContext) : IDashbo
     }
 
     public async Task<IReadOnlyList<DueEquipmentRow>> ListEquipmentDueAsync(
-        DashboardFilter filter, DateTimeOffset cutoff, CancellationToken cancellationToken = default)
+        DashboardFilter filter, DateTimeOffset cutoff, CancellationToken cancellationToken = default) =>
+        await ActiveItemsWithADueDate(filter)
+            .Where(item => item.NextInspectionDueAt <= cutoff)
+            .Select(item => new DueEquipmentRow(item.Id, item.Name, item.SerialNumber, item.ClientId, item.Client!.Name, item.NextInspectionDueAt!.Value))
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<DueEquipmentRow>> ListNextEquipmentDueAsync(
+        DashboardFilter filter, DateTimeOffset after, int take, CancellationToken cancellationToken = default) =>
+        await ActiveItemsWithADueDate(filter)
+            .Where(item => item.NextInspectionDueAt > after)
+            .OrderBy(item => item.NextInspectionDueAt).ThenBy(item => item.Name).ThenBy(item => item.Id)
+            .Take(take)
+            .Select(item => new DueEquipmentRow(item.Id, item.Name, item.SerialNumber, item.ClientId, item.Client!.Name, item.NextInspectionDueAt!.Value))
+            .ToListAsync(cancellationToken);
+
+    // The items the due lists are made of: active, not archived, of a client that is not archived, with a next inspection date.
+    private IQueryable<Item> ActiveItemsWithADueDate(DashboardFilter filter)
     {
         var items = dbContext.Items.AsNoTracking()
-            .Where(item => item.NextInspectionDueAt != null && item.NextInspectionDueAt <= cutoff &&
+            .Where(item => item.NextInspectionDueAt != null &&
                            item.Status == EquipmentStatus.Active && !item.IsArchived && item.ArchivedAt == null &&
                            item.Client!.ArchivedAt == null);
         if (filter.ManagerId is Guid managerId) items = items.Where(item => item.Client!.ManagerId == managerId);
         if (filter.ClientId is Guid clientId) items = items.Where(item => item.ClientId == clientId);
-
-        return await items
-            .Select(item => new DueEquipmentRow(item.Id, item.Name, item.SerialNumber, item.ClientId, item.Client!.Name, item.NextInspectionDueAt!.Value))
-            .ToListAsync(cancellationToken);
+        return items;
     }
 }

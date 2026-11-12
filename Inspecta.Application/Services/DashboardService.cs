@@ -34,7 +34,12 @@ public sealed class DashboardService(
 
         var jobs = await dashboardRepository.ListApprovedJobsAsync(filter, StartOf(period.From), EndOf(period.To), cancellationToken);
         var pipeline = await PipelineAsync(filter, cancellationToken);
-        var due = await dashboardRepository.ListEquipmentDueAsync(filter, EndOf(today.AddDays(DueSoonDays)), cancellationToken);
+        var dueUntil = EndOf(today.AddDays(DueSoonDays));
+        var due = await dashboardRepository.ListEquipmentDueAsync(filter, dueUntil, cancellationToken);
+        // Only when nothing is due soon (or overdue) the box shows the nearest ones after that, instead of staying empty.
+        IReadOnlyList<DueEquipmentRow> upcoming = due.Count == 0
+            ? await dashboardRepository.ListNextEquipmentDueAsync(filter, dueUntil, DueItemsShown, cancellationToken)
+            : [];
         var inspectors = await userRepository.ListAsync(managerId, UserRole.Inspector, isActive: true, cancellationToken);
 
         return new DashboardOverviewResponse(
@@ -45,7 +50,7 @@ public sealed class DashboardService(
                 pipeline.FirstOrDefault(item => item.Status == JobStatus.CertificateSubmitted)?.Count ?? 0),
             pipeline,
             Certificates(approved, period, thisMonth, previousMonth),
-            EquipmentDue(due, today),
+            EquipmentDue(due, upcoming, today),
             Workload(approved, jobs, inspectors, inspectorId, period));
     }
 
@@ -107,10 +112,13 @@ public sealed class DashboardService(
         return new DashboardCertificates(InMonth(thisMonth), InMonth(previousMonth), months);
     }
 
-    private static DashboardEquipmentDue EquipmentDue(IReadOnlyList<DueEquipmentRow> due, DateOnly today)
+    private static DashboardEquipmentDue EquipmentDue(IReadOnlyList<DueEquipmentRow> due, IReadOnlyList<DueEquipmentRow> upcoming, DateOnly today)
     {
-        var items = due
+        var shown = due.Count > 0 ? due : upcoming;
+        var items = shown
             .OrderBy(row => row.DueAt)
+            .ThenBy(row => row.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(row => row.Id)
             .Take(DueItemsShown)
             .Select(row =>
             {
@@ -118,7 +126,8 @@ public sealed class DashboardService(
                 return new DashboardDueItem(row.Id, row.Name, row.SerialNumber, row.ClientId, row.ClientName, row.DueAt, days, days < 0);
             })
             .ToArray();
-        return new DashboardEquipmentDue(due.Count, due.Count(row => DateOf(row.DueAt) < today), items);
+        var mode = due.Count > 0 ? "due_soon" : items.Length > 0 ? "upcoming" : "none";
+        return new DashboardEquipmentDue(due.Count, due.Count(row => DateOf(row.DueAt) < today), items, mode);
     }
 
     private static IReadOnlyList<DashboardInspectorWorkload> Workload(

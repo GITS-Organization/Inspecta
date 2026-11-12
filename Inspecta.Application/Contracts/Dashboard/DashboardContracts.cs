@@ -39,10 +39,14 @@ public sealed record DashboardCertificates(int ThisMonth, int PreviousMonth, IRe
 /// <param name="Total">All issued that month (a certificate without a verdict counts here only).</param>
 public sealed record DashboardMonth(string Month, int Safe, int WithConditions, int NotSafe, int Total);
 
-/// <summary>Items overdue or due in the next 30 days.</summary>
-/// <param name="Total">All of them, overdue ones included.</param>
-/// <param name="Items">The first ones: overdue first, then by due date.</param>
-public sealed record DashboardEquipmentDue(int Total, int Overdue, IReadOnlyList<DashboardDueItem> Items);
+/// <summary>Items overdue or due in the next 30 days; when there are none, the nearest ones due after that.</summary>
+/// <param name="Total">The ones overdue or due in the next 30 days, overdue ones included (0 when <paramref name="Mode"/> is not <c>due_soon</c>).</param>
+/// <param name="Items">At most 10: overdue first, then by due date (name breaks a tie).</param>
+/// <param name="Mode">
+/// <c>due_soon</c>: <paramref name="Items"/> are the ones overdue or due in 30 days. <c>upcoming</c>: nothing is due soon, so they are the
+/// nearest ones due after 30 days. <c>none</c>: no active item has a next inspection date.
+/// </param>
+public sealed record DashboardEquipmentDue(int Total, int Overdue, IReadOnlyList<DashboardDueItem> Items, string Mode = "due_soon");
 
 /// <param name="DaysUntilDue">Negative when overdue.</param>
 public sealed record DashboardDueItem(
