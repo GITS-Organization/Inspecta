@@ -37,13 +37,13 @@ public sealed class Quote
 
     public const decimal MaxDiscountPercent = 100m;
 
-    /// <summary>The VAT a new quotation starts with. The coordinator can change it or switch it off (0).</summary>
+    /// <summary>The usual VAT rate: what the screen offers when the coordinator ticks "Add VAT". A new quotation starts with no VAT (0).</summary>
     public const decimal DefaultVatPercent = 14m;
 
     public const decimal MaxVatPercent = 100m;
 
     /// <summary>VAT in percent of <see cref="AmountPiastres"/> (the total after the discount), 0 to 100 with at most two decimals. 0 means no VAT.</summary>
-    public decimal VatPercent { get; private set; } = DefaultVatPercent;
+    public decimal VatPercent { get; private set; }
 
     /// <summary>The VAT amount, rounded to the piastre. <see cref="AmountPiastres"/> itself stays before VAT.</summary>
     public long VatPiastres => VatOf(AmountPiastres, VatPercent);

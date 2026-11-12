@@ -2,7 +2,7 @@ using Inspecta.Domain.Entities;
 
 namespace Inspecta.Domain.Tests;
 
-/// <summary>The optional VAT of a quotation: a percentage (14 by default, 0 for none) worked out on the total after the discount.</summary>
+/// <summary>The optional VAT of a quotation: a percentage (none by default, 14 is the usual rate) worked out on the total after the discount.</summary>
 public sealed class QuoteVatTests
 {
     private static Quote QuoteOf(params (long UnitPrice, int Quantity)[] lines)
@@ -14,9 +14,15 @@ public sealed class QuoteVatTests
     }
 
     [Fact]
-    public void ANewQuotationStartsWithFourteenPercentVat()
+    public void ANewQuotationStartsWithNoVatAndFourteenIsOneCallAway()
     {
         var quote = QuoteOf((100_000, 1));
+
+        Assert.Equal(0m, quote.VatPercent);
+        Assert.Equal(0, quote.VatPiastres);
+        Assert.Equal(100_000, quote.TotalWithVatPiastres);
+
+        quote.SetVat(Quote.DefaultVatPercent);
 
         Assert.Equal(14m, quote.VatPercent);
         Assert.Equal(14_000, quote.VatPiastres);
@@ -28,6 +34,7 @@ public sealed class QuoteVatTests
     {
         var quote = QuoteOf((150_000, 1), (50_000, 2));
         quote.SetDiscount(10m);
+        quote.SetVat(14m);
 
         Assert.Equal(225_000, quote.AmountPiastres);
         Assert.Equal(31_500, quote.VatPiastres);
@@ -59,7 +66,7 @@ public sealed class QuoteVatTests
 
         Assert.Throws<ArgumentOutOfRangeException>(() => Quote.ValidateVat(-1m));
         Assert.ThrowsAny<ArgumentException>(() => quote.SetVat((decimal)percent));
-        Assert.Equal(14m, quote.VatPercent);
+        Assert.Equal(0m, quote.VatPercent);
     }
 
     [Theory]
@@ -79,6 +86,7 @@ public sealed class QuoteVatTests
     public void ASentQuotationKeepsItsVat()
     {
         var quote = QuoteOf((100_000, 1));
+        quote.SetVat(14m);
         quote.Send();
 
         Assert.Throws<InvalidOperationException>(() => quote.SetVat(0m));

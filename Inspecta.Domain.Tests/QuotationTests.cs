@@ -684,14 +684,18 @@ public sealed class QuotationTests
     // ---- the VAT ----
 
     [Fact]
-    public async Task TheVatIsFourteenPercentByDefaultAndShownInTheResponseAfterTheDiscount()
+    public async Task TheVatIsOffByDefaultAndShownInTheResponseAfterTheDiscountWhenSet()
     {
         var fixture = new Fixture();
         var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
 
+        var off = await fixture.Service.UpdateAsync(
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
         var saved = await fixture.Service.UpdateAsync(
-            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { DiscountPercent = 10m });
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { DiscountPercent = 10m, VatPercent = 14m });
 
+        Assert.Equal(0m, off.VatPercent);
+        Assert.Equal(off.AmountPiastres, off.TotalWithVatPiastres);
         Assert.Equal(14m, saved.VatPercent);
         Assert.Equal(Quote.VatOf(saved.AmountPiastres, 14m), saved.VatPiastres);
         Assert.Equal(saved.AmountPiastres + saved.VatPiastres, saved.TotalWithVatPiastres);
@@ -731,7 +735,7 @@ public sealed class QuotationTests
 
         var after = await fixture.Service.GetAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
         Assert.Equal(before.AmountPiastres, after.AmountPiastres);
-        Assert.Equal(14m, after.VatPercent);
+        Assert.Equal(0m, after.VatPercent);
     }
 
     [Theory]
@@ -756,7 +760,7 @@ public sealed class QuotationTests
         var fixture = new Fixture();
         var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
         var saved = await fixture.Service.UpdateAsync(
-            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { DiscountPercent = 10m });
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { DiscountPercent = 10m, VatPercent = 14m });
 
         await fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
 
@@ -772,7 +776,7 @@ public sealed class QuotationTests
         var fixture = new Fixture();
         var quote = await fixture.Service.CreateAsync(fixture.Request.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
         await fixture.Service.UpdateAsync(
-            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000) with { VatPercent = 0m });
+            fixture.Request.Id, quote.Id, CoordinatorId, "coordinator", Update(fixture, 1_200_000, 850_000));
 
         await fixture.Service.SendAsync(fixture.Request.Id, quote.Id, CoordinatorId, "coordinator");
 

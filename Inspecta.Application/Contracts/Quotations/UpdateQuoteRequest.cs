@@ -36,8 +36,8 @@ public sealed record UpdateQuoteRequest
     public decimal? DiscountPercent { get; init; }
 
     /// <summary>
-    /// VAT in percent of the total after the discount, 0 to 100 with at most two decimals. New quotations start with 14. Send <c>0</c> to
-    /// leave the VAT out; leave the field out to keep the current one.
+    /// VAT in percent of the total after the discount, 0 to 100 with at most two decimals. New quotations start with no VAT (0); the usual
+    /// rate is 14. Send <c>0</c> to leave the VAT out; leave the field out to keep the current one.
     /// </summary>
     [Range(typeof(decimal), "0", "100")]
     public decimal? VatPercent { get; init; }
