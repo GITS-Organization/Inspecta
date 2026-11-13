@@ -40,3 +40,42 @@ public sealed record MoneyResponse(
 
 /// <summary>What every executive call is asked: the days, the company (already resolved for the caller) and an optional reviewer.</summary>
 public sealed record ExecutiveQuery(DateOnly? From, DateOnly? To, Guid? ManagerId, Guid? ReviewerId);
+
+public enum ClientHealth { Healthy, Watch, AtRisk }
+
+public sealed record RenewalBuckets(int Overdue, int Within7, int Within30, int Within60, int Within90);
+
+public sealed record OverdueByClient(Guid ClientId, string ClientName, int Overdue);
+
+/// <summary><c>DaysUntilDue</c> is negative when overdue.</summary>
+public sealed record RenewalItem(
+    Guid EquipmentId, string Type, string? Serial, string? Capacity, Guid ClientId, string ClientName,
+    Domain.Enums.CertificateResult? LastResult, DateTimeOffset NextDueAt, int DaysUntilDue, bool JobOpened);
+
+/// <summary>
+/// Machines due for inspection are the next work. <c>Buckets</c> are cumulative from today (<c>Within30</c> includes <c>Within7</c>); <c>Weekly</c> is the
+/// overdue count then the next eleven weeks.
+/// </summary>
+public sealed record RenewalsResponse(
+    RenewalBuckets Buckets, int WithJobCount, int Registered, int SafePercent, IReadOnlyList<int> Weekly,
+    IReadOnlyList<OverdueByClient> MostOverdueByClient, int Total, int Page, int PageSize, IReadOnlyList<RenewalItem> Items);
+
+public sealed record ClientCounts(int Active, int WithContract, int Healthy, int Watch, int AtRisk);
+
+public sealed record ClientRow(
+    Guid Id, string Name, string? City, string? ReviewerName, bool Contract, int Since, int Machines, int OpenJobs,
+    long InvoicedYtdPiastres, long OwedPiastres, long OlderThan60Piastres, int OverdueMachines, int? NextDueInDays, ClientHealth Health);
+
+public sealed record ClientsResponse(ClientCounts Counts, int Total, int Page, int PageSize, IReadOnlyList<ClientRow> Items);
+
+public sealed record ClientContactRow(string Name, string? Role, string? Email, string? Phone);
+
+public sealed record ClientMachineRow(string Type, string? Serial, string? Capacity, Domain.Enums.CertificateResult? LastResult, DateTimeOffset NextDueAt, int DaysUntilDue);
+
+public sealed record ClientRevenue(long InvoicedYtdPiastres, long OwedPiastres, long OlderThan60Piastres);
+
+/// <summary>One client with its contacts, the machines due within 90 days or overdue, its last 20 invoices and its money.</summary>
+public sealed record ClientDetailResponse(
+    Guid Id, string Name, string? City, string? ReviewerName, bool Contract, int Since, int Machines, int OpenJobs,
+    long InvoicedYtdPiastres, long OwedPiastres, long OlderThan60Piastres, int OverdueMachines, int? NextDueInDays, ClientHealth Health,
+    IReadOnlyList<ClientContactRow> Contacts, IReadOnlyList<ClientMachineRow> Machines90, IReadOnlyList<Invoices.InvoiceSummary> Invoices, ClientRevenue Revenue);

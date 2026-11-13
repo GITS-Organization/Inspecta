@@ -97,6 +97,23 @@ public abstract class ExecutiveApiTestBase
         return (invoice, request);
     }
 
+    /// <summary>A machine of a client that is due in <paramref name="dueInDays"/> days (negative = overdue). It can be archived or have no date.</summary>
+    protected Guid SeedMachine(Guid clientId, int? dueInDays, CertificateResult? lastResult = CertificateResult.SafeToOperate, bool archived = false, string name = "Mobile crane")
+    {
+        var machine = Item.Create(clientId, name);
+        Api.SeedAs(db =>
+        {
+            db.Items.Add(machine);
+            db.SaveChanges();
+            if (dueInDays is int days)
+                db.Entry(machine).Property(nameof(Item.NextInspectionDueAt)).CurrentValue = (DateTimeOffset?)new DateTimeOffset(Today.AddDays(days).ToDateTime(new TimeOnly(9, 0)), TimeSpan.FromHours(2));
+            db.Entry(machine).Property(nameof(Item.LastInspectionResult)).CurrentValue = lastResult;
+            if (archived) db.Entry(machine).Property(nameof(Item.IsArchived)).CurrentValue = true;
+            db.SaveChanges();
+        });
+        return machine.Id;
+    }
+
     protected static string Range(int fromDaysAgo, int toDaysAgo = 0) =>
         $"from={Today.AddDays(-fromDaysAgo):yyyy-MM-dd}&to={Today.AddDays(-toDaysAgo):yyyy-MM-dd}";
 }

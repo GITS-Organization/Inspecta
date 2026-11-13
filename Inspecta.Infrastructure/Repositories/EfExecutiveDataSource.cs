@@ -77,13 +77,13 @@ public sealed class EfExecutiveDataSource(InspectaDbContext dbContext, CurrentTe
             .Select(invoice => new
             {
                 invoice.Id, invoice.Number, invoice.ManagerId, invoice.RequestId, invoice.ClientId, invoice.ClientName, invoice.TotalPiastres,
-                invoice.CreatedAt, invoice.Stage, invoice.ClosedWithBalance,
+                invoice.CreatedAt, invoice.Stage, invoice.ClosedWithBalance, invoice.QuotationReference,
                 Payments = invoice.Payments.Select(payment => new ExecPayment(payment.PaidOn, payment.AmountPiastres, payment.RecordedAt, payment.ReversesPaymentId)).ToList(),
                 Events = invoice.Events.Select(entry => new ExecInvoiceEvent(entry.Kind, entry.At, entry.ActorId)).ToList()
             }).ToListAsync(cancellationToken);
         return rows.Select(row => new ExecInvoice(
             row.Id, row.Number, row.ManagerId, row.RequestId, row.ClientId, row.ClientName, row.TotalPiastres, row.CreatedAt, row.Stage,
-            row.ClosedWithBalance, row.Payments, row.Events)).ToList();
+            row.ClosedWithBalance, row.Payments, row.Events, row.QuotationReference)).ToList();
     }
 
     private async Task<IReadOnlyList<ExecRequest>> LoadRequestsAsync(Guid? managerId, CancellationToken cancellationToken)

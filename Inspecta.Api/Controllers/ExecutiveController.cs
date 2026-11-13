@@ -32,6 +32,43 @@ public sealed class ExecutiveController(IExecutiveService executive) : Controlle
         Ok(await executive.MoneyAsync(new ExecutiveQuery(from, to, ResolveCompany(managerId, required: false), reviewerId), cancellationToken));
 
     /// <summary>
+    /// The Renewals screen: machines due for inspection are the next work. <c>buckets</c> (overdue, and cumulative from today: 7, 30, 60, 90 days),
+    /// <c>withJobCount</c> (due in 30 days and already on an open request), <c>registered</c>, <c>safePercent</c>, <c>weekly</c> (overdue, then eleven weeks),
+    /// <c>mostOverdueByClient</c> and the machines (<c>filter</c>: <c>all</c>, <c>overdue</c>, <c>soon</c> (30 days), <c>later</c>, <c>notSafe</c>; paged,
+    /// <c>pageSize</c> default 50, max 100). Only active machines that have a next inspection date count. <c>reviewerId</c> does not apply here.
+    /// </summary>
+    [RequirePermission(Permissions.ExecutiveView)]
+    [HttpGet("renewals")]
+    [ProducesResponseType<RenewalsResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<RenewalsResponse>> Renewals(
+        [FromQuery] string? filter, [FromQuery] Guid? managerId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken cancellationToken = default) =>
+        Ok(await executive.RenewalsAsync(new ExecutiveQuery(null, null, ResolveCompany(managerId, required: false), null), filter, page, pageSize, cancellationToken));
+
+    /// <summary>
+    /// The Clients screen: <c>counts</c> (active, with a contract, healthy, watch, at risk; they ignore the filters) and the clients, biggest invoiced year to
+    /// date first. <c>health</c>: <c>healthy</c>, <c>watch</c> or <c>at_risk</c>. <c>q</c> searches name and city. Paged, <c>pageSize</c> default 50, max 100.
+    /// </summary>
+    [RequirePermission(Permissions.ExecutiveView)]
+    [HttpGet("clients")]
+    [ProducesResponseType<ClientsResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ClientsResponse>> Clients(
+        [FromQuery] string? health, [FromQuery] string? q, [FromQuery] Guid? managerId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken cancellationToken = default) =>
+        Ok(await executive.ClientsAsync(new ExecutiveQuery(null, null, ResolveCompany(managerId, required: false), null), health, q, page, pageSize, cancellationToken));
+
+    /// <summary>One client: its row, contacts, the machines due within 90 days or overdue, its last 20 invoices and its money. <c>404</c> for a client that does not exist or is not the company's.</summary>
+    [RequirePermission(Permissions.ExecutiveView)]
+    [HttpGet("clients/{clientId:guid}")]
+    [ProducesResponseType<ClientDetailResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ClientDetailResponse>> Client(Guid clientId, [FromQuery] Guid? managerId, CancellationToken cancellationToken) =>
+        await executive.ClientAsync(new ExecutiveQuery(null, null, ResolveCompany(managerId, required: false), null), clientId, cancellationToken) is { } client ? Ok(client) : NotFound();
+
+    /// <summary>
     /// The company's targets: the share of invoiced money collected (percent), the days to collect it, the days from request to delivery and the days
     /// a review should take. A company that never set them gets 85, 30, 28 and 2. The platform owner without <c>managerId</c> gets the defaults.
     /// </summary>

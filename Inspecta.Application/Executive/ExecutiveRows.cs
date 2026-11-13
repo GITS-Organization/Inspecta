@@ -21,7 +21,8 @@ public sealed record ExecInvoice(
     InvoiceStage Stage,
     bool ClosedWithBalance,
     IReadOnlyList<ExecPayment> Payments,
-    IReadOnlyList<ExecInvoiceEvent> Events)
+    IReadOnlyList<ExecInvoiceEvent> Events,
+    string? QuotationReference = null)
 {
     public long PaidPiastres => Payments.Sum(item => item.AmountPiastres);
     public long BalancePiastres => TotalPiastres - PaidPiastres;
