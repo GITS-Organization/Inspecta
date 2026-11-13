@@ -43,6 +43,7 @@ public sealed class ExecutiveWorkApiTests(ApiHttpTests.Api api) : ExecutiveApiTe
             db.Entry(certificate).Property(nameof(InspectionCertificate.ReviewedAt)).CurrentValue = (DateTimeOffset?)DateTimeOffset.UtcNow;
             db.Entry(certificate).Property(nameof(InspectionCertificate.FinalResult)).CurrentValue = (CertificateResult?)result;
             db.Entry(certificate).Property(nameof(InspectionCertificate.ReviewerId)).CurrentValue = (Guid?)reviewer.Id;
+            db.Entry(certificate).Property(nameof(InspectionCertificate.CertificateNumber)).CurrentValue = (string?)("CERT-" + Guid.NewGuid().ToString("N")[..6]);
             db.SaveChanges();
         });
     }
