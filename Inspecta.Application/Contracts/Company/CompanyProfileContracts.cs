@@ -40,6 +40,14 @@ public sealed record SaveCompanyProfileRequest
     [MaxLength(200)]
     public string? SignerName { get; init; }
 
+    /// <summary>The company's tax registration number, printed on its invoices. Optional; empty clears it.</summary>
+    [MaxLength(64)]
+    public string? TaxRegistrationNumber { get; init; }
+
+    /// <summary>The company's activity code, printed on its invoices. Optional; empty clears it.</summary>
+    [MaxLength(64)]
+    public string? ActivityCode { get; init; }
+
     /// <summary><c>#RRGGBB</c>; the blue of the page bands (the default when left out).</summary>
     public string? PrimaryColor { get; init; }
 
@@ -70,4 +78,6 @@ public sealed record CompanyProfileResponse(
     bool HasAccreditations,
     string? LogoUrl,
     DateTimeOffset UpdatedAt,
-    bool UsesBuiltInDetails = false);
+    bool UsesBuiltInDetails = false,
+    string? TaxRegistrationNumber = null,
+    string? ActivityCode = null);

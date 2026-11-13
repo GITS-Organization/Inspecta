@@ -27,6 +27,10 @@ public sealed record UpdateClientRequest
     [MaxLength(64)]
     public string? TaxNumber { get; init; }
 
+    /// <summary>The client's address, printed on its invoices. Optional; empty clears it.</summary>
+    [MaxLength(500)]
+    public string? Address { get; init; }
+
     [MaxLength(4000)]
     public string? Notes { get; init; }
 

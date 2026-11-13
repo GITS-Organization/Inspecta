@@ -32,6 +32,7 @@ public sealed class CompanyProfileService(
         profile.Update(
             request.Name, request.CertificateTitle, request.IssuerName, request.Tagline, request.Address, request.Phones,
             request.Emails, request.Website, request.SignerName, request.PrimaryColor, request.AccentColor);
+        profile.SetTaxDetails(request.TaxRegistrationNumber, request.ActivityCode);
         if (logo.Changed) profile.SetLogo(logo.Content);
         if (accreditations.Changed) profile.SetAccreditations(accreditations.Content);
 
@@ -46,6 +47,7 @@ public sealed class CompanyProfileService(
         profile.Update(
             request.Name, request.CertificateTitle, request.IssuerName, request.Tagline, request.Address, request.Phones,
             request.Emails, request.Website, request.SignerName, request.PrimaryColor, request.AccentColor);
+        profile.SetTaxDetails(request.TaxRegistrationNumber, request.ActivityCode);
         profile.SetLogo(Decode(request.LogoBase64, "logo").Content);
         profile.SetAccreditations(Decode(request.AccreditationsBase64, "accreditations image").Content);
     }
@@ -94,7 +96,9 @@ public sealed class CompanyProfileService(
         profile.AccreditationsPng is { Length: > 0 },
         profile.LogoPng is { Length: > 0 } ? $"/api/v1/branding/{profile.ManagerId}/logo.png" : null,
         profile.UpdatedAt,
-        profile.UsesBuiltInDetails);
+        profile.UsesBuiltInDetails,
+        profile.TaxRegistrationNumber,
+        profile.ActivityCode);
 
     // Left out: unchanged. Empty: removed. Otherwise the image.
     private static (bool Changed, byte[]? Content) Decode(string? base64, string what)

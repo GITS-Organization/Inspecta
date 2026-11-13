@@ -31,7 +31,8 @@ public sealed class ClientService(
             taxNumber: request.TaxNumber,
             latitude: request.Latitude,
             longitude: request.Longitude,
-            managerId: managerId);
+            managerId: managerId,
+            address: request.Address);
         foreach (var contact in request.Contacts)
         {
             client.Contacts.Add(ClientContact.Create(client.Id, contact.Name, contact.Email, contact.Phone, contact.IsPrimary));
@@ -88,7 +89,8 @@ public sealed class ClientService(
             request.TaxNumber,
             request.Latitude,
             request.Longitude,
-            request.Notes);
+            request.Notes,
+            request.Address);
         if (request.Contacts is { } contacts)
         {
             if (contacts.Count(contact => contact.IsPrimary) > 1)
@@ -149,5 +151,6 @@ public sealed class ClientService(
         client.Notes,
         client.CreatedAt,
         client.ArchivedAt,
-        client.Contacts.Select(contact => new ClientContactResponse(contact.Id, contact.Name, contact.Email, contact.Phone, contact.IsPrimary)).ToArray());
+        client.Contacts.Select(contact => new ClientContactResponse(contact.Id, contact.Name, contact.Email, contact.Phone, contact.IsPrimary)).ToArray(),
+        client.Address);
 }

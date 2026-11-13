@@ -14,7 +14,8 @@ public sealed record ClientResponse(
     string? Notes,
     DateTimeOffset CreatedAt,
     DateTimeOffset? ArchivedAt,
-    IReadOnlyList<ClientContactResponse> Contacts);
+    IReadOnlyList<ClientContactResponse> Contacts,
+    string? Address = null);
 
 /// <summary>Client contact details.</summary>
 public sealed record ClientContactResponse(Guid Id, string Name, string? Email, string? Phone, bool IsPrimary);
