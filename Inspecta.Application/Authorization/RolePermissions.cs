@@ -46,6 +46,8 @@ public static class RolePermissions
     private const string Coordinator = RoleNames.Coordinator;
     private const string Inspector = RoleNames.Inspector;
     private const string CompanyAdmin = RoleNames.CompanyAdmin;
+    private const string FinancialManager = RoleNames.FinancialManager;
+    private const string GeneralManager = RoleNames.GeneralManager;
 
     private static readonly (string Permission, string[] Roles)[] Grants =
     [
@@ -88,6 +90,12 @@ public static class RolePermissions
         (Permissions.QuotesView, [Admin, Manager, Coordinator]),
         (Permissions.QuotesListAll, [Admin, Manager, Coordinator, Inspector]),
         (Permissions.QuotesWork, [Admin, Manager, Coordinator]),
+
+        (Permissions.InvoicesView, [Admin, Coordinator, FinancialManager, GeneralManager]),
+        (Permissions.InvoicesCreate, [Admin, Coordinator]),
+        (Permissions.InvoicesRecordPayment, [Admin, Coordinator, FinancialManager]),
+        (Permissions.InvoicesHandOver, [Admin, Coordinator]),
+        (Permissions.InvoicesClose, [Admin, FinancialManager]),
 
         (Permissions.DraftsView, [Admin, Manager, Coordinator]),
         (Permissions.DraftsWork, [Coordinator]),

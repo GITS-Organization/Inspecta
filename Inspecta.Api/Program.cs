@@ -121,6 +121,7 @@ builder.Services.AddScoped<IRequestEquipmentRegistrar>(services => new RequestEq
 builder.Services.AddScoped<IEquipmentService, EquipmentService>();
 builder.Services.AddScoped<IQuoteRepository, EfQuoteRepository>();
 builder.Services.AddScoped<IInvoiceRepository, EfInvoiceRepository>();
+builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<IQuoteService, QuoteService>();
 builder.Services.AddScoped<ICertificateRepository, EfCertificateRepository>();
 builder.Services.AddScoped<ICertificateService, CertificateService>();

@@ -180,6 +180,48 @@ public sealed class InvoicePersistenceTests : IDisposable
         Assert.Equal(200_000, october1.Sum(row => row.AmountPiastres));
     }
 
+    [Fact]
+    public async Task A_payment_and_an_event_added_to_a_loaded_invoice_are_inserted_not_updated()
+    {
+        var (_, _, invoice) = InvoiceTestData.Make(Guid.NewGuid());
+        Save(invoice);
+
+        await using (var db = CreateContext("admin", null))
+        {
+            var repository = new EfInvoiceRepository(db);
+            var loaded = (await repository.GetByIdAsync(invoice.Id, tracking: true))!;
+            loaded.RecordPayment(250_000, Today, "Advance", InvoiceTestData.Actor, Today);
+            loaded.HandOver(InvoiceTestData.Actor);
+            await repository.SaveAsync();
+        }
+
+        await using var check = CreateContext("admin", null);
+        var saved = (await new EfInvoiceRepository(check).GetByIdAsync(invoice.Id))!;
+        Assert.Equal(250_000, saved.PaidPiastres);
+        Assert.Equal(InvoiceStage.WithFinance, saved.Stage);
+        Assert.Equal(2, saved.Events.Count);
+    }
+
+    [Fact]
+    public async Task Two_changes_made_from_the_same_loaded_state_cannot_both_be_saved()
+    {
+        var (_, _, invoice) = InvoiceTestData.Make(Guid.NewGuid(), 1_000);
+        Save(invoice);
+
+        await using var first = CreateContext("admin", null);
+        await using var second = CreateContext("admin", null);
+        var one = (await new EfInvoiceRepository(first).GetByIdAsync(invoice.Id, tracking: true))!;
+        var two = (await new EfInvoiceRepository(second).GetByIdAsync(invoice.Id, tracking: true))!;
+        one.RecordPayment(1_000, Today, null, InvoiceTestData.Actor, Today);
+        two.RecordPayment(1_000, Today, null, InvoiceTestData.Actor, Today);
+
+        await first.SaveChangesAsync();
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync());
+
+        await using var check = CreateContext("admin", null);
+        Assert.Equal(1_000, (await new EfInvoiceRepository(check).GetByIdAsync(invoice.Id))!.PaidPiastres);
+    }
+
     private static (InspectionRequest Request, Invoice Invoice) EmailRequestInvoice(Guid company, Guid coordinatorId)
     {
         var request = InspectionRequest.Create(

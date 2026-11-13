@@ -1,4 +1,5 @@
 using Inspecta.Application.Exceptions;
+using Inspecta.Domain.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,7 @@ public sealed class AuthExceptionHandler(ILogger<AuthExceptionHandler> logger) :
         var (statusCode, title, code, detail) = exception switch
         {
             AuthException auth => (auth.StatusCode, "Request rejected", auth.Code, auth.Message),
+            InvoiceRuleException rule => (InvoiceRuleException.IsBadInput(rule.Code) ? StatusCodes.Status400BadRequest : StatusCodes.Status409Conflict, "Request rejected", rule.Code, rule.Message),
             EmailEncryptionConfigurationException => (
                 StatusCodes.Status503ServiceUnavailable,
                 "Email encryption is unavailable",

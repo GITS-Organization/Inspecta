@@ -261,7 +261,7 @@ public sealed class CompanyAdminApiTests : IClassFixture<ApiHttpTests.Api>
     [Theory]
     [InlineData("general_manager")]
     [InlineData("financial_manager")]
-    public async Task TheReservedRolesCanSignInAndChangeTheirPasswordAndOpenNothingElse(string role)
+    public async Task TheGeneralAndFinancialManagersCanSignInAndOpenOnlyInvoicesAndNothingElse(string role)
     {
         var setup = SeedCompany();
         var user = api.AddUser($"reserved-{role}-{Interlocked.Increment(ref sequence)}@example.com", Enum.Parse<UserRole>(string.Concat(role.Split('_').Select(part => char.ToUpperInvariant(part[0]) + part[1..]))), setup.Company.Id);
@@ -271,7 +271,9 @@ public sealed class CompanyAdminApiTests : IClassFixture<ApiHttpTests.Api>
         using var json = JsonDocument.Parse(await me.Content.ReadAsStringAsync());
 
         Assert.Equal(role, json.RootElement.GetProperty("role").GetString());
-        Assert.Empty(json.RootElement.GetProperty("permissions").EnumerateArray());
+        // Since invoices (2026-11-13) these two roles have rights: the general manager looks, the financial manager records payments and closes.
+        var expected = role == "general_manager" ? new[] { "Invoices.View" } : new[] { "Invoices.View", "Invoices.RecordPayment", "Invoices.Close" };
+        Assert.Equal(expected.Order(), json.RootElement.GetProperty("permissions").EnumerateArray().Select(item => item.GetString()!).Order());
         foreach (var path in new[] { "/api/v1/clients", "/api/v1/requests", "/api/v1/dashboard/overview", "/api/v1/company", "/api/v1/company/users", "/api/v1/equipment" })
             Assert.True((await client.GetAsync(path)).StatusCode == HttpStatusCode.Forbidden, $"{path} should be closed to {role}");
     }

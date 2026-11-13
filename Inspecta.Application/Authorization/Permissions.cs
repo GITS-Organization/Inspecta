@@ -49,6 +49,13 @@ public static class Permissions
     public const string QuotesListAll = "Quotes.ListAll";
     public const string QuotesWork = "Quotes.Work";
 
+    // Invoices: what a client owes for an accepted quotation, and the money received on it.
+    public const string InvoicesView = "Invoices.View";
+    public const string InvoicesCreate = "Invoices.Create";
+    public const string InvoicesRecordPayment = "Invoices.RecordPayment";
+    public const string InvoicesHandOver = "Invoices.HandOver";
+    public const string InvoicesClose = "Invoices.Close";
+
     public const string DraftsView = "Drafts.View";
     public const string DraftsWork = "Drafts.Work";
 
