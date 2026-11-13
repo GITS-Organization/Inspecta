@@ -35,6 +35,7 @@ public sealed class InspectaDbContext(
     public DbSet<ReviewComment> ReviewComments => Set<ReviewComment>();
     public DbSet<CertificateDelivery> CertificateDeliveries => Set<CertificateDelivery>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<ExecutiveTargets> ExecutiveTargets => Set<ExecutiveTargets>();
     public DbSet<InvoicePayment> InvoicePayments => Set<InvoicePayment>();
     public DbSet<InvoiceEvent> InvoiceEvents => Set<InvoiceEvent>();
 
@@ -210,6 +211,10 @@ public sealed class InspectaDbContext(
         invoice.HasMany(item => item.Events).WithOne().HasForeignKey(entry => entry.InvoiceId).OnDelete(DeleteBehavior.Cascade);
         invoice.Navigation(item => item.Payments).UsePropertyAccessMode(PropertyAccessMode.Field);
         invoice.Navigation(item => item.Events).UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        var executiveTargets = modelBuilder.Entity<ExecutiveTargets>();
+        executiveTargets.HasKey(item => item.ManagerId);
+        executiveTargets.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
 
         var invoicePayment = modelBuilder.Entity<InvoicePayment>();
         invoicePayment.HasKey(item => item.Id);

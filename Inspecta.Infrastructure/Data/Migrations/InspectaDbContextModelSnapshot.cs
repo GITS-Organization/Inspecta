@@ -565,6 +565,34 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.ToTable("CoordinatorEmailConfigs");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.ExecutiveTargets", b =>
+                {
+                    b.Property<Guid>("ManagerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CollectionRatePercent")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DaysToCollect")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RequestToDeliveryDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ReviewDaysPerStep")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ManagerId");
+
+                    b.ToTable("ExecutiveTargets");
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.InspectionCertificate", b =>
                 {
                     b.Property<Guid>("Id")

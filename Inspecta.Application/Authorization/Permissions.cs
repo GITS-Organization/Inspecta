@@ -56,6 +56,7 @@ public static class Permissions
     public const string InvoicesHandOver = "Invoices.HandOver";
     public const string InvoicesEmailClient = "Invoices.EmailClient";
     public const string InvoicesClose = "Invoices.Close";
+    public const string ExecutiveManageTargets = "Executive.ManageTargets";
     public const string RevenueView = "Revenue.View";
 
     public const string DraftsView = "Drafts.View";
