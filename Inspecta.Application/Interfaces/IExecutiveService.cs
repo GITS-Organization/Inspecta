@@ -20,4 +20,7 @@ public interface IExecutiveService
 
     /// <summary>One client, or <c>null</c> when it does not exist, is archived or is not the company's.</summary>
     Task<ClientDetailResponse?> ClientAsync(ExecutiveQuery query, Guid clientId, CancellationToken cancellationToken = default);
+
+    /// <summary>The Work screen: jobs in flight, the open jobs (paged), time in each step, quotations, certificates by month, reviewers and inspectors.</summary>
+    Task<WorkResponse> WorkAsync(ExecutiveQuery query, int page, int pageSize, CancellationToken cancellationToken = default);
 }

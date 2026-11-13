@@ -79,3 +79,31 @@ public sealed record ClientDetailResponse(
     Guid Id, string Name, string? City, string? ReviewerName, bool Contract, int Since, int Machines, int OpenJobs,
     long InvoicedYtdPiastres, long OwedPiastres, long OlderThan60Piastres, int OverdueMachines, int? NextDueInDays, ClientHealth Health,
     IReadOnlyList<ClientContactRow> Contacts, IReadOnlyList<ClientMachineRow> Machines90, IReadOnlyList<Invoices.InvoiceSummary> Invoices, ClientRevenue Revenue);
+
+public enum StageGroup { Inbox, Field, Review, Delivery }
+
+/// <summary>Jobs in flight: average age and the average days from request to delivery (standard requests delivered in the period) and the ones stuck 30 days or more in the same status.</summary>
+public sealed record WorkJobs(int InFlight, int AverageAgeDays, int RequestToDeliveryDays, int StuckOver30);
+
+public sealed record OpenJob(
+    string RequestNumber, Guid? ClientId, string ClientName, int Machines, string? ReviewerName,
+    Domain.Enums.JobStatus Stage, StageGroup StageGroup, int AgeDays, bool Stuck);
+
+/// <summary><c>Step</c> is request_to_quotation_sent, quotation_to_client_answer, accepted_to_inspector_assigned, inspection_to_submitted, review_to_approved or approved_to_delivered.</summary>
+public sealed record StepTime(string Step, double AverageDays, int? TargetDays);
+
+public sealed record QuotationFigures(int Sent, int AcceptedPercent, int Countered, int UnansweredOver14, long UnansweredOver14Piastres, int NewClients);
+
+public sealed record CertificatesMonth(string Month, int Safe, int WithConditions, int NotSafe);
+
+public sealed record ReviewerRow(Guid Id, string Name, int Certificates, int Waiting, double AverageReviewDays, bool Slow);
+
+public sealed record InspectorRow(Guid Id, string Name, int Certificates, int Jobs, DateOnly? OnLeaveUntil);
+
+public sealed record WorkResponse(
+    ExecutiveDays Period, ExecutiveDays Previous, WorkJobs Jobs, IReadOnlyList<OpenJob> Open, int Total, int Page, int PageSize,
+    IReadOnlyList<StepTime> StepTimes, QuotationFigures Quotations, IReadOnlyList<CertificatesMonth> CertificatesByMonth,
+    IReadOnlyList<ReviewerRow> Reviewers, IReadOnlyList<InspectorRow> Inspectors);
+
+/// <summary>Open jobs in four groups, for the pipeline bar.</summary>
+public sealed record PipelineGroup(StageGroup Group, int Count);

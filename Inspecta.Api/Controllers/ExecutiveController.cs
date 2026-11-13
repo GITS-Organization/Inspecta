@@ -69,6 +69,22 @@ public sealed class ExecutiveController(IExecutiveService executive) : Controlle
         await executive.ClientAsync(new ExecutiveQuery(null, null, ResolveCompany(managerId, required: false), null), clientId, cancellationToken) is { } client ? Ok(client) : NotFound();
 
     /// <summary>
+    /// The Work screen: <c>jobs</c> (in flight, average age, request to delivery, stuck over 30 days), the <c>open</c> jobs (oldest first, paged, <c>pageSize</c>
+    /// default 50, max 100), <c>stepTimes</c> (average days between the first entry of one status and the first entry of the next, for steps that finished in the
+    /// period), <c>quotations</c>, <c>certificatesByMonth</c> (approved, by verdict), <c>reviewers</c> and <c>inspectors</c>. Emails still marked "maybe" never
+    /// count. <c>reviewerId</c> narrows the jobs, steps, quotations and certificates, not the two people tables.
+    /// </summary>
+    [RequirePermission(Permissions.ExecutiveView)]
+    [HttpGet("work")]
+    [ProducesResponseType<WorkResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<WorkResponse>> Work(
+        [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] Guid? managerId, [FromQuery] Guid? reviewerId,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken cancellationToken = default) =>
+        Ok(await executive.WorkAsync(new ExecutiveQuery(from, to, ResolveCompany(managerId, required: false), reviewerId), page, pageSize, cancellationToken));
+
+    /// <summary>
     /// The company's targets: the share of invoiced money collected (percent), the days to collect it, the days from request to delivery and the days
     /// a review should take. A company that never set them gets 85, 30, 28 and 2. The platform owner without <c>managerId</c> gets the defaults.
     /// </summary>

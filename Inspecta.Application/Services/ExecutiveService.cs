@@ -84,6 +84,25 @@ public sealed class ExecutiveService(IExecutiveTargetsRepository targetsReposito
             new ClientRevenue(row.InvoicedYtdPiastres, row.OwedPiastres, row.OlderThan60Piastres));
     }
 
+    public async Task<WorkResponse> WorkAsync(ExecutiveQuery query, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var scope = await ScopeAsync(query, cancellationToken);
+        var period = scope.Period;
+        var open = WorkFigures.OpenJobs(scope.Requests, scope.Data.People, scope.Today);
+        var (number, size) = Paging(page, pageSize);
+        // The reviewers and inspectors tables are about the people, so the reviewer filter does not narrow them.
+        var allCertificates = scope.Data.Certificates;
+        return new WorkResponse(
+            scope.Days, scope.PreviousDays,
+            WorkFigures.Jobs(scope.Requests, period.From, period.To, scope.Today),
+            open.Skip((number - 1) * size).Take(size).ToList(), open.Count, number, size,
+            WorkFigures.StepTimes(scope.Requests, period.From, period.To, scope.Targets.ReviewDaysPerStep),
+            WorkFigures.Quotations(scope.Quotes, scope.Requests, scope.Data.Clients, period.From, period.To, scope.Today),
+            WorkFigures.CertificatesByMonth(scope.Certificates, scope.Today),
+            WorkFigures.Reviewers(scope.Data.People, scope.AllRequests, allCertificates, period.From, period.To, scope.Targets.ReviewDaysPerStep),
+            WorkFigures.Inspectors(scope.Data.People, scope.AllRequests, allCertificates, period.From, period.To));
+    }
+
     // Requests that count as jobs: emails still marked "maybe" never do.
     private static IReadOnlyList<ExecRequest> Jobs(ExecutiveData data) => data.Requests.Where(request => request.Triage != Domain.Enums.RequestTriage.Maybe).ToList();
 
@@ -94,7 +113,8 @@ public sealed class ExecutiveService(IExecutiveTargetsRepository targetsReposito
     /// <summary>One company's rows with the period and the targets worked out once; the reviewer filter is applied to what hangs on a request.</summary>
     internal sealed record Scope(
         ExecutivePeriod Period, DateOnly Today, ExecutiveTargetsResponse Targets, ExecutiveData Data,
-        IReadOnlyList<ExecInvoice> Invoices, IReadOnlyList<ExecRequest> Requests)
+        IReadOnlyList<ExecInvoice> Invoices, IReadOnlyList<ExecRequest> Requests, IReadOnlyList<ExecRequest> AllRequests,
+        IReadOnlyList<ExecQuote> Quotes, IReadOnlyList<ExecCertificate> Certificates)
     {
         public ExecutiveDays Days => new(Period.From, Period.To);
         public ExecutiveDays PreviousDays => new(Period.PreviousFrom, Period.PreviousTo);
@@ -108,16 +128,21 @@ public sealed class ExecutiveService(IExecutiveTargetsRepository targetsReposito
         var targets = await GetTargetsAsync(query.ManagerId, cancellationToken);
 
         var requests = data.Requests.Where(request => request.Triage != Domain.Enums.RequestTriage.Maybe).ToList();
+        var allRequests = requests;
         var invoices = data.Invoices;
+        var quotes = data.Quotes;
+        var certificates = data.Certificates;
         if (query.ReviewerId is Guid reviewerId)
         {
             var mine = requests.Where(request => request.ReviewerId == reviewerId).ToList();
             var ids = mine.Select(request => request.Id).ToHashSet();
             requests = mine;
             invoices = data.Invoices.Where(invoice => ids.Contains(invoice.RequestId)).ToList();
+            quotes = data.Quotes.Where(quote => ids.Contains(quote.RequestId)).ToList();
+            certificates = data.Certificates.Where(certificate => ids.Contains(certificate.RequestId)).ToList();
         }
 
-        return new Scope(period, today, targets, data, invoices, requests);
+        return new Scope(period, today, targets, data, invoices, requests, allRequests, quotes, certificates);
     }
 
     private static MoneyKpis MoneyKpisOf(Scope scope)
