@@ -427,6 +427,44 @@ public sealed class InvoiceApiTests : IClassFixture<ApiHttpTests.Api>
     }
 
     [Fact]
+    public async Task The_financial_and_general_manager_can_download_the_invoice_pdf()
+    {
+        var setup = SeedCompany();
+        var invoice = SeedInvoice(setup);
+        foreach (var email in new[] { setup.Finance.Email, setup.General.Email, setup.Coordinator.Email })
+        {
+            var user = await SignedInAs(email);
+
+            var response = await user.GetAsync($"/api/v1/invoices/{invoice.Id}/pdf");
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);
+            Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString((await response.Content.ReadAsByteArrayAsync())[..5]));
+        }
+    }
+
+    [Fact]
+    public async Task Emailing_the_client_waits_for_the_delivery_and_belongs_to_the_coordinator()
+    {
+        var setup = SeedCompany();
+        var invoice = SeedInvoice(setup, delivered: false);
+        var coordinator = await SignedInAs(setup.Coordinator.Email);
+        var finance = await SignedInAs(setup.Finance.Email);
+        var general = await SignedInAs(setup.General.Email);
+
+        var early = await coordinator.PostAsJsonAsync($"/api/v1/invoices/{invoice.Id}/email", new { });
+        var preview = await Json(await coordinator.GetAsync($"/api/v1/invoices/{invoice.Id}/email"));
+
+        Assert.Equal(HttpStatusCode.Conflict, early.StatusCode);
+        Assert.Equal("not_delivered", await CodeOf(early));
+        Assert.False(preview.GetProperty("canSend").GetBoolean());
+        Assert.Contains(preview.GetProperty("blockers").EnumerateArray(), item => item.GetString()!.Contains("delivered"));
+        Assert.Equal($"/api/v1/invoices/{invoice.Id}/pdf", preview.GetProperty("pdfUrl").GetString());
+        Assert.Equal(HttpStatusCode.Forbidden, (await finance.PostAsJsonAsync($"/api/v1/invoices/{invoice.Id}/email", new { })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await general.GetAsync($"/api/v1/invoices/{invoice.Id}/email")).StatusCode);
+    }
+
+    [Fact]
     public async Task The_platform_owner_can_reverse_a_payment_on_a_closed_invoice()
     {
         var setup = SeedCompany();

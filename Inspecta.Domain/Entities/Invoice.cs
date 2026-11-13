@@ -158,11 +158,11 @@ public sealed class Invoice
     }
 
     /// <summary>Notes that the invoice was emailed to the client. Can happen any number of times.</summary>
-    public void MarkEmailed(Guid actorId)
+    public void MarkEmailed(Guid actorId, string? note = null)
     {
         EnsureNotClosed();
         ClientEmailedAt = DateTimeOffset.UtcNow;
-        events.Add(InvoiceEvent.Create(this, InvoiceEventKind.Emailed, actorId));
+        events.Add(InvoiceEvent.Create(this, InvoiceEventKind.Emailed, actorId, note));
         RowVersion++;
     }
 

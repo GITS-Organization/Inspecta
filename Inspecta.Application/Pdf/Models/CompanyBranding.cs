@@ -18,7 +18,9 @@ public sealed record CompanyBranding(
     byte[]? AccreditationsPng,
     string PrimaryColor,
     string AccentColor,
-    bool UsesBuiltInDetails = false)
+    bool UsesBuiltInDetails = false,
+    string? TaxRegistrationNumber = null,
+    string? ActivityCode = null)
 {
     /// <summary>
     /// The company details of a quotation, or <c>null</c> when the profile keeps the built-in company details. Its long texts (about us, services, terms, bank accounts) are not part of the profile yet, so

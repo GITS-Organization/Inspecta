@@ -30,6 +30,7 @@ public static class PdfServiceCollectionExtensions
         services.AddSingleton<IPdfGenerator, PdfGenerator>();
         services.AddPdfTemplate<QuotationPdfModel, QuotationPdfTemplate>();
         services.AddPdfTemplate<CertificatePdfModel, CertificatePdfTemplate>();
+        services.AddPdfTemplate<InvoicePdfModel, InvoicePdfTemplate>();
         return services;
     }
 

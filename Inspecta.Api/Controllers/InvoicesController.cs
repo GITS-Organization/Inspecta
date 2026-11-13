@@ -3,6 +3,8 @@ using Inspecta.Api.Authorization;
 using Inspecta.Application.Authorization;
 using Inspecta.Application.Contracts;
 using Inspecta.Application.Contracts.Invoices;
+using Inspecta.Application.Contracts.Quotations;
+using Inspecta.Application.Pdf;
 using Inspecta.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -132,6 +134,57 @@ public sealed class InvoicesController(IInvoiceService invoiceService) : Control
     {
         if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
         return Ok(await invoiceService.ReversePaymentAsync(id, paymentId, request, actorId, role, cancellationToken));
+    }
+
+    /// <summary>The invoice as a PDF (its frozen numbers and price lines, what is paid and what is left as of today), for anyone who may view invoices.</summary>
+    [RequirePermission(Permissions.InvoicesView)]
+    [HttpGet("{id:guid}/pdf")]
+    [Produces(PdfFile.ContentType)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Pdf(Guid id, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        var file = await invoiceService.GetPdfAsync(id, actorId, role, cancellationToken);
+        return File(file.Content, PdfFile.ContentType, file.FileName);
+    }
+
+    /// <summary>
+    /// The email that would carry the invoice to the client, ready to be edited. It goes to the sender of the original request email (or the client's
+    /// certificates email, or the address in <c>sentTo</c>). The answer has <c>canSend</c> and <c>blockers</c> (why Send would fail: the certificates are not
+    /// delivered yet, no mailbox, no address) and <c>pdfUrl</c> to open the attachment. Sends nothing.
+    /// </summary>
+    [RequirePermission(Permissions.InvoicesEmailClient)]
+    [HttpGet("{id:guid}/email")]
+    [ProducesResponseType<QuoteEmailPreviewResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<QuoteEmailPreviewResponse>> PreviewEmail(
+        Guid id, [FromQuery] string? sentTo, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        var draft = string.IsNullOrWhiteSpace(sentTo) ? null : new SendQuoteEmailRequest { SentTo = sentTo };
+        return Ok(await invoiceService.PreviewEmailAsync(id, draft, actorId, role, cancellationToken));
+    }
+
+    /// <summary>
+    /// Email the invoice PDF to the client from the coordinator's mailbox. Only after the certificates were delivered (<c>409 not_delivered</c>) and
+    /// while the invoice is not closed; it can be sent again. Everything in the body is optional and keeps what the preview suggested. Only after the mail
+    /// server accepted the message is the sending recorded in the invoice history; a failure (<c>502</c>) changes nothing and can be retried. It does not
+    /// hand the invoice over: that is <c>POST .../hand-over</c>.
+    /// </summary>
+    [RequirePermission(Permissions.InvoicesEmailClient)]
+    [HttpPost("{id:guid}/email")]
+    [ProducesResponseType<InvoiceDetail>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status502BadGateway)]
+    public async Task<ActionResult<InvoiceDetail>> SendEmail(Guid id, [FromBody] SendQuoteEmailRequest? request, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        return Ok(await invoiceService.SendEmailAsync(id, request, actorId, role, cancellationToken));
     }
 
     /// <summary>

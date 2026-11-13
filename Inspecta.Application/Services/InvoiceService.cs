@@ -1,6 +1,8 @@
 using Inspecta.Application.Authorization;
 using Inspecta.Application.Contracts;
 using Inspecta.Application.Contracts.Invoices;
+using Inspecta.Application.Contracts.Quotations;
+using Inspecta.Application.Pdf;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
 using Inspecta.Domain.Entities;
@@ -17,7 +19,11 @@ public sealed class InvoiceService(
     IInvoiceRepository invoices,
     IRequestRepository requests,
     IQuoteRepository quotes,
-    IUserRepository users) : IInvoiceService
+    IUserRepository users,
+    IInvoiceDeliveryService deliveryService,
+    IPdfGenerator pdfGenerator,
+    ICompanyBrandingProvider? companyBranding = null,
+    IClientRepository? clients = null) : IInvoiceService
 {
     public const int MaxPageSize = 100;
 
@@ -131,6 +137,45 @@ public sealed class InvoiceService(
             .OrderByDescending(item => item.AmountPiastres).ThenBy(item => item.ClientName).ToList();
         return new RevenueResponse(start, end, rows.Sum(row => row.AmountPiastres), byMonth, byClient);
     }
+
+    public async Task<PdfFile> GetPdfAsync(Guid id, Guid actorId, string role, CancellationToken cancellationToken = default)
+    {
+        var (invoice, request) = await LoadAsync(id, actorId, role, tracking: false, cancellationToken);
+        var client = clients is not null && invoice.ClientId is Guid clientId ? await clients.GetByIdAsync(clientId, false, cancellationToken) : null;
+        var company = companyBranding is null ? null : await companyBranding.GetAsync(request?.ManagerId ?? invoice.ManagerId, cancellationToken);
+        return pdfGenerator.Generate(InvoicePdfModelFactory.Create(invoice, client, company, InvoiceCalendar.Today()));
+    }
+
+    public async Task<QuoteEmailPreviewResponse> PreviewEmailAsync(
+        Guid id, SendQuoteEmailRequest? email, Guid actorId, string role, CancellationToken cancellationToken = default)
+    {
+        var (invoice, job) = await LoadAsync(id, actorId, role, tracking: false, cancellationToken);
+        EnsureCoordinatorOrOwner(job, actorId, role);
+        var plan = await deliveryService.PlanAsync(invoice, job!, ToDraft(email), cancellationToken);
+        var blockers = new List<string>();
+        if (invoice.Stage == InvoiceStage.Closed) blockers.Add("The invoice is closed.");
+        if (job!.Status != JobStatus.SentToClient) blockers.Add("The certificates have not been delivered to the client yet.");
+        blockers.AddRange(plan.Blockers);
+        return new QuoteEmailPreviewResponse(
+            "invoice", plan.EmailEnabled, plan.ToAddress, plan.ToName, plan.Cc, plan.Subject, plan.Body, plan.FromAddress, plan.AttachmentName,
+            $"/api/v1/invoices/{invoice.Id}/pdf", plan.RepliesToOriginalEmail, null, blockers.Count == 0, blockers, plan.BodyHtml, plan.ExtraAttachmentNames);
+    }
+
+    public async Task<InvoiceDetail> SendEmailAsync(
+        Guid id, SendQuoteEmailRequest? email, Guid actorId, string role, CancellationToken cancellationToken = default)
+    {
+        var (invoice, job) = await LoadAsync(id, actorId, role, tracking: true, cancellationToken);
+        EnsureCoordinatorOrOwner(job, actorId, role);
+        if (invoice.Stage == InvoiceStage.Closed) throw new InvoiceRuleException("invoice_closed", "The invoice is closed.");
+        EnsureDelivered(job);
+        var sent = await deliveryService.SendAsync(invoice, job!, ToDraft(email), cancellationToken);
+        invoice.MarkEmailed(actorId, $"Sent to {sent.ToAddress}");
+        await invoices.SaveAsync(cancellationToken);
+        return await DetailAsync(invoice, job, actorId, role, cancellationToken);
+    }
+
+    private static QuoteEmailDraft? ToDraft(SendQuoteEmailRequest? email) =>
+        email is null ? null : new QuoteEmailDraft(email.SentTo, email.Cc, email.Subject, email.Message, ExtraEmailAttachments.Decode(email.Attachments));
 
     // ---- who may do what ----
 

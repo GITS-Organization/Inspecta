@@ -73,7 +73,9 @@ public sealed class CompanyProfileService(
         profile.AccreditationsPng,
         profile.PrimaryColor,
         profile.AccentColor,
-        profile.UsesBuiltInDetails);
+        profile.UsesBuiltInDetails,
+        profile.TaxRegistrationNumber,
+        profile.ActivityCode);
 
     private static CompanyProfileResponse Map(CompanyProfile profile) => new(
         profile.ManagerId,
