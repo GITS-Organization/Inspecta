@@ -50,6 +50,23 @@ public sealed class InvoicesController(IInvoiceService invoiceService) : Control
     }
 
     /// <summary>
+    /// The company's revenue: the payments recorded from <c>from</c> to <c>to</c> (<c>yyyy-MM-dd</c>, Cairo days, both included; default the
+    /// current month), by the day each was received, with the total, a figure per month and one per client (biggest first). VAT included. A
+    /// reversal counts as negative money on the day it was recorded, so a past month never changes afterwards. The platform owner can narrow to one
+    /// company with <c>managerId</c>.
+    /// </summary>
+    [RequirePermission(Permissions.RevenueView)]
+    [HttpGet("revenue")]
+    [ProducesResponseType<RevenueResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<RevenueResponse>> Revenue(
+        [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] Guid? managerId, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out _, out var role)) return Unauthorized();
+        return Ok(await invoiceService.RevenueAsync(from, to, managerId, role, cancellationToken));
+    }
+
+    /// <summary>
     /// One invoice with its frozen numbers and price lines, its payments, its history (oldest first) and <c>actions</c>: what the caller can
     /// do with it now. It holds no detail of the inspection work.
     /// </summary>

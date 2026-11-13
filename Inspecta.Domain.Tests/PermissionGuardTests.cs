@@ -153,6 +153,7 @@ public sealed class PermissionGuardTests
         ["InvoicesController.ReversePayment"] = "admin,coordinator,financial_manager",
         ["InvoicesController.HandOver"] = "admin,coordinator",
         ["InvoicesController.Close"] = "admin,financial_manager",
+        ["InvoicesController.Revenue"] = "admin,financial_manager,general_manager",
         ["CompanyController.Get"] = "admin,technical_manager,coordinator,inspector,company_admin",
         ["CompanyController.SetDefaultReviewer"] = "admin,company_admin",
         ["CompanyController.GetProfile"] = "admin,company_admin",

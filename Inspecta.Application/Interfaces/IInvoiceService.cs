@@ -15,4 +15,7 @@ public interface IInvoiceService
     Task<InvoiceDetail> ReversePaymentAsync(Guid id, Guid paymentId, ReversePaymentRequest request, Guid actorId, string role, CancellationToken cancellationToken = default);
     Task<InvoiceDetail> HandOverAsync(Guid id, Guid actorId, string role, CancellationToken cancellationToken = default);
     Task<InvoiceDetail> CloseAsync(Guid id, CloseInvoiceRequest? request, Guid actorId, string role, CancellationToken cancellationToken = default);
+
+    /// <summary>The money received in a period (default: the current month, Cairo). The platform owner may narrow to one company.</summary>
+    Task<RevenueResponse> RevenueAsync(DateOnly? from, DateOnly? to, Guid? managerId, string role, CancellationToken cancellationToken = default);
 }

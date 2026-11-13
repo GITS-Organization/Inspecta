@@ -55,6 +55,7 @@ public static class Permissions
     public const string InvoicesRecordPayment = "Invoices.RecordPayment";
     public const string InvoicesHandOver = "Invoices.HandOver";
     public const string InvoicesClose = "Invoices.Close";
+    public const string RevenueView = "Revenue.View";
 
     public const string DraftsView = "Drafts.View";
     public const string DraftsWork = "Drafts.Work";

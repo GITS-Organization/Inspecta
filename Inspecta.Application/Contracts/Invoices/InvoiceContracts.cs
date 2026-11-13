@@ -75,3 +75,20 @@ public sealed record InvoiceListQuery(
     DateOnly? To = null,
     int Page = 1,
     int PageSize = 50);
+
+/// <summary>
+/// The money received from <c>from</c> to <c>to</c> (both days included, Cairo), VAT included, by the day each payment was received.
+/// A reversal counts as negative money on the day it was recorded.
+/// </summary>
+public sealed record RevenueResponse(
+    DateOnly From,
+    DateOnly To,
+    long TotalPiastres,
+    IReadOnlyList<RevenueByMonth> ByMonth,
+    IReadOnlyList<RevenueByClient> ByClient);
+
+/// <summary><c>month</c> is <c>yyyy-MM</c>. Months with no payment are left out.</summary>
+public sealed record RevenueByMonth(string Month, long AmountPiastres);
+
+/// <summary>One client's share, biggest first: grouped by client id when the request had one, else by the name on the invoice.</summary>
+public sealed record RevenueByClient(Guid? ClientId, string ClientName, long AmountPiastres);

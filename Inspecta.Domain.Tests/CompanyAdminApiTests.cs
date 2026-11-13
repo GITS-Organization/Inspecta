@@ -271,8 +271,8 @@ public sealed class CompanyAdminApiTests : IClassFixture<ApiHttpTests.Api>
         using var json = JsonDocument.Parse(await me.Content.ReadAsStringAsync());
 
         Assert.Equal(role, json.RootElement.GetProperty("role").GetString());
-        // Since invoices (2026-11-13) these two roles have rights: the general manager looks, the financial manager records payments and closes.
-        var expected = role == "general_manager" ? new[] { "Invoices.View" } : new[] { "Invoices.View", "Invoices.RecordPayment", "Invoices.Close" };
+        // Since invoices (2026-11-13) these two roles have rights: the general manager looks and sees revenue, the financial manager also records payments and closes.
+        var expected = role == "general_manager" ? new[] { "Invoices.View", "Revenue.View" } : new[] { "Invoices.View", "Invoices.RecordPayment", "Invoices.Close", "Revenue.View" };
         Assert.Equal(expected.Order(), json.RootElement.GetProperty("permissions").EnumerateArray().Select(item => item.GetString()!).Order());
         foreach (var path in new[] { "/api/v1/clients", "/api/v1/requests", "/api/v1/dashboard/overview", "/api/v1/company", "/api/v1/company/users", "/api/v1/equipment" })
             Assert.True((await client.GetAsync(path)).StatusCode == HttpStatusCode.Forbidden, $"{path} should be closed to {role}");

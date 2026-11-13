@@ -96,6 +96,7 @@ public static class RolePermissions
         (Permissions.InvoicesRecordPayment, [Admin, Coordinator, FinancialManager]),
         (Permissions.InvoicesHandOver, [Admin, Coordinator]),
         (Permissions.InvoicesClose, [Admin, FinancialManager]),
+        (Permissions.RevenueView, [Admin, FinancialManager, GeneralManager]),
 
         (Permissions.DraftsView, [Admin, Manager, Coordinator]),
         (Permissions.DraftsWork, [Coordinator]),

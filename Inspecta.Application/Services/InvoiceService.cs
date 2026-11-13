@@ -116,6 +116,22 @@ public sealed class InvoiceService(
         return await DetailAsync(invoice, job, actorId, role, cancellationToken);
     }
 
+    public async Task<RevenueResponse> RevenueAsync(DateOnly? from, DateOnly? to, Guid? managerId, string role, CancellationToken cancellationToken = default)
+    {
+        var today = InvoiceCalendar.Today();
+        var start = from ?? new DateOnly(today.Year, today.Month, 1);
+        var end = to ?? today;
+        if (start > end) throw new ArgumentException("from cannot be after to.");
+
+        var rows = await invoices.RevenueAsync(start, end, role == RoleNames.Admin ? managerId : null, cancellationToken);
+        var byMonth = rows.GroupBy(row => $"{row.PaidOn:yyyy-MM}").OrderBy(group => group.Key)
+            .Select(group => new RevenueByMonth(group.Key, group.Sum(row => row.AmountPiastres))).ToList();
+        var byClient = rows.GroupBy(row => row.ClientId is Guid id ? id.ToString() : "name:" + row.ClientName.Trim().ToLowerInvariant())
+            .Select(group => new RevenueByClient(group.First().ClientId, group.First().ClientName.Trim(), group.Sum(row => row.AmountPiastres)))
+            .OrderByDescending(item => item.AmountPiastres).ThenBy(item => item.ClientName).ToList();
+        return new RevenueResponse(start, end, rows.Sum(row => row.AmountPiastres), byMonth, byClient);
+    }
+
     // ---- who may do what ----
 
     // Payments: the coordinator who owns the request while the invoice is open, the financial manager once it is with finance, the platform owner always.
