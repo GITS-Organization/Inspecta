@@ -18,7 +18,8 @@ public sealed class QuoteService(
     IUserRepository userRepository,
     IRequestEquipmentRegistrar? equipmentRegistrar = null,
     ICompanyBrandingProvider? companyBranding = null,
-    IClientReplyRepository? clientReplies = null) : IQuoteService
+    IClientReplyRepository? clientReplies = null,
+    IInvoiceRepository? invoiceRepository = null) : IQuoteService
 {
     public async Task<IReadOnlyList<QuoteResponse>> ListAsync(
         Guid requestId,
@@ -627,6 +628,7 @@ public sealed class QuoteService(
         }
 
         quote.RecordClientDecision(QuoteStatus.Accepted);
+        await AddInvoiceAsync(request, quote, actorId, cancellationToken);
         request.TransitionTo(JobStatus.Unassigned, actorId);
         await ClearRepliesAsync(request, cancellationToken);
         await quoteRepository.SaveAsync(cancellationToken);
@@ -651,10 +653,19 @@ public sealed class QuoteService(
             QuoteStatus.Rejected => JobStatus.QuoteRejected,
             _ => throw new ArgumentException("Decision must be accepted or rejected.", nameof(decision))
         };
+        if (decision.Decision == QuoteStatus.Accepted) await AddInvoiceAsync(request, quote, actorId, cancellationToken);
         request.TransitionTo(status, actorId, decision.Note);
         await ClearRepliesAsync(request, cancellationToken);
         await quoteRepository.SaveAsync(cancellationToken);
         return await MapAsync(quote, canManage: true, cancellationToken);
+    }
+
+    // The invoice of an accepted quotation, added to the same unit of work as the acceptance. One per quotation; nothing for a quotation without a price.
+    private async Task AddInvoiceAsync(InspectionRequest request, Quote quote, Guid actorId, CancellationToken cancellationToken)
+    {
+        if (invoiceRepository is null || await invoiceRepository.GetByQuoteIdAsync(quote.Id, cancellationToken) is not null) return;
+        var invoice = Invoice.CreateFor(quote, request, actorId, InvoiceCalendar.Of(quote.ClientRespondedAt ?? DateTimeOffset.UtcNow));
+        if (invoice is not null) await invoiceRepository.AddAsync(invoice, cancellationToken);
     }
 
     /// <summary>Loads the request when the actor may see it, and, for changes, when they may manage its quotes.</summary>

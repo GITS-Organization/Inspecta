@@ -1719,12 +1719,14 @@ public sealed class QuotationTests
                 delivery,
                 mailboxAuthenticator: authenticator);
             Replies = new FakeReplies();
+            Invoices = new FakeInvoices();
             Service = new QuoteService(
                 Quotes, Requests, Pdf, Delivery, Outbox, new IncomingEmailRequestTests.FakeUserRepository([Coordinator, .. extraUsers]), registrar,
-                clientReplies: Replies);
+                clientReplies: Replies, invoiceRepository: Invoices);
         }
 
         public FakeReplies Replies { get; }
+        internal FakeInvoices Invoices { get; }
 
         /// <summary>The client answers the quotation email: the reply is kept and the request reacts, as the mailbox import does.</summary>
         public void ClientAnswers(string text, Guid? quoteId = null)
@@ -1857,6 +1859,7 @@ public sealed class QuotationTests
         private readonly List<Quote> quotes = [];
 
         public Func<Guid, InspectionRequest?> RequestOf { get; set; } = _ => null;
+        public Action? OnSave { get; set; }
         public QuoteListFilter? LastFilter { get; private set; }
 
         public Task AddAsync(Quote quote, CancellationToken cancellationToken = default)
@@ -1891,7 +1894,11 @@ public sealed class QuotationTests
                 .OrderByDescending(quote => quote.UpdatedAt).ToArray());
         }
 
-        public Task SaveAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task SaveAsync(CancellationToken cancellationToken = default)
+        {
+            OnSave?.Invoke();
+            return Task.CompletedTask;
+        }
     }
 
     internal sealed class FakeRequests(params InspectionRequest[] initial) : IRequestRepository
