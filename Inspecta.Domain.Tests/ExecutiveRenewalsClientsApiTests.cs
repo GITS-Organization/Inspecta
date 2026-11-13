@@ -127,7 +127,7 @@ public sealed class ExecutiveRenewalsClientsApiTests(ApiHttpTests.Api api) : Exe
 
         Assert.Equal("Detail Co", detail.GetProperty("name").GetString());
         Assert.Equal("Safety manager", detail.GetProperty("contacts")[0].GetProperty("name").GetString());
-        Assert.Equal(2, detail.GetProperty("machines90").GetArrayLength());
+        Assert.Equal(2, detail.GetProperty("dueMachines").GetArrayLength());
         Assert.Equal(1, detail.GetProperty("invoices").GetArrayLength());
         Assert.Equal(300_000, detail.GetProperty("revenue").GetProperty("owedPiastres").GetInt64());
     }

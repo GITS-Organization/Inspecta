@@ -103,6 +103,14 @@ public sealed class ExecutiveService(IExecutiveTargetsRepository targetsReposito
             new CertificatesIssued(WorkFigures.CertificatesIssued(scope.Certificates, period.From, period.To), WorkFigures.SafePercentOfIssued(scope.Certificates, period.From, period.To)));
     }
 
+    public async Task<ActivityResponse> ActivityAsync(Guid? managerId, string? kind, DateTimeOffset? before, int limit, CancellationToken cancellationToken = default)
+    {
+        var parsed = ActivityBuilder.ParseKind(kind);
+        var data = await dataSource.LoadAsync(managerId, cancellationToken);
+        var (items, next) = ActivityBuilder.Page(ActivityBuilder.Events(data), parsed, before, Math.Clamp(limit, 1, 100));
+        return new ActivityResponse(items, next, ActivityBuilder.Upcoming(data, InvoiceCalendar.Today()));
+    }
+
     public async Task<WorkResponse> WorkAsync(ExecutiveQuery query, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         var scope = await ScopeAsync(query, cancellationToken);

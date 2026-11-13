@@ -78,7 +78,7 @@ public sealed record ClientRevenue(long InvoicedYtdPiastres, long OwedPiastres, 
 public sealed record ClientDetailResponse(
     Guid Id, string Name, string? City, string? ReviewerName, bool Contract, int Since, int Machines, int OpenJobs,
     long InvoicedYtdPiastres, long OwedPiastres, long OlderThan60Piastres, int OverdueMachines, int? NextDueInDays, ClientHealth Health,
-    IReadOnlyList<ClientContactRow> Contacts, IReadOnlyList<ClientMachineRow> Machines90, IReadOnlyList<Invoices.InvoiceSummary> Invoices, ClientRevenue Revenue);
+    IReadOnlyList<ClientContactRow> Contacts, IReadOnlyList<ClientMachineRow> DueMachines, IReadOnlyList<Invoices.InvoiceSummary> Invoices, ClientRevenue Revenue);
 
 public enum StageGroup { Inbox, Field, Review, Delivery }
 
@@ -134,3 +134,18 @@ public sealed record CertificatesIssued(int Count, int SafePercent);
 public sealed record TodayResponse(
     ExecutiveDays Period, ExecutiveDays Previous, TodayKpis Kpis, IReadOnlyList<Decision> Decisions, IReadOnlyList<MonthlyMoney> Monthly,
     IReadOnlyList<PipelineGroup> Pipeline, CertificatesIssued CertificatesIssued);
+
+public enum ActivityKind { Quote, Job, Cert, Inv, Client }
+
+/// <summary>
+/// One thing that happened, as codes and numbers (the app writes the sentence). Several certificates approved or delivered on one request on one day are one
+/// row with <c>Count</c>. Nothing from an email is ever in it.
+/// </summary>
+public sealed record ActivityItem(
+    DateTimeOffset At, ActivityKind Kind, string Code, Guid? ClientId, string ClientName, string? RequestNumber, string? ActorName, long? AmountPiastres, int? Count);
+
+/// <summary><c>Kind</c> is inspection or quotationExpiry.</summary>
+public sealed record UpcomingItem(DateOnly On, string Kind, string ClientName, string? RequestNumber, string DetailCode, int? Count, string? InspectorName, long? AmountPiastres);
+
+/// <summary><c>NextBefore</c> is passed as <c>before</c> to get the next page; <c>null</c> when there is no more.</summary>
+public sealed record ActivityResponse(IReadOnlyList<ActivityItem> Items, DateTimeOffset? NextBefore, IReadOnlyList<UpcomingItem> Upcoming);

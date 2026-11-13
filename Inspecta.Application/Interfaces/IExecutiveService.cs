@@ -26,4 +26,7 @@ public interface IExecutiveService
 
     /// <summary>The Work screen: jobs in flight, the open jobs (paged), time in each step, quotations, certificates by month, reviewers and inspectors.</summary>
     Task<WorkResponse> WorkAsync(ExecutiveQuery query, int page, int pageSize, CancellationToken cancellationToken = default);
+
+    /// <summary>The company feed (a kind, newest first, a cursor) and what is coming in the next seven days.</summary>
+    Task<ActivityResponse> ActivityAsync(Guid? managerId, string? kind, DateTimeOffset? before, int limit, CancellationToken cancellationToken = default);
 }

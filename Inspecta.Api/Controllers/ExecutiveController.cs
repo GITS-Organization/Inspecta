@@ -85,6 +85,21 @@ public sealed class ExecutiveController(IExecutiveService executive) : Controlle
         await executive.ClientAsync(new ExecutiveQuery(null, null, ResolveCompany(managerId, required: false), null), clientId, cancellationToken) is { } client ? Ok(client) : NotFound();
 
     /// <summary>
+    /// The company feed, newest first, as codes and numbers (the app writes the sentence): <c>kind</c> is <c>all</c>, <c>quote</c>, <c>job</c>, <c>cert</c>,
+    /// <c>inv</c> or <c>client</c>; <c>before</c> (a moment) and <c>limit</c> (default 30, max 100) page it, and <c>nextBefore</c> is what to pass as <c>before</c> for
+    /// the next page (<c>null</c> when there is no more). <c>upcoming</c> is the next seven days: inspections scheduled and quotations expiring. Nothing from an
+    /// email is in it. <c>reviewerId</c> does not apply.
+    /// </summary>
+    [RequirePermission(Permissions.ExecutiveView)]
+    [HttpGet("activity")]
+    [ProducesResponseType<ActivityResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ActivityResponse>> Activity(
+        [FromQuery] string? kind, [FromQuery] DateTimeOffset? before, [FromQuery] Guid? managerId, [FromQuery] int limit = 30, CancellationToken cancellationToken = default) =>
+        Ok(await executive.ActivityAsync(ResolveCompany(managerId, required: false), kind, before, limit, cancellationToken));
+
+    /// <summary>
     /// The Work screen: <c>jobs</c> (in flight, average age, request to delivery, stuck over 30 days), the <c>open</c> jobs (oldest first, paged, <c>pageSize</c>
     /// default 50, max 100), <c>stepTimes</c> (average days between the first entry of one status and the first entry of the next, for steps that finished in the
     /// period), <c>quotations</c>, <c>certificatesByMonth</c> (approved, by verdict), <c>reviewers</c> and <c>inspectors</c>. Emails still marked "maybe" never
