@@ -124,6 +124,7 @@ builder.Services.AddScoped<IInvoiceRepository, EfInvoiceRepository>();
 builder.Services.AddScoped<IInvoiceDeliveryService, InvoiceDeliveryService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<IExecutiveTargetsRepository, EfExecutiveTargetsRepository>();
+builder.Services.AddScoped<IExecutiveDataSource, EfExecutiveDataSource>();
 builder.Services.AddScoped<IExecutiveService, ExecutiveService>();
 builder.Services.AddScoped<IQuoteService, QuoteService>();
 builder.Services.AddScoped<ICertificateRepository, EfCertificateRepository>();
