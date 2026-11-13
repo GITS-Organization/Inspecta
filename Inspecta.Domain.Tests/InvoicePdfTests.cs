@@ -39,7 +39,7 @@ public sealed class InvoicePdfTests
         var invoice = PaidInvoice();
         var client = Client.Create("Alexandria Steel", taxNumber: "555-666", address: "12 Port Said St, Alexandria");
 
-        var model = InvoicePdfModelFactory.Create(invoice, client, Branding(builtIn: false), Today);
+        var model = InvoicePdfModelFactory.Create(invoice, client, Branding(builtIn: false));
 
         Assert.Equal(invoice.Number, model.Number);
         Assert.Equal("Gamma Inspection", model.IssuerName);
@@ -57,9 +57,18 @@ public sealed class InvoicePdfTests
     }
 
     [Fact]
+    public void The_invoice_date_is_the_day_it_was_made_not_the_day_the_pdf_is_printed()
+    {
+        var invoice = PaidInvoice(0);
+        var model = InvoicePdfModelFactory.Create(invoice, null, null);
+
+        Assert.Equal(InvoiceCalendar.Of(invoice.CreatedAt), model.IssuedOn);
+    }
+
+    [Fact]
     public void A_missing_detail_is_null_so_the_page_leaves_its_line_out()
     {
-        var model = InvoicePdfModelFactory.Create(PaidInvoice(0), client: null, Branding(builtIn: false, tax: " ", activity: null), Today);
+        var model = InvoicePdfModelFactory.Create(PaidInvoice(0), client: null, Branding(builtIn: false, tax: " ", activity: null));
 
         Assert.Null(model.IssuerTaxRegistrationNumber);
         Assert.Null(model.IssuerActivityCode);
@@ -70,7 +79,7 @@ public sealed class InvoicePdfTests
     [Fact]
     public void A_profile_with_the_built_in_details_prints_the_built_in_company_but_keeps_its_tax_numbers()
     {
-        var model = InvoicePdfModelFactory.Create(PaidInvoice(0), null, Branding(builtIn: true), Today);
+        var model = InvoicePdfModelFactory.Create(PaidInvoice(0), null, Branding(builtIn: true));
 
         Assert.Null(model.IssuerName);
         Assert.Null(model.IssuerAddress);
@@ -81,7 +90,7 @@ public sealed class InvoicePdfTests
     public void The_pdf_renders_valid_bytes_with_a_safe_file_name()
     {
         using var provider = Provider();
-        var model = InvoicePdfModelFactory.Create(PaidInvoice(), null, null, Today);
+        var model = InvoicePdfModelFactory.Create(PaidInvoice(), null, null);
 
         var file = provider.GetRequiredService<IPdfGenerator>().Generate(model);
 

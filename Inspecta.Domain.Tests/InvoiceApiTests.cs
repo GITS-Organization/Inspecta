@@ -285,6 +285,29 @@ public sealed class InvoiceApiTests : IClassFixture<ApiHttpTests.Api>
     }
 
     [Fact]
+    public async Task The_financial_manager_can_close_an_invoice_of_a_job_that_was_never_delivered_by_hand_with_a_reason()
+    {
+        var setup = SeedCompany();
+        var invoice = SeedInvoice(setup, delivered: false);
+        var coordinator = await SignedInAs(setup.Coordinator.Email);
+        var finance = await SignedInAs(setup.Finance.Email);
+        await coordinator.PostAsJsonAsync($"/api/v1/invoices/{invoice.Id}/payments", Payment(200_000));
+
+        var before = await Json(await finance.GetAsync($"/api/v1/invoices/{invoice.Id}"));
+        var plain = await finance.PostAsync($"/api/v1/invoices/{invoice.Id}/close", null);
+        var closed = await finance.PostAsJsonAsync($"/api/v1/invoices/{invoice.Id}/close", new { reason = "Job cancelled; advance settled" });
+
+        var actions = before.GetProperty("actions").EnumerateArray().Select(item => item.GetString()).ToArray();
+        Assert.Equal(["close_manually"], actions);
+        Assert.Equal("wrong_stage", await CodeOf(plain));
+        Assert.Equal(HttpStatusCode.OK, closed.StatusCode);
+        var detail = await Json(closed);
+        Assert.Equal("closed", detail.GetProperty("summary").GetProperty("stage").GetString());
+        Assert.Equal(800_000, Balance(detail));
+        Assert.Equal(HttpStatusCode.Conflict, (await finance.PostAsJsonAsync($"/api/v1/invoices/{invoice.Id}/payments", Payment(1))).StatusCode);
+    }
+
+    [Fact]
     public async Task The_financial_and_general_manager_see_invoices_but_no_request_details_and_cannot_open_the_request()
     {
         var setup = SeedCompany();

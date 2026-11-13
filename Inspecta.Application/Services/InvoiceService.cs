@@ -114,7 +114,8 @@ public sealed class InvoiceService(
     public async Task<InvoiceDetail> CloseAsync(Guid id, CloseInvoiceRequest? request, Guid actorId, string role, CancellationToken cancellationToken = default)
     {
         var (invoice, job) = await LoadAsync(id, actorId, role, tracking: true, cancellationToken);
-        if (role == RoleNames.FinancialManager && invoice.Stage == InvoiceStage.Open)
+        // An invoice still with the coordinator can only be closed by the financial manager by hand with a reason (a job that was never delivered).
+        if (role == RoleNames.FinancialManager && invoice.Stage == InvoiceStage.Open && string.IsNullOrWhiteSpace(request?.Reason))
             throw new InvoiceRuleException("wrong_stage", "The invoice is still with the coordinator.");
         if (string.IsNullOrWhiteSpace(request?.Reason)) invoice.Close(actorId);
         else invoice.CloseManually(actorId, request.Reason);
@@ -143,7 +144,7 @@ public sealed class InvoiceService(
         var (invoice, request) = await LoadAsync(id, actorId, role, tracking: false, cancellationToken);
         var client = clients is not null && invoice.ClientId is Guid clientId ? await clients.GetByIdAsync(clientId, false, cancellationToken) : null;
         var company = companyBranding is null ? null : await companyBranding.GetAsync(request?.ManagerId ?? invoice.ManagerId, cancellationToken);
-        return pdfGenerator.Generate(InvoicePdfModelFactory.Create(invoice, client, company, InvoiceCalendar.Today()));
+        return pdfGenerator.Generate(InvoicePdfModelFactory.Create(invoice, client, company));
     }
 
     public async Task<QuoteEmailPreviewResponse> PreviewEmailAsync(
@@ -269,7 +270,7 @@ public sealed class InvoiceService(
             if (invoice.Stage == InvoiceStage.Open) actions.Add("hand_over");
         }
 
-        if (!closed && (admin || finance))
+        if (!closed && (admin || role == RoleNames.FinancialManager))
         {
             if (invoice.Stage == InvoiceStage.WithFinance && invoice.BalancePiastres == 0) actions.Add("close");
             actions.Add("close_manually");

@@ -37,7 +37,7 @@ public sealed class InvoiceDeliveryService(
             throw new ArgumentException($"The email text is longer than {CertificateDeliveryService.MaxBodyLength} characters.");
         var fromAddress = config is null || coordinator is null ? null : QuoteDeliveryService.ResolveFromAddress(config, coordinator);
         var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
-        var pdfName = pdfGenerator.Generate(InvoicePdfModelFactory.Create(invoice, client, company, InvoiceCalendar.Today())).FileName;
+        var pdfName = pdfGenerator.Generate(InvoicePdfModelFactory.Create(invoice, client, company)).FileName;
 
         var blockers = new List<string>();
         if (options is { Enabled: false }) blockers.Add("Emailing is switched off.");
@@ -71,7 +71,7 @@ public sealed class InvoiceDeliveryService(
         var source = await requestRepository.GetEmailAsync(request.Id, cancellationToken);
         var client = await ClientOfAsync(invoice, cancellationToken);
         var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
-        var pdf = pdfGenerator.Generate(InvoicePdfModelFactory.Create(invoice, client, company, InvoiceCalendar.Today()));
+        var pdf = pdfGenerator.Generate(InvoicePdfModelFactory.Create(invoice, client, company));
         var laidOut = EmailLayout.ForCoordinator(plan.Body, coordinator, fromAddress, source, EmailLayout.BrandingFor(company, branding));
         try
         {

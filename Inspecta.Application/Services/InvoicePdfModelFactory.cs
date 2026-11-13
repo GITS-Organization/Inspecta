@@ -5,7 +5,7 @@ namespace Inspecta.Application.Services;
 
 public static class InvoicePdfModelFactory
 {
-    public static InvoicePdfModel Create(Invoice invoice, Client? client, CompanyBranding? company, DateOnly today)
+    public static InvoicePdfModel Create(Invoice invoice, Client? client, CompanyBranding? company)
     {
         // A profile that keeps the built-in details prints the built-in company; its tax details are still its own.
         var own = company is { UsesBuiltInDetails: false };
@@ -18,7 +18,7 @@ public static class InvoicePdfModelFactory
             item.TotalPiastres)).ToList();
         return new InvoicePdfModel(
             invoice.Number,
-            today,
+            InvoiceCalendar.Of(invoice.CreatedAt),
             own ? company!.Name : null,
             Clean(company?.TaxRegistrationNumber),
             Clean(company?.ActivityCode),
