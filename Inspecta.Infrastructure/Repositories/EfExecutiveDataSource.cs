@@ -43,7 +43,8 @@ public sealed class EfExecutiveDataSource(InspectaDbContext dbContext, CurrentTe
         var certificates = await dbContext.Certificates.AsNoTracking()
             .Where(certificate => certificate.Request != null && (managerId == null || certificate.Request.ManagerId == managerId))
             .Select(certificate => new ExecCertificate(
-                certificate.RequestId, certificate.SubmittedAt, certificate.ReviewedAt, certificate.FinalResult, certificate.ReviewerId, certificate.InspectorId))
+                certificate.RequestId, certificate.SubmittedAt, certificate.ReviewedAt, certificate.FinalResult, certificate.ReviewerId, certificate.InspectorId,
+                certificate.CertificateNumber != null))
             .ToListAsync(cancellationToken);
 
         var machines = await dbContext.Items.AsNoTracking()
@@ -63,7 +64,8 @@ public sealed class EfExecutiveDataSource(InspectaDbContext dbContext, CurrentTe
             client.Id, client.Name, client.Location, client.HasContract, client.CreatedAt, client.ArchivedAt, client.Contacts)).ToList();
 
         var people = await dbContext.Users.AsNoTracking()
-            .Where(user => user.Role != UserRole.Admin && (managerId == null || user.ManagerId == managerId))
+            .Where(user => user.Role != UserRole.Admin && (managerId == null || user.ManagerId == managerId
+                || user.ManagerId == null && user.Id == managerId && user.Role == UserRole.TechnicalManager))
             .Select(user => new ExecPerson(user.Id, user.FullName, user.Role, user.IsActive, user.IsOnLeave ? user.LeaveUntil : null))
             .ToListAsync(cancellationToken);
 
@@ -80,7 +82,7 @@ public sealed class EfExecutiveDataSource(InspectaDbContext dbContext, CurrentTe
                 invoice.CreatedAt, invoice.Stage, invoice.ClosedWithBalance, invoice.QuotationReference,
                 Payments = invoice.Payments.Select(payment => new ExecPayment(payment.PaidOn, payment.AmountPiastres, payment.RecordedAt, payment.ReversesPaymentId)).ToList(),
                 Events = invoice.Events.Select(entry => new ExecInvoiceEvent(entry.Kind, entry.At, entry.ActorId)).ToList()
-            }).ToListAsync(cancellationToken);
+            }).AsSplitQuery().ToListAsync(cancellationToken);
         return rows.Select(row => new ExecInvoice(
             row.Id, row.Number, row.ManagerId, row.RequestId, row.ClientId, row.ClientName, row.TotalPiastres, row.CreatedAt, row.Stage,
             row.ClosedWithBalance, row.Payments, row.Events, row.QuotationReference)).ToList();
@@ -97,7 +99,7 @@ public sealed class EfExecutiveDataSource(InspectaDbContext dbContext, CurrentTe
                 MachineCount = request.Items.Sum(item => item.Quantity),
                 EquipmentIds = request.Items.Where(item => item.EquipmentId != null).Select(item => item.EquipmentId!.Value).ToList(),
                 Transitions = request.History.Select(entry => new ExecTransition(entry.FromStatus, entry.ToStatus, entry.OccurredAt, entry.ActorId)).ToList()
-            }).ToListAsync(cancellationToken);
+            }).AsSplitQuery().ToListAsync(cancellationToken);
         return rows.Select(row => new ExecRequest(
             row.Id, row.ManagerId, row.ClientId, row.ClientName, row.Kind, row.Triage, row.Status, row.ReviewerId, row.CoordinatorId, row.InspectorId,
             row.ReceivedAt, row.ScheduledAt, row.MachineCount, row.EquipmentIds, row.Transitions.OrderBy(entry => entry.At).ToList())).ToList();

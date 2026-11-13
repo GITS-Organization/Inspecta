@@ -52,15 +52,18 @@ public static class MoneyFigures
         foreach (var invoice in invoices)
         {
             if (invoice.TotalPiastres <= 0 || invoice.BalancePiastres != 0) continue;
+            // The payment that finally brought the balance to zero: the last one after which the running total went from below the total to the total.
             long running = 0;
+            ExecPayment? closing = null;
             foreach (var payment in invoice.Payments.OrderBy(item => item.PaidOn).ThenBy(item => item.RecordedAt))
             {
+                var before = running;
                 running += payment.AmountPiastres;
-                if (running < invoice.TotalPiastres) continue;
-                if (InRange(payment.PaidOn, from, to))
-                    days.Add(Math.Max(0, payment.PaidOn.DayNumber - InvoiceCalendar.Of(invoice.CreatedAt).DayNumber));
-                break;
+                if (before < invoice.TotalPiastres && running >= invoice.TotalPiastres) closing = payment;
             }
+
+            if (closing is not null && InRange(closing.PaidOn, from, to))
+                days.Add(Math.Max(0, closing.PaidOn.DayNumber - InvoiceCalendar.Of(invoice.CreatedAt).DayNumber));
         }
 
         return days.Count == 0 ? 0 : (int)Math.Round(days.Average(), MidpointRounding.AwayFromZero);

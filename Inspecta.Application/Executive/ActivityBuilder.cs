@@ -39,10 +39,10 @@ public static class ActivityBuilder
                 var (kind, code) = mapped.Value;
                 int? count = null;
                 if (code == "certificates_approved")
-                    count = Math.Max(1, data.Certificates.Count(certificate => certificate.RequestId == request.Id && certificate.ReviewedAt is not null
+                    count = Math.Max(1, data.Certificates.Count(certificate => certificate.RequestId == request.Id && certificate.IsIssued
                         && InvoiceCalendar.Of(certificate.ReviewedAt.Value) == InvoiceCalendar.Of(entry.At)));
                 else if (code == "certificates_delivered")
-                    count = Math.Max(1, data.Certificates.Count(certificate => certificate.RequestId == request.Id && certificate.ReviewedAt is not null));
+                    count = Math.Max(1, data.Certificates.Count(certificate => certificate.RequestId == request.Id && certificate.IsIssued));
                 items.Add(new ActivityItem(entry.At, kind, code, request.ClientId, request.ClientName.Trim(), request.Number, NameOf(entry.ActorId), null, count));
             }
         }

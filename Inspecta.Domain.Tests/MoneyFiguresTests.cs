@@ -151,4 +151,13 @@ public sealed class MoneyFiguresTests
         Assert.Equal(2_000L, months[10].CollectedPiastres);
         Assert.Equal((0L, 0L), (months[0].InvoicedPiastres, months[0].CollectedPiastres));
     }
+
+    [Fact]
+    public void Days_to_collect_uses_the_payment_that_finally_brought_the_balance_to_zero()
+    {
+        var invoice = Invoice(1_000, 30, payments: [(25, 1_000), (20, -1_000), (10, 1_000)]);
+
+        Assert.Equal(20, MoneyFigures.DaysToCollect([invoice], Month.From, Month.To));
+        Assert.Equal(0, MoneyFigures.DaysToCollect([invoice], Today.AddDays(-30), Today.AddDays(-22)));
+    }
 }

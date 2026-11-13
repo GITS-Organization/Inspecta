@@ -197,4 +197,30 @@ public sealed class WorkFiguresTests
         Assert.Equal(Today.AddDays(8), rows["Away"].OnLeaveUntil);
         Assert.Null(rows["Back"].OnLeaveUntil);
     }
+
+    [Fact]
+    public void A_certificate_returned_for_changes_is_not_an_issued_one()
+    {
+        var reviewer = Guid.NewGuid();
+        var approved = Certificate(2, reviewer: reviewer);
+        var returned = Certificate(2, reviewer: reviewer) with { Approved = false };
+        var people = new[] { new ExecPerson(reviewer, "R", UserRole.TechnicalManager, true, null) };
+
+        Assert.Equal(1, WorkFigures.CertificatesIssued([approved, returned], Today.AddDays(-30), Today));
+        Assert.Equal(100, WorkFigures.SafePercentOfIssued([approved, returned with { Result = CertificateResult.NotSafe }], Today.AddDays(-30), Today));
+        Assert.Equal(1, WorkFigures.CertificatesByMonth([approved, returned], Today)[11].Safe);
+        Assert.Equal(1, WorkFigures.Reviewers(people, [], [approved, returned], Today.AddDays(-30), Today, 2).Single().Certificates);
+        var inspector = new ExecPerson(approved.InspectorId, "I", UserRole.Inspector, true, null);
+        Assert.Equal(1, WorkFigures.Inspectors([inspector], [], [approved, returned with { InspectorId = approved.InspectorId }], Today.AddDays(-30), Today).Single().Certificates);
+    }
+
+    [Fact]
+    public void A_note_in_the_history_does_not_restart_the_days_in_status()
+    {
+        var request = Request(JobStatus.InProgress, 60, history: [(JobStatus.InProgress, 45)]);
+        var withNote = request with { Transitions = [.. request.Transitions, new ExecTransition(JobStatus.InProgress, JobStatus.InProgress, At(2), Actor)] };
+
+        Assert.Equal(45, WorkFigures.DaysInStatus(withNote, Today));
+        Assert.True(WorkFigures.Stuck(withNote, Today));
+    }
 }

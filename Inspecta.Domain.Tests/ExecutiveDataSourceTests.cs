@@ -159,4 +159,24 @@ public sealed class ExecutiveDataSourceTests : IDisposable
     }
 
     public void Dispose() => connection.Dispose();
+
+    [Fact]
+    public async Task A_technical_manager_from_before_companies_existed_is_one_of_the_companys_people()
+    {
+        var founder = AppUser.Create("founder@example.com", "Founder TM", UserRole.TechnicalManager);
+        var coordinator = AppUser.Create("legacy-c@example.com", "Legacy coordinator", UserRole.Coordinator, managerId: founder.Id);
+        var stranger = AppUser.Create("stranger-tm@example.com", "Other TM", UserRole.TechnicalManager);
+        using (var db = CreateContext("admin", null))
+        {
+            db.Companies.Add(Company.Create("Legacy", id: founder.Id));
+            db.Users.AddRange(founder, coordinator, stranger);
+            db.SaveChanges();
+        }
+
+        var (read, source) = Open("general_manager", founder.Id);
+        await using var _ = read;
+        var data = await source.LoadAsync(null);
+
+        Assert.Equal(new[] { founder.Id, coordinator.Id }.Order(), data.People.Select(item => item.Id).Order());
+    }
 }

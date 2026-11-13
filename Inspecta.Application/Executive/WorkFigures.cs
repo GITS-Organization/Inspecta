@@ -36,7 +36,7 @@ public static class WorkFigures
     /// <summary>Days the request has been in its current status (since its last status change, or since it arrived).</summary>
     public static int DaysInStatus(ExecRequest request, DateOnly today)
     {
-        var since = request.Transitions.Where(entry => entry.To == request.Status).Select(entry => (DateTimeOffset?)entry.At).OrderByDescending(at => at).FirstOrDefault() ?? request.ReceivedAt;
+        var since = request.Transitions.Where(entry => entry.To == request.Status && entry.From != entry.To).Select(entry => (DateTimeOffset?)entry.At).OrderByDescending(at => at).FirstOrDefault() ?? request.ReceivedAt;
         return Math.Max(0, today.DayNumber - InvoiceCalendar.Of(since).DayNumber);
     }
 
@@ -137,7 +137,7 @@ public static class WorkFigures
     /// <summary>Certificates approved in each of the last twelve months, by their verdict (a certificate with no verdict is counted in none).</summary>
     public static IReadOnlyList<CertificatesMonth> CertificatesByMonth(IEnumerable<ExecCertificate> certificates, DateOnly today)
     {
-        var approved = certificates.Where(certificate => certificate.ReviewedAt is not null).Select(certificate => (Day: InvoiceCalendar.Of(certificate.ReviewedAt!.Value), certificate.Result)).ToList();
+        var approved = certificates.Where(certificate => certificate.IsIssued).Select(certificate => (Day: InvoiceCalendar.Of(certificate.ReviewedAt!.Value), certificate.Result)).ToList();
         var first = new DateOnly(today.Year, today.Month, 1).AddMonths(-11);
         return Enumerable.Range(0, 12).Select(index => first.AddMonths(index)).Select(month =>
         {
@@ -151,11 +151,11 @@ public static class WorkFigures
     }
 
     public static int CertificatesIssued(IEnumerable<ExecCertificate> certificates, DateOnly from, DateOnly to) =>
-        certificates.Count(certificate => certificate.ReviewedAt is not null && InRange(InvoiceCalendar.Of(certificate.ReviewedAt.Value), from, to));
+        certificates.Count(certificate => certificate.IsIssued && InRange(InvoiceCalendar.Of(certificate.ReviewedAt.Value), from, to));
 
     public static int SafePercentOfIssued(IEnumerable<ExecCertificate> certificates, DateOnly from, DateOnly to)
     {
-        var issued = certificates.Where(certificate => certificate.ReviewedAt is not null && InRange(InvoiceCalendar.Of(certificate.ReviewedAt.Value), from, to)).ToList();
+        var issued = certificates.Where(certificate => certificate.IsIssued && InRange(InvoiceCalendar.Of(certificate.ReviewedAt.Value), from, to)).ToList();
         return issued.Count == 0 ? 0 : (int)Math.Round(issued.Count(certificate => certificate.Result == CertificateResult.SafeToOperate) * 100m / issued.Count, MidpointRounding.AwayFromZero);
     }
 
@@ -169,7 +169,7 @@ public static class WorkFigures
         var byId = requests.ToDictionary(request => request.Id);
         return people.Where(person => person.Role == UserRole.TechnicalManager && person.IsActive).Select(person =>
         {
-            var approved = certificates.Where(certificate => certificate.ReviewerId == person.Id && certificate.ReviewedAt is not null
+            var approved = certificates.Where(certificate => certificate.ReviewerId == person.Id && certificate.IsIssued
                 && InRange(InvoiceCalendar.Of(certificate.ReviewedAt.Value), from, to)).ToList();
             var days = new List<double>();
             foreach (var requestId in approved.Select(certificate => certificate.RequestId).Distinct())
@@ -190,7 +190,7 @@ public static class WorkFigures
         IEnumerable<ExecPerson> people, IReadOnlyCollection<ExecRequest> requests, IReadOnlyCollection<ExecCertificate> certificates, DateOnly from, DateOnly to) =>
         people.Where(person => person.Role == UserRole.Inspector && person.IsActive).Select(person => new InspectorRow(
             person.Id, person.Name,
-            certificates.Count(certificate => certificate.InspectorId == person.Id && certificate.ReviewedAt is not null && InRange(InvoiceCalendar.Of(certificate.ReviewedAt.Value), from, to)),
+            certificates.Count(certificate => certificate.InspectorId == person.Id && certificate.IsIssued && InRange(InvoiceCalendar.Of(certificate.ReviewedAt.Value), from, to)),
             requests.Count(request => InFlight(request) && request.InspectorId == person.Id),
             person.OnLeaveUntil is DateTimeOffset until && InvoiceCalendar.Of(until) >= InvoiceCalendar.Today() ? InvoiceCalendar.Of(until) : null))
             .OrderByDescending(row => row.Certificates).ThenBy(row => row.Name, StringComparer.OrdinalIgnoreCase).ToList();

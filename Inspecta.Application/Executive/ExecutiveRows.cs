@@ -70,7 +70,12 @@ public sealed record ExecCertificate(
     DateTimeOffset? ReviewedAt,
     CertificateResult? Result,
     Guid? ReviewerId,
-    Guid InspectorId);
+    Guid InspectorId,
+    bool Approved = true)
+{
+    /// <summary>Approved and issued: a certificate returned for changes also carries a review time but is not issued.</summary>
+    public bool IsIssued => Approved && ReviewedAt is not null;
+}
 
 public sealed record ExecMachine(
     Guid Id,
