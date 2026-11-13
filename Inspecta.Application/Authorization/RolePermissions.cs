@@ -98,6 +98,7 @@ public static class RolePermissions
         (Permissions.InvoicesEmailClient, [Admin, Coordinator]),
         (Permissions.InvoicesClose, [Admin, FinancialManager]),
         (Permissions.RevenueView, [Admin, FinancialManager, GeneralManager]),
+        (Permissions.ExecutiveView, [Admin, GeneralManager]),
         (Permissions.ExecutiveManageTargets, [Admin, CompanyAdmin]),
 
         (Permissions.DraftsView, [Admin, Manager, Coordinator]),

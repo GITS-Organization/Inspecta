@@ -33,6 +33,8 @@ public sealed class EfInvoiceRepository(InspectaDbContext dbContext) : IInvoiceR
         if (filter.ManagerId is Guid managerId) query = query.Where(invoice => invoice.ManagerId == managerId);
         if (filter.RequestId is Guid requestId) query = query.Where(invoice => invoice.RequestId == requestId);
         if (filter.Stage is InvoiceStage stage) query = query.Where(invoice => invoice.Stage == stage);
+        if (filter.ReviewerId is Guid reviewerId)
+            query = query.Where(invoice => dbContext.Requests.Any(request => request.Id == invoice.RequestId && request.ReviewerId == reviewerId));
         if (filter.CoordinatorId is Guid coordinatorId)
             query = query.Where(invoice => dbContext.Requests.Any(request =>
                 request.Id == invoice.RequestId && (request.Source != RequestSource.Email || request.CoordinatorId == coordinatorId)));

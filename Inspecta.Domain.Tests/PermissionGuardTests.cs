@@ -157,6 +157,7 @@ public sealed class PermissionGuardTests
         ["InvoicesController.SendEmail"] = "admin,coordinator",
         ["InvoicesController.Close"] = "admin,financial_manager",
         ["InvoicesController.Revenue"] = "admin,financial_manager,general_manager",
+        ["ExecutiveController.Money"] = "admin,general_manager",
         ["ExecutiveController.GetTargets"] = "admin,company_admin",
         ["ExecutiveController.SaveTargets"] = "admin,company_admin",
         ["CompanyController.Get"] = "admin,technical_manager,coordinator,inspector,company_admin",

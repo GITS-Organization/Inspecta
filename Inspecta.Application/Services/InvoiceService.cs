@@ -47,7 +47,8 @@ public sealed class InvoiceService(
             From: query.From,
             To: query.To,
             Skip: (page - 1) * size,
-            Take: size), cancellationToken);
+            Take: size,
+            ReviewerId: query.ReviewerId), cancellationToken);
         return new PagedList<InvoiceSummary>(result.Items.Select(Summary).ToList(), result.Total);
     }
 

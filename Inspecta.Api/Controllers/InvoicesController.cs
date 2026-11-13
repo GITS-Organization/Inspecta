@@ -44,11 +44,12 @@ public sealed class InvoicesController(IInvoiceService invoiceService) : Control
         [FromQuery] DateOnly? to,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
+        [FromQuery] Guid? reviewerId = null,
         CancellationToken cancellationToken = default)
     {
         if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
         return Ok(await invoiceService.ListAsync(
-            actorId, role, new InvoiceListQuery(stage, paymentState, q, requestId, managerId, from, to, page, pageSize), cancellationToken));
+            actorId, role, new InvoiceListQuery(stage, paymentState, q, requestId, managerId, from, to, page, pageSize, reviewerId), cancellationToken));
     }
 
     /// <summary>

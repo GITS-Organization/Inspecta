@@ -74,7 +74,8 @@ public sealed record InvoiceListQuery(
     DateOnly? From = null,
     DateOnly? To = null,
     int Page = 1,
-    int PageSize = 50);
+    int PageSize = 50,
+    Guid? ReviewerId = null);
 
 /// <summary>
 /// The money received from <c>from</c> to <c>to</c> (both days included, Cairo), VAT included, by the day each payment was received.

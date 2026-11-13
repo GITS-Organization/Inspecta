@@ -21,7 +21,8 @@ public sealed record InvoiceListFilter(
     DateOnly? From = null,
     DateOnly? To = null,
     int Skip = 0,
-    int Take = 50);
+    int Take = 50,
+    Guid? ReviewerId = null);
 
 /// <summary>One page of invoices, newest first, with how many matched in all.</summary>
 public sealed record InvoicePage(IReadOnlyList<Invoice> Items, int Total);

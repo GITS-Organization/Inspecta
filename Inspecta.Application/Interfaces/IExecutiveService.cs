@@ -8,4 +8,7 @@ public interface IExecutiveService
     Task<ExecutiveTargetsResponse> GetTargetsAsync(Guid? managerId, CancellationToken cancellationToken = default);
 
     Task<ExecutiveTargetsResponse> SaveTargetsAsync(Guid managerId, SaveExecutiveTargetsRequest request, Guid actorId, CancellationToken cancellationToken = default);
+
+    /// <summary>The Money screen: collected against invoiced, what is still owed, its age, who owes the most and the last twelve months.</summary>
+    Task<MoneyResponse> MoneyAsync(ExecutiveQuery query, CancellationToken cancellationToken = default);
 }
