@@ -12,6 +12,11 @@ public sealed class Client
     public string? Location { get; private set; }
     public string? CertificatesEmail { get; private set; }
     public string? TaxNumber { get; private set; }
+
+    /// <summary>The client's address, printed on invoices (optional).</summary>
+    public string? Address { get; private set; }
+
+    public const int MaxAddressLength = 500;
     public double? Latitude { get; private set; }
     public double? Longitude { get; private set; }
     public string? Notes { get; private set; }
@@ -31,7 +36,8 @@ public sealed class Client
         double? latitude = null,
         double? longitude = null,
         Guid? managerId = null,
-        DateTimeOffset? createdAt = null)
+        DateTimeOffset? createdAt = null,
+        string? address = null)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Client name is required.", nameof(name));
         ValidateCoordinates(latitude, longitude);
@@ -45,6 +51,7 @@ public sealed class Client
             Location = location?.Trim(),
             CertificatesEmail = EmptyToNull(certificatesEmail),
             TaxNumber = EmptyToNull(taxNumber),
+            Address = ValidAddress(address),
             Latitude = latitude,
             Longitude = longitude,
             Notes = notes?.Trim(),
@@ -61,7 +68,8 @@ public sealed class Client
         string? taxNumber,
         double? latitude,
         double? longitude,
-        string? notes)
+        string? notes,
+        string? address = null)
     {
         EnsureNotArchived();
         if (string.IsNullOrWhiteSpace(name))
@@ -74,6 +82,7 @@ public sealed class Client
         Location = location?.Trim();
         CertificatesEmail = EmptyToNull(certificatesEmail);
         TaxNumber = EmptyToNull(taxNumber);
+        Address = ValidAddress(address);
         Latitude = latitude;
         Longitude = longitude;
         Notes = notes?.Trim();
@@ -112,6 +121,14 @@ public sealed class Client
             throw new ArgumentOutOfRangeException(nameof(latitude));
         if (longitude is < -180 or > 180)
             throw new ArgumentOutOfRangeException(nameof(longitude));
+    }
+
+    private static string? ValidAddress(string? value)
+    {
+        var address = EmptyToNull(value);
+        if (address is not null && address.Length > MaxAddressLength)
+            throw new ArgumentException($"Address is longer than {MaxAddressLength} characters.");
+        return address;
     }
 
     private static string? EmptyToNull(string? value) =>

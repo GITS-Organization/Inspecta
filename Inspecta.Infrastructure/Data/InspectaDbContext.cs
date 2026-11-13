@@ -34,6 +34,9 @@ public sealed class InspectaDbContext(
     public DbSet<IssuedCertificateFile> IssuedCertificateFiles => Set<IssuedCertificateFile>();
     public DbSet<ReviewComment> ReviewComments => Set<ReviewComment>();
     public DbSet<CertificateDelivery> CertificateDeliveries => Set<CertificateDelivery>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<InvoicePayment> InvoicePayments => Set<InvoicePayment>();
+    public DbSet<InvoiceEvent> InvoiceEvents => Set<InvoiceEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -185,6 +188,44 @@ public sealed class InspectaDbContext(
         quote.Property(item => item.VatPercent).HasPrecision(5, 2);
         quote.HasIndex(item => new { item.RequestId, item.Version }).IsUnique();
         quote.HasOne(item => item.Request).WithMany().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
+
+        var invoice = modelBuilder.Entity<Invoice>();
+        invoice.HasKey(item => item.Id);
+        invoice.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
+        invoice.HasIndex(item => item.QuoteId).IsUnique();
+        invoice.HasIndex(item => item.RequestId);
+        invoice.HasIndex(item => new { item.ManagerId, item.Stage });
+        invoice.Property(item => item.Number).HasMaxLength(40).IsRequired();
+        invoice.Property(item => item.ClientName).HasMaxLength(200).IsRequired();
+        invoice.Property(item => item.QuotationReference).HasMaxLength(100);
+        invoice.Property(item => item.Stage).HasConversion<string>().HasMaxLength(24);
+        invoice.Property(item => item.DiscountPercent).HasPrecision(5, 2);
+        invoice.Property(item => item.VatPercent).HasPrecision(5, 2);
+        // Every rule method bumps it: two changes made at the same moment cannot both be saved.
+        invoice.Property(item => item.RowVersion).IsConcurrencyToken();
+        invoice.Ignore(item => item.PaidPiastres);
+        invoice.Ignore(item => item.BalancePiastres);
+        invoice.Ignore(item => item.PaymentState);
+        invoice.HasMany(item => item.Payments).WithOne().HasForeignKey(payment => payment.InvoiceId).OnDelete(DeleteBehavior.Cascade);
+        invoice.HasMany(item => item.Events).WithOne().HasForeignKey(entry => entry.InvoiceId).OnDelete(DeleteBehavior.Cascade);
+        invoice.Navigation(item => item.Payments).UsePropertyAccessMode(PropertyAccessMode.Field);
+        invoice.Navigation(item => item.Events).UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        var invoicePayment = modelBuilder.Entity<InvoicePayment>();
+        invoicePayment.HasKey(item => item.Id);
+        invoicePayment.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
+        invoicePayment.HasIndex(item => item.InvoiceId);
+        invoicePayment.HasIndex(item => new { item.ManagerId, item.PaidOn });
+        invoicePayment.Property(item => item.Label).HasMaxLength(InvoicePayment.MaxLabelLength);
+        invoicePayment.Property(item => item.Reason).HasMaxLength(InvoicePayment.MaxReasonLength);
+        invoicePayment.Ignore(item => item.IsReversal);
+
+        var invoiceEvent = modelBuilder.Entity<InvoiceEvent>();
+        invoiceEvent.HasKey(item => item.Id);
+        invoiceEvent.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
+        invoiceEvent.HasIndex(item => item.InvoiceId);
+        invoiceEvent.Property(item => item.Kind).HasConversion<string>().HasMaxLength(24);
+        invoiceEvent.Property(item => item.Note).HasMaxLength(Invoice.MaxNoteLength);
 
         var certificate = modelBuilder.Entity<InspectionCertificate>();
         certificate.HasKey(item => item.Id);

@@ -120,6 +120,7 @@ builder.Services.AddScoped<IRequestEquipmentRegistrar>(services => new RequestEq
     services.GetRequiredService<IEquipmentCatalog>(), builder.Configuration.GetValue("Requests:AutoRegisterEquipment", true)));
 builder.Services.AddScoped<IEquipmentService, EquipmentService>();
 builder.Services.AddScoped<IQuoteRepository, EfQuoteRepository>();
+builder.Services.AddScoped<IInvoiceRepository, EfInvoiceRepository>();
 builder.Services.AddScoped<IQuoteService, QuoteService>();
 builder.Services.AddScoped<ICertificateRepository, EfCertificateRepository>();
 builder.Services.AddScoped<ICertificateService, CertificateService>();

@@ -37,6 +37,12 @@ public sealed class CompanyProfile
     public string EmailsJson { get; private set; } = "[]";
     public string Website { get; private set; } = string.Empty;
 
+    /// <summary>The company's tax registration number, printed on its invoices (optional).</summary>
+    public string? TaxRegistrationNumber { get; private set; }
+
+    /// <summary>The company's activity code, printed on its invoices (optional).</summary>
+    public string? ActivityCode { get; private set; }
+
     /// <summary>Who signs for the company in the certificate's signature box.</summary>
     public string? SignerName { get; private set; }
 
@@ -102,6 +108,14 @@ public sealed class CompanyProfile
         EmailsJson = Write(emails, "email", 320);
         Website = Optional(website, "Website", 200) ?? string.Empty;
         SignerName = Optional(signerName, "Signer name", 200);
+    }
+
+    /// <summary>Sets the tax details printed on invoices. Empty clears one. Kept apart from <see cref="Update"/>, which the built-in profile resets.</summary>
+    public void SetTaxDetails(string? taxRegistrationNumber, string? activityCode)
+    {
+        TaxRegistrationNumber = Optional(taxRegistrationNumber, "Tax registration number", 64);
+        ActivityCode = Optional(activityCode, "Activity code", 64);
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     /// <summary>Sets the logo (a PNG of at most 1 MB) or removes it with <c>null</c>.</summary>
