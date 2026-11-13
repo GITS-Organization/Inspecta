@@ -107,3 +107,30 @@ public sealed record WorkResponse(
 
 /// <summary>Open jobs in four groups, for the pipeline bar.</summary>
 public sealed record PipelineGroup(StageGroup Group, int Count);
+
+public sealed record MachinesOverdueKpi(int Count, int DueIn30, bool Met);
+
+public sealed record TodayKpis(CollectedKpi Collected, OutstandingKpi Outstanding, DaysKpi DaysToCollect, DaysKpi RequestToDelivery, MachinesOverdueKpi MachinesOverdue);
+
+public enum DecisionKind { Money, Renewals, Quotation, Work }
+
+public enum DecisionSeverity { Red, Amber, Violet }
+
+public enum ExecutiveScreen { Money, Renewals, Work }
+
+public sealed record DecisionOwner(string Name, string Role);
+
+/// <summary>
+/// One thing that needs the general manager. <c>Title</c> is an English sentence for debugging; the app writes its own text from <c>TitleCode</c> and the numbers.
+/// <c>Screen</c> and <c>TargetId</c> say where "Open" goes.
+/// </summary>
+public sealed record Decision(
+    DecisionKind Kind, DecisionSeverity Severity, string Title, string TitleCode, Guid? ClientId, string ClientName, DecisionOwner Owner,
+    int WaitingDays, long? AmountPiastres, ExecutiveScreen Screen, Guid? TargetId);
+
+/// <summary>Certificates approved in the period and the share of them that are safe to operate (not the machine based figure of Renewals).</summary>
+public sealed record CertificatesIssued(int Count, int SafePercent);
+
+public sealed record TodayResponse(
+    ExecutiveDays Period, ExecutiveDays Previous, TodayKpis Kpis, IReadOnlyList<Decision> Decisions, IReadOnlyList<MonthlyMoney> Monthly,
+    IReadOnlyList<PipelineGroup> Pipeline, CertificatesIssued CertificatesIssued);

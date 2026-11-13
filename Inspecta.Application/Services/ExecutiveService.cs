@@ -84,6 +84,25 @@ public sealed class ExecutiveService(IExecutiveTargetsRepository targetsReposito
             new ClientRevenue(row.InvoicedYtdPiastres, row.OwedPiastres, row.OlderThan60Piastres));
     }
 
+    public async Task<TodayResponse> TodayAsync(ExecutiveQuery query, CancellationToken cancellationToken = default)
+    {
+        var scope = await ScopeAsync(query, cancellationToken);
+        var period = scope.Period;
+        var money = MoneyKpisOf(scope);
+        var delivery = WorkFigures.RequestToDelivery(scope.Requests, period.From, period.To);
+        var overdue = scope.Data.Machines.Count(machine => RenewalsFigures.DaysUntilDue(machine, scope.Today) < 0);
+        var dueIn30 = scope.Data.Machines.Count(machine => RenewalsFigures.DaysUntilDue(machine, scope.Today) is >= 0 and <= 30);
+        var kpis = new TodayKpis(
+            money.Collected, money.Outstanding, money.DaysToCollect,
+            new DaysKpi(delivery, WorkFigures.RequestToDelivery(scope.Requests, period.PreviousFrom, period.PreviousTo), scope.Targets.RequestToDeliveryDays, delivery <= scope.Targets.RequestToDeliveryDays),
+            new MachinesOverdueKpi(overdue, dueIn30, overdue == 0));
+        return new TodayResponse(
+            scope.Days, scope.PreviousDays, kpis,
+            DecisionBuilder.Build(scope.Invoices, scope.Requests, scope.Quotes, scope.Data.Machines, scope.Data.Clients, scope.Data.People, scope.Today),
+            MoneyFigures.Monthly(scope.Invoices, scope.Today), WorkFigures.Pipeline(scope.Requests),
+            new CertificatesIssued(WorkFigures.CertificatesIssued(scope.Certificates, period.From, period.To), WorkFigures.SafePercentOfIssued(scope.Certificates, period.From, period.To)));
+    }
+
     public async Task<WorkResponse> WorkAsync(ExecutiveQuery query, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         var scope = await ScopeAsync(query, cancellationToken);

@@ -16,6 +16,22 @@ namespace Inspecta.Api.Controllers;
 public sealed class ExecutiveController(IExecutiveService executive) : ControllerBase
 {
     /// <summary>
+    /// The Today screen. <c>kpis</c>: collected (with rate and target), outstanding, days to collect, request to delivery and machines overdue, each with its
+    /// target and whether it is met. <c>decisions</c> (at most ten, ranked: red, violet, amber, the longest waiting first) says what needs the general manager,
+    /// with who has it, how long it has waited and where "Open" goes (<c>screen</c>, <c>targetId</c>); <c>titleCode</c> names the kind of row. <c>monthly</c> is
+    /// the last twelve months, <c>pipeline</c> the open jobs in four groups, <c>certificatesIssued</c> the certificates approved in the period and the share
+    /// that are safe to operate. <c>from</c>, <c>to</c>, <c>reviewerId</c> and <c>managerId</c> as for the other screens.
+    /// </summary>
+    [RequirePermission(Permissions.ExecutiveView)]
+    [HttpGet("today")]
+    [ProducesResponseType<TodayResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<TodayResponse>> Today(
+        [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] Guid? managerId, [FromQuery] Guid? reviewerId, CancellationToken cancellationToken) =>
+        Ok(await executive.TodayAsync(new ExecutiveQuery(from, to, ResolveCompany(managerId, required: false), reviewerId), cancellationToken));
+
+    /// <summary>
     /// The Money screen. <c>kpis</c>: invoiced (invoices created in the period), collected (payments dated in it) with its rate and target, outstanding (the
     /// balance of invoices that are not closed, the part older than 60 days, and apart the balance of invoices closed by hand), days to collect with its target.
     /// <c>aging</c> by the age of the invoice, <c>whoOwesMost</c> (six clients) and <c>monthly</c> (the last twelve months). <c>from</c> and <c>to</c>

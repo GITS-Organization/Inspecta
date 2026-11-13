@@ -158,6 +158,7 @@ public sealed class PermissionGuardTests
         ["InvoicesController.Close"] = "admin,financial_manager",
         ["InvoicesController.Revenue"] = "admin,financial_manager,general_manager",
         ["ExecutiveController.Money"] = "admin,general_manager",
+        ["ExecutiveController.Today"] = "admin,general_manager",
         ["ExecutiveController.Renewals"] = "admin,general_manager",
         ["ExecutiveController.Clients"] = "admin,general_manager",
         ["ExecutiveController.Client"] = "admin,general_manager",
