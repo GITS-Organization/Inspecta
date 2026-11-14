@@ -5,7 +5,7 @@ namespace Inspecta.Application.Executive;
 // Plain rows of one company, read once per answer and turned into figures by the calculators. They carry names, numbers, dates and statuses
 // only: nothing a request or a quotation says is read into them.
 
-public sealed record ExecPayment(DateOnly PaidOn, long AmountPiastres, DateTimeOffset RecordedAt, Guid? ReversesPaymentId);
+public sealed record ExecPayment(DateOnly PaidOn, long AmountPiastres, DateTimeOffset RecordedAt, Guid? ReversesPaymentId, Guid? RecordedBy = null, string? Label = null);
 
 public sealed record ExecInvoiceEvent(InvoiceEventKind Kind, DateTimeOffset At, Guid? ActorId);
 

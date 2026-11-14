@@ -149,3 +149,20 @@ public sealed record UpcomingItem(DateOnly On, string Kind, string ClientName, s
 
 /// <summary><c>NextBefore</c> is passed as <c>before</c> to get the next page; <c>null</c> when there is no more.</summary>
 public sealed record ActivityResponse(IReadOnlyList<ActivityItem> Items, DateTimeOffset? NextBefore, IReadOnlyList<UpcomingItem> Upcoming);
+
+public sealed record ReadyToCloseItem(Guid InvoiceId, string Number, string ClientName, long TotalPiastres, int AgeDays);
+
+/// <summary>Invoices handed to finance and paid in full: nothing is left but to close them. <c>Items</c> are the oldest few.</summary>
+public sealed record ReadyToClose(int Count, long TotalPiastres, IReadOnlyList<ReadyToCloseItem> Items);
+
+/// <summary>Invoices still with the coordinator (not handed to finance yet) and what they still owe.</summary>
+public sealed record NotHandedOver(int Count, long BalancePiastres);
+
+public sealed record OldUnpaidItem(Guid InvoiceId, string Number, string ClientName, long BalancePiastres, int AgeDays);
+
+public sealed record LatestPayment(
+    DateTimeOffset At, DateOnly PaidOn, Guid InvoiceId, string InvoiceNumber, string ClientName, long AmountPiastres, string? Label, string? RecordedByName);
+
+/// <summary>The financial manager's Overview: the money figures of the Money screen plus what to do next and what was just received.</summary>
+public sealed record FinanceOverviewResponse(
+    MoneyResponse Money, ReadyToClose ReadyToClose, NotHandedOver NotHandedOver, IReadOnlyList<OldUnpaidItem> OldUnpaid, IReadOnlyList<LatestPayment> LatestPayments);

@@ -164,6 +164,7 @@ public sealed class PermissionGuardTests
         ["ExecutiveController.Client"] = "admin,general_manager",
         ["ExecutiveController.Work"] = "admin,general_manager",
         ["ExecutiveController.Activity"] = "admin,general_manager",
+        ["FinanceController.Overview"] = "admin,financial_manager",
         ["ExecutiveController.GetTargets"] = "admin,company_admin",
         ["ExecutiveController.SaveTargets"] = "admin,company_admin",
         ["CompanyController.Get"] = "admin,technical_manager,coordinator,inspector,company_admin",

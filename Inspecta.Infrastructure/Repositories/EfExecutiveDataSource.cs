@@ -80,7 +80,7 @@ public sealed class EfExecutiveDataSource(InspectaDbContext dbContext, CurrentTe
             {
                 invoice.Id, invoice.Number, invoice.ManagerId, invoice.RequestId, invoice.ClientId, invoice.ClientName, invoice.TotalPiastres,
                 invoice.CreatedAt, invoice.Stage, invoice.ClosedWithBalance, invoice.QuotationReference,
-                Payments = invoice.Payments.Select(payment => new ExecPayment(payment.PaidOn, payment.AmountPiastres, payment.RecordedAt, payment.ReversesPaymentId)).ToList(),
+                Payments = invoice.Payments.Select(payment => new ExecPayment(payment.PaidOn, payment.AmountPiastres, payment.RecordedAt, payment.ReversesPaymentId, payment.RecordedBy, payment.Label)).ToList(),
                 Events = invoice.Events.Select(entry => new ExecInvoiceEvent(entry.Kind, entry.At, entry.ActorId)).ToList()
             }).AsSplitQuery().ToListAsync(cancellationToken);
         return rows.Select(row => new ExecInvoice(

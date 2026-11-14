@@ -33,13 +33,23 @@ public sealed class ExecutiveService(IExecutiveTargetsRepository targetsReposito
         return Map(targets);
     }
 
-    public async Task<MoneyResponse> MoneyAsync(ExecutiveQuery query, CancellationToken cancellationToken = default)
+    public async Task<MoneyResponse> MoneyAsync(ExecutiveQuery query, CancellationToken cancellationToken = default) =>
+        MoneyOf(await ScopeAsync(query, cancellationToken));
+
+    public async Task<FinanceOverviewResponse> FinanceOverviewAsync(ExecutiveQuery query, CancellationToken cancellationToken = default)
     {
         var scope = await ScopeAsync(query, cancellationToken);
-        return new MoneyResponse(
-            scope.Days, scope.PreviousDays, MoneyKpisOf(scope), MoneyFigures.Aging(scope.Invoices, scope.Today),
-            MoneyFigures.WhoOwesMost(scope.Invoices, scope.Today, 6), MoneyFigures.Monthly(scope.Invoices, scope.Today));
+        return new FinanceOverviewResponse(
+            MoneyOf(scope),
+            FinanceFigures.ReadyToClose(scope.Invoices, scope.Today, 5),
+            FinanceFigures.NotHandedOver(scope.Invoices),
+            FinanceFigures.OldUnpaid(scope.Invoices, scope.Today, 3),
+            FinanceFigures.LatestPayments(scope.Invoices, scope.Data.People, 10));
     }
+
+    private static MoneyResponse MoneyOf(Scope scope) => new(
+        scope.Days, scope.PreviousDays, MoneyKpisOf(scope), MoneyFigures.Aging(scope.Invoices, scope.Today),
+        MoneyFigures.WhoOwesMost(scope.Invoices, scope.Today, 6), MoneyFigures.Monthly(scope.Invoices, scope.Today));
 
     public async Task<RenewalsResponse> RenewalsAsync(ExecutiveQuery query, string? filter, int page, int pageSize, CancellationToken cancellationToken = default)
     {

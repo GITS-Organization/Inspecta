@@ -12,6 +12,9 @@ public interface IExecutiveService
     /// <summary>The Money screen: collected against invoiced, what is still owed, its age, who owes the most and the last twelve months.</summary>
     Task<MoneyResponse> MoneyAsync(ExecutiveQuery query, CancellationToken cancellationToken = default);
 
+    /// <summary>The financial manager's Overview: the money figures, what is ready to close, what is not handed over yet, the oldest unpaid and the latest payments.</summary>
+    Task<FinanceOverviewResponse> FinanceOverviewAsync(ExecutiveQuery query, CancellationToken cancellationToken = default);
+
     /// <summary>The Today screen: five numbers with their targets, what needs a decision, the last twelve months and the work in flight.</summary>
     Task<TodayResponse> TodayAsync(ExecutiveQuery query, CancellationToken cancellationToken = default);
 

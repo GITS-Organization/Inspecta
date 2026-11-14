@@ -59,6 +59,7 @@ public static class Permissions
     public const string ExecutiveView = "Executive.View";
     public const string ExecutiveManageTargets = "Executive.ManageTargets";
     public const string RevenueView = "Revenue.View";
+    public const string FinanceView = "Finance.View";
 
     public const string DraftsView = "Drafts.View";
     public const string DraftsWork = "Drafts.Work";
