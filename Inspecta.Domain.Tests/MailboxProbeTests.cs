@@ -92,4 +92,40 @@ public sealed class MailboxProbeTests
         Assert.Equal(["failed", "skipped", "skipped", "skipped"], steps.Select(step => step.State));
         Assert.Contains("public", steps[0].Message);
     }
+
+    [Fact]
+    public void A_sync_that_the_server_refused_is_a_refused_sign_in_with_the_reason_and_the_advice()
+    {
+        var failure = MailboxSyncFailures.Classify(new AuthenticationException("bad"), "imap.gmail.com", 993);
+
+        Assert.NotNull(failure);
+        Assert.True(failure!.SignInRefused);
+        Assert.StartsWith("The mailbox refused the email or password.", failure.Reason);
+        Assert.Contains("App password", failure.Reason);
+    }
+
+    [Theory]
+    [InlineData(typeof(SocketException))]
+    [InlineData(typeof(IOException))]
+    public void A_sync_that_could_not_reach_the_server_is_a_problem_but_not_a_refused_sign_in(Type kind)
+    {
+        var error = (Exception)(kind == typeof(SocketException) ? new SocketException((int)SocketError.ConnectionRefused) : new IOException("x"));
+
+        var failure = MailboxSyncFailures.Classify(error, "imap.example.com", 993);
+
+        Assert.NotNull(failure);
+        Assert.False(failure!.SignInRefused);
+        Assert.Contains("imap.example.com:993", failure.Reason);
+    }
+
+    [Theory]
+    [InlineData(typeof(InvalidOperationException))]
+    [InlineData(typeof(ArgumentException))]
+    [InlineData(typeof(OperationCanceledException))]
+    public void A_failure_that_is_not_about_the_mailbox_never_marks_the_mailbox_as_broken(Type kind)
+    {
+        var error = (Exception)Activator.CreateInstance(kind, "importing one email failed")!;
+
+        Assert.Null(MailboxSyncFailures.Classify(error, "imap.example.com", 993));
+    }
 }

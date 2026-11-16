@@ -3,6 +3,7 @@ using System.Globalization;
 using Inspecta.Application.Interfaces;
 using Inspecta.Domain.Entities;
 using Inspecta.Domain.Enums;
+using Inspecta.Infrastructure.Mail;
 using MailKit;
 using MailKit.Net.Imap;
 using MailKit.Search;
@@ -48,6 +49,7 @@ public sealed partial class EmailSyncBackgroundService
             // Read-only: the mailbox is never modified. Progress is tracked by UID instead of the read flag.
             var inbox = client.Inbox;
             await inbox.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
+            await RecordHealthAsync(config.CoordinatorId, failure: null, signInRefused: false);
             var uidValidity = inbox.UidValidity.ToString(CultureInfo.InvariantCulture);
 
             var syncFrom = config.SyncFromUtc;
@@ -94,6 +96,12 @@ public sealed partial class EmailSyncBackgroundService
 
             var advanceTo = cursor;
             var blocked = false;
+            DateTimeOffset? newestReceived = null;
+            void Touch(MimeKit.MimeMessage received)
+            {
+                var at = received.Date == DateTimeOffset.MinValue ? DateTimeOffset.UtcNow : received.Date;
+                if (newestReceived is null || at > newestReceived) newestReceived = at;
+            }
             try
             {
                 foreach (var uid in newUids)
@@ -112,6 +120,7 @@ public sealed partial class EmailSyncBackgroundService
                                 "Message UID {Uid} from {Sender} answers a quotation of coordinator {CoordinatorId}: {Outcome}.",
                                 uid.Id, incoming.FromAddress, config.CoordinatorId, outcome);
                             FailedImports.TryRemove((config.CoordinatorId, uid.Id), out _);
+                            Touch(message);
                             if (!blocked) advanceTo = uid.Id;
                             continue;
                         }
@@ -160,6 +169,7 @@ public sealed partial class EmailSyncBackgroundService
                         }
 
                         FailedImports.TryRemove((config.CoordinatorId, uid.Id), out _);
+                        Touch(message);
                         if (!blocked) advanceTo = uid.Id;
                     }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -198,6 +208,7 @@ public sealed partial class EmailSyncBackgroundService
             }
             finally
             {
+                if (newestReceived is { } received) await RecordEmailReceivedAsync(config.CoordinatorId, received);
                 if (advanceTo > cursor)
                     await repository.SaveSyncCursorAsync(
                         config.CoordinatorId, uidValidity, advanceTo, syncFrom, CancellationToken.None);
@@ -215,6 +226,38 @@ public sealed partial class EmailSyncBackgroundService
                 exception,
                 "Failed to synchronize email for coordinator {CoordinatorId}; other mailboxes will continue.",
                 config.CoordinatorId);
+            // A refused sign-in or a server that cannot be reached is remembered, so the company admin can see it; a bug in importing one email is not.
+            if (MailboxSyncFailures.Classify(exception, config.ImapServer, config.ImapPort) is { } failure)
+                await RecordHealthAsync(config.CoordinatorId, failure.Reason, failure.SignInRefused);
+        }
+    }
+
+    /// <summary>Remembers whether the mailbox worked this time. Remembering never stops a sync: a failure to write is only logged.</summary>
+    private async Task RecordHealthAsync(Guid coordinatorId, string? failure, bool signInRefused)
+    {
+        try
+        {
+            await using var scope = scopeFactory.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<ICoordinatorEmailConfigRepository>()
+                .RecordCheckAsync(coordinatorId, DateTimeOffset.UtcNow, failure, signInRefused, CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Could not remember the state of the mailbox of coordinator {CoordinatorId}.", coordinatorId);
+        }
+    }
+
+    private async Task RecordEmailReceivedAsync(Guid coordinatorId, DateTimeOffset at)
+    {
+        try
+        {
+            await using var scope = scopeFactory.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<ICoordinatorEmailConfigRepository>()
+                .RecordEmailReceivedAsync(coordinatorId, at, CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Could not remember the last email of coordinator {CoordinatorId}.", coordinatorId);
         }
     }
 
