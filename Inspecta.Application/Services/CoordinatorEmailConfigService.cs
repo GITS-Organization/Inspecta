@@ -88,6 +88,7 @@ public sealed class CoordinatorEmailConfigService(
     {
         Validate(request);
         await EnsureTeamCoordinatorAsync(managerId, coordinatorId, cancellationToken);
+        if (request.Verify) await MailboxVerification.EnsureWorksAsync(mailboxProbe, request, cancellationToken);
 
         var encryptedPassword = secretProtector.Protect(request.Password);
         var config = await configRepository.GetByCoordinatorAsync(coordinatorId, cancellationToken);
@@ -120,6 +121,7 @@ public sealed class CoordinatorEmailConfigService(
                 syncFromUtc: request.SyncFrom);
         }
 
+        if (request.Verify) config.RecordSuccessfulCheck((clock ?? TimeProvider.System).GetUtcNow());
         await configRepository.SaveAsync(config, cancellationToken);
     }
 
@@ -128,12 +130,7 @@ public sealed class CoordinatorEmailConfigService(
     {
         Validate(request);
         await EnsureTeamCoordinatorAsync(managerId, coordinatorId, cancellationToken);
-        var imapServer = request.ImapServer.Trim();
-        var smtpServer = string.IsNullOrWhiteSpace(request.SmtpServer) ? CoordinatorEmailConfig.DeriveSmtpServer(imapServer) : request.SmtpServer.Trim();
-        var smtpPort = request.SmtpPort ?? 587;
-        var steps = await mailboxProbe.ProbeAsync(new MailboxProbeSettings(
-            imapServer, request.ImapPort, request.UseSsl, request.EmailUsername.Trim(), request.Password, null,
-            smtpServer, smtpPort, request.SmtpUseSsl ?? smtpPort == 465), cancellationToken);
+        var steps = await mailboxProbe.ProbeAsync(MailboxVerification.SettingsOf(request), cancellationToken);
         return Answer(steps);
     }
 

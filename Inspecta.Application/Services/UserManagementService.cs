@@ -15,7 +15,8 @@ public sealed class UserManagementService(
     ILoginAttemptTracker? loginAttempts = null,
     ICompanyRepository? companies = null,
     ITransactionRunner? transactions = null,
-    IReviewerService? reviewers = null) : IUserManagementService
+    IReviewerService? reviewers = null,
+    IMailboxProbe? mailboxProbe = null) : IUserManagementService
 {
     public async Task<AuthUserResponse> CreateAsync(
         CreateStaffUserRequest request,
@@ -258,6 +259,12 @@ public sealed class UserManagementService(
 
         var email = request.Email.Trim().ToLowerInvariant();
         await EnsureEmailAvailableAsync(email, cancellationToken);
+        // A mailbox that is asked to be tried is tried before anything is created: a failure leaves no account behind.
+        if (request.EmailConfig is { Verify: true } toVerify)
+        {
+            ValidateEmailConfig(toVerify);
+            await MailboxVerification.EnsureWorksAsync(mailboxProbe ?? throw new InvalidOperationException("A mailbox probe is needed to verify a mailbox."), toVerify, cancellationToken);
+        }
         var user = CreateUser(
             email,
             request.FullName,
@@ -289,7 +296,7 @@ public sealed class UserManagementService(
         CoordinatorEmailConfigRequest request)
     {
         ValidateEmailConfig(request);
-        return CoordinatorEmailConfig.Create(
+        var config = CoordinatorEmailConfig.Create(
             coordinatorId,
             tenantId,
             request.ImapServer,
@@ -300,6 +307,8 @@ public sealed class UserManagementService(
             smtpServer: request.SmtpServer,
             smtpPort: request.SmtpPort,
             smtpUseSsl: request.SmtpUseSsl);
+        if (request.Verify) config.RecordSuccessfulCheck(DateTimeOffset.UtcNow);
+        return config;
     }
 
     private static void ValidateEmailConfig(CoordinatorEmailConfigRequest request)

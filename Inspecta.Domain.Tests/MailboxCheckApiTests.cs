@@ -225,4 +225,91 @@ public sealed class MailboxCheckApiTests : IClassFixture<ApiHttpTests.Api>
 
         Assert.Equal(HttpStatusCode.NotFound, crossTenant.StatusCode);
     }
+
+    private object VerifiedBody(string email = "mailbox@example.com") => new
+    {
+        imapServer = "imap.example.com", imapPort = 993, emailUsername = email, password = "typed-password", verify = true
+    };
+
+    [Fact]
+    public async Task Saving_with_verify_refuses_a_mailbox_that_does_not_work_and_stores_nothing()
+    {
+        var world = Seed();
+        var admin = await SignedInAs(Host(new FakeProbe { FailAt = "sign_in" }), world.Admin.Email);
+
+        var response = await admin.PutAsJsonAsync($"/api/v1/company/users/{world.Coordinator.Id}/email-config", VerifiedBody());
+        var problem = await Json(response);
+        var stored = await Json(await admin.GetAsync($"/api/v1/company/users/{world.Coordinator.Id}/email-config"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("mailbox_test_failed", problem.GetProperty("code").GetString());
+        Assert.Contains("sign_in did not work.", problem.GetProperty("detail").GetString());
+        Assert.Contains(problem.GetProperty("problems").EnumerateArray(), item => item.GetString()!.Contains("Try this."));
+        Assert.False(stored.GetProperty("configured").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Saving_with_verify_stores_a_working_mailbox_already_marked_as_checked()
+    {
+        var world = Seed();
+        var admin = await SignedInAs(Host(new FakeProbe()), world.Admin.Email);
+
+        var response = await admin.PutAsJsonAsync($"/api/v1/company/users/{world.Coordinator.Id}/email-config", VerifiedBody());
+        var stored = await Json(await admin.GetAsync($"/api/v1/company/users/{world.Coordinator.Id}/email-config"));
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.True(stored.GetProperty("configured").GetBoolean());
+        Assert.Equal("connected", stored.GetProperty("connectionStatus").GetString());
+        Assert.NotEqual(JsonValueKind.Null, stored.GetProperty("lastCheckedAt").ValueKind);
+    }
+
+    [Fact]
+    public async Task Saving_without_verify_does_not_try_the_mailbox_as_before()
+    {
+        var world = Seed();
+        var probe = new FakeProbe { FailAt = "sign_in" };
+        var admin = await SignedInAs(Host(probe), world.Admin.Email);
+
+        var response = await admin.PutAsJsonAsync($"/api/v1/company/users/{world.Coordinator.Id}/email-config", Body());
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(0, probe.Calls);
+    }
+
+    [Fact]
+    public async Task Creating_a_coordinator_with_verify_creates_nothing_when_the_mailbox_fails()
+    {
+        var world = Seed();
+        var admin = await SignedInAs(Host(new FakeProbe { FailAt = "reach" }), world.Admin.Email);
+        var email = $"verify-failed-{Interlocked.Increment(ref sequence)}@example.com";
+
+        var response = await admin.PostAsJsonAsync("/api/v1/company/users", new
+        {
+            email, fullName = "Verify Failed", password = "StrongPassword123!", role = "coordinator", emailConfig = VerifiedBody()
+        });
+        var users = await admin.GetStringAsync("/api/v1/company/users");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("mailbox_test_failed", (await Json(response)).GetProperty("code").GetString());
+        Assert.DoesNotContain(email, users);
+    }
+
+    [Fact]
+    public async Task Creating_a_coordinator_with_verify_stores_the_mailbox_as_checked_when_it_works()
+    {
+        var world = Seed();
+        var admin = await SignedInAs(Host(new FakeProbe()), world.Admin.Email);
+        var email = $"verify-worked-{Interlocked.Increment(ref sequence)}@example.com";
+
+        var created = await admin.PostAsJsonAsync("/api/v1/company/users", new
+        {
+            email, fullName = "Verify Worked", password = "StrongPassword123!", role = "coordinator", emailConfig = VerifiedBody(email)
+        });
+        var id = (await Json(created)).GetProperty("id").GetGuid();
+        var stored = await Json(await admin.GetAsync($"/api/v1/company/users/{id}/email-config"));
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal("connected", stored.GetProperty("connectionStatus").GetString());
+        Assert.NotEqual(JsonValueKind.Null, stored.GetProperty("lastCheckedAt").ValueKind);
+    }
 }

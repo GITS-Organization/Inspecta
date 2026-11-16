@@ -32,6 +32,12 @@ public sealed record CoordinatorEmailConfigRequest
 
     /// <summary>Import mail that arrived after this date. A new mailbox starts from 1 November 2026 when it is left out; changing it makes the import start again from the new date.</summary>
     public DateTimeOffset? SyncFrom { get; init; }
+
+    /// <summary>
+    /// True to try the mailbox (reach the server, sign in, read the inbox, send) before saving it: nothing is saved, and for a new coordinator no account is created,
+    /// when it does not work (<c>400 mailbox_test_failed</c>, the failed steps in <c>problems</c>). A mailbox that works is saved already marked as checked. Defaults to false.
+    /// </summary>
+    public bool Verify { get; init; }
 }
 
 /// <summary>The mailbox settings of a coordinator without the password.</summary>
