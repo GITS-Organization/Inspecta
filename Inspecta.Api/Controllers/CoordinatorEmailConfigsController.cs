@@ -72,6 +72,34 @@ public sealed class CoordinatorEmailConfigsController(
         Guid coordinatorId, ChangeSyncFromRequest request, [FromQuery] Guid? managerId, CancellationToken cancellationToken) =>
         Ok(await configService.ChangeSyncFromAsync(ResolveManagerId(managerId), coordinatorId, request.SyncFrom, cancellationToken));
 
+    /// <summary>Try the settings typed in, without saving anything: can the server be reached, does the sign-in work, can the inbox be read, can mail be sent.</summary>
+    /// <remarks>
+    /// The same body as the save call (the password is needed). Always answers <c>200</c> with the four steps (<c>reach</c>, <c>sign_in</c>, <c>read</c>, <c>send</c>);
+    /// a step is <c>ok</c>, <c>failed</c> (with <c>message</c> and <c>hint</c> in plain words) or <c>skipped</c> after an earlier failure. <c>ok</c> is true only when all four worked.
+    /// No email is sent and nothing is stored.
+    /// </remarks>
+    [RequirePermission(Permissions.AccountsManage)]
+    [HttpPost("test")]
+    [ProducesResponseType<MailboxCheckResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<MailboxCheckResponse>> Test(
+        Guid coordinatorId, CoordinatorEmailConfigRequest request, [FromQuery] Guid? managerId, CancellationToken cancellationToken) =>
+        Ok(await configService.TestAsync(ResolveManagerId(managerId), coordinatorId, request, cancellationToken));
+
+    /// <summary>Try the saved mailbox now and remember the result.</summary>
+    /// <remarks>
+    /// The same four steps as the test, run on the saved settings (a Microsoft mailbox signs in with its saved sign-in). The result is kept: <c>connectionStatus</c>
+    /// becomes <c>connected</c> or <c>problem</c> (<c>needs_reconnect</c> when Microsoft refuses the sign-in), <c>lastCheckedAt</c> moves to now and <c>lastAuthError</c> says why.
+    /// <c>404 email_config_not_found</c> when no mailbox is set up.
+    /// </remarks>
+    [RequirePermission(Permissions.AccountsManage)]
+    [HttpPost("check")]
+    [ProducesResponseType<MailboxCheckResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<MailboxCheckResponse>> Check(Guid coordinatorId, [FromQuery] Guid? managerId, CancellationToken cancellationToken) =>
+        Ok(await configService.CheckAsync(ResolveManagerId(managerId), coordinatorId, cancellationToken));
+
     private Guid ResolveManagerId(Guid? requestedManagerId)
     {
         var actorId = GetActorId();

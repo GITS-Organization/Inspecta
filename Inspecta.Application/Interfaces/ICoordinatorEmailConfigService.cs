@@ -22,4 +22,10 @@ public interface ICoordinatorEmailConfigService
     /// <summary>Starts importing mail again from a chosen date, without touching the mailbox settings.</summary>
     Task<CoordinatorEmailConfigResponse> ChangeSyncFromAsync(
         Guid managerId, Guid coordinatorId, DateTimeOffset syncFrom, CancellationToken cancellationToken = default);
+
+    /// <summary>Tries the settings typed in (nothing is saved) and says, step by step, whether the mailbox works.</summary>
+    Task<MailboxCheckResponse> TestAsync(Guid managerId, Guid coordinatorId, CoordinatorEmailConfigRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Tries the saved mailbox now, remembers the result (its status and when it was checked) and says, step by step, whether it works.</summary>
+    Task<MailboxCheckResponse> CheckAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken = default);
 }

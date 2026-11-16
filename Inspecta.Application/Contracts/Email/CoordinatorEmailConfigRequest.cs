@@ -60,3 +60,9 @@ public sealed record ChangeSyncFromRequest
     [System.ComponentModel.DataAnnotations.Required]
     public DateTimeOffset SyncFrom { get; init; }
 }
+
+/// <summary>One thing tried when a mailbox is tested: <c>reach</c>, <c>sign_in</c>, <c>read</c> or <c>send</c>, and how it went (<c>ok</c>, <c>failed</c> or <c>skipped</c> after an earlier failure).</summary>
+public sealed record MailboxCheckStep(string Step, string State, string? Message = null, string? Hint = null);
+
+/// <summary>The four steps of a mailbox test, in order. <c>Ok</c> only when every step worked.</summary>
+public sealed record MailboxCheckResponse(bool Ok, IReadOnlyList<MailboxCheckStep> Steps);

@@ -10,7 +10,10 @@ public sealed class CoordinatorEmailConfigService(
     IUserRepository userRepository,
     ICoordinatorEmailConfigRepository configRepository,
     ISecretProtector secretProtector,
-    ICompanyGate? companyGate = null) : ICoordinatorEmailConfigService
+    IMailboxProbe mailboxProbe,
+    IMailboxAuthenticator mailboxAuthenticator,
+    ICompanyGate? companyGate = null,
+    TimeProvider? clock = null) : ICoordinatorEmailConfigService
 {
     private async Task EnsureTeamCoordinatorAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken)
     {
@@ -119,6 +122,60 @@ public sealed class CoordinatorEmailConfigService(
 
         await configRepository.SaveAsync(config, cancellationToken);
     }
+
+    public async Task<MailboxCheckResponse> TestAsync(
+        Guid managerId, Guid coordinatorId, CoordinatorEmailConfigRequest request, CancellationToken cancellationToken = default)
+    {
+        Validate(request);
+        await EnsureTeamCoordinatorAsync(managerId, coordinatorId, cancellationToken);
+        var imapServer = request.ImapServer.Trim();
+        var smtpServer = string.IsNullOrWhiteSpace(request.SmtpServer) ? CoordinatorEmailConfig.DeriveSmtpServer(imapServer) : request.SmtpServer.Trim();
+        var smtpPort = request.SmtpPort ?? 587;
+        var steps = await mailboxProbe.ProbeAsync(new MailboxProbeSettings(
+            imapServer, request.ImapPort, request.UseSsl, request.EmailUsername.Trim(), request.Password, null,
+            smtpServer, smtpPort, request.SmtpUseSsl ?? smtpPort == 465), cancellationToken);
+        return Answer(steps);
+    }
+
+    public async Task<MailboxCheckResponse> CheckAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken = default)
+    {
+        await EnsureTeamCoordinatorAsync(managerId, coordinatorId, cancellationToken);
+        var config = await configRepository.GetByCoordinatorNoTrackingAsync(coordinatorId, cancellationToken)
+            ?? throw new AuthException("email_config_not_found", "This coordinator has no mailbox set up.", 404);
+        var now = (clock ?? TimeProvider.System).GetUtcNow();
+
+        MailboxCredential credential;
+        try
+        {
+            credential = await mailboxAuthenticator.GetAsync(config, cancellationToken);
+        }
+        catch (AuthException exception) when (exception.Code == "mailbox_reconnect_required")
+        {
+            // Microsoft no longer accepts the saved sign-in: there is nothing to try until the coordinator connects again.
+            const string message = "Microsoft refused the saved sign-in.";
+            const string hint = "The coordinator must connect Outlook again from their own app.";
+            await configRepository.RecordCheckAsync(coordinatorId, now, message, signInRefused: true, cancellationToken);
+            return Answer(
+            [
+                new MailboxCheckStep("reach", "ok"),
+                new MailboxCheckStep("sign_in", "failed", message, hint),
+                new MailboxCheckStep("read", "skipped"),
+                new MailboxCheckStep("send", "skipped")
+            ]);
+        }
+
+        var smtp = config.ResolveSmtp();
+        var steps = await mailboxProbe.ProbeAsync(new MailboxProbeSettings(
+            config.ImapServer, config.ImapPort, config.UseSsl, credential.Username, credential.Password, credential.AccessToken,
+            smtp.Server, smtp.Port, smtp.UseSsl), cancellationToken);
+        var failure = steps.FirstOrDefault(step => step.State == "failed");
+        await configRepository.RecordCheckAsync(
+            coordinatorId, now, failure is null ? null : $"{failure.Message} {failure.Hint}".Trim(),
+            signInRefused: failure?.Step == "sign_in", cancellationToken);
+        return Answer(steps);
+    }
+
+    private static MailboxCheckResponse Answer(IReadOnlyList<MailboxCheckStep> steps) => new(steps.All(step => step.State == "ok"), steps);
 
     private static void Validate(CoordinatorEmailConfigRequest request)
     {
