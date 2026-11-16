@@ -49,6 +49,7 @@ public sealed class UserManagementService(
 
         var email = request.Email.Trim().ToLowerInvariant();
         await EnsureEmailAvailableAsync(email, cancellationToken);
+        await VerifyMailboxAsync(request.EmailConfig, cancellationToken);
         var user = CreateUser(
             email,
             request.FullName,
@@ -259,12 +260,7 @@ public sealed class UserManagementService(
 
         var email = request.Email.Trim().ToLowerInvariant();
         await EnsureEmailAvailableAsync(email, cancellationToken);
-        // A mailbox that is asked to be tried is tried before anything is created: a failure leaves no account behind.
-        if (request.EmailConfig is { Verify: true } toVerify)
-        {
-            ValidateEmailConfig(toVerify);
-            await MailboxVerification.EnsureWorksAsync(mailboxProbe ?? throw new InvalidOperationException("A mailbox probe is needed to verify a mailbox."), toVerify, cancellationToken);
-        }
+        await VerifyMailboxAsync(request.EmailConfig, cancellationToken);
         var user = CreateUser(
             email,
             request.FullName,
@@ -288,6 +284,14 @@ public sealed class UserManagementService(
             }
         }
         return await ResponseAsync(user, cancellationToken);
+    }
+
+    // A mailbox that is asked to be tried is tried before anything is created: a failure leaves no account behind.
+    private async Task VerifyMailboxAsync(CoordinatorEmailConfigRequest? config, CancellationToken cancellationToken)
+    {
+        if (config is not { Verify: true }) return;
+        ValidateEmailConfig(config);
+        await MailboxVerification.EnsureWorksAsync(mailboxProbe ?? throw new InvalidOperationException("A mailbox probe is needed to verify a mailbox."), config, cancellationToken);
     }
 
     private CoordinatorEmailConfig CreateEmailConfig(

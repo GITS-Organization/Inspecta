@@ -136,6 +136,59 @@ public sealed class UserManagementTests
         Assert.Equal("imap.example.com", config.ImapServer);
     }
 
+    private sealed class FixedProbe(string? failAt) : IMailboxProbe
+    {
+        public Task<IReadOnlyList<MailboxCheckStep>> ProbeAsync(MailboxProbeSettings settings, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<MailboxCheckStep>>(new[] { "reach", "sign_in", "read", "send" }.Select(step => new MailboxCheckStep(step, step == failAt ? "failed" : "ok", step == failAt ? "It did not work." : null, step == failAt ? "Try this." : null)).ToList());
+    }
+
+    private static CreateStaffUserRequest CoordinatorByTheOwner(bool verify) => new()
+    {
+        Email = "coordinator@example.com", FullName = "Coordinator", Password = "StrongPassword123!", Role = UserRole.Coordinator,
+        ManagerId = Guid.Empty, EmailConfig = new CoordinatorEmailConfigRequest { ImapServer = "imap.example.com", ImapPort = 993, EmailUsername = "coordinator@example.com", Password = "mail-password", Verify = verify }
+    };
+
+    [Fact]
+    public async Task The_platform_owner_creating_a_coordinator_with_verify_tries_the_mailbox_first_and_creates_nothing_when_it_fails()
+    {
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
+        var users = new MemoryUserRepository(manager);
+        var service = new UserManagementService(users, new FakePasswordService(), new FakeSecretProtector(), companies: CompaniesOf(users), mailboxProbe: new FixedProbe("sign_in"));
+        var request = CoordinatorByTheOwner(verify: true) with { ManagerId = manager.Id };
+
+        var error = await Assert.ThrowsAsync<AuthException>(() => service.CreateAsync(request));
+
+        Assert.Equal("mailbox_test_failed", error.Code);
+        Assert.Empty(users.EmailConfigs);
+        Assert.DoesNotContain(users.Users, user => user.Email == "coordinator@example.com");
+    }
+
+    [Fact]
+    public async Task The_platform_owner_creating_a_coordinator_with_verify_stores_the_mailbox_as_checked_only_because_it_was_tried()
+    {
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
+        var users = new MemoryUserRepository(manager);
+        var service = new UserManagementService(users, new FakePasswordService(), new FakeSecretProtector(), companies: CompaniesOf(users), mailboxProbe: new FixedProbe(null));
+        var request = CoordinatorByTheOwner(verify: true) with { ManagerId = manager.Id };
+
+        await service.CreateAsync(request);
+
+        Assert.NotNull(Assert.Single(users.EmailConfigs).LastCheckedAt);
+    }
+
+    [Fact]
+    public async Task The_platform_owner_creating_a_coordinator_without_verify_does_not_claim_the_mailbox_was_checked()
+    {
+        var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
+        var users = new MemoryUserRepository(manager);
+        var service = CreateService(users);
+        var request = CoordinatorByTheOwner(verify: false) with { ManagerId = manager.Id };
+
+        await service.CreateAsync(request);
+
+        Assert.Null(Assert.Single(users.EmailConfigs).LastCheckedAt);
+    }
+
     [Fact]
     public async Task AdminCreationAlsoRequiresAndStoresCoordinatorEmailSettings()
     {
