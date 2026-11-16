@@ -70,12 +70,13 @@ public sealed class UserManagementTests
     }
 
     [Fact]
-    public async Task TechnicalManagerMustProvideEmailSettingsWhenCreatingCoordinator()
+    public async Task ACoordinatorCanBeCreatedWithoutAMailboxAndTheAccountThenHasNone()
     {
         var manager = AppUser.Create("manager@example.com", "Manager", UserRole.TechnicalManager);
-        var service = CreateService(new MemoryUserRepository(manager));
+        var users = new MemoryUserRepository(manager);
+        var service = CreateService(users);
 
-        var error = await Assert.ThrowsAsync<AuthException>(() => service.CreateTeamMemberAsync(
+        var created = await service.CreateTeamMemberAsync(
             manager.Id,
             new CreateTeamMemberRequest
             {
@@ -83,9 +84,11 @@ public sealed class UserManagementTests
                 FullName = "Coordinator",
                 Password = "StrongPassword123!",
                 Role = UserRole.Coordinator
-            }));
+            });
 
-        Assert.Equal("coordinator_email_config_required", error.Code);
+        Assert.Equal(UserRole.Coordinator, created.Role);
+        Assert.Equal(manager.Id, created.ManagerId);
+        Assert.Empty(users.EmailConfigs);
     }
 
     [Fact]

@@ -251,8 +251,7 @@ public sealed class UserManagementService(
         await EnsureCompanyUsableAsync(managerId, cancellationToken);
         if (!IsTeamRole(request.Role))
             throw new AuthException("role_forbidden", "A company can have coordinators, inspectors, technical managers, general managers and financial managers.", 403);
-        if (request.Role == UserRole.Coordinator && request.EmailConfig is null)
-            throw new AuthException("coordinator_email_config_required", "IMAP settings are required when creating a coordinator.", 400);
+        // A coordinator may be created before the mailbox is: an Outlook mailbox is connected by the coordinator themselves, later.
         if (request.Role != UserRole.Coordinator && request.EmailConfig is not null)
             throw new AuthException("email_config_coordinator_only", "IMAP settings can only be assigned to coordinators.", 400);
         ValidatePassword(request.Password);
