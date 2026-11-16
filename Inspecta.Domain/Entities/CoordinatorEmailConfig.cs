@@ -52,6 +52,46 @@ public sealed class CoordinatorEmailConfig
     /// <summary>Why the saved sign-in stopped working, for the person who has to connect again.</summary>
     public string? LastAuthError { get; private set; }
 
+    /// <summary>When the mailbox was last tried (a sync, a check or a test of the saved settings); <c>null</c> until then.</summary>
+    public DateTimeOffset? LastCheckedAt { get; private set; }
+
+    /// <summary>When the newest email imported from this mailbox arrived; <c>null</c> until one did.</summary>
+    public DateTimeOffset? LastEmailAt { get; private set; }
+
+    /// <summary>The mailbox was reached and signed in to: it works.</summary>
+    public void RecordSuccessfulCheck(DateTimeOffset at)
+    {
+        LastCheckedAt = at;
+        ConnectionStatus = MailboxConnectionStatus.Connected;
+        LastAuthError = null;
+    }
+
+    /// <summary>
+    /// The mailbox could not be used. Microsoft refusing the saved sign-in means the coordinator must connect again; every other failure is a
+    /// problem with its reason. A reconnect that is waiting is never replaced by a lesser problem.
+    /// </summary>
+    public void RecordFailedCheck(DateTimeOffset at, string reason, bool signInRefused)
+    {
+        LastCheckedAt = at;
+        var text = reason?.Trim() ?? string.Empty;
+        if (text.Length > MaxAuthErrorLength) text = text[..MaxAuthErrorLength];
+        if (AuthMode == MailboxAuthMode.MicrosoftOAuth && signInRefused)
+        {
+            ConnectionStatus = MailboxConnectionStatus.NeedsReconnect;
+            LastAuthError = text;
+            return;
+        }
+        if (ConnectionStatus == MailboxConnectionStatus.NeedsReconnect) return;
+        ConnectionStatus = MailboxConnectionStatus.Problem;
+        LastAuthError = text;
+    }
+
+    /// <summary>An email from this mailbox was imported; only a newer one moves the date.</summary>
+    public void RecordEmailReceived(DateTimeOffset at)
+    {
+        if (LastEmailAt is null || at > LastEmailAt) LastEmailAt = at;
+    }
+
     /// <summary>A mailbox the coordinator connected by signing in to Microsoft: Outlook's servers and no password.</summary>
     public static CoordinatorEmailConfig CreateMicrosoft(
         Guid coordinatorId,

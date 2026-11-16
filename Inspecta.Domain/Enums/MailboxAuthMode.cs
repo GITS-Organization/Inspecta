@@ -16,5 +16,8 @@ public enum MailboxConnectionStatus
     Connected = 0,
 
     /// <summary>Microsoft no longer accepts the saved sign-in: the coordinator must connect again.</summary>
-    NeedsReconnect = 1
+    NeedsReconnect = 1,
+
+    /// <summary>The last check found something wrong (a refused password, a server that cannot be reached, or sending that fails); the reason is kept.</summary>
+    Problem = 2
 }
