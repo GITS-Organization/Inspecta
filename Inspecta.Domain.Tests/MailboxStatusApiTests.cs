@@ -100,4 +100,22 @@ public sealed class MailboxStatusApiTests : IClassFixture<ApiHttpTests.Api>
         Assert.Equal("needs_reconnect", mailbox.GetProperty("connectionStatus").GetString());
         Assert.Equal("microsoft_oauth", mailbox.GetProperty("authMode").GetString());
     }
+
+    [Fact]
+    public async Task A_coordinator_created_without_a_mailbox_has_none_and_the_answer_says_so()
+    {
+        var (admin, _, _) = Seed();
+        var client = await SignedInAs(admin.Email);
+        var email = $"no-mailbox-{Interlocked.Increment(ref sequence)}@example.com";
+
+        var created = await client.PostAsJsonAsync("/api/v1/company/users", new { email, fullName = "No Mailbox Yet", password = "StrongPassword123!", role = "coordinator" });
+        using var user = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        var answer = await client.GetAsync($"/api/v1/company/users/{user.RootElement.GetProperty("id").GetGuid()}/email-config");
+        using var stored = JsonDocument.Parse(await answer.Content.ReadAsStringAsync());
+        var mailbox = stored.RootElement;
+
+        Assert.Equal(System.Net.HttpStatusCode.Created, created.StatusCode);
+        Assert.False(mailbox.GetProperty("configured").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, mailbox.GetProperty("lastCheckedAt").ValueKind);
+    }
 }
