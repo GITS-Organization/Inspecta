@@ -59,13 +59,28 @@ public sealed class EfCoordinatorEmailConfigRepository(InspectaDbContext dbConte
                     .SetProperty(config => config.LastAuthError, reason),
                 cancellationToken) > 0;
 
-    public async Task RecordCheckAsync(Guid coordinatorId, DateTimeOffset at, string? failure, bool signInRefused, CancellationToken cancellationToken = default)
+    public async Task RecordCheckAsync(Guid coordinatorId, DateTimeOffset expectedUpdatedAt, DateTimeOffset at, string? failure, string? step, CancellationToken cancellationToken = default)
     {
-        var config = await dbContext.CoordinatorEmailConfigs.SingleOrDefaultAsync(item => item.CoordinatorId == coordinatorId, cancellationToken);
+        var config = await StillSameAsync(coordinatorId, expectedUpdatedAt, cancellationToken);
         if (config is null) return;
         if (failure is null) config.RecordSuccessfulCheck(at);
-        else config.RecordFailedCheck(at, failure, signInRefused);
+        else config.RecordFailedCheck(at, failure, step ?? "reach");
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task RecordSyncAsync(Guid coordinatorId, DateTimeOffset expectedUpdatedAt, DateTimeOffset at, string? failure, string? step, CancellationToken cancellationToken = default)
+    {
+        var config = await StillSameAsync(coordinatorId, expectedUpdatedAt, cancellationToken);
+        if (config is null) return;
+        var changed = failure is null ? config.RecordSyncSuccess(at) : config.RecordSyncFailure(at, failure, step ?? "reach");
+        if (changed) await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    // The mailbox as it is now, but only when it still has the settings the result is about (a save or a reconnect changes UpdatedAt).
+    private async Task<CoordinatorEmailConfig?> StillSameAsync(Guid coordinatorId, DateTimeOffset expectedUpdatedAt, CancellationToken cancellationToken)
+    {
+        var config = await dbContext.CoordinatorEmailConfigs.SingleOrDefaultAsync(item => item.CoordinatorId == coordinatorId, cancellationToken);
+        return config is not null && config.UpdatedAt == expectedUpdatedAt ? config : null;
     }
 
     public async Task RecordEmailReceivedAsync(Guid coordinatorId, DateTimeOffset at, CancellationToken cancellationToken = default)

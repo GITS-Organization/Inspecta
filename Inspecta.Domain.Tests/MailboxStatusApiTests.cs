@@ -74,7 +74,7 @@ public sealed class MailboxStatusApiTests : IClassFixture<ApiHttpTests.Api>
         var (admin, coordinator, company) = Seed();
         var config = PasswordMailbox(coordinator, company);
         config.RecordEmailReceived(Received);
-        config.RecordFailedCheck(Checked, "The mailbox refused the email or password.", signInRefused: true);
+        config.RecordFailedCheck(Checked, "The mailbox refused the email or password.", "sign_in");
         api.SeedAs(db => db.CoordinatorEmailConfigs.Add(config));
         var client = await SignedInAs(admin.Email);
 
@@ -91,7 +91,7 @@ public sealed class MailboxStatusApiTests : IClassFixture<ApiHttpTests.Api>
     {
         var (admin, coordinator, company) = Seed();
         var config = CoordinatorEmailConfig.CreateMicrosoft(coordinator.Id, company.Id, coordinator.Email, "token", "tenant");
-        config.RecordFailedCheck(Checked, "Microsoft refused the saved sign-in.", signInRefused: true);
+        config.MarkNeedsReconnect("Microsoft refused the saved sign-in.");
         api.SeedAs(db => db.CoordinatorEmailConfigs.Add(config));
         var client = await SignedInAs(admin.Email);
 

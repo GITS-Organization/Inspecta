@@ -531,6 +531,10 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset?>("LastEmailAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("LastFailedStep")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<long>("LastUid")
                         .HasColumnType("bigint");
 

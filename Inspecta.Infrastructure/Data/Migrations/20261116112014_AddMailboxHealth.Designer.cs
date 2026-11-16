@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Inspecta.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(InspectaDbContext))]
-    [Migration("20261116105355_AddMailboxHealth")]
+    [Migration("20261116112014_AddMailboxHealth")]
     partial class AddMailboxHealth
     {
         /// <inheritdoc />
@@ -533,6 +533,10 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
                     b.Property<DateTimeOffset?>("LastEmailAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastFailedStep")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<long>("LastUid")
                         .HasColumnType("bigint");

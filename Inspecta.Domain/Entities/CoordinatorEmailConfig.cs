@@ -52,44 +52,92 @@ public sealed class CoordinatorEmailConfig
     /// <summary>Why the saved sign-in stopped working, for the person who has to connect again.</summary>
     public string? LastAuthError { get; private set; }
 
+    /// <summary>
+    /// The mailboxes the background sync reads: every one except those waiting for the coordinator to connect Outlook again. A mailbox with a problem is
+    /// read again every cycle, so a network blip or a temporary outage mends itself the next time the sync signs in.
+    /// </summary>
+    public static readonly System.Linq.Expressions.Expression<Func<CoordinatorEmailConfig, bool>> IsReadableBySync =
+        config => config.ConnectionStatus != MailboxConnectionStatus.NeedsReconnect;
+
+    /// <summary>How long a sync waits before writing the same news about a mailbox again (that it still works, or that it still fails the same way).</summary>
+    private static readonly TimeSpan SyncRecordInterval = TimeSpan.FromMinutes(15);
+
     /// <summary>When the mailbox was last tried (a sync, a check or a test of the saved settings); <c>null</c> until then.</summary>
     public DateTimeOffset? LastCheckedAt { get; private set; }
 
     /// <summary>When the newest email imported from this mailbox arrived; <c>null</c> until one did.</summary>
     public DateTimeOffset? LastEmailAt { get; private set; }
 
-    /// <summary>The mailbox was reached and signed in to: it works.</summary>
+    /// <summary>The step of the last try that did not work (<c>reach</c>, <c>sign_in</c>, <c>read</c> or <c>send</c>); <c>null</c> while the mailbox works.</summary>
+    public string? LastFailedStep { get; private set; }
+
+    /// <summary>A full test passed (reach, sign in, read, send): whatever was wrong is over.</summary>
     public void RecordSuccessfulCheck(DateTimeOffset at)
     {
         LastCheckedAt = at;
         ConnectionStatus = MailboxConnectionStatus.Connected;
         LastAuthError = null;
+        LastFailedStep = null;
     }
 
     /// <summary>
-    /// The mailbox could not be used. Microsoft refusing the saved sign-in means the coordinator must connect again; every other failure is a
-    /// problem with its reason. A reconnect that is waiting is never replaced by a lesser problem.
+    /// A check or test found something wrong at <paramref name="step"/>. It is a problem with its reason. Only Microsoft refusing the saved sign-in (the token
+    /// refresh, handled elsewhere) means the coordinator must connect again, so a reconnect that is waiting is never replaced, and one refused IMAP sign-in
+    /// is not turned into a reconnect.
     /// </summary>
-    public void RecordFailedCheck(DateTimeOffset at, string reason, bool signInRefused)
+    public void RecordFailedCheck(DateTimeOffset at, string reason, string step)
     {
         LastCheckedAt = at;
-        var text = reason?.Trim() ?? string.Empty;
-        if (text.Length > MaxAuthErrorLength) text = text[..MaxAuthErrorLength];
-        if (AuthMode == MailboxAuthMode.MicrosoftOAuth && signInRefused)
-        {
-            ConnectionStatus = MailboxConnectionStatus.NeedsReconnect;
-            LastAuthError = text;
-            return;
-        }
         if (ConnectionStatus == MailboxConnectionStatus.NeedsReconnect) return;
         ConnectionStatus = MailboxConnectionStatus.Problem;
-        LastAuthError = text;
+        LastAuthError = Clip(reason);
+        LastFailedStep = step;
     }
 
-    /// <summary>An email from this mailbox was imported; only a newer one moves the date.</summary>
+    /// <summary>
+    /// A sync signed in and opened the inbox. That ends a problem with reaching, signing in or reading, but never a sending problem (a sync does not send).
+    /// Gives <c>false</c> when there is nothing new to write: the mailbox was already fine and was written a short while ago.
+    /// </summary>
+    public bool RecordSyncSuccess(DateTimeOffset at)
+    {
+        var clears = ConnectionStatus == MailboxConnectionStatus.Problem && LastFailedStep != "send";
+        if (!clears && LastCheckedAt is { } last && at - last < SyncRecordInterval) return false;
+        LastCheckedAt = at;
+        if (clears)
+        {
+            ConnectionStatus = MailboxConnectionStatus.Connected;
+            LastAuthError = null;
+            LastFailedStep = null;
+        }
+        return true;
+    }
+
+    /// <summary>A sync could not use the mailbox. Gives <c>false</c> when it is the same failure that was written a short while ago.</summary>
+    public bool RecordSyncFailure(DateTimeOffset at, string reason, string step)
+    {
+        if (ConnectionStatus == MailboxConnectionStatus.NeedsReconnect) return false;
+        var text = Clip(reason);
+        var same = ConnectionStatus == MailboxConnectionStatus.Problem && LastFailedStep == step && LastAuthError == text;
+        if (same && LastCheckedAt is { } last && at - last < SyncRecordInterval) return false;
+        LastCheckedAt = at;
+        ConnectionStatus = MailboxConnectionStatus.Problem;
+        LastAuthError = text;
+        LastFailedStep = step;
+        return true;
+    }
+
+    /// <summary>An email from this mailbox was imported; only a newer one moves the date, and never into the future (the date is the sender's header).</summary>
     public void RecordEmailReceived(DateTimeOffset at)
     {
+        var now = DateTimeOffset.UtcNow;
+        if (at > now) at = now;
         if (LastEmailAt is null || at > LastEmailAt) LastEmailAt = at;
+    }
+
+    private static string Clip(string? reason)
+    {
+        var text = reason?.Trim() ?? string.Empty;
+        return text.Length > MaxAuthErrorLength ? text[..MaxAuthErrorLength] : text;
     }
 
     /// <summary>A mailbox the coordinator connected by signing in to Microsoft: Outlook's servers and no password.</summary>
@@ -162,6 +210,8 @@ public sealed class CoordinatorEmailConfig
         MicrosoftTenantId = microsoftTenantId.Trim();
         ConnectionStatus = MailboxConnectionStatus.Connected;
         LastAuthError = null;
+        LastFailedStep = null;
+        LastCheckedAt = null;
     }
 
     public void Update(
@@ -206,6 +256,8 @@ public sealed class CoordinatorEmailConfig
         MicrosoftTenantId = null;
         ConnectionStatus = MailboxConnectionStatus.Connected;
         LastAuthError = null;
+        LastFailedStep = null;
+        LastCheckedAt = null;
 
         // A different mailbox has its own UIDs: start again from now instead of importing its history.
         // A date the user chose wins, and moves the start of the import by itself.

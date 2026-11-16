@@ -18,13 +18,12 @@ public sealed class EfEmailSyncRepository(
     public async Task<IReadOnlyList<CoordinatorEmailConfig>> ListActiveConfigsAsync(
         CancellationToken cancellationToken = default) =>
         await (
-            from config in dbContext.CoordinatorEmailConfigs.AsNoTracking()
+            from config in dbContext.CoordinatorEmailConfigs.AsNoTracking().Where(CoordinatorEmailConfig.IsReadableBySync)
             join coordinator in dbContext.Users.IgnoreQueryFilters().AsNoTracking()
                 on config.CoordinatorId equals coordinator.Id
             join company in dbContext.Companies.AsNoTracking()
                 on config.TenantId equals company.Id
-            where config.ConnectionStatus == MailboxConnectionStatus.Connected &&
-                  coordinator.Role == UserRole.Coordinator &&
+            where coordinator.Role == UserRole.Coordinator &&
                   coordinator.IsActive &&
                   !coordinator.IsDeleted &&
                   coordinator.ManagerId == company.Id &&

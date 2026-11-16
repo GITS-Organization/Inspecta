@@ -99,7 +99,7 @@ public sealed class MailboxProbeTests
         var failure = MailboxSyncFailures.Classify(new AuthenticationException("bad"), "imap.gmail.com", 993);
 
         Assert.NotNull(failure);
-        Assert.True(failure!.SignInRefused);
+        Assert.Equal("sign_in", failure!.Step);
         Assert.StartsWith("The mailbox refused the email or password.", failure.Reason);
         Assert.Contains("App password", failure.Reason);
     }
@@ -114,7 +114,7 @@ public sealed class MailboxProbeTests
         var failure = MailboxSyncFailures.Classify(error, "imap.example.com", 993);
 
         Assert.NotNull(failure);
-        Assert.False(failure!.SignInRefused);
+        Assert.Equal("reach", failure!.Step);
         Assert.Contains("imap.example.com:993", failure.Reason);
     }
 

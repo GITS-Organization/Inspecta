@@ -22,6 +22,13 @@ namespace Inspecta.Infrastructure.Data.Migrations
                 table: "CoordinatorEmailConfigs",
                 type: "timestamp with time zone",
                 nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "LastFailedStep",
+                table: "CoordinatorEmailConfigs",
+                type: "character varying(16)",
+                maxLength: 16,
+                nullable: true);
         }
 
         /// <inheritdoc />
@@ -33,6 +40,10 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
             migrationBuilder.DropColumn(
                 name: "LastEmailAt",
+                table: "CoordinatorEmailConfigs");
+
+            migrationBuilder.DropColumn(
+                name: "LastFailedStep",
                 table: "CoordinatorEmailConfigs");
         }
     }

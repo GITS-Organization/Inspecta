@@ -36,10 +36,17 @@ public interface ICoordinatorEmailConfigRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Remembers that the mailbox was tried now: it worked (<paramref name="failure"/> is <c>null</c>), or it failed with that reason
-    /// (<paramref name="signInRefused"/> tells a refused sign-in from a server that could not be reached or sent through). Nothing happens when the mailbox was removed meanwhile.
+    /// Remembers the result of a check or test of the saved mailbox: it worked (<paramref name="failure"/> is <c>null</c>) or it failed at <paramref name="step"/> with that reason.
+    /// Written only when the mailbox still has the settings it was tried with (<paramref name="expectedUpdatedAt"/>): a result about settings that were changed or reconnected
+    /// meanwhile is dropped. Nothing happens when the mailbox was removed meanwhile.
     /// </summary>
-    Task RecordCheckAsync(Guid coordinatorId, DateTimeOffset at, string? failure, bool signInRefused, CancellationToken cancellationToken = default);
+    Task RecordCheckAsync(Guid coordinatorId, DateTimeOffset expectedUpdatedAt, DateTimeOffset at, string? failure, string? step, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Remembers how a sync of the mailbox went, with the same guards as <see cref="RecordCheckAsync"/>. A sync never ends a sending problem (it does not send), and it only writes
+    /// when there is news: the same result is not written again every cycle.
+    /// </summary>
+    Task RecordSyncAsync(Guid coordinatorId, DateTimeOffset expectedUpdatedAt, DateTimeOffset at, string? failure, string? step, CancellationToken cancellationToken = default);
 
     /// <summary>Remembers when the newest imported email arrived (only a newer one moves it). Nothing happens when the mailbox was removed meanwhile.</summary>
     Task RecordEmailReceivedAsync(Guid coordinatorId, DateTimeOffset at, CancellationToken cancellationToken = default);

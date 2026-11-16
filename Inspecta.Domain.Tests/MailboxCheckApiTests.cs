@@ -183,7 +183,7 @@ public sealed class MailboxCheckApiTests : IClassFixture<ApiHttpTests.Api>
         var world = Seed();
         var probe = new FakeProbe();
         var config = CoordinatorEmailConfig.CreateMicrosoft(world.Coordinator.Id, world.Company.Id, "mailbox@example.com", "token", "tenant");
-        config.RecordFailedCheck(DateTimeOffset.UtcNow.AddHours(-1), "Microsoft refused the saved sign-in.", signInRefused: true);
+        config.MarkNeedsReconnect("Microsoft refused the saved sign-in.");
         api.SeedAs(db => db.CoordinatorEmailConfigs.Add(config));
         var admin = await SignedInAs(Host(probe), world.Admin.Email);
 
@@ -191,7 +191,7 @@ public sealed class MailboxCheckApiTests : IClassFixture<ApiHttpTests.Api>
         var stored = await Json(await admin.GetAsync($"/api/v1/company/users/{world.Coordinator.Id}/email-config"));
 
         Assert.False(answer.GetProperty("ok").GetBoolean());
-        Assert.Equal(["ok", "failed", "skipped", "skipped"], States(answer));
+        Assert.Equal(["skipped", "failed", "skipped", "skipped"], States(answer));
         Assert.Equal(0, probe.Calls);
         Assert.Equal("needs_reconnect", stored.GetProperty("connectionStatus").GetString());
     }

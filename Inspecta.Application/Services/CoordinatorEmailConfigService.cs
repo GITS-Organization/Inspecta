@@ -151,11 +151,22 @@ public sealed class CoordinatorEmailConfigService(
             // Microsoft no longer accepts the saved sign-in: there is nothing to try until the coordinator connects again.
             const string message = "Microsoft refused the saved sign-in.";
             const string hint = "The coordinator must connect Outlook again from their own app.";
-            await configRepository.RecordCheckAsync(coordinatorId, now, message, signInRefused: true, cancellationToken);
+            await configRepository.RecordCheckAsync(coordinatorId, config.UpdatedAt, now, message, "sign_in", cancellationToken);
             return Answer(
             [
-                new MailboxCheckStep("reach", "ok"),
+                new MailboxCheckStep("reach", "skipped"),
                 new MailboxCheckStep("sign_in", "failed", message, hint),
+                new MailboxCheckStep("read", "skipped"),
+                new MailboxCheckStep("send", "skipped")
+            ]);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Microsoft could not be asked right now (not a refusal): say so, and change nothing about the mailbox.
+            return Answer(
+            [
+                new MailboxCheckStep("reach", "skipped"),
+                new MailboxCheckStep("sign_in", "failed", "We could not sign in to the mailbox right now.", "Try again in a moment."),
                 new MailboxCheckStep("read", "skipped"),
                 new MailboxCheckStep("send", "skipped")
             ]);
@@ -167,8 +178,7 @@ public sealed class CoordinatorEmailConfigService(
             smtp.Server, smtp.Port, smtp.UseSsl), cancellationToken);
         var failure = steps.FirstOrDefault(step => step.State == "failed");
         await configRepository.RecordCheckAsync(
-            coordinatorId, now, failure is null ? null : $"{failure.Message} {failure.Hint}".Trim(),
-            signInRefused: failure?.Step == "sign_in", cancellationToken);
+            coordinatorId, config.UpdatedAt, now, failure is null ? null : $"{failure.Message} {failure.Hint}".Trim(), failure?.Step, cancellationToken);
         return Answer(steps);
     }
 

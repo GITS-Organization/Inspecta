@@ -296,6 +296,7 @@ public sealed class InspectaDbContext(
         emailConfig.Property(item => item.EncryptedRefreshToken).HasMaxLength(2048);
         emailConfig.Property(item => item.MicrosoftTenantId).HasMaxLength(64);
         emailConfig.Property(item => item.LastAuthError).HasMaxLength(500);
+        emailConfig.Property(item => item.LastFailedStep).HasMaxLength(16);
         emailConfig.HasOne<AppUser>()
             .WithOne()
             .HasForeignKey<CoordinatorEmailConfig>(item => item.CoordinatorId)

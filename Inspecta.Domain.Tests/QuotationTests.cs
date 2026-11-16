@@ -1817,7 +1817,9 @@ public sealed class QuotationTests
         public Task<bool> MarkNeedsReconnectAsync(Guid coordinatorId, string expected, string reason, CancellationToken cancellationToken = default) =>
             Task.FromResult(true);
 
-        public Task RecordCheckAsync(Guid coordinatorId, DateTimeOffset at, string? failure, bool signInRefused, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task RecordCheckAsync(Guid coordinatorId, DateTimeOffset expectedUpdatedAt, DateTimeOffset at, string? failure, string? step, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task RecordSyncAsync(Guid coordinatorId, DateTimeOffset expectedUpdatedAt, DateTimeOffset at, string? failure, string? step, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task RecordEmailReceivedAsync(Guid coordinatorId, DateTimeOffset at, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }

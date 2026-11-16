@@ -49,7 +49,7 @@ public sealed partial class EmailSyncBackgroundService
             // Read-only: the mailbox is never modified. Progress is tracked by UID instead of the read flag.
             var inbox = client.Inbox;
             await inbox.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
-            await RecordHealthAsync(config.CoordinatorId, failure: null, signInRefused: false);
+            await RecordHealthAsync(config, failure: null, step: null);
             var uidValidity = inbox.UidValidity.ToString(CultureInfo.InvariantCulture);
 
             var syncFrom = config.SyncFromUtc;
@@ -228,22 +228,22 @@ public sealed partial class EmailSyncBackgroundService
                 config.CoordinatorId);
             // A refused sign-in or a server that cannot be reached is remembered, so the company admin can see it; a bug in importing one email is not.
             if (MailboxSyncFailures.Classify(exception, config.ImapServer, config.ImapPort) is { } failure)
-                await RecordHealthAsync(config.CoordinatorId, failure.Reason, failure.SignInRefused);
+                await RecordHealthAsync(config, failure.Reason, failure.Step);
         }
     }
 
     /// <summary>Remembers whether the mailbox worked this time. Remembering never stops a sync: a failure to write is only logged.</summary>
-    private async Task RecordHealthAsync(Guid coordinatorId, string? failure, bool signInRefused)
+    private async Task RecordHealthAsync(CoordinatorEmailConfig config, string? failure, string? step)
     {
         try
         {
             await using var scope = scopeFactory.CreateAsyncScope();
             await scope.ServiceProvider.GetRequiredService<ICoordinatorEmailConfigRepository>()
-                .RecordCheckAsync(coordinatorId, DateTimeOffset.UtcNow, failure, signInRefused, CancellationToken.None);
+                .RecordSyncAsync(config.CoordinatorId, config.UpdatedAt, DateTimeOffset.UtcNow, failure, step, CancellationToken.None);
         }
         catch (Exception exception)
         {
-            logger.LogWarning(exception, "Could not remember the state of the mailbox of coordinator {CoordinatorId}.", coordinatorId);
+            logger.LogWarning(exception, "Could not remember the state of the mailbox of coordinator {CoordinatorId}.", config.CoordinatorId);
         }
     }
 
