@@ -50,7 +50,9 @@ public sealed record CoordinatorEmailConfigResponse(
     string AuthMode = "password",
     /// <summary><c>connected</c>, or <c>needs_reconnect</c> when Microsoft no longer accepts the saved sign-in.</summary>
     string ConnectionStatus = "connected",
-    string? LastAuthError = null);
+    string? LastAuthError = null,
+    DateTimeOffset? LastCheckedAt = null,
+    DateTimeOffset? LastEmailAt = null);
 
 /// <summary>Chooses the date mail is imported from.</summary>
 public sealed record ChangeSyncFromRequest

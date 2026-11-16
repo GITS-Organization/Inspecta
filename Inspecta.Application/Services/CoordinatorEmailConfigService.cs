@@ -32,8 +32,17 @@ public sealed class CoordinatorEmailConfigService(
             true, config.ImapServer, config.ImapPort, config.EmailUsername, config.UseSsl,
             config.SmtpServer, config.SmtpPort, config.SmtpUseSsl, config.SyncFromUtc, config.UpdatedAt,
             config.AuthMode == MailboxAuthMode.MicrosoftOAuth ? "microsoft_oauth" : "password",
-            config.ConnectionStatus == MailboxConnectionStatus.NeedsReconnect ? "needs_reconnect" : "connected",
-            config.LastAuthError);
+            StatusOf(config.ConnectionStatus),
+            config.LastAuthError,
+            config.LastCheckedAt,
+            config.LastEmailAt);
+
+    private static string StatusOf(MailboxConnectionStatus status) => status switch
+    {
+        MailboxConnectionStatus.NeedsReconnect => "needs_reconnect",
+        MailboxConnectionStatus.Problem => "problem",
+        _ => "connected"
+    };
 
     public async Task<CoordinatorEmailConfigResponse> GetAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken = default)
     {
