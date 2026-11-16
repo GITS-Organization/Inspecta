@@ -312,4 +312,27 @@ public sealed class MailboxCheckApiTests : IClassFixture<ApiHttpTests.Api>
         Assert.Equal("connected", stored.GetProperty("connectionStatus").GetString());
         Assert.NotEqual(JsonValueKind.Null, stored.GetProperty("lastCheckedAt").ValueKind);
     }
+
+    [Fact]
+    public async Task Testing_and_checking_are_limited_per_person_so_they_cannot_be_used_to_probe_other_servers()
+    {
+        var world = Seed();
+        var other = Seed();
+        var probe = new FakeProbe();
+        var host = Host(probe);
+        var admin = await SignedInAs(host, world.Admin.Email);
+        var otherAdmin = await SignedInAs(host, other.Admin.Email);
+        var statuses = new List<HttpStatusCode>();
+
+        for (var attempt = 0; attempt < 12; attempt++)
+            statuses.Add((await admin.PostAsJsonAsync($"/api/v1/company/users/{world.Coordinator.Id}/email-config/test", Body())).StatusCode);
+        var stillLimited = await admin.PostAsync($"/api/v1/company/users/{world.Coordinator.Id}/email-config/check", null);
+        var otherPerson = await otherAdmin.PostAsJsonAsync($"/api/v1/company/users/{other.Coordinator.Id}/email-config/test", Body());
+
+        Assert.Equal(10, statuses.Count(status => status == HttpStatusCode.OK));
+        Assert.Equal(2, statuses.Count(status => status == HttpStatusCode.TooManyRequests));
+        Assert.Equal(11, probe.Calls); // ten for the first person, one for the other; the limited ones never reached the server
+        Assert.Equal(HttpStatusCode.TooManyRequests, stillLimited.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, otherPerson.StatusCode);
+    }
 }
