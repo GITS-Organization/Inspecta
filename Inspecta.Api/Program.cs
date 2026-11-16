@@ -105,6 +105,7 @@ builder.Services.AddSingleton(new QuoteDeliveryOptions(builder.Configuration.Get
 builder.Services.AddScoped<IQuoteDeliveryService, QuoteDeliveryService>();
 builder.Services.AddSingleton<IEmailSender, MailKitSmtpEmailSender>();
 builder.Services.AddSingleton<IMailboxProbe, MailKitMailboxProbe>();
+builder.Services.AddSingleton<Inspecta.Application.Services.MailboxTryLimiter>();
 builder.Services.AddSingleton<IEmailBranding, Inspecta.Infrastructure.Services.EmailBrandingProvider>();
 builder.Services.AddPdfGeneration(builder.Configuration);
 builder.Services.AddScoped<IInspectionRequestService, InspectionRequestService>();
@@ -170,11 +171,6 @@ builder.Services.AddRateLimiter(limiter =>
     limiter.AddPolicy(Inspecta.Api.Controllers.AuthController.LoginRateLimitPolicy, context => PerAddress(context, 10));
     limiter.AddPolicy(Inspecta.Api.Controllers.AuthController.RefreshRateLimitPolicy, context => PerAddress(context, 60));
     limiter.AddPolicy(Inspecta.Api.Controllers.MicrosoftMailboxController.CallbackRateLimitPolicy, context => PerAddress(context, 30));
-    // Trying a mailbox connects to a server the person typed: ten tries a minute per person, shared by the test and the check.
-    limiter.AddPolicy(Inspecta.Api.Controllers.CoordinatorEmailConfigsController.TryMailboxRateLimitPolicy, context =>
-        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
-            context.User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 builder.Services.AddScoped<IPasswordService, IdentityPasswordService>();
 builder.Services.AddSingleton<IAccessTokenService, JwtAccessTokenService>();

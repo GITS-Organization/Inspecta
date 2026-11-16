@@ -16,7 +16,8 @@ public sealed class UserManagementService(
     ICompanyRepository? companies = null,
     ITransactionRunner? transactions = null,
     IReviewerService? reviewers = null,
-    IMailboxProbe? mailboxProbe = null) : IUserManagementService
+    IMailboxProbe? mailboxProbe = null,
+    MailboxTryLimiter? tryLimiter = null) : IUserManagementService
 {
     public async Task<AuthUserResponse> CreateAsync(
         CreateStaffUserRequest request,
@@ -49,7 +50,7 @@ public sealed class UserManagementService(
 
         var email = request.Email.Trim().ToLowerInvariant();
         await EnsureEmailAvailableAsync(email, cancellationToken);
-        await VerifyMailboxAsync(request.EmailConfig, cancellationToken);
+        await VerifyMailboxAsync(request.EmailConfig, managerId ?? Guid.Empty, cancellationToken);
         var user = CreateUser(
             email,
             request.FullName,
@@ -260,7 +261,7 @@ public sealed class UserManagementService(
 
         var email = request.Email.Trim().ToLowerInvariant();
         await EnsureEmailAvailableAsync(email, cancellationToken);
-        await VerifyMailboxAsync(request.EmailConfig, cancellationToken);
+        await VerifyMailboxAsync(request.EmailConfig, managerId, cancellationToken);
         var user = CreateUser(
             email,
             request.FullName,
@@ -287,10 +288,11 @@ public sealed class UserManagementService(
     }
 
     // A mailbox that is asked to be tried is tried before anything is created: a failure leaves no account behind.
-    private async Task VerifyMailboxAsync(CoordinatorEmailConfigRequest? config, CancellationToken cancellationToken)
+    private async Task VerifyMailboxAsync(CoordinatorEmailConfigRequest? config, Guid companyId, CancellationToken cancellationToken)
     {
         if (config is not { Verify: true }) return;
         ValidateEmailConfig(config);
+        tryLimiter?.Take(companyId);
         await MailboxVerification.EnsureWorksAsync(mailboxProbe ?? throw new InvalidOperationException("A mailbox probe is needed to verify a mailbox."), config, cancellationToken);
     }
 

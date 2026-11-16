@@ -12,6 +12,7 @@ public sealed class CoordinatorEmailConfigService(
     ISecretProtector secretProtector,
     IMailboxProbe mailboxProbe,
     IMailboxAuthenticator mailboxAuthenticator,
+    MailboxTryLimiter tryLimiter,
     ICompanyGate? companyGate = null,
     TimeProvider? clock = null) : ICoordinatorEmailConfigService
 {
@@ -88,7 +89,11 @@ public sealed class CoordinatorEmailConfigService(
     {
         Validate(request);
         await EnsureTeamCoordinatorAsync(managerId, coordinatorId, cancellationToken);
-        if (request.Verify) await MailboxVerification.EnsureWorksAsync(mailboxProbe, request, cancellationToken);
+        if (request.Verify)
+        {
+            tryLimiter.Take(managerId);
+            await MailboxVerification.EnsureWorksAsync(mailboxProbe, request, cancellationToken);
+        }
 
         var encryptedPassword = secretProtector.Protect(request.Password);
         var config = await configRepository.GetByCoordinatorAsync(coordinatorId, cancellationToken);
@@ -130,6 +135,7 @@ public sealed class CoordinatorEmailConfigService(
     {
         Validate(request);
         await EnsureTeamCoordinatorAsync(managerId, coordinatorId, cancellationToken);
+        tryLimiter.Take(managerId);
         var steps = await mailboxProbe.ProbeAsync(MailboxVerification.SettingsOf(request), cancellationToken);
         return Answer(steps);
     }
@@ -137,6 +143,7 @@ public sealed class CoordinatorEmailConfigService(
     public async Task<MailboxCheckResponse> CheckAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken = default)
     {
         await EnsureTeamCoordinatorAsync(managerId, coordinatorId, cancellationToken);
+        tryLimiter.Take(managerId);
         var config = await configRepository.GetByCoordinatorNoTrackingAsync(coordinatorId, cancellationToken)
             ?? throw new AuthException("email_config_not_found", "This coordinator has no mailbox set up.", 404);
         var now = (clock ?? TimeProvider.System).GetUtcNow();
@@ -160,7 +167,7 @@ public sealed class CoordinatorEmailConfigService(
                 new MailboxCheckStep("send", "skipped")
             ]);
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is HttpRequestException or TimeoutException || exception is OperationCanceledException && !cancellationToken.IsCancellationRequested)
         {
             // Microsoft could not be asked right now (not a refusal): say so, and change nothing about the mailbox.
             return Answer(

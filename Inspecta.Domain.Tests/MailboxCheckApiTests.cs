@@ -335,4 +335,59 @@ public sealed class MailboxCheckApiTests : IClassFixture<ApiHttpTests.Api>
         Assert.Equal(HttpStatusCode.TooManyRequests, stillLimited.StatusCode);
         Assert.Equal(HttpStatusCode.OK, otherPerson.StatusCode);
     }
+
+    [Fact]
+    public async Task Saving_with_verify_and_creating_with_verify_count_against_the_same_limit()
+    {
+        var world = Seed();
+        var probe = new FakeProbe();
+        var admin = await SignedInAs(Host(probe), world.Admin.Email);
+        var statuses = new List<HttpStatusCode>();
+
+        for (var attempt = 0; attempt < 11; attempt++)
+            statuses.Add((await admin.PutAsJsonAsync($"/api/v1/company/users/{world.Coordinator.Id}/email-config", VerifiedBody())).StatusCode);
+        var created = await admin.PostAsJsonAsync("/api/v1/company/users", new
+        {
+            email = $"limited-{Interlocked.Increment(ref sequence)}@example.com", fullName = "Limited", password = "StrongPassword123!", role = "coordinator", emailConfig = VerifiedBody()
+        });
+        var savedWithoutVerify = await admin.PutAsJsonAsync($"/api/v1/company/users/{world.Coordinator.Id}/email-config", Body());
+
+        Assert.Equal(10, statuses.Count(status => status == HttpStatusCode.NoContent));
+        Assert.Equal(HttpStatusCode.TooManyRequests, statuses[10]);
+        Assert.Equal(HttpStatusCode.TooManyRequests, created.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, savedWithoutVerify.StatusCode); // not trying the mailbox is never limited
+        Assert.Equal(10, probe.Calls);
+    }
+
+    private sealed class FailingAuthenticator(Exception error) : IMailboxAuthenticator
+    {
+        public Task<MailboxCredential> GetAsync(CoordinatorEmailConfig config, CancellationToken cancellationToken = default) => throw error;
+    }
+
+    [Fact]
+    public async Task When_microsoft_cannot_be_asked_right_now_the_check_says_so_and_changes_nothing()
+    {
+        var world = Seed();
+        var config = CoordinatorEmailConfig.CreateMicrosoft(world.Coordinator.Id, world.Company.Id, "mailbox@example.com", "token", "tenant");
+        api.SeedAs(db => db.CoordinatorEmailConfigs.Add(config));
+        var host = api.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("IMAP_ENCRYPTION_KEY", Key);
+            builder.ConfigureServices(services =>
+            {
+                foreach (var descriptor in services.Where(value => value.ServiceType == typeof(IMailboxAuthenticator)).ToList()) services.Remove(descriptor);
+                services.AddScoped<IMailboxAuthenticator>(_ => new FailingAuthenticator(new HttpRequestException("Microsoft did not answer")));
+            });
+        });
+        var admin = await SignedInAs(host, world.Admin.Email);
+
+        var response = await admin.PostAsync($"/api/v1/company/users/{world.Coordinator.Id}/email-config/check", null);
+        var answer = await Json(response);
+        var stored = await Json(await admin.GetAsync($"/api/v1/company/users/{world.Coordinator.Id}/email-config"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("We could not sign in to the mailbox right now.", answer.GetProperty("steps")[1].GetProperty("message").GetString());
+        Assert.Equal("connected", stored.GetProperty("connectionStatus").GetString());
+        Assert.Equal(JsonValueKind.Null, stored.GetProperty("lastCheckedAt").ValueKind);
+    }
 }

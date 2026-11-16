@@ -163,4 +163,31 @@ public sealed class MailboxHealthTests
         Assert.True(config.RecordSyncFailure(Now.AddMinutes(3), "The mailbox refused the email or password.", "sign_in"));
         Assert.Equal("sign_in", config.LastFailedStep);
     }
+
+    [Fact]
+    public void A_sync_failure_never_replaces_a_sending_problem_so_a_later_good_sync_cannot_hide_it()
+    {
+        var config = Password();
+        config.RecordFailedCheck(Now, "We can read the mailbox but cannot send from it.", "send");
+
+        config.RecordSyncFailure(Now.AddMinutes(20), "We could not reach the server.", "reach");
+        config.RecordSyncSuccess(Now.AddMinutes(40));
+
+        Assert.Equal(MailboxConnectionStatus.Problem, config.ConnectionStatus);
+        Assert.Equal("send", config.LastFailedStep);
+        Assert.Equal("We can read the mailbox but cannot send from it.", config.LastAuthError);
+    }
+
+    [Fact]
+    public void A_different_mailbox_starts_without_the_last_email_of_the_old_one_but_the_same_mailbox_keeps_it()
+    {
+        var config = Password();
+        config.RecordEmailReceived(Now.AddDays(-1));
+
+        config.Update("imap.example.com", 993, "a@example.com", "encrypted-2", true);
+        Assert.Equal(Now.AddDays(-1), config.LastEmailAt);
+
+        config.Update("imap.other.com", 993, "b@other.com", "encrypted-3", true);
+        Assert.Null(config.LastEmailAt);
+    }
 }

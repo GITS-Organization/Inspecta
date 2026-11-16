@@ -44,7 +44,9 @@ public sealed class ProcessLocalStateGuardTests
         "LoginAttemptTracker.states",
         // Microsoft access tokens and renewal gates: a second instance only refreshes more often and could spend one refresh token twice. Needs a database lock or a shared cache.
         "MailboxTokenCache.tokens",
-        "MailboxTokenCache.gates"
+        "MailboxTokenCache.gates",
+        // Tries of a mailbox per company (the limit on testing a typed server): each instance counts alone, so the limit multiplies by the number of instances. Needs a shared store (database or Redis).
+        "MailboxTryLimiter.recent"
     };
 
     private static bool Is(Type fieldType, Type[] kinds) =>

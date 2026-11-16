@@ -6,7 +6,6 @@ using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 
 namespace Inspecta.Api.Controllers;
 
@@ -17,8 +16,6 @@ namespace Inspecta.Api.Controllers;
 public sealed class CoordinatorEmailConfigsController(
     ICoordinatorEmailConfigService configService) : ControllerBase
 {
-    public const string TryMailboxRateLimitPolicy = "try-mailbox";
-
     /// <summary>Replace the encrypted IMAP settings for a coordinator in the selected team.</summary>
     [RequirePermission(Permissions.AccountsManage)]
     [HttpPut]
@@ -79,10 +76,9 @@ public sealed class CoordinatorEmailConfigsController(
     /// <remarks>
     /// The same body as the save call (the password is needed). Always answers <c>200</c> with the four steps (<c>reach</c>, <c>sign_in</c>, <c>read</c>, <c>send</c>);
     /// a step is <c>ok</c>, <c>failed</c> (with <c>message</c> and <c>hint</c> in plain words) or <c>skipped</c> after an earlier failure. <c>ok</c> is true only when all four worked.
-    /// No email is sent and nothing is stored. Limited to ten tries a minute per person (test and check together): <c>429</c> after that.
+    /// No email is sent and nothing is stored. Trying a mailbox is limited to ten tries a minute for a company, whichever way (test, check, or save/create with <c>verify</c>): <c>429 too_many_tries</c> after that.
     /// </remarks>
     [RequirePermission(Permissions.AccountsManage)]
-    [EnableRateLimiting(TryMailboxRateLimitPolicy)]
     [HttpPost("test")]
     [ProducesResponseType<MailboxCheckResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -98,7 +94,6 @@ public sealed class CoordinatorEmailConfigsController(
     /// <c>404 email_config_not_found</c> when no mailbox is set up.
     /// </remarks>
     [RequirePermission(Permissions.AccountsManage)]
-    [EnableRateLimiting(TryMailboxRateLimitPolicy)]
     [HttpPost("check")]
     [ProducesResponseType<MailboxCheckResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

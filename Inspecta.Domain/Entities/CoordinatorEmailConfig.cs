@@ -116,6 +116,13 @@ public sealed class CoordinatorEmailConfig
     public bool RecordSyncFailure(DateTimeOffset at, string reason, string step)
     {
         if (ConnectionStatus == MailboxConnectionStatus.NeedsReconnect) return false;
+        // A sending problem is only ended by a check or a save that tries sending: a sync failing elsewhere must not overwrite it, or a later good sync would hide it.
+        if (ConnectionStatus == MailboxConnectionStatus.Problem && LastFailedStep == "send")
+        {
+            if (LastCheckedAt is { } checkedAt && at - checkedAt < SyncRecordInterval) return false;
+            LastCheckedAt = at;
+            return true;
+        }
         var text = Clip(reason);
         var same = ConnectionStatus == MailboxConnectionStatus.Problem && LastFailedStep == step && LastAuthError == text;
         if (same && LastCheckedAt is { } last && at - last < SyncRecordInterval) return false;
@@ -169,7 +176,11 @@ public sealed class CoordinatorEmailConfig
         var mailboxChanged = !string.Equals(EmailUsername, mailboxAddress?.Trim(), StringComparison.OrdinalIgnoreCase);
         ApplyMicrosoft(mailboxAddress, encryptedRefreshToken, microsoftTenantId);
         UpdatedAt = DateTimeOffset.UtcNow;
-        if (mailboxChanged) ResetSync(UpdatedAt);
+        if (mailboxChanged)
+        {
+            ResetSync(UpdatedAt);
+            LastEmailAt = null;
+        }
     }
 
     /// <summary>Microsoft handed out a new refresh token while renewing the access token.</summary>
@@ -259,6 +270,7 @@ public sealed class CoordinatorEmailConfig
         LastFailedStep = null;
         LastCheckedAt = null;
 
+        if (mailboxChanged) LastEmailAt = null;
         // A different mailbox has its own UIDs: start again from now instead of importing its history.
         // A date the user chose wins, and moves the start of the import by itself.
         if (syncFromUtc is { } chosen && chosen != SyncFromUtc) ResetSync(chosen);
