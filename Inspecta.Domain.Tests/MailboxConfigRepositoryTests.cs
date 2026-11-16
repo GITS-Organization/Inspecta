@@ -94,5 +94,62 @@ public sealed class MailboxConfigRepositoryTests : IDisposable
         Assert.Equal(MailboxConnectionStatus.Connected, Read().ConnectionStatus);
     }
 
+    private static readonly DateTimeOffset At = new(2026, 11, 16, 9, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public async Task ASyncThatSignedInIsRecordedAndClearsAnOldProblem()
+    {
+        var config = CoordinatorEmailConfig.Create(coordinator.Id, manager.Id, "imap.gmail.com", 993, "ahmed@gmail.com", "enc-password", true);
+        config.RecordFailedCheck(At.AddHours(-1), "The mailbox refused the email or password.", signInRefused: true);
+        Store(config);
+        await using var db = CreateContext();
+
+        await new EfCoordinatorEmailConfigRepository(db).RecordCheckAsync(coordinator.Id, At, failure: null, signInRefused: false);
+
+        var stored = Read();
+        Assert.Equal(At, stored.LastCheckedAt);
+        Assert.Equal(MailboxConnectionStatus.Connected, stored.ConnectionStatus);
+        Assert.Null(stored.LastAuthError);
+    }
+
+    [Fact]
+    public async Task ASyncThatFailedLeavesAProblemWithItsReason()
+    {
+        Store(CoordinatorEmailConfig.Create(coordinator.Id, manager.Id, "imap.gmail.com", 993, "ahmed@gmail.com", "enc-password", true));
+        await using var db = CreateContext();
+
+        await new EfCoordinatorEmailConfigRepository(db).RecordCheckAsync(coordinator.Id, At, "The mailbox refused the email or password.", signInRefused: true);
+
+        var stored = Read();
+        Assert.Equal(MailboxConnectionStatus.Problem, stored.ConnectionStatus);
+        Assert.Equal("The mailbox refused the email or password.", stored.LastAuthError);
+        Assert.Equal(At, stored.LastCheckedAt);
+    }
+
+    [Fact]
+    public async Task RecordingForAMailboxThatWasRemovedMeanwhileDoesNothing()
+    {
+        await using var db = CreateContext();
+        var repository = new EfCoordinatorEmailConfigRepository(db);
+
+        await repository.RecordCheckAsync(coordinator.Id, At, failure: null, signInRefused: false);
+        await repository.RecordEmailReceivedAsync(coordinator.Id, At);
+
+        Assert.Null(await repository.GetByCoordinatorNoTrackingAsync(coordinator.Id));
+    }
+
+    [Fact]
+    public async Task TheLastEmailIsStoredAndOnlyMovesForward()
+    {
+        Store(CoordinatorEmailConfig.Create(coordinator.Id, manager.Id, "imap.gmail.com", 993, "ahmed@gmail.com", "enc-password", true));
+        await using var db = CreateContext();
+        var repository = new EfCoordinatorEmailConfigRepository(db);
+
+        await repository.RecordEmailReceivedAsync(coordinator.Id, At);
+        await repository.RecordEmailReceivedAsync(coordinator.Id, At.AddDays(-2));
+
+        Assert.Equal(At, Read().LastEmailAt);
+    }
+
     public void Dispose() => connection.Dispose();
 }

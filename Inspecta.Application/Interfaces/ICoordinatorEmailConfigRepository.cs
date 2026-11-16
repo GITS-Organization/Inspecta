@@ -35,6 +35,15 @@ public interface ICoordinatorEmailConfigRepository
         string reason,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Remembers that the mailbox was tried now: it worked (<paramref name="failure"/> is <c>null</c>), or it failed with that reason
+    /// (<paramref name="signInRefused"/> tells a refused sign-in from a server that could not be reached or sent through). Nothing happens when the mailbox was removed meanwhile.
+    /// </summary>
+    Task RecordCheckAsync(Guid coordinatorId, DateTimeOffset at, string? failure, bool signInRefused, CancellationToken cancellationToken = default);
+
+    /// <summary>Remembers when the newest imported email arrived (only a newer one moves it). Nothing happens when the mailbox was removed meanwhile.</summary>
+    Task RecordEmailReceivedAsync(Guid coordinatorId, DateTimeOffset at, CancellationToken cancellationToken = default);
+
     /// <summary>Removes the mailbox settings of a coordinator (the mailbox is no longer read or sent from).</summary>
     Task DeleteAsync(CoordinatorEmailConfig config, CancellationToken cancellationToken = default);
 }

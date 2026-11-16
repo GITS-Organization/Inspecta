@@ -59,6 +59,23 @@ public sealed class EfCoordinatorEmailConfigRepository(InspectaDbContext dbConte
                     .SetProperty(config => config.LastAuthError, reason),
                 cancellationToken) > 0;
 
+    public async Task RecordCheckAsync(Guid coordinatorId, DateTimeOffset at, string? failure, bool signInRefused, CancellationToken cancellationToken = default)
+    {
+        var config = await dbContext.CoordinatorEmailConfigs.SingleOrDefaultAsync(item => item.CoordinatorId == coordinatorId, cancellationToken);
+        if (config is null) return;
+        if (failure is null) config.RecordSuccessfulCheck(at);
+        else config.RecordFailedCheck(at, failure, signInRefused);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task RecordEmailReceivedAsync(Guid coordinatorId, DateTimeOffset at, CancellationToken cancellationToken = default)
+    {
+        var config = await dbContext.CoordinatorEmailConfigs.SingleOrDefaultAsync(item => item.CoordinatorId == coordinatorId, cancellationToken);
+        if (config is null) return;
+        config.RecordEmailReceived(at);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task DeleteAsync(CoordinatorEmailConfig config, CancellationToken cancellationToken = default)
     {
         dbContext.CoordinatorEmailConfigs.Remove(config);

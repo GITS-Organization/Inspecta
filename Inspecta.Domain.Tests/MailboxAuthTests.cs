@@ -68,6 +68,10 @@ public sealed class MailboxAuthTests
             return Task.FromResult(true);
         }
 
+        public Task RecordCheckAsync(Guid coordinatorId, DateTimeOffset at, string? failure, bool signInRefused, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task RecordEmailReceivedAsync(Guid coordinatorId, DateTimeOffset at, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
         public Task<bool> MarkNeedsReconnectAsync(Guid coordinatorId, string expected, string reason, CancellationToken cancellationToken = default)
         {
             if (stored.AuthMode != MailboxAuthMode.MicrosoftOAuth || stored.EncryptedRefreshToken != expected) return Task.FromResult(false);
