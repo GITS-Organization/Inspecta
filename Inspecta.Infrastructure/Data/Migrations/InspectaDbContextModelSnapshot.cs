@@ -525,6 +525,12 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<DateTimeOffset?>("LastCheckedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LastEmailAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<long>("LastUid")
                         .HasColumnType("bigint");
 
