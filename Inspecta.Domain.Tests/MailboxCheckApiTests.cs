@@ -390,4 +390,88 @@ public sealed class MailboxCheckApiTests : IClassFixture<ApiHttpTests.Api>
         Assert.Equal("connected", stored.GetProperty("connectionStatus").GetString());
         Assert.Equal(JsonValueKind.Null, stored.GetProperty("lastCheckedAt").ValueKind);
     }
+
+    [Fact]
+    public async Task A_mailbox_can_be_tested_before_the_coordinator_exists_and_nothing_is_stored()
+    {
+        var world = Seed();
+        var probe = new FakeProbe();
+        var admin = await SignedInAs(Host(probe), world.Admin.Email);
+        var usersBefore = await admin.GetStringAsync("/api/v1/company/users");
+
+        var response = await admin.PostAsJsonAsync("/api/v1/company/email-config/test", Body());
+        var answer = await Json(response);
+        var usersAfter = await admin.GetStringAsync("/api/v1/company/users");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(answer.GetProperty("ok").GetBoolean());
+        Assert.Equal(["ok", "ok", "ok", "ok"], States(answer));
+        Assert.Equal("typed-password", probe.Seen!.Password);
+        Assert.Equal("smtp.example.com", probe.Seen.SmtpServer);
+        Assert.Equal(usersBefore, usersAfter);
+    }
+
+    [Fact]
+    public async Task A_failed_test_before_creating_says_the_failed_step_and_what_to_do()
+    {
+        var world = Seed();
+        var admin = await SignedInAs(Host(new FakeProbe { FailAt = "reach" }), world.Admin.Email);
+
+        var answer = await Json(await admin.PostAsJsonAsync("/api/v1/company/email-config/test", Body()));
+
+        Assert.False(answer.GetProperty("ok").GetBoolean());
+        Assert.Equal(["failed", "skipped", "skipped", "skipped"], States(answer));
+        Assert.Equal("reach did not work.", answer.GetProperty("steps")[0].GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Testing_before_creating_needs_the_password_and_only_the_company_admin_may_ask()
+    {
+        var world = Seed();
+        var probe = new FakeProbe();
+        var host = Host(probe);
+        var admin = await SignedInAs(host, world.Admin.Email);
+
+        var noPassword = await admin.PostAsJsonAsync("/api/v1/company/email-config/test", Body(password: ""));
+
+        Assert.Equal(HttpStatusCode.BadRequest, noPassword.StatusCode);
+        foreach (var email in new[] { world.Manager.Email, world.Coordinator.Email })
+        {
+            var client = await SignedInAs(host, email);
+            Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync("/api/v1/company/email-config/test", Body())).StatusCode);
+        }
+        Assert.Equal(0, probe.Calls);
+    }
+
+    [Fact]
+    public async Task Testing_before_creating_counts_against_the_same_limit_as_every_other_way_of_trying_a_mailbox()
+    {
+        var world = Seed();
+        var probe = new FakeProbe();
+        var admin = await SignedInAs(Host(probe), world.Admin.Email);
+        var statuses = new List<HttpStatusCode>();
+
+        for (var attempt = 0; attempt < 11; attempt++)
+            statuses.Add((await admin.PostAsJsonAsync("/api/v1/company/email-config/test", Body())).StatusCode);
+        var existing = await admin.PostAsJsonAsync($"/api/v1/company/users/{world.Coordinator.Id}/email-config/test", Body());
+
+        Assert.Equal(10, statuses.Count(status => status == HttpStatusCode.OK));
+        Assert.Equal(HttpStatusCode.TooManyRequests, statuses[10]);
+        Assert.Equal(HttpStatusCode.TooManyRequests, existing.StatusCode);
+        Assert.Equal(10, probe.Calls);
+    }
+
+    [Fact]
+    public async Task The_platform_owner_must_name_the_company_when_testing_before_creating()
+    {
+        var world = Seed();
+        var owner = api.AddUser($"mc-owner-{Interlocked.Increment(ref sequence)}@example.com", UserRole.Admin);
+        var client = await SignedInAs(Host(new FakeProbe()), owner.Email);
+
+        var without = await client.PostAsJsonAsync("/api/v1/company/email-config/test", Body());
+        var named = await client.PostAsJsonAsync($"/api/v1/company/email-config/test?managerId={world.Company.Id}", Body());
+
+        Assert.Equal(HttpStatusCode.BadRequest, without.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, named.StatusCode);
+    }
 }

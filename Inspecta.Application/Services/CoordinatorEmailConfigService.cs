@@ -16,10 +16,15 @@ public sealed class CoordinatorEmailConfigService(
     ICompanyGate? companyGate = null,
     TimeProvider? clock = null) : ICoordinatorEmailConfigService
 {
-    private async Task EnsureTeamCoordinatorAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken)
+    private async Task EnsureCompanyUsableAsync(Guid managerId, CancellationToken cancellationToken)
     {
         if (companyGate is not null && !await companyGate.IsUsableAsync(managerId, cancellationToken))
             throw new AuthException("manager_not_found", "An active company was not found.", 404);
+    }
+
+    private async Task EnsureTeamCoordinatorAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken)
+    {
+        await EnsureCompanyUsableAsync(managerId, cancellationToken);
 
         var coordinator = await userRepository.GetByIdAsync(coordinatorId, cancellationToken);
         if (coordinator is null ||
@@ -130,6 +135,13 @@ public sealed class CoordinatorEmailConfigService(
         await configRepository.SaveAsync(config, cancellationToken);
     }
 
+    public async Task<MailboxCheckResponse> TestNewAsync(Guid managerId, CoordinatorEmailConfigRequest request, CancellationToken cancellationToken = default)
+    {
+        Validate(request);
+        await EnsureCompanyUsableAsync(managerId, cancellationToken);
+        tryLimiter.Take(managerId);
+        return Answer(await mailboxProbe.ProbeAsync(MailboxVerification.SettingsOf(request), cancellationToken));
+    }
     public async Task<MailboxCheckResponse> TestAsync(
         Guid managerId, Guid coordinatorId, CoordinatorEmailConfigRequest request, CancellationToken cancellationToken = default)
     {

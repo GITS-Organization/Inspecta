@@ -69,6 +69,7 @@ public sealed class PermissionGuardTests
         ["CoordinatorEmailConfigsController.ChangeSyncFrom"] = "admin,company_admin",
         ["CoordinatorEmailConfigsController.Test"] = "admin,company_admin",
         ["CoordinatorEmailConfigsController.Check"] = "admin,company_admin",
+        ["CompanyMailboxTestController.Test"] = "admin,company_admin",
         ["DashboardController.Overview"] = "admin,technical_manager",
         ["EmailBacklogController.Cleanup"] = "admin",
         ["EmailsController.SendTest"] = "admin,technical_manager,coordinator",

@@ -26,6 +26,9 @@ public interface ICoordinatorEmailConfigService
     /// <summary>Tries the settings typed in (nothing is saved) and says, step by step, whether the mailbox works.</summary>
     Task<MailboxCheckResponse> TestAsync(Guid managerId, Guid coordinatorId, CoordinatorEmailConfigRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>Tries mailbox settings typed in for a coordinator who does not exist yet (nothing is saved), so the settings can be tested before the account is created.</summary>
+    Task<MailboxCheckResponse> TestNewAsync(Guid managerId, CoordinatorEmailConfigRequest request, CancellationToken cancellationToken = default);
+
     /// <summary>Tries the saved mailbox now, remembers the result (its status and when it was checked) and says, step by step, whether it works.</summary>
     Task<MailboxCheckResponse> CheckAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken = default);
 }
