@@ -51,7 +51,7 @@ public sealed class MicrosoftMailboxConnectionService(
         return new StartMicrosoftConnectionResponse(microsoft.BuildAuthorizationUrl(state, challenge));
     }
 
-    public async Task<MicrosoftConnectionResult> CompleteAsync(string? state, string? code, string? error, CancellationToken cancellationToken = default)
+    public async Task<MicrosoftConnectionResult> CompleteAsync(string? state, string? code, string? error, string? errorDescription = null, CancellationToken cancellationToken = default)
     {
         if (!microsoft.IsConfigured)
             return Failed("microsoft_not_configured", "Connecting an Outlook mailbox is not set up on this server yet.");
@@ -61,7 +61,7 @@ public sealed class MicrosoftMailboxConnectionService(
             return Failed("invalid_oauth_state", "This sign-in link is not valid any more. Start connecting the mailbox again.");
 
         if (!string.IsNullOrEmpty(error) || string.IsNullOrWhiteSpace(code))
-            return Failed("microsoft_sign_in_failed", "The Microsoft sign-in was cancelled or refused. Nothing was connected.");
+            return Failed("microsoft_sign_in_failed", "The Microsoft sign-in was cancelled or refused. Nothing was connected." + WhatMicrosoftSaid(error, errorDescription));
 
         var team = await ActiveTeamAsync(remembered.CoordinatorId, cancellationToken);
         if (team is null || team.ManagerId != remembered.ManagerId)
@@ -128,6 +128,21 @@ public sealed class MicrosoftMailboxConnectionService(
         {
             return null;
         }
+    }
+
+    // Microsoft says why it refused (for example access_denied with "AADSTS90094: The grant requires admin permission"). That is shown, cleaned and cut short,
+    // so the real reason can be found; it is only reached with a valid sign-in link, and the page encodes it.
+    private static string WhatMicrosoftSaid(string? error, string? description)
+    {
+        static string Clean(string? text, int max)
+        {
+            var cleaned = new string((text ?? string.Empty).Where(character => !char.IsControl(character)).ToArray()).Trim();
+            return cleaned.Length > max ? cleaned[..max] + "..." : cleaned;
+        }
+        var reason = Clean(error, 60);
+        var detail = Clean(description, 300);
+        if (reason.Length == 0 && detail.Length == 0) return string.Empty;
+        return " Microsoft said: " + reason + (reason.Length > 0 && detail.Length > 0 ? ": " : string.Empty) + detail;
     }
 
     private static MicrosoftConnectionResult Failed(string code, string message) => new(false, message, null, code);

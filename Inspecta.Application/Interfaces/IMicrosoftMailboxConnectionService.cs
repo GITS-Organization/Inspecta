@@ -19,5 +19,5 @@ public interface IMicrosoftMailboxConnectionService
     Task<StartMicrosoftConnectionResponse> StartForAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken = default);
 
     /// <summary>Finishes the sign-in Microsoft redirected back from. Never throws for a bad request: the result says what failed.</summary>
-    Task<MicrosoftConnectionResult> CompleteAsync(string? state, string? code, string? error, CancellationToken cancellationToken = default);
+    Task<MicrosoftConnectionResult> CompleteAsync(string? state, string? code, string? error, string? errorDescription = null, CancellationToken cancellationToken = default);
 }

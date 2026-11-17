@@ -49,9 +49,9 @@ public sealed class MicrosoftMailboxController(
     [EnableRateLimiting(CallbackRateLimitPolicy)]
     [Produces("text/html")]
     public async Task<ContentResult> Callback(
-        [FromQuery] string? code, [FromQuery] string? state, [FromQuery] string? error, CancellationToken cancellationToken)
+        [FromQuery] string? code, [FromQuery] string? state, [FromQuery] string? error, [FromQuery(Name = "error_description")] string? errorDescription, CancellationToken cancellationToken)
     {
-        var result = await connectionService.CompleteAsync(state, code, error, cancellationToken);
+        var result = await connectionService.CompleteAsync(state, code, error, errorDescription, cancellationToken);
         Response.Headers.CacheControl = "no-store";
         var title = result.Connected ? "Mailbox connected" : "The mailbox was not connected";
         var detail = result.Code is null ? string.Empty : $"<p class=\"code\">{WebUtility.HtmlEncode(result.Code)}</p>";

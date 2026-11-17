@@ -445,4 +445,54 @@ public sealed class MicrosoftConnectionHttpTests : IClassFixture<ApiHttpTests.Ap
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.Contains("microsoft_not_configured", await response.Content.ReadAsStringAsync());
     }
+
+    [Fact]
+    public async Task WhenMicrosoftRefusesThePageSaysWhatMicrosoftSaidSoTheRealReasonCanBeFound()
+    {
+        using var host = Host(new FakeMicrosoft());
+        var user = NewCoordinator();
+        var admin = await ManagerAsync(host);
+        var state = await StateOf(await admin.PostAsync(AdminStart(user.Id), null));
+        var description = Uri.EscapeDataString("AADSTS90094: The grant requires admin permission.");
+
+        var page = await Client(host).GetAsync($"{Callback}?error=access_denied&error_description={description}&state={Uri.EscapeDataString(state)}");
+        var html = await page.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, page.StatusCode);
+        Assert.Contains("microsoft_sign_in_failed", html);
+        Assert.Contains("access_denied", html);
+        Assert.Contains("AADSTS90094", html);
+        Assert.False((await ConfigOf(admin, user.Id)).GetProperty("configured").GetBoolean());
+    }
+
+    [Fact]
+    public async Task WhatMicrosoftSaidIsNeverTrustedAsMarkupOrAllowedToGrowWithoutLimit()
+    {
+        using var host = Host(new FakeMicrosoft());
+        var user = NewCoordinator();
+        var admin = await ManagerAsync(host);
+        var state = await StateOf(await admin.PostAsync(AdminStart(user.Id), null));
+        var description = Uri.EscapeDataString("<script>alert(1)</script>" + new string('x', 2000));
+
+        var page = await Client(host).GetAsync($"{Callback}?error=access_denied&error_description={description}&state={Uri.EscapeDataString(state)}");
+        var html = await page.Content.ReadAsStringAsync();
+
+        Assert.DoesNotContain("<script>alert(1)", html);
+        Assert.Contains("&lt;script&gt;", html);
+        Assert.True(html.Length < 4000, $"the page grew to {html.Length} characters");
+    }
+
+    [Fact]
+    public async Task ARefusalWithoutAnyReasonStillShowsTheUsualMessage()
+    {
+        using var host = Host(new FakeMicrosoft());
+        var user = NewCoordinator();
+        var admin = await ManagerAsync(host);
+        var state = await StateOf(await admin.PostAsync(AdminStart(user.Id), null));
+
+        var page = await Client(host).GetAsync($"{Callback}?state={Uri.EscapeDataString(state)}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, page.StatusCode);
+        Assert.Contains("cancelled or refused", await page.Content.ReadAsStringAsync());
+    }
 }
