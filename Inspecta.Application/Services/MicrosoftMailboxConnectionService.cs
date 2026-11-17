@@ -26,16 +26,28 @@ public sealed class MicrosoftMailboxConnectionService(
 
     public async Task<StartMicrosoftConnectionResponse> StartAsync(Guid coordinatorId, CancellationToken cancellationToken = default)
     {
-        if (!microsoft.IsConfigured)
-            throw new AuthException("microsoft_not_configured", "Connecting an Outlook mailbox is not set up on this server yet.", 503);
-
         var coordinator = await ActiveTeamAsync(coordinatorId, cancellationToken)
             ?? throw new AuthException("coordinator_not_found", "An active coordinator of an active team is needed.", 404);
+        return Start(coordinator);
+    }
+
+    public async Task<StartMicrosoftConnectionResponse> StartForAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken = default)
+    {
+        var coordinator = await ActiveTeamAsync(coordinatorId, cancellationToken);
+        if (coordinator is null || coordinator.ManagerId != managerId)
+            throw new AuthException("coordinator_not_found", "An active coordinator of this company is needed.", 404);
+        return Start(coordinator);
+    }
+
+    private StartMicrosoftConnectionResponse Start(AppUser coordinator)
+    {
+        if (!microsoft.IsConfigured)
+            throw new AuthException("microsoft_not_configured", "Connecting an Outlook mailbox is not set up on this server yet.", 503);
 
         var verifier = Base64Url(RandomNumberGenerator.GetBytes(48));
         var challenge = Base64Url(SHA256.HashData(Encoding.ASCII.GetBytes(verifier)));
         var state = secretProtector.Protect(JsonSerializer.Serialize(
-            new MicrosoftConnectionState(coordinatorId, coordinator.ManagerId!.Value, verifier, time.GetUtcNow().Add(StateLifetime))));
+            new MicrosoftConnectionState(coordinator.Id, coordinator.ManagerId!.Value, verifier, time.GetUtcNow().Add(StateLifetime))));
         return new StartMicrosoftConnectionResponse(microsoft.BuildAuthorizationUrl(state, challenge));
     }
 

@@ -12,6 +12,12 @@ public interface IMicrosoftMailboxConnectionService
     /// <exception cref="Exceptions.AuthException"><c>microsoft_not_configured</c> (503) when the server has no Microsoft app settings.</exception>
     Task<StartMicrosoftConnectionResponse> StartAsync(Guid coordinatorId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The company admin starts the Microsoft sign-in for one coordinator of the company. Whoever signs in to Microsoft on the page it opens connects their mailbox
+    /// to that coordinator (the mailbox must be on the company's domain). <c>coordinator_not_found</c> (404) when the person is not an active coordinator of that company.
+    /// </summary>
+    Task<StartMicrosoftConnectionResponse> StartForAsync(Guid managerId, Guid coordinatorId, CancellationToken cancellationToken = default);
+
     /// <summary>Finishes the sign-in Microsoft redirected back from. Never throws for a bad request: the result says what failed.</summary>
     Task<MicrosoftConnectionResult> CompleteAsync(string? state, string? code, string? error, CancellationToken cancellationToken = default);
 }

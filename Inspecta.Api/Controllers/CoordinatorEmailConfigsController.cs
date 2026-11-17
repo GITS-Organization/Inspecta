@@ -14,7 +14,8 @@ namespace Inspecta.Api.Controllers;
 [Route("api/v1/company/users/{coordinatorId:guid}/email-config")]
 [Route("api/v1/manager/team/{coordinatorId:guid}/email-config")]
 public sealed class CoordinatorEmailConfigsController(
-    ICoordinatorEmailConfigService configService) : ControllerBase
+    ICoordinatorEmailConfigService configService,
+    IMicrosoftMailboxConnectionService microsoftConnection) : ControllerBase
 {
     /// <summary>Replace the encrypted IMAP settings for a coordinator in the selected team.</summary>
     [RequirePermission(Permissions.AccountsManage)]
@@ -99,6 +100,22 @@ public sealed class CoordinatorEmailConfigsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<MailboxCheckResponse>> Check(Guid coordinatorId, [FromQuery] Guid? managerId, CancellationToken cancellationToken) =>
         Ok(await configService.CheckAsync(ResolveManagerId(managerId), coordinatorId, cancellationToken));
+
+    /// <summary>Start connecting an Outlook / Microsoft 365 mailbox to this coordinator: gives the Microsoft sign-in address to open in a browser.</summary>
+    /// <remarks>
+    /// The company admin opens <c>authorizationUrl</c> and signs in to Microsoft with the mailbox's account (or sends the page to the person who owns it); Microsoft then
+    /// sends the browser to the callback, which saves the connection to this coordinator and shows a plain page. The coordinator does not need to sign in to the app.
+    /// The mailbox must be on the company's email domain. The link is valid for 10 minutes. Afterwards read <c>GET .../email-config</c>: <c>authMode: microsoft_oauth</c>, <c>connectionStatus: connected</c>.
+    /// <c>503 microsoft_not_configured</c> when the server has no Microsoft app settings; <c>404 coordinator_not_found</c> for anyone who is not an active coordinator of the company.
+    /// </remarks>
+    [RequirePermission(Permissions.AccountsManage)]
+    [HttpPost("microsoft/start")]
+    [ProducesResponseType<StartMicrosoftConnectionResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<ActionResult<StartMicrosoftConnectionResponse>> StartMicrosoft(
+        Guid coordinatorId, [FromQuery] Guid? managerId, CancellationToken cancellationToken) =>
+        Ok(await microsoftConnection.StartForAsync(ResolveManagerId(managerId), coordinatorId, cancellationToken));
 
     private Guid ResolveManagerId(Guid? requestedManagerId)
     {

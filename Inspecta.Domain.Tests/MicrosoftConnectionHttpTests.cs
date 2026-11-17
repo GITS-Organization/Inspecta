@@ -358,4 +358,91 @@ public sealed class MicrosoftConnectionHttpTests : IClassFixture<ApiHttpTests.Ap
         Assert.Equal("connected", fixedConfig.GetProperty("connectionStatus").GetString());
         Assert.Equal(JsonValueKind.Null, fixedConfig.GetProperty("lastAuthError").ValueKind);
     }
+
+    private static string AdminStart(Guid coordinatorId) => $"/api/v1/company/users/{coordinatorId}/email-config/microsoft/start";
+
+    private static async Task<string> StateOf(HttpResponseMessage response)
+    {
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return HttpUtility.ParseQueryString(new Uri(json.RootElement.GetProperty("authorizationUrl").GetString()!).Query)["state"]!;
+    }
+
+    [Fact]
+    public async Task TheCompanyAdminStartsTheOutlookConnectionForACoordinatorWhoNeverSignsInAndTheSignInConnectsThatCoordinator()
+    {
+        using var host = Host(new FakeMicrosoft());
+        var user = NewCoordinator();
+        var admin = await ManagerAsync(host);
+
+        var state = await StateOf(await admin.PostAsync(AdminStart(user.Id), null));
+        var page = await CallBack(Client(host), state);
+        var config = await ConfigOf(admin, user.Id);
+
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.True(config.GetProperty("configured").GetBoolean());
+        Assert.Equal("microsoft_oauth", config.GetProperty("authMode").GetString());
+        Assert.Equal("connected", config.GetProperty("connectionStatus").GetString());
+        Assert.Equal("ahmed@example.com", config.GetProperty("emailUsername").GetString());
+        Assert.DoesNotContain("refresh-secret-1", config.ToString());
+    }
+
+    [Fact]
+    public async Task ConnectingOutlookFromTheAdminOverAnExistingPasswordMailboxReplacesIt()
+    {
+        using var host = Host(new FakeMicrosoft());
+        var user = NewCoordinator();
+        var admin = await ManagerAsync(host);
+        var saved = await admin.PutAsJsonAsync($"/api/v1/company/users/{user.Id}/email-config", new
+        {
+            imapServer = "imap.example.com", imapPort = 993, emailUsername = "old@example.com", password = "old-password"
+        });
+        Assert.Equal(HttpStatusCode.NoContent, saved.StatusCode);
+
+        await CallBack(Client(host), await StateOf(await admin.PostAsync(AdminStart(user.Id), null)));
+        var config = await ConfigOf(admin, user.Id);
+
+        Assert.Equal("microsoft_oauth", config.GetProperty("authMode").GetString());
+        Assert.Equal("ahmed@example.com", config.GetProperty("emailUsername").GetString());
+    }
+
+    [Fact]
+    public async Task OnlyTheCompanyAdminMayStartItAndNotForAnotherCompanysCoordinator()
+    {
+        using var host = Host(new FakeMicrosoft());
+        var user = NewCoordinator();
+        var coordinator = As(Client(host), await SignIn(Client(host), user.Email));
+        var technicalManager = As(Client(host), await SignIn(Client(host), "manager-a@example.com"));
+        var otherCompanyAdmin = await ManagerAsync(host, "company-admin-b@example.com");
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await coordinator.PostAsync(AdminStart(user.Id), null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await technicalManager.PostAsync(AdminStart(user.Id), null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await otherCompanyAdmin.PostAsync(AdminStart(user.Id), null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Client(host).PostAsync(AdminStart(user.Id), null)).StatusCode);
+    }
+
+    [Fact]
+    public async Task StartingItForAPersonWhoIsNotACoordinatorIsNotFound()
+    {
+        using var host = Host(new FakeMicrosoft());
+        var inspector = api.AddUser($"ms-inspector-{Interlocked.Increment(ref accounts)}@example.com", UserRole.Inspector, api.ManagerA);
+        var admin = await ManagerAsync(host);
+
+        var response = await admin.PostAsync(AdminStart(inspector.Id), null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task StartingItFromTheAdminWithoutMicrosoftSettingsAnswers503MicrosoftNotConfigured()
+    {
+        using var host = Host();
+        var user = NewCoordinator();
+        var admin = await ManagerAsync(host);
+
+        var response = await admin.PostAsync(AdminStart(user.Id), null);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Contains("microsoft_not_configured", await response.Content.ReadAsStringAsync());
+    }
 }
