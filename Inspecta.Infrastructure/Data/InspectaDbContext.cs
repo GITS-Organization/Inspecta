@@ -293,7 +293,7 @@ public sealed class InspectaDbContext(
         emailConfig.Property(item => item.LastUidValidity).HasMaxLength(64);
         emailConfig.Property(item => item.SmtpServer).HasMaxLength(255);
         emailConfig.Property(item => item.EncryptedPassword).HasMaxLength(2048).IsRequired();
-        emailConfig.Property(item => item.EncryptedRefreshToken).HasMaxLength(2048);
+        // No length limit: a Microsoft refresh token is long, and encrypted it is longer still (a 2048 limit made saving a connection fail).
         emailConfig.Property(item => item.MicrosoftTenantId).HasMaxLength(64);
         emailConfig.Property(item => item.LastAuthError).HasMaxLength(500);
         emailConfig.Property(item => item.LastFailedStep).HasMaxLength(16);

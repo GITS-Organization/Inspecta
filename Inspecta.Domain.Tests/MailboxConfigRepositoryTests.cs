@@ -6,6 +6,7 @@ using Inspecta.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace Inspecta.Domain.Tests;
 
@@ -200,6 +201,19 @@ public sealed class MailboxConfigRepositoryTests : IDisposable
         await repository.RecordEmailReceivedAsync(coordinator.Id, At.AddDays(-2));
 
         Assert.Equal(At, Read().LastEmailAt);
+    }
+
+    [Fact]
+    public void TheColumnForTheEncryptedRefreshTokenFitsTheLongestTokenMicrosoftGivesOut()
+    {
+        var key = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+        var protector = new Inspecta.Infrastructure.Services.AesGcmSecretProtector(
+            new Microsoft.Extensions.Configuration.ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["IMAP_ENCRYPTION_KEY"] = key }).Build());
+        var needed = protector.Protect(new string('r', 4000)).Length;
+        using var db = CreateContext();
+        var column = db.Model.FindEntityType(typeof(CoordinatorEmailConfig))!.FindProperty(nameof(CoordinatorEmailConfig.EncryptedRefreshToken))!.GetMaxLength();
+
+        Assert.True(column is null || column >= needed, $"the column holds {column} characters but an encrypted 4000-character refresh token needs {needed}");
     }
 
     public void Dispose() => connection.Dispose();
