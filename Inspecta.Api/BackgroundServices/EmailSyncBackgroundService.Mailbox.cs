@@ -49,7 +49,6 @@ public sealed partial class EmailSyncBackgroundService
             // Read-only: the mailbox is never modified. Progress is tracked by UID instead of the read flag.
             var inbox = client.Inbox;
             await inbox.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
-            await RecordHealthAsync(config, failure: null, step: null);
             var uidValidity = inbox.UidValidity.ToString(CultureInfo.InvariantCulture);
 
             var syncFrom = config.SyncFromUtc;
@@ -96,6 +95,8 @@ public sealed partial class EmailSyncBackgroundService
 
             var advanceTo = cursor;
             var blocked = false;
+            // An email that cannot be imported is shown on the mailbox, so the card does not say "connected" while mail goes missing.
+            MailboxSyncFailure? importProblem = null;
             DateTimeOffset? newestReceived = null;
             void Touch(MimeKit.MimeMessage received)
             {
@@ -181,6 +182,7 @@ public sealed partial class EmailSyncBackgroundService
                         // One bad message must not block the ones after it. The cursor stays in front of it so it is
                         // retried next cycle (later messages that were imported are skipped by the unique key). After
                         // repeated failures it is given up on, so it cannot hold the mailbox back forever.
+                        importProblem = MailboxSyncFailures.ForImport(uid.Id, exception);
                         var attempts = FailedImports.AddOrUpdate((config.CoordinatorId, uid.Id), 1, (_, count) => count + 1);
                         if (attempts >= MaxImportAttempts)
                         {
@@ -214,6 +216,8 @@ public sealed partial class EmailSyncBackgroundService
                         config.CoordinatorId, uidValidity, advanceTo, syncFrom, CancellationToken.None);
             }
 
+            // Remembered once, at the end, so a failure in the middle is not first called "fine" and then "failed" in the same round.
+            await RecordHealthAsync(config, importProblem?.Reason, importProblem?.Step);
             await client.DisconnectAsync(true, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -226,7 +230,7 @@ public sealed partial class EmailSyncBackgroundService
                 exception,
                 "Failed to synchronize email for coordinator {CoordinatorId}; other mailboxes will continue.",
                 config.CoordinatorId);
-            // A refused sign-in or a server that cannot be reached is remembered, so the company admin can see it; a bug in importing one email is not.
+            // Whatever stopped the sync is remembered, so the company admin can see it instead of a mailbox that says "connected" and delivers nothing.
             if (MailboxSyncFailures.Classify(exception, config.ImapServer, config.ImapPort) is { } failure)
                 await RecordHealthAsync(config, failure.Reason, failure.Step);
         }

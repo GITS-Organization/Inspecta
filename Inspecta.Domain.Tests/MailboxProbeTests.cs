@@ -118,14 +118,51 @@ public sealed class MailboxProbeTests
         Assert.Contains("imap.example.com:993", failure.Reason);
     }
 
+    [Fact]
+    public void A_cancelled_sync_says_nothing_about_the_mailbox()
+    {
+        Assert.Null(MailboxSyncFailures.Classify(new OperationCanceledException(), "imap.example.com", 993));
+    }
+
     [Theory]
     [InlineData(typeof(InvalidOperationException))]
     [InlineData(typeof(ArgumentException))]
-    [InlineData(typeof(OperationCanceledException))]
-    public void A_failure_that_is_not_about_the_mailbox_never_marks_the_mailbox_as_broken(Type kind)
+    public void A_sync_that_stopped_for_any_other_reason_is_shown_with_what_went_wrong_instead_of_staying_silent(Type kind)
     {
-        var error = (Exception)Activator.CreateInstance(kind, "importing one email failed")!;
+        // The card used to say "connected" while the sync was failing for a reason nobody could see.
+        var error = (Exception)Activator.CreateInstance(kind, "no default reviewer")!;
 
-        Assert.Null(MailboxSyncFailures.Classify(error, "imap.example.com", 993));
+        var failure = MailboxSyncFailures.Classify(error, "imap.example.com", 993);
+
+        Assert.NotNull(failure);
+        Assert.Equal("read", failure!.Step);
+        Assert.Contains(kind.Name, failure.Reason);
+        Assert.Contains("no default reviewer", failure.Reason);
+    }
+
+    [Fact]
+    public void The_reason_uses_the_deepest_message_only_its_first_line_and_a_bounded_length()
+    {
+        var inner = new Exception("value too long for type character varying(255)\nDetail: Key (secret)=(hidden)");
+        var error = new InvalidOperationException("An error occurred while saving the entity changes.", inner);
+
+        var failure = MailboxSyncFailures.Classify(error, "imap.example.com", 993)!;
+
+        Assert.Contains("value too long for type character varying(255)", failure.Reason);
+        Assert.DoesNotContain("Detail:", failure.Reason);
+        Assert.DoesNotContain("hidden", failure.Reason);
+
+        var long_ = MailboxSyncFailures.Classify(new InvalidOperationException(new string('x', 5000)), "imap.example.com", 993)!;
+        Assert.True(long_.Reason.Length < 400);
+    }
+
+    [Fact]
+    public void An_email_that_could_not_be_imported_is_a_problem_that_names_the_email_and_the_cause()
+    {
+        var failure = MailboxSyncFailures.ForImport(42, new InvalidOperationException("The sender is missing."));
+
+        Assert.Equal("read", failure.Step);
+        Assert.Contains("42", failure.Reason);
+        Assert.Contains("The sender is missing.", failure.Reason);
     }
 }
