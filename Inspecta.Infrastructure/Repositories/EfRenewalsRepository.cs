@@ -162,10 +162,14 @@ public sealed class EfRenewalsRepository(InspectaDbContext dbContext) : IRenewal
     {
         if (clientIds.Count == 0) return new Dictionary<Guid, RenewalReminder>();
         var ids = clientIds.ToArray();
-        var rows = await dbContext.RenewalReminders.AsNoTracking()
+        // The newest of each client is chosen on small rows (an id and a date); only those few are read in full.
+        var keys = await dbContext.RenewalReminders.AsNoTracking()
             .Where(item => item.ManagerId == managerId && ids.Contains(item.ClientId))
+            .Select(item => new { item.Id, item.ClientId, item.CreatedAt })
             .ToListAsync(cancellationToken);
-        return rows.GroupBy(item => item.ClientId).ToDictionary(group => group.Key, group => group.OrderByDescending(item => item.CreatedAt).First());
+        var latestIds = keys.GroupBy(item => item.ClientId).Select(group => group.OrderByDescending(item => item.CreatedAt).First().Id).ToList();
+        var rows = await dbContext.RenewalReminders.AsNoTracking().Where(item => latestIds.Contains(item.Id)).ToListAsync(cancellationToken);
+        return rows.ToDictionary(item => item.ClientId);
     }
 
     public async Task<IReadOnlyList<RenewalReminderReply>> RepliesAsync(IReadOnlyCollection<Guid> reminderIds, CancellationToken cancellationToken = default)
@@ -196,6 +200,17 @@ public sealed class EfRenewalsRepository(InspectaDbContext dbContext) : IRenewal
     public async Task AddReplyAsync(RenewalReminderReply reply, RenewalReminder reminder, CancellationToken cancellationToken = default)
     {
         dbContext.RenewalReminderReplies.Add(reply);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception)
+        {
+            // The reply and the reminder stay tracked otherwise, and every later save of the same mailbox run would fail with them.
+            foreach (var entry in exception.Entries) entry.State = EntityState.Detached;
+            dbContext.Entry(reply).State = EntityState.Detached;
+            dbContext.Entry(reminder).State = EntityState.Detached;
+            throw;
+        }
     }
 }

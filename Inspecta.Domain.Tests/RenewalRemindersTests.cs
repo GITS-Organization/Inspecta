@@ -555,6 +555,72 @@ public sealed class RenewalRemindersTests : IDisposable
     }
 
     [Fact]
+    public void AReplyThatProvesDeliveryChangesTheRowSoARetryInProgressLosesAndALateFailureCannotUndoIt()
+    {
+        var reminder = RenewalReminder.Create(manager.Id, client.Id, coordinator.Id, Guid.NewGuid(), "integrity-intl.com");
+        reminder.BeginAttempt("certs@deltasteel.com", null, "hager.samy@integrity-intl.com", "Hager Samy", "Subject", "Message", []);
+        reminder.MarkFailed("refused");
+        var before = reminder.UpdatedAt;
+
+        reminder.RecordReply(before.AddSeconds(5));
+
+        Assert.Equal(OutboundEmailStatus.Sent, reminder.Status);
+        Assert.True(reminder.UpdatedAt > before, "the change of status must change the token");
+        // A send that was still in flight reports its failure after the answer: the answer wins.
+        reminder.MarkFailed("timed out");
+        Assert.Equal(OutboundEmailStatus.Sent, reminder.Status);
+        Assert.Equal("replied", reminder.State);
+        // Times kept to the microsecond, as the database keeps them, so the token compares equal.
+        Assert.Equal(0, reminder.UpdatedAt.Ticks % 10);
+    }
+
+    [Fact]
+    public async Task AClosedReminderThatNeverWentOutIsNotSentByARetry()
+    {
+        await using var db = Context();
+        var key = Guid.NewGuid();
+        sender.Failure = new EmailDeliveryException("refused");
+        await Assert.ThrowsAsync<AuthException>(() => Service(db).SendReminderAsync(manager.Id, coordinator.Id, Send(key)));
+        var failed = await db.Set<RenewalReminder>().SingleAsync();
+        Assert.True(await new EfRenewalsRepository(db).CloseReminderAsync(manager.Id, failed.Id, coordinator.Id, DateTimeOffset.UtcNow));
+        sender.Failure = null;
+
+        // The retry is another request: it reads the reminder fresh.
+        await using var retry = Context();
+        var error = await Assert.ThrowsAsync<AuthException>(() => Service(retry).SendReminderAsync(manager.Id, coordinator.Id, Send(key)));
+
+        Assert.Equal("reminder_closed", error.Code);
+        Assert.Empty(sender.Sent);
+    }
+
+    [Fact]
+    public async Task AReplyThatCannotBeSavedDoesNotLeaveBrokenStateForTheNextSavesOfTheSameRun()
+    {
+        var sent = RenewalReminder.Create(manager.Id, client.Id, coordinator.Id, Guid.NewGuid(), "integrity-intl.com");
+        sent.BeginAttempt("certs@deltasteel.com", null, "hager.samy@integrity-intl.com", "Hager Samy", "Subject", "Message", []);
+        sent.MarkSent();
+        await using (var seed = Context()) { seed.Add(sent); seed.SaveChanges(); }
+        var mail = Reply("<" + sent.MessageId + ">", messageId: "<same@deltasteel.com>");
+        await using (var first = Context())
+        {
+            var repository = new EfRenewalsRepository(first);
+            var reminder = (await repository.GetReminderAsync(manager.Id, sent.Id))!;
+            await repository.AddReplyAsync(RenewalReminderReply.Create(manager.Id, sent.Id, mail, DateTimeOffset.UtcNow), reminder);
+        }
+
+        // The same reply arrives again from another mailbox at the same moment: the unique index refuses it.
+        await using var db = Context();
+        var again = new EfRenewalsRepository(db);
+        var tracked = (await again.GetReminderAsync(manager.Id, sent.Id))!;
+        await Assert.ThrowsAnyAsync<DbUpdateException>(() => again.AddReplyAsync(RenewalReminderReply.Create(manager.Id, sent.Id, mail, DateTimeOffset.UtcNow), tracked));
+
+        // The run goes on: an ordinary save in the same scope still works.
+        db.Clients.Add(Client.Create("Another Co.", managerId: manager.Id));
+        await db.SaveChangesAsync();
+        Assert.Single(await Context().Set<RenewalReminderReply>().ToListAsync());
+    }
+
+    [Fact]
     public async Task ARequestAndACloseCannotBothWinTheSameReminder()
     {
         var sent = RenewalReminder.Create(manager.Id, client.Id, coordinator.Id, Guid.NewGuid(), "integrity-intl.com");

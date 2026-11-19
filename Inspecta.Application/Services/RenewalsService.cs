@@ -186,6 +186,8 @@ public sealed class RenewalsService(
         {
             if (existing.ClientId != request.ClientId) throw new AuthException("send_key_used", "This send key belongs to another reminder.", 409);
             if (await AlreadyHandledAsync(existing, cancellationToken) is { } done) return done;
+            // Closed before it ever went out: it is not sent now.
+            if (existing.ClosedAt is not null) throw new AuthException("reminder_closed", "This reminder was closed.", 409);
         }
 
         var checkedRequest = await CheckAsync(managerId, request, cancellationToken);
@@ -241,14 +243,26 @@ public sealed class RenewalsService(
         {
             // The mail server's own words (addresses, internal host names) are not shown or kept: they say nothing a coordinator can act on.
             row.MarkFailed("The mail server did not accept the message.");
-            await repository.SaveAsync(CancellationToken.None);
+            await SaveAfterSendAsync(row, () => row.MarkFailed("The mail server did not accept the message."));
             throw new AuthException("email_delivery_failed", "The email could not be sent. Try again, or check the mailbox settings.", 502);
         }
 
         // Recorded straight away: a retry with the same key finds the reminder already sent.
         row.MarkSent();
-        await repository.SaveAsync(CancellationToken.None);
+        await SaveAfterSendAsync(row, row.MarkSent);
         return new RenewalReminderResult(await ToResponseAsync(row, cancellationToken), true);
+    }
+
+    /// <summary>
+    /// Saves the outcome of the send. If the reminder was changed meanwhile (closed, or answered by the client), it is read again and the outcome is applied
+    /// to the current row: the email went out, so the result must not be lost.
+    /// </summary>
+    private async Task SaveAfterSendAsync(RenewalReminder row, Action apply)
+    {
+        if (await repository.TrySaveAsync(CancellationToken.None)) return;
+        await repository.ReloadReminderAsync(row, CancellationToken.None);
+        apply();
+        await repository.SaveAsync(CancellationToken.None);
     }
 
     /// <summary>A reminder with this key that is already sent (or being sent) is answered, never sent again. <c>null</c> when it can be attempted: failed, or abandoned.</summary>
@@ -277,7 +291,7 @@ public sealed class RenewalsService(
             if (reminder.RequestId is { } existingRequest)
                 throw new AuthException("renewal_request_exists", "A request was already created from this reminder.", 409) { Problems = [existingRequest.ToString()] };
             if (reminder.ClosedAt is not null) throw new AuthException("reminder_closed", "This reminder was closed.", 409);
-            if (reminder.Status != OutboundEmailStatus.Sent) throw new AuthException("reminder_not_sent", "This reminder was not sent, so it has no answer to turn into a request.", 409);
+            if (reminder.Status != OutboundEmailStatus.Sent && reminder.LastReplyAt is null) throw new AuthException("reminder_not_sent", "This reminder was not sent, so it has no answer to turn into a request.", 409);
         }
 
         // The machines must be the client's, in service and not archived; a date is not needed for a request.

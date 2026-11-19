@@ -50,6 +50,13 @@ public sealed class RenewalReminder
 
     public bool IsStalePending => Status == OutboundEmailStatus.Pending && UpdatedAt < DateTimeOffset.UtcNow - OutboundEmail.PendingTimeout;
 
+    /// <summary>Now, to the microsecond: that is all the database keeps, and the date of the last change is the token two clicks compete with, so it must compare equal after a round trip.</summary>
+    private static DateTimeOffset Now()
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new DateTimeOffset(now.Ticks - now.Ticks % 10, TimeSpan.Zero);
+    }
+
     /// <summary>sending, failed, sent, replied, requested or closed.</summary>
     public string State =>
         RequestId is not null ? "requested"
@@ -65,7 +72,7 @@ public sealed class RenewalReminder
             throw new ArgumentException("Company, client, sender and key are required.");
         if (string.IsNullOrWhiteSpace(messageIdDomain)) throw new ArgumentException("A domain for the Message-ID is required.", nameof(messageIdDomain));
 
-        var now = DateTimeOffset.UtcNow;
+        var now = Now();
         return new RenewalReminder
         {
             Id = Guid.NewGuid(),
@@ -99,23 +106,25 @@ public sealed class RenewalReminder
         Status = OutboundEmailStatus.Pending;
         Attempts++;
         LastError = null;
-        UpdatedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = Now();
     }
 
     public void MarkSent()
     {
         Status = OutboundEmailStatus.Sent;
-        SentAt = DateTimeOffset.UtcNow;
+        SentAt = Now();
         UpdatedAt = SentAt.Value;
         LastError = null;
     }
 
     public void MarkFailed(string error)
     {
+        // The client already answered: the email did arrive, whatever the mail server's own answer said.
+        if (LastReplyAt is not null) return;
         if (Status == OutboundEmailStatus.Sent) throw new InvalidOperationException("A sent reminder cannot fail.");
         Status = OutboundEmailStatus.Failed;
         LastError = string.IsNullOrWhiteSpace(error) ? "Unknown error." : error.Length > 500 ? error[..500] : error;
-        UpdatedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = Now();
     }
 
     public IReadOnlyList<ReminderMachine> GetMachines() =>
@@ -133,6 +142,8 @@ public sealed class RenewalReminder
             Status = OutboundEmailStatus.Sent;
             SentAt ??= at;
             LastError = null;
+            // The status changed: a retry that read the row before this must lose.
+            UpdatedAt = at > UpdatedAt ? at : UpdatedAt.AddTicks(10);
         }
     }
 
