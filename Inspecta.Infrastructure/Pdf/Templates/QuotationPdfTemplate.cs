@@ -49,7 +49,8 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
         }
     }
 
-    private static byte[]? Logo(QuotationPdfModel model) => model.Branding?.LogoPng ?? PdfAssets.Logo;
+    // Only a company that may use the built-in identity falls back to the built-in logo.
+    private static byte[]? Logo(QuotationPdfModel model) => model.Branding?.LogoPng ?? (model.Branding is { MayUseBuiltInIdentity: false } ? null : PdfAssets.Logo);
 
     public override string FileName(QuotationPdfModel model) =>
         $"quotation-{SafeFileName(model.ProposalNumber)}.pdf";

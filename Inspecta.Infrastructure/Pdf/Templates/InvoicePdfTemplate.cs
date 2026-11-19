@@ -27,7 +27,8 @@ public sealed class InvoicePdfTemplate : QuestPdfTemplate<InvoicePdfModel>
                 title.Item().PaddingTop(2).Text($"No. {model.Number}").FontSize(10).FontColor(PdfTheme.Muted);
                 title.Item().Text($"Date: {model.IssuedOn.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)}").FontSize(10).FontColor(PdfTheme.Muted);
             });
-            if ((model.Branding?.LogoPng ?? PdfAssets.Logo) is { Length: > 0 } logo)
+            // Only a company that may use the built-in identity falls back to the built-in logo.
+            if ((model.Branding?.LogoPng ?? (model.Branding is { MayUseBuiltInIdentity: false } ? null : PdfAssets.Logo)) is { Length: > 0 } logo)
                 row.ConstantItem(90).Height(60).AlignRight().Image(logo).FitArea();
         });
 
@@ -40,10 +41,10 @@ public sealed class InvoicePdfTemplate : QuestPdfTemplate<InvoicePdfModel>
             column.Item().Element(box => Party(
                 box, "Issuer (From)",
                 [
-                    ("Taxpayer Name", model.IssuerName ?? fallback.Name),
+                    ("Taxpayer Name", model.IssuerNameToPrint(fallback.Name)),
                     ("Registration Number", model.IssuerTaxRegistrationNumber),
                     ("Taxpayer Activity Code", model.IssuerActivityCode),
-                    ("Address", model.IssuerAddress ?? fallback.Address)
+                    ("Address", model.IssuerAddressToPrint(fallback.Address))
                 ]));
             if (model.QuotationReference is not null)
                 column.Item().Text(text =>

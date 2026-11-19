@@ -46,6 +46,7 @@ public sealed class InspectaDbContext(
         company.HasKey(item => item.Id);
         company.Property(item => item.Name).HasMaxLength(Company.MaxNameLength).IsRequired();
         company.Property(item => item.SubscriptionStatus).HasConversion<string>().HasMaxLength(24);
+        company.Property(item => item.KeepsBuiltInIdentity).HasDefaultValue(false);
 
         var user = modelBuilder.Entity<AppUser>();
         user.HasKey(item => item.Id);

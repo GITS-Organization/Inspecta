@@ -55,13 +55,42 @@ public sealed class CompanyProfileService(
     public async Task<byte[]?> GetLogoAsync(Guid managerId, CancellationToken cancellationToken = default) =>
         (await profileRepository.GetByManagerAsync(managerId, tracking: false, cancellationToken))?.LogoPng;
 
+    /// <remarks>
+    /// <c>null</c> (or a profile that keeps the built-in details) means the first customer's identity is drawn. Only a company that keeps the
+    /// built-in identity gets that; any other company is drawn under its own name, with only the images and colours it chose.
+    /// A team that is not a company row (none exists today) is treated as before.
+    /// </remarks>
     public async Task<CompanyBranding?> GetAsync(Guid? managerId, CancellationToken cancellationToken = default)
     {
         if (managerId is not Guid id) return null;
-        return await profileRepository.GetByManagerAsync(id, tracking: false, cancellationToken) is { } profile ? ToBranding(profile) : null;
+        var profile = await profileRepository.GetByManagerAsync(id, tracking: false, cancellationToken);
+        var company = companies is null ? null : await companies.GetByIdAsync(id, tracking: false, cancellationToken);
+        var keeps = company is null || company.KeepsBuiltInIdentity;
+        if (profile is { UsesBuiltInDetails: false }) return ToBranding(profile, keeps);
+        if (keeps) return profile is null ? null : ToBranding(profile, keeps);
+        return OwnNameOnly(company!.Name, profile);
     }
 
-    private static CompanyBranding ToBranding(CompanyProfile profile) => new(
+    /// <summary>A company without details of its own: its name everywhere, nothing of another company, and the images and colours it set.</summary>
+    private static CompanyBranding OwnNameOnly(string name, CompanyProfile? profile) => new(
+        name,
+        name,
+        name,
+        string.Empty,
+        string.Empty,
+        [],
+        [],
+        string.Empty,
+        string.Empty,
+        profile?.LogoPng,
+        profile?.AccreditationsPng,
+        profile?.PrimaryColor ?? CompanyProfile.DefaultPrimaryColor,
+        profile?.AccentColor ?? CompanyProfile.DefaultAccentColor,
+        UsesBuiltInDetails: false,
+        profile?.TaxRegistrationNumber,
+        profile?.ActivityCode);
+
+    private static CompanyBranding ToBranding(CompanyProfile profile, bool keepsBuiltInIdentity) => new(
         profile.Name,
         profile.CertificateTitle ?? profile.Name,
         profile.IssuerName ?? profile.Name,
@@ -77,7 +106,8 @@ public sealed class CompanyProfileService(
         profile.AccentColor,
         profile.UsesBuiltInDetails,
         profile.TaxRegistrationNumber,
-        profile.ActivityCode);
+        profile.ActivityCode,
+        keepsBuiltInIdentity);
 
     private static CompanyProfileResponse Map(CompanyProfile profile) => new(
         profile.ManagerId,

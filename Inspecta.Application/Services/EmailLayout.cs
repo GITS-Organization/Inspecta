@@ -91,7 +91,9 @@ public static class EmailLayout
         // A profile that keeps the built-in details only changes the logo; otherwise it is the company's own details.
         if (company.UsesBuiltInDetails)
             return builtIn is null ? null : new FixedBranding(builtIn.Get() with { LogoPng = company.LogoPng ?? builtIn.Get().LogoPng });
-        return new FixedBranding(new EmailBranding(company.Name, company.Address, company.Website, company.LogoPng ?? builtIn?.Get().LogoPng));
+        // Its own details; without a logo of its own, the built-in one only for a company that keeps the built-in identity.
+        return new FixedBranding(new EmailBranding(company.Name, company.Address, company.Website,
+            company.LogoPng ?? (company.KeepsBuiltInIdentity ? builtIn?.Get().LogoPng : null)));
     }
 
     /// <summary>The logo of the team's company as a preview on screen loads it.</summary>

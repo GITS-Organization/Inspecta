@@ -8,8 +8,10 @@ namespace Inspecta.Application.Services;
 public sealed class ClientCertificateService(
     IClientRepository clientRepository,
     ICertificateFileRepository certificateFiles,
-    IQrCodeRenderer? qrCodes = null)
+    IQrCodeRenderer? qrCodes = null,
+    ICompanyBrandingProvider? companyBranding = null)
 {
+    /// <summary>The issuer of a certificate drawn with the built-in identity of the first customer.</summary>
     public const string Issuer = "Integrity International Inspection";
 
     public async Task<IReadOnlyList<ClientCertificateResponse>> ListAsync(Guid clientId, CancellationToken cancellationToken = default)
@@ -83,10 +85,16 @@ public sealed class ClientCertificateService(
             file.ExaminationDate,
             file.NextExaminationDate,
             file.IssuedAt,
-            Issuer,
+            await IssuerOfAsync(file.ManagerId, cancellationToken),
             PdfPath(normalized),
             file.Result.ToInspectionResult());
     }
+
+    /// <summary>The company that issued the certificate, as its certificates name it: its own issuer name, or the built-in one.</summary>
+    private async Task<string> IssuerOfAsync(Guid companyId, CancellationToken cancellationToken) =>
+        companyBranding is not null && await companyBranding.GetAsync(companyId, cancellationToken) is { MayUseBuiltInIdentity: false } company
+            ? company.IssuerName
+            : Issuer;
 
     /// <summary>
     /// The issued PDF behind a QR code, for the public page's download button. Anyone holding the code may download it:

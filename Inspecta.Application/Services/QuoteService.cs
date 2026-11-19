@@ -395,7 +395,7 @@ public sealed class QuoteService(
             previous?.Message,
             Summarize(request),
             clientName,
-            previous?.GetNotes() ?? QuotationDefaults.StandardNotes,
+            previous?.GetNotes() ?? QuotationDefaults.NotesFor(companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken)),
             previous?.GetScopeOfWork(),
             validForDays);
         // A revision starts from the previous discount, like prices and notes; the coordinator can change it.

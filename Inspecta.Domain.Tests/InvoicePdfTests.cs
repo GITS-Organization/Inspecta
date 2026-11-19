@@ -111,4 +111,41 @@ public sealed class InvoicePdfTests
 
         Assert.Equal("%PDF-", Encoding.ASCII.GetString(file.Content, 0, 5));
     }
+
+    [Fact]
+    public void A_new_company_invoice_never_shows_the_first_customers_name_or_address()
+    {
+        var own = new Inspecta.Application.Pdf.Models.CompanyBranding(
+            "Nour Inspection", "Nour Inspection", "Nour Inspection", "", "", [], [], "", "", null, null, "#112233", "#445566");
+        InvoicePdfModel Invoice(string? name, string? address, Inspecta.Application.Pdf.Models.CompanyBranding? branding) => new(
+            "INV-2026-ABCDEF", Today, name, null, null, address, null, "Client", null, null,
+            [new InvoicePdfLine("Crane", "", 1, "Per Visit", null, 1_000_000)], 1_000_000, 0m, 0, 0m, 0, 1_000_000, 0, 1_000_000, branding);
+
+        Assert.Equal("Nour Inspection", Invoice("Nour Inspection", null, own).IssuerNameToPrint("Built-in name"));
+        Assert.Null(Invoice("Nour Inspection", null, own).IssuerAddressToPrint("Built-in address"));
+        Assert.Null(Invoice(null, null, own).IssuerNameToPrint("Built-in name"));
+        // The built-in identity (no profile, or a company that keeps it) still falls back, as before.
+        Assert.Equal("Built-in address", Invoice(null, null, null).IssuerAddressToPrint("Built-in address"));
+        Assert.Equal("Built-in name", Invoice(null, null, own with { UsesBuiltInDetails = true }).IssuerNameToPrint("Built-in name"));
+        Assert.Equal("Built-in address", Invoice("X", null, own with { KeepsBuiltInIdentity = true }).IssuerAddressToPrint("Built-in address"));
+        Assert.Equal("Cairo", Invoice("X", "Cairo", own).IssuerAddressToPrint("Built-in address"));
+    }
+
+    [Fact]
+    public void A_company_with_its_own_details_and_no_logo_gets_no_logo_never_the_first_customers()
+    {
+        using var provider = Provider();
+        var generator = provider.GetRequiredService<IPdfGenerator>();
+        var onePixel = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==");
+        var company = new Inspecta.Application.Pdf.Models.CompanyBranding(
+            "Nour Inspection", "Nour Inspection", "Nour Inspection", "", "Cairo", [], [], "", "", onePixel, null, "#112233", "#445566");
+        InvoicePdfModel Invoice(Inspecta.Application.Pdf.Models.CompanyBranding branding) => new(
+            "INV-2026-ABCDEF", Today, "Nour Inspection", null, null, "Cairo", null, "Client", null, null,
+            [new InvoicePdfLine("Crane", "", 1, "Per Visit", null, 1_000_000)], 1_000_000, 0m, 0, 0m, 0, 1_000_000, 0, 1_000_000, branding);
+
+        var withLogo = generator.Generate(Invoice(company)).Content.Length;
+        var withoutLogo = generator.Generate(Invoice(company with { LogoPng = null })).Content.Length;
+
+        Assert.True(withoutLogo <= withLogo, $"{withoutLogo} should not be bigger than {withLogo}: no built-in logo");
+    }
 }

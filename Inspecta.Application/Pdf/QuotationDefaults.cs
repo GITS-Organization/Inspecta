@@ -25,6 +25,15 @@ public static class QuotationDefaults
         "All other conditions are subject to Integrity's General Conditions of Services."
     ];
 
+    /// <summary>
+    /// The notes a new quotation of this company starts with: the standard notes, in which the first customer names itself, name the company
+    /// that quotes instead. The built-in identity keeps them word for word.
+    /// </summary>
+    public static IReadOnlyList<string> NotesFor(Models.CompanyBranding? company) =>
+        company is { MayUseBuiltInIdentity: false }
+            ? StandardNotes.Select(note => note.Replace("Integrity's", company.Name + "'s")).ToList()
+            : StandardNotes;
+
     public static string ValidityNote(int days) =>
         $"This quotation is valid for {days} days from the date of this document's issuance.";
 }

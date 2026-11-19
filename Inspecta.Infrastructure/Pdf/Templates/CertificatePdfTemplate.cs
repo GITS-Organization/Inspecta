@@ -24,7 +24,7 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
     private const float Line = 0.7f;
     private const float Pad = 2.4f;
     private const float Gap = 4f;
-    // The built-in identity: used by a team that has no company profile.
+    // The built-in identity: used by a company that keeps it and has no company details of its own.
     private const string BuiltInSigner = "Ahmed Khalil";
     private const string BuiltInPhones = "+201287374933 - 01035945426";
     private const string BuiltInTitle = "Integrity International Inspection";
@@ -43,9 +43,10 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
     private static CompanyBranding? Details(CertificatePdfModel model) => model.Company is { UsesBuiltInDetails: false } ? model.Company : null;
 
     private static string HeaderTitle(CertificatePdfModel model) => Details(model)?.CertificateTitle ?? BuiltInTitle;
-    // A company that has not set its own logo or accreditation marks gets the built-in ones.
-    private static byte[]? Logo(CertificatePdfModel model) => model.Company?.LogoPng ?? PdfAssets.CertificateLogo;
-    private static byte[]? Accreditations(CertificatePdfModel model) => model.Company?.AccreditationsPng ?? PdfAssets.Accreditations;
+    // A company that has not set its own logo or accreditation marks gets the built-in ones only if it may use the built-in identity.
+    private static bool MayUseBuiltIn(CertificatePdfModel model) => model.Company is null || model.Company.MayUseBuiltInIdentity;
+    private static byte[]? Logo(CertificatePdfModel model) => model.Company?.LogoPng ?? (MayUseBuiltIn(model) ? PdfAssets.CertificateLogo : null);
+    private static byte[]? Accreditations(CertificatePdfModel model) => model.Company?.AccreditationsPng ?? (MayUseBuiltIn(model) ? PdfAssets.Accreditations : null);
     private static Color Blue(CertificatePdfModel model) => model.Company is null ? BandBlue : Color.FromHex(model.Company.PrimaryColor);
     private static Color Accent(CertificatePdfModel model) => model.Company is null ? BandGreen : Color.FromHex(model.Company.AccentColor);
 
@@ -120,7 +121,8 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
                     lines.Item().Text(HeaderTitle(model)).Bold();
                     var tagline = company is null ? "Industrial & Energy Services." : company.Tagline;
                     if (!string.IsNullOrWhiteSpace(tagline)) lines.Item().Text(tagline);
-                    lines.Item().Text(company is null ? "21 Nakib Sharif Ramzy st, Smouha, Alex., Egypt." : company.Address);
+                    var address = company is null ? "21 Nakib Sharif Ramzy st, Smouha, Alex., Egypt." : company.Address;
+                    if (!string.IsNullOrWhiteSpace(address)) lines.Item().Text(address);
                     var phones = company is null ? BuiltInPhones : string.Join(" - ", company.Phones);
                     if (phones.Length > 0)
                         lines.Item().Text(text =>
@@ -167,7 +169,8 @@ public sealed class CertificatePdfTemplate : QuestPdfTemplate<CertificatePdfMode
                 {
                     var company = Details(model);
                     lines.Item().Text($"{HeaderTitle(model)}. All rights reserved.").Bold().FontSize(6.8f);
-                    lines.Item().Text($"{HeaderTitle(model)} | {(company is null ? "21 Nakib Sharif Ramzy St., Smouha, Alexandria, Egypt" : company.Address)}").Bold().FontSize(6.8f);
+                    var footerAddress = company is null ? "21 Nakib Sharif Ramzy St., Smouha, Alexandria, Egypt" : company.Address;
+                    lines.Item().Text(string.IsNullOrWhiteSpace(footerAddress) ? HeaderTitle(model) : $"{HeaderTitle(model)} | {footerAddress}").Bold().FontSize(6.8f);
                     var tel = company is null ? "+201287374933 / 01035945426" : string.Join(" / ", company.Phones);
                     if (tel.Length > 0) lines.Item().Text($"Tel: {tel}").Bold().FontSize(6.8f).FontColor(Green);
                     var emails = company is null ? "Ibrahim.ashraf@integrity-intl.com / Info@integrity-intl.com" : string.Join(" / ", company.Emails);

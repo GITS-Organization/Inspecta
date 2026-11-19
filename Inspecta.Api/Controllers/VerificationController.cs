@@ -103,6 +103,8 @@ public sealed class VerificationController(ClientCertificateService certificates
                "tr+tr{border-top:1px solid #edf1f7}.foot{margin-top:16px;color:#5b6b85;font-size:12px}" +
                ".button{display:block;margin-top:18px;padding:12px;border-radius:8px;background:#2b66a6;color:#fff;text-align:center;font-weight:600;text-decoration:none}" +
                "</style></head><body><div class=\"card\">" + body +
-               "<div class=\"foot\">Integrity International Inspection - Report of Thorough Examination</div></div></body></html>";
+               // The company that issued it; a code that matches nothing names no company.
+               (result.Valid ? $"<div class=\"foot\">{H(result.IssuedBy)} - Report of Thorough Examination</div>" : string.Empty) +
+               "</div></body></html>";
     }
 }

@@ -28,6 +28,15 @@ public sealed class Company
 
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
 
+    /// <summary>
+    /// Whether the company may still be drawn with the built-in identity of the first customer (its name, signer, phones, logo and
+    /// accreditation marks) when it has no company details of its own. Only the companies that existed when this was introduced keep it;
+    /// a company created since is always drawn under its own name.
+    /// </summary>
+    public bool KeepsBuiltInIdentity { get; private set; }
+
+    public void KeepBuiltInIdentity() => KeepsBuiltInIdentity = true;
+
     public static Company Create(string name, DateTimeOffset? subscriptionEndDate = null, Guid? id = null, DateTimeOffset? createdAt = null)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("The company name is required.", nameof(name));

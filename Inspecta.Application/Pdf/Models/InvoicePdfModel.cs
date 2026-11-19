@@ -27,7 +27,14 @@ public sealed record InvoicePdfModel(
     long TotalPiastres,
     long PaidPiastres,
     long BalancePiastres,
-    CompanyBranding? Branding = null);
+    CompanyBranding? Branding = null)
+{
+    /// <summary>The issuer's name, or the built-in one only when the company may use the built-in identity.</summary>
+    public string? IssuerNameToPrint(string builtInName) => IssuerName ?? (Branding is { MayUseBuiltInIdentity: false } ? null : builtInName);
+
+    /// <summary>The issuer's address, or the built-in one only when the company may use the built-in identity.</summary>
+    public string? IssuerAddressToPrint(string builtInAddress) => IssuerAddress ?? (Branding is { MayUseBuiltInIdentity: false } ? null : builtInAddress);
+}
 
 /// <summary>One row of the lines table. <c>CodeName</c> is the type of the line (for example "Mobile crane"); there is no item code.</summary>
 public sealed record InvoicePdfLine(string CodeName, string Description, int Quantity, string UnitType, long? UnitPricePiastres, long TotalPiastres);

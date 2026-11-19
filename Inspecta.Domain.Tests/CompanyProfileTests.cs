@@ -35,8 +35,163 @@ public sealed class CompanyProfileTests : IDisposable
         using var db = Context();
         db.Database.EnsureCreated();
         db.AddRange(manager, coordinator);
-        db.Companies.Add(Company.Create("Acme", id: manager.Id));
+        var acme = Company.Create("Acme", id: manager.Id);
+        // These tests are about a company that existed before new companies stopped getting the first customer's identity.
+        acme.KeepBuiltInIdentity();
+        db.Companies.Add(acme);
         db.SaveChanges();
+    }
+
+    /// <summary>A company created now, with its technical manager (the company id is the manager's id, as for every company so far).</summary>
+    private Guid NewCompany(string name, bool keepsBuiltInIdentity = false)
+    {
+        using var db = Context();
+        var technicalManager = AppUser.Create($"tm{Guid.NewGuid():N}@example.com", "Technical Manager", UserRole.TechnicalManager);
+        db.Add(technicalManager);
+        var company = Company.Create(name, id: technicalManager.Id);
+        if (keepsBuiltInIdentity) company.KeepBuiltInIdentity();
+        db.Companies.Add(company);
+        db.SaveChanges();
+        return technicalManager.Id;
+    }
+
+    private static CompanyProfileService Profiles(InspectaDbContext db) =>
+        new(new EfCompanyProfileRepository(db), new EfUserRepository(db), new EfCompanyRepository(db));
+
+    [Fact]
+    public async Task ANewCompanyWithoutAProfileIsNamedAfterItselfAndNeverAfterTheFirstCustomer()
+    {
+        var nour = NewCompany("Nour Inspection");
+        await using var db = Context();
+
+        var branding = await ((ICompanyBrandingProvider)Profiles(db)).GetAsync(nour);
+
+        Assert.NotNull(branding);
+        Assert.False(branding!.UsesBuiltInDetails);
+        Assert.Equal("Nour Inspection", branding.Name);
+        Assert.Equal("Nour Inspection", branding.CertificateTitle);
+        Assert.Equal("Nour Inspection", branding.IssuerName);
+        Assert.Empty(branding.Phones);
+        Assert.Empty(branding.Emails);
+        Assert.Equal(string.Empty, branding.SignerName);
+        Assert.Null(branding.LogoPng);
+        Assert.Null(branding.AccreditationsPng);
+        Assert.NotNull(branding.ToQuotationProfile());
+    }
+
+    [Fact]
+    public async Task AnImagesOnlyProfileOfANewCompanyKeepsItsImagesUnderItsOwnName()
+    {
+        var nour = NewCompany("Nour Inspection");
+        await using var db = Context();
+        var service = Profiles(db);
+        await service.SaveAsync(nour, new SaveCompanyProfileRequest { LogoBase64 = Convert.ToBase64String(Png), PrimaryColor = "#112233" });
+
+        var branding = (await ((ICompanyBrandingProvider)service).GetAsync(nour))!;
+
+        Assert.False(branding.UsesBuiltInDetails);
+        Assert.Equal("Nour Inspection", branding.IssuerName);
+        Assert.Equal(Png, branding.LogoPng);
+        Assert.Equal("#112233", branding.PrimaryColor);
+    }
+
+    [Fact]
+    public async Task ACompanyThatKeepsTheBuiltInIdentityIsDrawnExactlyAsBefore()
+    {
+        var integrity = NewCompany("Integrity", keepsBuiltInIdentity: true);
+        await using var db = Context();
+        var service = Profiles(db);
+
+        Assert.Null(await ((ICompanyBrandingProvider)service).GetAsync(integrity));
+        await service.SaveAsync(integrity, new SaveCompanyProfileRequest { LogoBase64 = Convert.ToBase64String(Png) });
+        Assert.True((await ((ICompanyBrandingProvider)service).GetAsync(integrity))!.UsesBuiltInDetails);
+    }
+
+    [Fact]
+    public async Task ACompanyThatKeepsTheBuiltInIdentityAndHasItsOwnDetailsAlsoStaysExactlyAsBefore()
+    {
+        var integrity = NewCompany("Integrity", keepsBuiltInIdentity: true);
+        await using (var seed = Context())
+        {
+            seed.IssuedCertificateFiles.Add(IssuedCertificateFile.Create(Guid.NewGuid(), Guid.NewGuid(), integrity, null, "Client B", "Crane",
+                "CERT-2026-0003", "JJJJKKKKLLLLMMMM", new DateOnly(2026, 11, 1), new DateOnly(2027, 11, 1), "c.pdf", [1]));
+            seed.SaveChanges();
+        }
+        await using var db = Context();
+        var service = Profiles(db);
+        await service.SaveAsync(integrity, Request() with { LogoBase64 = null });
+
+        var branding = (await ((ICompanyBrandingProvider)service).GetAsync(integrity))!;
+
+        Assert.False(branding.UsesBuiltInDetails);
+        Assert.True(branding.KeepsBuiltInIdentity);
+        // The QR page and the standing notes stay word for word.
+        var certificates = new ClientCertificateService(new EfClientRepository(db), new EfCertificateFileRepository(db), null, service);
+        Assert.Equal(ClientCertificateService.Issuer, (await certificates.VerifyAsync("jjjjkkkkllllmmmm", new DateOnly(2026, 11, 19))).IssuedBy);
+        Assert.Equal(QuotationDefaults.StandardNotes, QuotationDefaults.NotesFor(branding));
+        // Without a logo of its own, the built-in logo is still drawn, as before.
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddPdfGeneration(new ConfigurationBuilder().Build());
+        using var provider = services.BuildServiceProvider();
+        var generator = provider.GetRequiredService<IPdfGenerator>();
+        var withoutLogo = generator.Generate(Certificate(branding)).Content.Length;
+        var withTinyLogo = generator.Generate(Certificate(branding with { LogoPng = Png })).Content.Length;
+        Assert.True(withoutLogo > withTinyLogo, $"{withoutLogo} should be bigger than {withTinyLogo}: the built-in logo is drawn");
+
+        // A new company is told apart by the same flag.
+        var nour = NewCompany("Nour Inspection");
+        Assert.False((await ((ICompanyBrandingProvider)service).GetAsync(nour))!.KeepsBuiltInIdentity);
+    }
+
+    [Fact]
+    public async Task TheQrPageNamesTheCompanyThatIssuedTheCertificate()
+    {
+        var nour = NewCompany("Nour Inspection");
+        var integrity = NewCompany("Integrity", keepsBuiltInIdentity: true);
+        await using (var seed = Context())
+        {
+            seed.IssuedCertificateFiles.Add(IssuedCertificateFile.Create(Guid.NewGuid(), Guid.NewGuid(), nour, null, "Client A", "Forklift",
+                "CERT-2026-0001", "AAAABBBBCCCCDDDD", new DateOnly(2026, 11, 1), new DateOnly(2027, 11, 1), "a.pdf", [1]));
+            seed.IssuedCertificateFiles.Add(IssuedCertificateFile.Create(Guid.NewGuid(), Guid.NewGuid(), integrity, null, "Client B", "Crane",
+                "CERT-2026-0002", "EEEEFFFFGGGGHHHH", new DateOnly(2026, 11, 1), new DateOnly(2027, 11, 1), "b.pdf", [1]));
+            seed.SaveChanges();
+        }
+
+        // The public page has no team.
+        await using var db = Context();
+        var certificates = new ClientCertificateService(new EfClientRepository(db), new EfCertificateFileRepository(db), null, Profiles(db));
+        var today = new DateOnly(2026, 11, 19);
+
+        Assert.Equal("Nour Inspection", (await certificates.VerifyAsync("aaaabbbbccccdddd", today)).IssuedBy);
+        Assert.Equal("Integrity International Inspection", (await certificates.VerifyAsync("eeeeffffgggghhhh", today)).IssuedBy);
+
+        var controller = new Inspecta.Api.Controllers.VerificationController(certificates)
+        {
+            ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new DefaultHttpContext() }
+        };
+        var page = (await controller.Page("aaaabbbbccccdddd", CancellationToken.None)).Content!;
+        Assert.Contains("Nour Inspection", page);
+        Assert.DoesNotContain("Integrity", page);
+        var notFound = (await controller.Page("0000000000000000", CancellationToken.None)).Content!;
+        Assert.DoesNotContain("Integrity", notFound);
+
+        // A company profile of its own names the issuer.
+        await Profiles(db).SaveAsync(nour, Request());
+        Assert.Equal("Acme Inspection Services", (await certificates.VerifyAsync("aaaabbbbccccdddd", today)).IssuedBy);
+    }
+
+    [Fact]
+    public void TheStandingQuotationNotesNameTheCompanyThatQuotes()
+    {
+        var own = new CompanyBranding("Nour Inspection", "Nour Inspection", "Nour Inspection", "", "", [], [], "", "", null, null, "#112233", "#445566");
+
+        var notes = QuotationDefaults.NotesFor(own);
+
+        Assert.DoesNotContain(notes, note => note.Contains("Integrity"));
+        Assert.Contains(notes, note => note.Contains("Nour Inspection's General Conditions of Services"));
+        Assert.Equal(QuotationDefaults.StandardNotes, QuotationDefaults.NotesFor(null));
+        Assert.Equal(QuotationDefaults.StandardNotes, QuotationDefaults.NotesFor(own with { UsesBuiltInDetails = true }));
     }
 
     private InspectaDbContext Context() => new(options, new CurrentTenant(new HttpContextAccessor()));
@@ -188,10 +343,11 @@ public sealed class CompanyProfileTests : IDisposable
         Assert.Equal(EmailLayout.PreviewLogoPath, EmailLayout.PreviewLogoFor(team, null));
         Assert.Equal(EmailLayout.PreviewLogoPath, EmailLayout.PreviewLogoFor(team, company with { LogoPng = null }));
 
-        // A company without a logo of its own signs with the built-in one.
+        // A company with its own details never signs with the first customer's logo; only the built-in details carry it.
         var builtInWithLogo = new FixedBranding(new EmailBranding("Integrity", "Alexandria", "www.integrity-intl.com", [1, 2, 3]));
         Assert.Equal(Png, EmailLayout.BrandingFor(company, builtInWithLogo)!.Get().LogoPng);
-        Assert.Equal([1, 2, 3], EmailLayout.BrandingFor(company with { LogoPng = null }, builtInWithLogo)!.Get().LogoPng);
+        Assert.Null(EmailLayout.BrandingFor(company with { LogoPng = null }, builtInWithLogo)!.Get().LogoPng);
+        Assert.Equal([1, 2, 3], EmailLayout.BrandingFor(company with { LogoPng = null, UsesBuiltInDetails = true }, builtInWithLogo)!.Get().LogoPng);
     }
 
     [Fact]
@@ -210,9 +366,16 @@ public sealed class CompanyProfileTests : IDisposable
         var quotation = Quotation(company);
 
         Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(generator.Generate(certificate).Content, 0, 5));
-        // Without a logo or accreditation marks of its own, the built-in ones are drawn: the file is as large as the built-in one is.
-        var withoutImages = generator.Generate(certificate with { Company = company with { LogoPng = null } }).Content.Length;
-        Assert.True(withoutImages > generator.Generate(certificate).Content.Length, "the built-in logo is bigger than the 1 pixel test logo");
+        // Without a logo or accreditation marks of its own, a company gets no images at all, never the first customer's:
+        // leaving out its 1 pixel image cannot make the file bigger.
+        var withLogo = generator.Generate(certificate).Content.Length;
+        var withoutLogo = generator.Generate(certificate with { Company = company with { LogoPng = null } }).Content.Length;
+        Assert.True(withoutLogo <= withLogo, $"{withoutLogo} should not be bigger than {withLogo}: no built-in logo");
+        var withMarks = generator.Generate(certificate with { Company = company with { AccreditationsPng = Png } }).Content.Length;
+        Assert.True(withLogo <= withMarks, $"{withLogo} should not be bigger than {withMarks}: no built-in accreditation marks");
+        var quotationWithLogo = generator.Generate(quotation).Content.Length;
+        var quotationWithoutLogo = generator.Generate(quotation with { Branding = company with { LogoPng = null } }).Content.Length;
+        Assert.True(quotationWithoutLogo <= quotationWithLogo, $"{quotationWithoutLogo} should not be bigger than {quotationWithLogo}: no built-in logo");
 
         // The built-in company details with a logo of their own are drawn too (the built-in texts, no cover).
         var imagesOnly = company with { UsesBuiltInDetails = true };

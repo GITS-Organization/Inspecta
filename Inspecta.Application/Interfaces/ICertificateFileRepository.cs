@@ -21,7 +21,8 @@ public sealed record IssuedCertificateSummary(
     string? QrData = null,
     string? PreparedBy = null,
     Inspecta.Domain.Enums.CertificateResult? Result = null,
-    int ContentLength = 0);
+    int ContentLength = 0,
+    Guid ManagerId = default);
 
 /// <summary>When a certificate was handed to the client, to whom, and (when it went by email) the copies and subject.</summary>
 public sealed record CertificateHandover(Guid CertificateId, DateTimeOffset SentAt, string? SentTo, bool EmailSent, IReadOnlyList<string> Cc, string? Subject);
