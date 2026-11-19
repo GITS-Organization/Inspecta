@@ -41,7 +41,8 @@ public sealed class MailKitSmtpEmailSender(ILogger<MailKitSmtpEmailSender> logge
         }
     }
 
-    private static MimeMessage BuildMessage(OutgoingEmail email)
+    /// <summary>The message as it is sent. The file is attached only when one is given (a renewal reminder has none).</summary>
+    public static MimeMessage BuildMessage(OutgoingEmail email)
     {
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress(email.FromName, email.FromAddress));
@@ -57,7 +58,8 @@ public sealed class MailKitSmtpEmailSender(ILogger<MailKitSmtpEmailSender> logge
 
         // Plain text always; the HTML version (when given) makes the links clickable in mail clients that prefer HTML.
         var body = new BodyBuilder { TextBody = email.BodyText, HtmlBody = email.BodyHtml };
-        body.Attachments.Add(email.AttachmentFileName, email.AttachmentContent, ContentType.Parse(email.AttachmentFileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ? "application/zip" : "application/pdf"));
+        if (!string.IsNullOrWhiteSpace(email.AttachmentFileName) && email.AttachmentContent is { } file)
+            body.Attachments.Add(email.AttachmentFileName, file, ContentType.Parse(email.AttachmentFileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ? "application/zip" : "application/pdf"));
         foreach (var more in email.MoreAttachments ?? [])
             body.Attachments.Add(more.FileName, more.Content, ContentType.Parse(more.ContentType));
         foreach (var image in email.InlineImages ?? [])

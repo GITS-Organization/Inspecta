@@ -152,7 +152,7 @@ public sealed class CertificateDeliveryTests : IDisposable
         Assert.Equal("<id@alnoor.com>", email.InReplyTo);
         Assert.Contains("<id@alnoor.com>", email.References);
         Assert.Equal(2, 1 + email.MoreAttachments!.Count);
-        Assert.All(email.MoreAttachments.Select(file => file.Content).Append(email.AttachmentContent), content => Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(content, 0, 5)));
+        Assert.All(email.MoreAttachments.Select(file => file.Content).Append(email.AttachmentContent), content => Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(content!, 0, 5)));
         await using var db = CreateContext();
         var row = Assert.Single(db.CertificateDeliveries.ToList());
         Assert.True(row.Sent);
