@@ -42,7 +42,8 @@ Content-Type: application/json
   "email": "manager@example.com",
   "fullName": "Technical Manager",
   "password": "Replace-With-Strong-Password",
-  "subscriptionMonths": 12
+  "subscriptionMonths": 12,
+  "companyName": "Example Inspection Co."
 }
 
 ### Activate/reactivate a Technical Manager subscription (Admin; end date may be null for no expiry)

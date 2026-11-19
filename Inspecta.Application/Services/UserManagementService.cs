@@ -75,6 +75,10 @@ public sealed class UserManagementService(
         ValidatePassword(request.Password);
         if (request.SubscriptionMonths is < 1 or > 120)
             throw new ArgumentOutOfRangeException(nameof(request.SubscriptionMonths));
+        // The company name is printed as the issuer of its certificates: it is never the person's name.
+        var companyName = !string.IsNullOrWhiteSpace(request.CompanyName) ? request.CompanyName.Trim()
+            : !string.IsNullOrWhiteSpace(request.CompanyProfile?.Name) ? request.CompanyProfile!.Name!.Trim()
+            : throw new AuthException("company_name_required", "Give the name of the company this technical manager starts.", 400);
 
         // The identity is checked first: a mistake in it must not leave an account without it.
         if (request.CompanyProfile is not null)
@@ -93,7 +97,7 @@ public sealed class UserManagementService(
         var manager = CreateUser(email, request.FullName, UserRole.TechnicalManager, request.Password, []);
         manager.AssignToManager(manager.Id);
         var company = Company.Create(
-            request.CompanyProfile?.Name is { Length: > 0 } profileName ? profileName : request.FullName,
+            companyName,
             DateTimeOffset.UtcNow.AddMonths(request.SubscriptionMonths),
             id: manager.Id);
         company.SetDefaultReviewer(manager.Id);

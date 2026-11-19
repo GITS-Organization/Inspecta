@@ -369,7 +369,7 @@ Content-Type: application/json
 GET {{baseUrl}}/api/v1/dashboard/overview?clientId={{clientId}}&inspectorId={{inspectorId}}&from=2026-10-01&to=2026-11-02
 Authorization: Bearer {{accessToken}}
 
-### Admin: create a technical manager together with its company identity (the logo and accreditations are optional: the built-in ones are used when left out)
+### Admin: create a technical manager together with its company identity (the logo and accreditations are optional: left out, the documents carry none)
 POST {{baseUrl}}/api/v1/technical-managers
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
@@ -388,7 +388,7 @@ Content-Type: application/json
   }
 }
 
-### Admin: create a technical manager that keeps the built-in (Integrity) details and only changes the logo (no name and address)
+### Admin: create a technical manager whose company is shown under its name with only a logo (no address yet)
 POST {{baseUrl}}/api/v1/technical-managers
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
@@ -397,6 +397,7 @@ Content-Type: application/json
   "email": "manager2@example.com",
   "fullName": "Second Manager",
   "password": "ChangeMe-StrongPassword1",
+  "companyName": "Second Inspection Co.",
   "companyProfile": { "logoBase64": "iVBORw0KGgo..." }
 }
 

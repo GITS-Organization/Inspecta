@@ -376,10 +376,10 @@ public static class WorkflowDocs
         [Key<TechnicalManagersController>(nameof(TechnicalManagersController.Create))] = new(1, "Company 1 · Create a technical manager and its company",
             """
             **Who:** Admin only. **When:** a new company becomes a customer. Everything is set in one call.
-            **How:** `POST /technical-managers` with `email`, `fullName`, `password` (at least 12 characters) and `subscriptionMonths` (1 to 120, default 1). Add `companyProfile` to set the company identity at the same time:
-            - `name` and `address` go together: give both for the company's own details, or leave both out to keep the built-in details (the first customer's) and change only the logo, accreditation marks and colours.
+            **How:** `POST /technical-managers` with `email`, `fullName`, `password` (at least 12 characters), `subscriptionMonths` (1 to 120, default 1) and `companyName` (at most 200 characters). The company name is required unless `companyProfile.name` is given (`companyName` wins when both are); without one the call answers `400 company_name_required` and creates nothing, because the company name is printed as the issuer of its certificates. Add `companyProfile` to set the company identity at the same time:
+            - `name` and `address` go together: give both for the company's own details, or leave both out and the company is shown under its company name, with only the logo, accreditation marks and colours you send.
             - `phones`, `emails` (at most 5 each), `website`, `certificateTitle`, `issuerName`, `tagline`, `signerName`, `primaryColor` and `accentColor` (`#RRGGBB`).
-            - `logoBase64` and `accreditationsBase64`: PNG, at most 1 MB each. Left out, the built-in logo and accreditation marks are used.
+            - `logoBase64` and `accreditationsBase64`: PNG, at most 1 MB each. Left out, the documents carry no logo or accreditation marks (a new company never gets another company's).
             A mistake in `companyProfile` answers `400` and creates no account. `409` when the email is already used.
             **Next:** sign in as the new manager and add the team (coordinators and inspectors), or open the profile (step 2).
             """),
@@ -387,8 +387,8 @@ public static class WorkflowDocs
             "**How:** `GET /admin/managers/{managerId}/company-profile` returns the identity printed for that team, or `404` when it has none (the built-in profile is used)."),
         [Key<AdminCompanyProfilesController>(nameof(AdminCompanyProfilesController.Save))] = new(3, "Company 3 · Change the company profile of a team",
             """
-            **Who:** Admin only. Do this when a new company is set up, before its first certificate or quotation: without a profile its documents carry the built-in identity.
-            **How:** `PUT /admin/managers/{managerId}/company-profile` with `name` and `address` (together; leave both out to keep the built-in company details and set only the images and colours), `certificateTitle`, `issuerName`, `tagline`, `phones`, `emails`, `website`, `signerName`, `primaryColor` and `accentColor` (`#RRGGBB`), and the images `logoBase64` and `accreditationsBase64` (PNG, at most 1 MB; left out keeps the current one, an empty text removes it; a company without its own logo or accreditation marks gets the built-in ones). The same object can be sent as `companyProfile` in `POST /technical-managers`.
+            **Who:** Admin only. Do this when a new company is set up, before its first certificate or quotation: without a profile a new company's documents show only its company name. (Only companies that existed before 19 Nov 2026 keep the built-in identity of the first customer.)
+            **How:** `PUT /admin/managers/{managerId}/company-profile` with `name` and `address` (together; leave both out to set only the images and colours under the company name), `certificateTitle`, `issuerName`, `tagline`, `phones`, `emails`, `website`, `signerName`, `primaryColor` and `accentColor` (`#RRGGBB`), and the images `logoBase64` and `accreditationsBase64` (PNG, at most 1 MB; left out keeps the current one, an empty text removes it; only a company that keeps the built-in identity gets the built-in ones when it has none). The same object can be sent as `companyProfile` in `POST /technical-managers`.
             It then shows on the certificates (header, footer, logo, faded logo, bands, notes, signature box), on the signature of the emails and on the quotation. A quotation of such a team has no cover and leaves out the pages of texts it does not have. Documents already issued do not change.
             """),
         [Key<TechnicalManagersController>(nameof(TechnicalManagersController.UpdateSubscription))] = new(4, "Company 4 · Activate, suspend or extend the subscription",

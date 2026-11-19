@@ -222,11 +222,13 @@ public sealed class UserManagementTests
             Email = "manager@example.com",
             FullName = "Technical Manager",
             Password = "StrongPassword123!",
-            SubscriptionMonths = 12
+            SubscriptionMonths = 12,
+            CompanyName = "  Delta Inspection  "
         });
 
         var account = Assert.Single(await users.ListAsync(role: UserRole.TechnicalManager));
         var company = Assert.Single(companies.Items);
+        Assert.Equal("Delta Inspection", company.Name);
         Assert.Equal(account.Id, created.Id);
         Assert.Equal(account.Id, company.Id);
         Assert.Equal(account.Id, company.DefaultReviewerId);
@@ -252,6 +254,48 @@ public sealed class UserManagementTests
 
         Assert.Equal(created.Id, profiles.SavedFor);
         Assert.Same(profile, profiles.Saved);
+    }
+
+    [Fact]
+    public async Task ACompanyIsNeverNamedAfterThePersonItsNameIsRequired()
+    {
+        // A company without a name used to take the manager's own name, which is printed as the issuer of its certificates.
+        var users = new MemoryUserRepository();
+        var companies = new FakeCompanyRepository();
+        var service = CreateService(users, companies);
+
+        var error = await Assert.ThrowsAsync<AuthException>(() => service.CreateTechnicalManagerAsync(new CreateTechnicalManagerRequest
+        {
+            Email = "manager@example.com", FullName = "Mona Hassan", Password = "StrongPassword123!", CompanyName = "   "
+        }));
+
+        Assert.Equal("company_name_required", error.Code);
+        Assert.Equal(400, error.StatusCode);
+        Assert.Empty(companies.Items);
+        Assert.Empty(await users.ListAsync(role: UserRole.TechnicalManager));
+
+        // A profile with only images, and no company name, is refused before anything is checked or saved.
+        var imagesOnly = new RecordingProfiles();
+        var imagesService = new UserManagementService(users, new FakePasswordService(), new FakeSecretProtector(), imagesOnly, companies: companies);
+        var imagesError = await Assert.ThrowsAsync<AuthException>(() => imagesService.CreateTechnicalManagerAsync(new CreateTechnicalManagerRequest
+        {
+            Email = "manager2@example.com", FullName = "Mona Hassan", Password = "StrongPassword123!", CompanyName = null,
+            CompanyProfile = new Inspecta.Application.Contracts.Company.SaveCompanyProfileRequest { LogoBase64 = "iVBORw0KGgo=" }
+        }));
+        Assert.Equal("company_name_required", imagesError.Code);
+        Assert.Empty(companies.Items);
+        Assert.Empty(await users.ListAsync(role: UserRole.TechnicalManager));
+        Assert.Null(imagesOnly.Saved);
+
+        // The name of the company profile counts as the company name.
+        var profiles = new RecordingProfiles();
+        var withProfile = new UserManagementService(users, new FakePasswordService(), new FakeSecretProtector(), profiles, companies: companies);
+        await withProfile.CreateTechnicalManagerAsync(new CreateTechnicalManagerRequest
+        {
+            Email = "manager@acme.com", FullName = "Acme Manager", Password = "StrongPassword123!",
+            CompanyProfile = new Inspecta.Application.Contracts.Company.SaveCompanyProfileRequest { Name = "Acme", Address = "Cairo" }
+        });
+        Assert.Equal("Acme", Assert.Single(companies.Items).Name);
     }
 
     [Fact]

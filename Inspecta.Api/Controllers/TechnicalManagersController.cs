@@ -16,12 +16,13 @@ public sealed class TechnicalManagersController(IUserManagementService userManag
     /// <remarks>
     /// <c>companyProfile</c> (same fields as <c>PUT /admin/managers/{managerId}/company-profile</c>: name, address, contacts, logo, accreditations, colours)
     /// sets the identity printed on the team's certificates, quotations and emails. It is checked first, so a mistake in it (<c>400</c>) creates no account.
-    /// A profile with only <c>logoBase64</c>, <c>accreditationsBase64</c> or colours keeps the built-in company details (the first customer's) and changes just those.
-    /// Left out, the team uses the built-in identity until a profile is set. A profile without its own logo or accreditation marks gets the built-in ones.
+    /// A profile with only <c>logoBase64</c>, <c>accreditationsBase64</c> or colours shows the company under its company name with just those images and colours.
+    /// Left out, the company is shown under its name only until a profile is set. The company name (<c>companyName</c>, or the profile's name; <c>companyName</c> wins when both are given) is required: 400 <c>company_name_required</c>.
     /// </remarks>
     [RequirePermission(Permissions.PlatformAdminister)]
     [HttpPost]
     [ProducesResponseType<AuthUserResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<AuthUserResponse>> Create(
         CreateTechnicalManagerRequest request,

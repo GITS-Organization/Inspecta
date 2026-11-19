@@ -348,7 +348,7 @@ public sealed class ReviewerApiTests : IClassFixture<ApiHttpTests.Api>
 
         var created = await owner.PostAsJsonAsync("/api/v1/technical-managers", new
         {
-            email, fullName = "Fresh Manager", password = ApiHttpTests.Password, subscriptionMonths = 6
+            email, fullName = "Fresh Manager", password = ApiHttpTests.Password, subscriptionMonths = 6, companyName = "Fresh Inspection"
         });
 
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
