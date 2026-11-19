@@ -41,11 +41,18 @@ public static class EmailLayout
     /// <param name="logoSource">
     /// What the logo's <c>src</c> is: <c>cid:...</c> in an email that carries the logo, or a web address for a preview on screen.
     /// </param>
-    public static LaidOutEmail Build(string bodyText, EmailSignatureInfo? signature, QuotedEmail? original, string? logoSource = null)
+    /// <param name="appendix">An extra block after the text and before the signature (the table of machines of a renewal reminder). Left out, nothing changes.</param>
+    public static LaidOutEmail Build(
+        string bodyText, EmailSignatureInfo? signature, QuotedEmail? original, string? logoSource = null, (string Text, string Html)? appendix = null)
     {
         var text = new StringBuilder(bodyText.TrimEnd());
         var html = new StringBuilder(CertificateDeliveryService.PlainTextToHtml(bodyText.TrimEnd()));
         var images = new List<EmailAttachment>();
+        if (appendix is { } block)
+        {
+            text.Append(Environment.NewLine).Append(Environment.NewLine).Append(block.Text);
+            html.Append(block.Html);
+        }
 
         if (signature is not null)
         {
@@ -72,12 +79,15 @@ public static class EmailLayout
     /// nothing quoted.
     /// </summary>
     public static LaidOutEmail ForCoordinator(
-        string bodyText, AppUser? coordinator, string? fromAddress, RequestEmail? source, IEmailBranding? branding, string? logoSource = null)
+        string bodyText, AppUser? coordinator, string? fromAddress, RequestEmail? source, IEmailBranding? branding, string? logoSource = null,
+        (string Text, string Html)? appendix = null)
     {
         if (branding is null || coordinator is null || string.IsNullOrWhiteSpace(fromAddress))
-            return new LaidOutEmail(bodyText, CertificateDeliveryService.PlainTextToHtml(bodyText), []);
+            return appendix is { } block
+                ? new LaidOutEmail(bodyText + Environment.NewLine + Environment.NewLine + block.Text, CertificateDeliveryService.PlainTextToHtml(bodyText) + block.Html, [])
+                : new LaidOutEmail(bodyText, CertificateDeliveryService.PlainTextToHtml(bodyText), []);
         var signature = new EmailSignatureInfo(coordinator.FullName, JobTitleOf(coordinator.Role), coordinator.Phone, fromAddress, branding.Get());
-        return Build(bodyText, signature, Quote(source), logoSource);
+        return Build(bodyText, signature, Quote(source), logoSource, appendix);
     }
 
     /// <summary>The address the logo is served from for a preview on screen (a real email carries it inside).</summary>

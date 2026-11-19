@@ -22,6 +22,7 @@ public sealed class PostgresQueryTranslationTests
         var manager = Guid.NewGuid();
         var client = Guid.NewGuid();
         var ids = new List<Guid> { Guid.NewGuid() };
+        var messageIds = new List<string> { "a@b.com" };
 
         var queries = new[]
         {
@@ -45,6 +46,18 @@ public sealed class PostgresQueryTranslationTests
             db.ClientMailRules.IgnoreQueryFilters().AsNoTracking().Where(rule => rule.ClientId == null || !db.Clients.IgnoreQueryFilters()
                 .Where(client => client.ArchivedAt != null).Select(client => client.Id).Contains(rule.ClientId.Value)).ToQueryString(),
             db.Requests.Include(item => item.Client).Include(item => item.Items).AsSplitQuery().OrderByDescending(item => item.ReceivedAt).ToQueryString(),
+            // Renewals: the list, the reminder checks and the reply lookups of the mailbox import.
+            db.Items.AsNoTracking().Where(item => item.Client!.ManagerId == manager && item.Client.ArchivedAt == null && item.NextInspectionDueAt != null && item.Status == EquipmentStatus.Active && !item.IsArchived && item.ArchivedAt == null)
+                .Select(item => new { item.ClientId, item.Id, item.Name, item.SerialNumber, item.Capacity, item.LastInspectionAt, item.LastInspectedOn, Due = item.NextInspectionDueAt!.Value }).ToQueryString(),
+            db.RequestItems.AsNoTracking().Where(item => item.EquipmentId != null && ids.Contains(item.EquipmentId.Value) && item.Request!.ManagerId == manager && item.Request.Triage != RequestTriage.Maybe && !new[] { JobStatus.QuoteRejected }.Contains(item.Request.Status))
+                .Select(item => item.EquipmentId!.Value).Distinct().ToQueryString(),
+            db.Items.AsNoTracking().Where(item => ids.Contains(item.Id) && item.Client!.ManagerId == manager)
+                .Select(item => new { item.Id, item.ClientId, Retired = item.Status == EquipmentStatus.Retired, Archived = item.IsArchived || item.ArchivedAt != null, item.NextInspectionDueAt }).ToQueryString(),
+            db.RenewalReminders.AsNoTracking().Where(item => item.ManagerId == manager && (client == Guid.Empty || item.ClientId == client)).ToQueryString(),
+            db.RenewalReminders.IgnoreQueryFilters().Where(item => item.ManagerId == manager && item.Status == OutboundEmailStatus.Sent && messageIds.Contains(item.MessageId)).ToQueryString(),
+            db.RenewalReminders.IgnoreQueryFilters().Where(item => item.ManagerId == manager && item.MessageId == "x").ToQueryString(),
+            db.RenewalReminderReplies.IgnoreQueryFilters().Where(reply => reply.ManagerId == manager && reply.MessageId == "x").ToQueryString(),
+            db.RenewalReminderReplies.AsNoTracking().Where(reply => ids.Contains(reply.ReminderId)).ToQueryString(),
             // The dashboard: the same queries as EfDashboardRepository.
             db.Requests.AsNoTracking().Where(item => item.Triage == RequestTriage.Request && item.ManagerId == manager && item.ClientId == client && item.InspectorId == client)
                 .GroupBy(item => item.Status).Select(group => new { Status = group.Key, Count = group.Count() }).ToQueryString(),

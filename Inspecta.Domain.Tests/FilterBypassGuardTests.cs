@@ -19,6 +19,7 @@ public sealed class FilterBypassGuardTests
         ["EfEmailSyncRepository.cs"] = 10,
         ["EfEquipmentCatalog.cs"] = 1,
         ["EfEquipmentRepository.cs"] = 2,
+        ["EfRenewalsRepository.cs"] = 3,
         ["EfUserRepository.cs"] = 3
     };
 

@@ -25,6 +25,8 @@ public sealed class InspectaDbContext(
     public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();
     public DbSet<ClientReply> ClientReplies => Set<ClientReply>();
     public DbSet<OutboundEmail> OutboundEmails => Set<OutboundEmail>();
+    public DbSet<RenewalReminder> RenewalReminders => Set<RenewalReminder>();
+    public DbSet<RenewalReminderReply> RenewalReminderReplies => Set<RenewalReminderReply>();
     public DbSet<JobStatusHistory> JobStatusHistory => Set<JobStatusHistory>();
     public DbSet<Quote> Quotes => Set<Quote>();
     public DbSet<InspectionCertificate> Certificates => Set<InspectionCertificate>();
@@ -363,6 +365,37 @@ public sealed class InspectaDbContext(
         outboundEmail.Ignore(item => item.IsStalePending);
         outboundEmail.HasOne<Quote>().WithMany().HasForeignKey(item => item.QuoteId).OnDelete(DeleteBehavior.Cascade);
         outboundEmail.HasOne<InspectionRequest>().WithMany().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
+
+        var renewalReminder = modelBuilder.Entity<RenewalReminder>();
+        renewalReminder.HasKey(item => item.Id);
+        renewalReminder.HasIndex(item => new { item.ManagerId, item.SendKey }).IsUnique();
+        renewalReminder.HasIndex(item => new { item.ManagerId, item.ClientId, item.CreatedAt });
+        renewalReminder.HasIndex(item => item.MessageId);
+        renewalReminder.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
+        renewalReminder.Property(item => item.Status).HasConversion<string>().HasMaxLength(16);
+        renewalReminder.Property(item => item.ToAddress).HasMaxLength(320).IsRequired();
+        renewalReminder.Property(item => item.ToName).HasMaxLength(500);
+        renewalReminder.Property(item => item.FromAddress).HasMaxLength(320).IsRequired();
+        renewalReminder.Property(item => item.FromName).HasMaxLength(500);
+        renewalReminder.Property(item => item.Subject).HasMaxLength(998).IsRequired();
+        renewalReminder.Property(item => item.MessageId).HasMaxLength(998).IsRequired();
+        renewalReminder.Property(item => item.LastError).HasMaxLength(500);
+        renewalReminder.Ignore(item => item.IsStalePending);
+        renewalReminder.Ignore(item => item.State);
+        renewalReminder.HasOne<Client>().WithMany().HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.Restrict);
+        renewalReminder.HasOne<InspectionRequest>().WithMany().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.SetNull);
+
+        var renewalReply = modelBuilder.Entity<RenewalReminderReply>();
+        renewalReply.HasKey(item => item.Id);
+        renewalReply.HasIndex(item => item.ReminderId);
+        renewalReply.HasIndex(item => new { item.ManagerId, item.MessageId }).IsUnique();
+        renewalReply.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
+        renewalReply.Property(item => item.MessageId).HasMaxLength(998);
+        renewalReply.Property(item => item.InReplyTo).HasMaxLength(998);
+        renewalReply.Property(item => item.FromAddress).HasMaxLength(320);
+        renewalReply.Property(item => item.FromName).HasMaxLength(500);
+        renewalReply.Property(item => item.Subject).HasMaxLength(998);
+        renewalReply.HasOne<RenewalReminder>().WithMany().HasForeignKey(item => item.ReminderId).OnDelete(DeleteBehavior.Cascade);
 
         var quotationDraft = modelBuilder.Entity<QuotationDraft>();
         quotationDraft.HasKey(item => item.Id);

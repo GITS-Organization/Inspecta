@@ -31,6 +31,59 @@ public sealed class RenewalsController(IRenewalsService renewals) : ControllerBa
         [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken cancellationToken = default) =>
         Ok(await renewals.ListAsync(ResolveCompany(managerId), window, q, page, pageSize, cancellationToken));
 
+    /// <summary>
+    /// The email the client would receive for these machines, with the reasons Send would not work (<c>blockers</c>). Sends nothing and saves nothing.
+    /// Same body as Send, <c>sendKey</c> not needed. 400 <c>recipient_not_of_client</c>, <c>machine_not_eligible</c>, <c>machines_required</c>, <c>message_required</c>.
+    /// </summary>
+    [RequirePermission(Permissions.RenewalsWork)]
+    [HttpPost("reminders/preview")]
+    [ProducesResponseType<RenewalReminderPreview>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<RenewalReminderPreview>> Preview(
+        SendRenewalReminderRequest request, [FromQuery] Guid? managerId, CancellationToken cancellationToken) =>
+        Ok(await renewals.PreviewReminderAsync(ResolveCompany(managerId), User.GetUserId(), request, cancellationToken));
+
+    /// <summary>
+    /// Sends the reminder from the caller's own mailbox: a text of the coordinator's with a table of the machines, to one of the client's saved addresses, with no
+    /// attachment. Nothing is ever sent automatically. <c>sendKey</c> (a new UUID per opened drawer, reused for a retry) makes a double click send once: the
+    /// same key answers 200 with the same reminder and sends nothing. 201 when it was sent now.
+    /// Errors: 400 <c>send_key_required</c>, <c>machines_required</c>, <c>message_required</c>, <c>message_too_long</c>, <c>recipient_not_of_client</c>,
+    /// <c>machine_not_eligible</c>; 404 client not found; 409 <c>mailbox_not_configured</c>, <c>mailbox_reconnect_required</c>, <c>email_disabled</c>,
+    /// <c>reminder_in_progress</c>; 502 <c>email_delivery_failed</c> (kept as failed; retry with the same key).
+    /// </summary>
+    [RequirePermission(Permissions.RenewalsWork)]
+    [HttpPost("reminders")]
+    [ProducesResponseType<RenewalReminderResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<RenewalReminderResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status502BadGateway)]
+    public async Task<ActionResult<RenewalReminderResponse>> Send(
+        SendRenewalReminderRequest request, [FromQuery] Guid? managerId, CancellationToken cancellationToken)
+    {
+        var result = await renewals.SendReminderAsync(ResolveCompany(managerId), User.GetUserId(), request, cancellationToken);
+        return result.Created
+            ? CreatedAtAction(nameof(Get), new { reminderId = result.Reminder.Id, managerId }, result.Reminder)
+            : Ok(result.Reminder);
+    }
+
+    /// <summary>One reminder with the client's answers (as text only) and, once it became a request, which one.</summary>
+    [RequirePermission(Permissions.RenewalsWork)]
+    [HttpGet("reminders/{reminderId:guid}")]
+    [ProducesResponseType<RenewalReminderResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<RenewalReminderResponse>> Get(Guid reminderId, [FromQuery] Guid? managerId, CancellationToken cancellationToken) =>
+        Ok(await renewals.GetReminderAsync(ResolveCompany(managerId), reminderId, cancellationToken));
+
+    /// <summary>The reminders, newest first, of one client (<c>clientId</c>) or all. <c>pageSize</c> default 50, max 100.</summary>
+    [RequirePermission(Permissions.RenewalsWork)]
+    [HttpGet("reminders")]
+    [ProducesResponseType<RenewalReminderPage>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<RenewalReminderPage>> ListReminders(
+        [FromQuery] Guid? clientId, [FromQuery] Guid? managerId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken cancellationToken = default) =>
+        Ok(await renewals.ListRemindersAsync(ResolveCompany(managerId), clientId, page, pageSize, cancellationToken));
+
     private Guid ResolveCompany(Guid? requested)
     {
         if (User.IsInRole("admin"))
