@@ -12,4 +12,10 @@ public interface IEquipmentService
     Task RecordInspectionAsync(Guid equipmentId, RecordEquipmentInspectionRequest request, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid equipmentId, CancellationToken cancellationToken = default);
     Task ArchiveAsync(Guid equipmentId, CancellationToken cancellationToken = default);
+
+    /// <summary>Marks the machine out of service (scrapped or sold). Doing it again changes nothing.</summary>
+    Task<EquipmentResponse> RetireAsync(Guid equipmentId, CancellationToken cancellationToken = default);
+
+    /// <summary>Puts a machine back in service.</summary>
+    Task<EquipmentResponse> ReactivateAsync(Guid equipmentId, CancellationToken cancellationToken = default);
 }

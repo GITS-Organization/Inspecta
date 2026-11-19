@@ -79,6 +79,8 @@ public sealed class PermissionGuardTests
         ["EquipmentController.Create"] = "admin,technical_manager,coordinator",
         ["EquipmentController.Update"] = "admin,technical_manager,coordinator",
         ["EquipmentController.RecordInspection"] = "admin,technical_manager,coordinator",
+        ["EquipmentController.Retire"] = "admin,technical_manager,coordinator",
+        ["EquipmentController.Reactivate"] = "admin,technical_manager,coordinator",
         ["EquipmentController.Archive"] = "admin,technical_manager",
         ["InspectorsController.List"] = "admin,technical_manager,coordinator",
         ["MachineInspectionController.StartInspection"] = "admin,technical_manager,coordinator,inspector",

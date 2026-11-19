@@ -61,6 +61,27 @@ public sealed class EquipmentController(IEquipmentService equipmentService) : Co
         return NoContent();
     }
 
+    /// <summary>
+    /// Marks a machine out of service (scrapped or sold): it leaves every due list and renewal, while its certificates, requests and issued
+    /// files stay. Doing it again changes nothing. <c>409 conflict</c> for an archived machine.
+    /// </summary>
+    [RequirePermission(Permissions.EquipmentEdit)]
+    [HttpPost("{equipmentId:guid}/retire")]
+    [ProducesResponseType<EquipmentResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<EquipmentResponse>> Retire(Guid equipmentId, CancellationToken cancellationToken) =>
+        Ok(await equipmentService.RetireAsync(equipmentId, cancellationToken));
+
+    /// <summary>Puts a machine back in service (the undo of retire).</summary>
+    [RequirePermission(Permissions.EquipmentEdit)]
+    [HttpPost("{equipmentId:guid}/reactivate")]
+    [ProducesResponseType<EquipmentResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<EquipmentResponse>> Reactivate(Guid equipmentId, CancellationToken cancellationToken) =>
+        Ok(await equipmentService.ReactivateAsync(equipmentId, cancellationToken));
+
     /// <summary>Delete an item for good. Refused with <c>409 equipment_in_use</c> while requests or certificates still use it.</summary>
     [RequirePermission(Permissions.EquipmentDelete)]
     [HttpDelete("{equipmentId:guid}")]

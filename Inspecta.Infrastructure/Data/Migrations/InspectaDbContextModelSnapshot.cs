@@ -1221,6 +1221,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<string>("PrNumber")
                         .HasColumnType("text");
 
+                    b.Property<DateTimeOffset?>("RetiredAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("SerialNumber")
                         .HasColumnType("text");
 

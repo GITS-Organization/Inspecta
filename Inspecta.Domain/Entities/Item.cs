@@ -43,6 +43,9 @@ public sealed class Item
     public DateOnly? LastInspectedOn { get; private set; }
     public CertificateResult? LastInspectionResult { get; private set; }
     public bool IsArchived { get; private set; }
+
+    /// <summary>When the machine was marked out of service (scrapped or sold); <c>null</c> while in service, or when it was retired before this date was kept.</summary>
+    public DateTimeOffset? RetiredAt { get; private set; }
     public DateTimeOffset? LastInspectionAt { get; private set; }
     public DateTimeOffset? NextInspectionDueAt { get; private set; }
     public DateTimeOffset? ArchivedAt { get; private set; }
@@ -257,10 +260,21 @@ public sealed class Item
         NextInspectionDueAt = new DateTimeOffset(nextDueOn.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
     }
 
+    /// <summary>Out of service: the machine leaves every due list and renewal. Its certificates, requests and issued files are untouched. Retiring twice keeps the first date.</summary>
     public void Retire()
     {
         EnsureEditable();
+        if (Status == EquipmentStatus.Retired) return;
         Status = EquipmentStatus.Retired;
+        RetiredAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>Back in service (the "undo" of <see cref="Retire"/>).</summary>
+    public void Reactivate()
+    {
+        EnsureEditable();
+        Status = EquipmentStatus.Active;
+        RetiredAt = null;
     }
 
     public bool IsDueSoon(DateOnly today) =>

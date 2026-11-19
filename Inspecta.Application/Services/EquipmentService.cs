@@ -1,3 +1,4 @@
+using Inspecta.Domain.Enums;
 using Inspecta.Application.Certificates;
 using Inspecta.Application.Contracts.Equipment;
 using Inspecta.Application.Interfaces;
@@ -79,11 +80,30 @@ public sealed class EquipmentService(IEquipmentRepository equipmentRepository) :
         await equipmentRepository.SaveAsync(cancellationToken);
     }
 
+    public async Task<EquipmentResponse> RetireAsync(Guid equipmentId, CancellationToken cancellationToken = default)
+    {
+        var equipment = await equipmentRepository.GetByIdAsync(equipmentId, tracking: true, cancellationToken)
+            ?? throw new KeyNotFoundException("Equipment was not found.");
+        equipment.Retire();
+        await equipmentRepository.SaveAsync(cancellationToken);
+        return Map(equipment);
+    }
+
+    public async Task<EquipmentResponse> ReactivateAsync(Guid equipmentId, CancellationToken cancellationToken = default)
+    {
+        var equipment = await equipmentRepository.GetByIdAsync(equipmentId, tracking: true, cancellationToken)
+            ?? throw new KeyNotFoundException("Equipment was not found.");
+        equipment.Reactivate();
+        await equipmentRepository.SaveAsync(cancellationToken);
+        return Map(equipment);
+    }
+
     private static EquipmentResponse Map(Item equipment) => new(
         equipment.Id, equipment.ClientId, equipment.Name, equipment.Category, equipment.Manufacturer,
         equipment.Model, GearRules.SerialFor(equipment.Name, equipment.SerialNumber), equipment.Capacity, equipment.ItemType,
         equipment.LocationInsideClientLocation, equipment.Notes, equipment.GetLabels(), equipment.GetDates(),
         equipment.GetChecklist(), equipment.GetAttachments(), equipment.CertificateExpiryDate,
         equipment.LastInspectedOn, equipment.LastInspectionAt, equipment.NextInspectionDueAt, equipment.ArchivedAt,
-        equipment.InspectionStandard, equipment.TestType);
+        equipment.InspectionStandard, equipment.TestType,
+        Status: equipment.Status == EquipmentStatus.Retired ? "retired" : "active", RetiredAt: equipment.RetiredAt);
 }

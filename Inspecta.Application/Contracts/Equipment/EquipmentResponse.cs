@@ -28,4 +28,6 @@ public sealed record EquipmentResponse(
     string? InspectionStandard = null,
     string? TestType = null,
     string? Kind = null,
-    IReadOnlyList<string>? InspectionStandards = null);
+    IReadOnlyList<string>? InspectionStandards = null,
+    string? Status = null,
+    DateTimeOffset? RetiredAt = null);
