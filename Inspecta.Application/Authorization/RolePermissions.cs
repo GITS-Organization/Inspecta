@@ -79,6 +79,8 @@ public static class RolePermissions
         (Permissions.InspectionWriteLegacy, [Admin, Manager, Inspector]),
         (Permissions.InspectionChangeDate, [Admin, Manager, Coordinator, Inspector]),
 
+        (Permissions.RenewalsWork, [Admin, Manager, Coordinator]),
+
         (Permissions.RequestsView, [Admin, Manager, Coordinator, Inspector]),
         (Permissions.RequestsWork, [Admin, Manager, Coordinator]),
         (Permissions.RequestsAssign, [Admin, Manager, Coordinator]),

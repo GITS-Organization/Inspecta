@@ -56,6 +56,9 @@ public static class Permissions
     public const string InvoicesHandOver = "Invoices.HandOver";
     public const string InvoicesEmailClient = "Invoices.EmailClient";
     public const string InvoicesClose = "Invoices.Close";
+    // Renewals: the machines that are due, the reminders emailed to clients about them, and the requests they turn into.
+    public const string RenewalsWork = "Renewals.Work";
+
     public const string ExecutiveView = "Executive.View";
     public const string ExecutiveManageTargets = "Executive.ManageTargets";
     public const string RevenueView = "Revenue.View";

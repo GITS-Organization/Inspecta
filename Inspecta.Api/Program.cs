@@ -121,6 +121,8 @@ builder.Services.AddScoped<IMachineSuggestionService, MachineSuggestionService>(
 builder.Services.AddScoped<IRequestEquipmentRegistrar>(services => new RequestEquipmentRegistrar(
     services.GetRequiredService<IEquipmentCatalog>(), builder.Configuration.GetValue("Requests:AutoRegisterEquipment", true)));
 builder.Services.AddScoped<IEquipmentService, EquipmentService>();
+builder.Services.AddScoped<IRenewalsRepository, EfRenewalsRepository>();
+builder.Services.AddScoped<IRenewalsService, RenewalsService>();
 builder.Services.AddScoped<IQuoteRepository, EfQuoteRepository>();
 builder.Services.AddScoped<IInvoiceRepository, EfInvoiceRepository>();
 builder.Services.AddScoped<IInvoiceDeliveryService, InvoiceDeliveryService>();

@@ -85,6 +85,9 @@ public static class RenewalsFigures
     internal static HashSet<Guid> OpenEquipment(IEnumerable<ExecRequest> requests) =>
         requests.Where(IsOpen).SelectMany(request => request.EquipmentIds).ToHashSet();
 
+    /// <summary>The statuses of a request that is over: its machines are free again.</summary>
+    public static readonly IReadOnlyList<JobStatus> FinishedStatuses = [JobStatus.QuoteRejected, JobStatus.ClientDeclined, JobStatus.SentToClient];
+
     internal static bool IsOpen(ExecRequest request) =>
-        request.Triage != RequestTriage.Maybe && request.Status is not (JobStatus.QuoteRejected or JobStatus.ClientDeclined or JobStatus.SentToClient);
+        request.Triage != RequestTriage.Maybe && !FinishedStatuses.Contains(request.Status);
 }
