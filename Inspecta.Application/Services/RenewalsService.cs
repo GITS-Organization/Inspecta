@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Inspecta.Application.Contracts.Renewals;
+using Inspecta.Application.Contracts.Requests;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
 using Inspecta.Domain.Entities;
@@ -22,7 +23,9 @@ public sealed class RenewalsService(
     IEmailBranding? branding = null,
     ICompanyBrandingProvider? companyBranding = null,
     IMailboxAuthenticator? mailboxAuthenticator = null,
-    TimeProvider? clock = null) : IRenewalsService
+    TimeProvider? clock = null,
+    IInspectionRequestService? inspectionRequests = null,
+    ITransactionRunner? transactions = null) : IRenewalsService
 {
     /// <summary>The longest window: machines due later than this are not listed.</summary>
     private const int LongestWindowDays = 90;
@@ -238,6 +241,70 @@ public sealed class RenewalsService(
         if (row.Status == OutboundEmailStatus.Pending && !row.IsStalePending)
             throw new AuthException("reminder_in_progress", "This reminder is being sent. Wait for it to finish.", 409);
         return null;
+    }
+
+    public async Task<RequestResponse> CreateRequestAsync(Guid managerId, Guid actorId, CreateRenewalRequest request, CancellationToken cancellationToken = default)
+    {
+        if (inspectionRequests is null) throw new InvalidOperationException("Requests are not available.");
+        if (request.EquipmentIds is null || request.EquipmentIds.Count == 0)
+            throw new AuthException("machines_required", "Choose at least one machine.", 400);
+        var client = await repository.GetClientAsync(managerId, request.ClientId, cancellationToken) ?? throw new KeyNotFoundException("Client was not found.");
+
+        RenewalReminder? reminder = null;
+        if (request.ReminderId is { } reminderId)
+        {
+            reminder = await repository.GetReminderAsync(managerId, reminderId, cancellationToken) ?? throw new KeyNotFoundException("Reminder was not found.");
+            if (reminder.ClientId != client.Id) throw new AuthException("reminder_of_other_client", "This reminder belongs to another client.", 400);
+            if (reminder.RequestId is not null) throw new AuthException("renewal_request_exists", "A request was already created from this reminder.", 409);
+            if (reminder.ClosedAt is not null) throw new AuthException("reminder_closed", "This reminder was closed.", 409);
+            if (reminder.Status != OutboundEmailStatus.Sent) throw new AuthException("reminder_not_sent", "This reminder was not sent, so it has no answer to turn into a request.", 409);
+        }
+
+        // The machines must be the client's, in service and not archived; a date is not needed for a request.
+        var ids = request.EquipmentIds.Distinct().ToList();
+        var found = (await repository.GetMachinesAsync(managerId, ids, cancellationToken)).ToDictionary(machine => machine.Id);
+        var problems = new List<string>();
+        var items = new List<CreateRequestItem>();
+        foreach (var id in ids)
+        {
+            if (!found.TryGetValue(id, out var machine) || machine.ClientId != client.Id) problems.Add($"{id}: not a machine of this client");
+            else if (machine.Archived) problems.Add($"{machine.Name}: archived");
+            else if (machine.Retired) problems.Add($"{machine.Name}: out of service");
+            else items.Add(new CreateRequestItem { Name = machine.Name, EquipmentId = machine.Id, SerialNumber = machine.SerialNumber, Capacity = machine.Capacity, Quantity = 1 });
+        }
+        if (problems.Count > 0)
+            throw new AuthException("machine_not_eligible", "These machines cannot go on the request: " + string.Join("; ", problems) + ".", 400);
+
+        var create = new CreateInspectionRequest
+        {
+            ClientId = client.Id,
+            ClientName = client.Name,
+            Location = string.IsNullOrWhiteSpace(client.Location) ? client.Name : client.Location!,
+            Subject = $"Renewal: {items.Count} machine{(items.Count == 1 ? string.Empty : "s")}",
+            PreferredDate = request.PreferredDate,
+            Items = items
+        };
+
+        async Task<RequestResponse> Create()
+        {
+            var created = await inspectionRequests.CreateAsync(create, actorId, managerId, cancellationToken);
+            // Claimed in the same transaction: two clicks at the same moment make one request, the other is undone.
+            if (reminder is not null &&
+                !await repository.ClaimReminderAsync(managerId, reminder.Id, created.Id, actorId, (clock ?? TimeProvider.System).GetUtcNow(), cancellationToken))
+                throw new AuthException("renewal_request_exists", "A request was already created from this reminder.", 409);
+            return created;
+        }
+
+        return transactions is null ? await Create() : await transactions.RunAsync(Create, cancellationToken);
+    }
+
+    public async Task<RenewalReminderResponse> CloseReminderAsync(Guid managerId, Guid actorId, Guid reminderId, CancellationToken cancellationToken = default)
+    {
+        var reminder = await repository.GetReminderAsync(managerId, reminderId, cancellationToken) ?? throw new KeyNotFoundException("Reminder was not found.");
+        if (reminder.RequestId is not null) throw new AuthException("renewal_request_exists", "A request was already created from this reminder.", 409);
+        reminder.Close(actorId, (clock ?? TimeProvider.System).GetUtcNow());
+        await repository.SaveAsync(cancellationToken);
+        return await ToResponseAsync(reminder, cancellationToken);
     }
 
     public async Task<RenewalReminderResponse> GetReminderAsync(Guid managerId, Guid reminderId, CancellationToken cancellationToken = default) =>

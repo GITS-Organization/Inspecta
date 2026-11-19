@@ -27,6 +27,12 @@ public sealed record RenewalReminderSummary(Guid Id, string State, DateTimeOffse
 /// <summary>What the coordinator sends: the client, the machines (ticked), who gets it and the message. <c>SendKey</c> is made by the screen when the reminder is opened.</summary>
 public sealed record SendRenewalReminderRequest(Guid? SendKey, Guid ClientId, IReadOnlyList<Guid> EquipmentIds, string ToAddress, string Message, string? Subject = null);
 
+/// <summary>
+/// Turns the answer of a client into a normal request. <c>ReminderId</c> is the reminder it answers (left out: the request is made from the register, for
+/// example after a phone call). The machines need not be the ones of the reminder.
+/// </summary>
+public sealed record CreateRenewalRequest(Guid ClientId, Guid? ReminderId, IReadOnlyList<Guid> EquipmentIds, DateTimeOffset? PreferredDate = null);
+
 /// <summary>The email as the client will see it. <c>Blockers</c> say why Send would not work (mailbox not configured, emailing switched off).</summary>
 public sealed record RenewalReminderPreview(string Subject, string? FromAddress, string? FromName, string ToAddress, string Html, string Text, IReadOnlyList<string> Blockers);
 

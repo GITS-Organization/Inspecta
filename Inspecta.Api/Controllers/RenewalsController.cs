@@ -1,6 +1,7 @@
 using Inspecta.Api.Authorization;
 using Inspecta.Application.Authorization;
 using Inspecta.Application.Contracts.Renewals;
+using Inspecta.Application.Contracts.Requests;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -67,6 +68,34 @@ public sealed class RenewalsController(IRenewalsService renewals) : ControllerBa
             ? CreatedAtAction(nameof(Get), new { reminderId = result.Reminder.Id, managerId }, result.Reminder)
             : Ok(result.Reminder);
     }
+
+    /// <summary>
+    /// "Create renewal request": a normal request for the client with the ticked machines (and an optional preferred date), made after the client answered
+    /// (<c>reminderId</c>) or without any reminder. It then continues like any request (quotation, inspection, certificate) and answers the same body as
+    /// <c>POST /requests</c>. A reminder becomes one request only: 409 <c>renewal_request_exists</c>. 400 <c>machines_required</c>, <c>machine_not_eligible</c>
+    /// (another client's, out of service or archived), <c>reminder_of_other_client</c>; 409 <c>reminder_not_sent</c>, <c>reminder_closed</c>; 404 client or reminder not found.
+    /// </summary>
+    [RequirePermission(Permissions.RenewalsWork)]
+    [HttpPost("requests")]
+    [ProducesResponseType<RequestResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<RequestResponse>> CreateRequest(
+        CreateRenewalRequest request, [FromQuery] Guid? managerId, CancellationToken cancellationToken)
+    {
+        var created = await renewals.CreateRequestAsync(ResolveCompany(managerId), User.GetUserId(), request, cancellationToken);
+        return CreatedAtAction("GetById", "Requests", new { requestId = created.Id }, created);
+    }
+
+    /// <summary>The client said no, or it was handled another way: the reminder ends without a request (state <c>closed</c>). Closing again changes nothing. 409 <c>renewal_request_exists</c> once it became a request.</summary>
+    [RequirePermission(Permissions.RenewalsWork)]
+    [HttpPost("reminders/{reminderId:guid}/close")]
+    [ProducesResponseType<RenewalReminderResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<RenewalReminderResponse>> Close(Guid reminderId, [FromQuery] Guid? managerId, CancellationToken cancellationToken) =>
+        Ok(await renewals.CloseReminderAsync(ResolveCompany(managerId), User.GetUserId(), reminderId, cancellationToken));
 
     /// <summary>One reminder with the client's answers (as text only) and, once it became a request, which one.</summary>
     [RequirePermission(Permissions.RenewalsWork)]

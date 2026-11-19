@@ -110,6 +110,15 @@ public sealed class EfRenewalsRepository(InspectaDbContext dbContext) : IRenewal
 
     public Task SaveAsync(CancellationToken cancellationToken = default) => dbContext.SaveChangesAsync(cancellationToken);
 
+    public async Task<bool> ClaimReminderAsync(Guid managerId, Guid reminderId, Guid requestId, Guid actorId, DateTimeOffset at, CancellationToken cancellationToken = default) =>
+        await dbContext.RenewalReminders
+            .Where(item => item.ManagerId == managerId && item.Id == reminderId && item.RequestId == null && item.ClosedAt == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(item => item.RequestId, requestId)
+                .SetProperty(item => item.RequestCreatedAt, at)
+                .SetProperty(item => item.RequestCreatedById, actorId)
+                .SetProperty(item => item.UpdatedAt, at), cancellationToken) == 1;
+
     public async Task<(IReadOnlyList<RenewalReminder> Items, int Total)> ListRemindersAsync(
         Guid managerId, Guid? clientId, int page, int pageSize, CancellationToken cancellationToken = default)
     {

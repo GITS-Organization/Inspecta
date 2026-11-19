@@ -1,4 +1,5 @@
 using Inspecta.Application.Contracts.Renewals;
+using Inspecta.Application.Contracts.Requests;
 
 namespace Inspecta.Application.Interfaces;
 
@@ -12,6 +13,12 @@ public interface IRenewalsService
 
     /// <summary>Sends the reminder from the actor's own mailbox, once per <c>SendKey</c>.</summary>
     Task<RenewalReminderResult> SendReminderAsync(Guid managerId, Guid actorId, SendRenewalReminderRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Creates a normal request for the client with the machines, and links the reminder to it (once).</summary>
+    Task<RequestResponse> CreateRequestAsync(Guid managerId, Guid actorId, CreateRenewalRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>The client said no, or it was handled another way: the reminder ends without a request. Closing again changes nothing.</summary>
+    Task<RenewalReminderResponse> CloseReminderAsync(Guid managerId, Guid actorId, Guid reminderId, CancellationToken cancellationToken = default);
 
     Task<RenewalReminderResponse> GetReminderAsync(Guid managerId, Guid reminderId, CancellationToken cancellationToken = default);
 

@@ -25,6 +25,12 @@ public interface IRenewalsRepository
 
     Task SaveAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Links the reminder to the request it became, only if it has none and is not closed. <c>false</c> when it was claimed meanwhile (two clicks at the same
+    /// moment): the caller then undoes the request it just made.
+    /// </summary>
+    Task<bool> ClaimReminderAsync(Guid managerId, Guid reminderId, Guid requestId, Guid actorId, DateTimeOffset at, CancellationToken cancellationToken = default);
+
     /// <summary>The reminders newest first, of one client or all.</summary>
     Task<(IReadOnlyList<RenewalReminder> Items, int Total)> ListRemindersAsync(Guid managerId, Guid? clientId, int page, int pageSize, CancellationToken cancellationToken = default);
 

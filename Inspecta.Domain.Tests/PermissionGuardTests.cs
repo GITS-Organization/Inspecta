@@ -84,6 +84,8 @@ public sealed class PermissionGuardTests
         ["RenewalsController.Send"] = "admin,technical_manager,coordinator",
         ["RenewalsController.Get"] = "admin,technical_manager,coordinator",
         ["RenewalsController.ListReminders"] = "admin,technical_manager,coordinator",
+        ["RenewalsController.CreateRequest"] = "admin,technical_manager,coordinator",
+        ["RenewalsController.Close"] = "admin,technical_manager,coordinator",
         ["EquipmentController.Retire"] = "admin,technical_manager,coordinator",
         ["EquipmentController.Reactivate"] = "admin,technical_manager,coordinator",
         ["EquipmentController.Archive"] = "admin,technical_manager",
