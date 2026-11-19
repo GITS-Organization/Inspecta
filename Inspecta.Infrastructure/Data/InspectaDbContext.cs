@@ -380,6 +380,8 @@ public sealed class InspectaDbContext(
         renewalReminder.Property(item => item.Subject).HasMaxLength(998).IsRequired();
         renewalReminder.Property(item => item.MessageId).HasMaxLength(998).IsRequired();
         renewalReminder.Property(item => item.LastError).HasMaxLength(500);
+        // Two clicks on the retry of a failed reminder: both read the same row, the first to save wins, the other is refused (the date of its last change is the token).
+        renewalReminder.Property(item => item.UpdatedAt).IsConcurrencyToken();
         renewalReminder.Ignore(item => item.IsStalePending);
         renewalReminder.Ignore(item => item.State);
         renewalReminder.HasOne<Client>().WithMany().HasForeignKey(item => item.ClientId).OnDelete(DeleteBehavior.Restrict);

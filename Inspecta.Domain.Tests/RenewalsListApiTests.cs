@@ -121,6 +121,32 @@ public sealed class RenewalsListApiTests(ApiHttpTests.Api api) : ExecutiveApiTes
     }
 
     [Fact]
+    public async Task AClientWhoseReminderIsWaitingStaysOnTheListEvenWhenItsMachinesAreOutsideTheWindow()
+    {
+        var world = SeedCompany();
+        var client = SeedClientWithContacts(world, "Delta Steel Co.", "certs@deltasteel.com");
+        var machine = SeedMachine(client, 60);
+        var coordinator = await SignedInAs(world.Coordinator.Email);
+        Assert.Equal(0, (await Json(await coordinator.GetAsync("/api/v1/renewals?window=30"))).GetProperty("clients").GetArrayLength());
+
+        var reminder = RenewalReminder.Create(world.Company.Id, client, world.Coordinator.Id, Guid.NewGuid(), "integrity-intl.com");
+        reminder.BeginAttempt("certs@deltasteel.com", null, "hager@integrity-intl.com", "Hager Samy", "Periodic inspection due", "Dear client", [new ReminderMachine(machine, "Crane", null, null, Today.AddDays(60))]);
+        reminder.MarkSent();
+        Api.SeedAs(db => db.RenewalReminders.Add(reminder));
+
+        var listed = await Json(await coordinator.GetAsync("/api/v1/renewals?window=30"));
+        var shown = Assert.Single(listed.GetProperty("clients").EnumerateArray());
+        Assert.Equal("sent", shown.GetProperty("latestReminder").GetProperty("state").GetString());
+        // It is on the list because of the reminder, not because a machine is in the window.
+        Assert.Equal(0, shown.GetProperty("dueInWindow").GetInt32());
+        Assert.Equal(1, shown.GetProperty("machines").GetArrayLength());
+
+        // Once the reminder is closed, the client goes back to the machines' own windows.
+        Assert.Equal(HttpStatusCode.OK, (await coordinator.PostAsync($"/api/v1/renewals/reminders/{reminder.Id}/close", null)).StatusCode);
+        Assert.Equal(0, (await Json(await coordinator.GetAsync("/api/v1/renewals?window=30"))).GetProperty("clients").GetArrayLength());
+    }
+
+    [Fact]
     public async Task OnlyTheCallersCompanyIsShownAndThePlatformOwnerMustNameOne()
     {
         var mine = SeedCompany();

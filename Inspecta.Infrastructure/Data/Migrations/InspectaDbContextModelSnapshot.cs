@@ -1719,6 +1719,7 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");

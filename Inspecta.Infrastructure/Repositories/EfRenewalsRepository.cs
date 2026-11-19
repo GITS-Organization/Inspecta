@@ -23,7 +23,7 @@ public sealed class EfRenewalsRepository(InspectaDbContext dbContext) : IRenewal
                 && item.Status == EquipmentStatus.Active && !item.IsArchived && item.ArchivedAt == null)
             .Select(item => new { item.ClientId, item.Id, item.Name, item.SerialNumber, item.Capacity, item.LastInspectionAt, item.LastInspectedOn, Due = item.NextInspectionDueAt!.Value })
             .ToListAsync(cancellationToken);
-        // The date window is applied here: the machines of one company are few, and a comparison of dates with offsets does not translate on every database.
+        // The date window is applied here, not in SQL: the tests run on SQLite, which cannot compare dates that carry an offset, and what is read is one company's dated machines as small rows.
         machines = machines.Where(machine => machine.Due < dueBefore).ToList();
         if (machines.Count == 0) return [];
 
@@ -110,6 +110,32 @@ public sealed class EfRenewalsRepository(InspectaDbContext dbContext) : IRenewal
 
     public Task SaveAsync(CancellationToken cancellationToken = default) => dbContext.SaveChangesAsync(cancellationToken);
 
+    public async Task<bool> TrySaveAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            // Someone else changed the reminder first: forget this attempt's changes.
+            foreach (var entry in exception.Entries) entry.State = EntityState.Detached;
+            return false;
+        }
+    }
+
+    public Task ReloadReminderAsync(RenewalReminder reminder, CancellationToken cancellationToken = default) =>
+        dbContext.Entry(reminder).ReloadAsync(cancellationToken);
+
+    public async Task<bool> CloseReminderAsync(Guid managerId, Guid reminderId, Guid actorId, DateTimeOffset at, CancellationToken cancellationToken = default) =>
+        await dbContext.RenewalReminders
+            .Where(item => item.ManagerId == managerId && item.Id == reminderId && item.RequestId == null && item.ClosedAt == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(item => item.ClosedAt, at)
+                .SetProperty(item => item.ClosedById, actorId)
+                .SetProperty(item => item.UpdatedAt, at), cancellationToken) == 1;
+
     public async Task<bool> ClaimReminderAsync(Guid managerId, Guid reminderId, Guid requestId, Guid actorId, DateTimeOffset at, CancellationToken cancellationToken = default) =>
         await dbContext.RenewalReminders
             .Where(item => item.ManagerId == managerId && item.Id == reminderId && item.RequestId == null && item.ClosedAt == null)
@@ -124,11 +150,11 @@ public sealed class EfRenewalsRepository(InspectaDbContext dbContext) : IRenewal
     {
         var query = dbContext.RenewalReminders.AsNoTracking()
             .Where(item => item.ManagerId == managerId && (clientId == null || item.ClientId == clientId));
-        var total = await query.CountAsync(cancellationToken);
-        // Ordered after loading the page's rows: the date of a reminder carries an offset, which not every database can sort.
-        var all = await query.ToListAsync(cancellationToken);
-        var items = all.OrderByDescending(item => item.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).ToList();
-        return (items, total);
+        // Ordered after loading small rows (an id and a date): the date carries an offset, which not every database can sort. Only the page is read in full.
+        var keys = await query.Select(item => new { item.Id, item.CreatedAt }).ToListAsync(cancellationToken);
+        var pageIds = keys.OrderByDescending(item => item.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).Select(item => item.Id).ToList();
+        var rows = (await query.Where(item => pageIds.Contains(item.Id)).ToListAsync(cancellationToken)).ToDictionary(item => item.Id);
+        return (pageIds.Select(id => rows[id]).ToList(), keys.Count);
     }
 
     public async Task<IReadOnlyDictionary<Guid, RenewalReminder>> LatestByClientAsync(
@@ -149,13 +175,13 @@ public sealed class EfRenewalsRepository(InspectaDbContext dbContext) : IRenewal
         return await dbContext.RenewalReminderReplies.AsNoTracking().Where(reply => ids.Contains(reply.ReminderId)).ToListAsync(cancellationToken);
     }
 
-    public async Task<RenewalReminder?> FindSentReminderAsync(Guid managerId, IReadOnlyList<string> messageIds, CancellationToken cancellationToken = default)
+    public async Task<RenewalReminder?> FindReminderByMessageIdAsync(Guid managerId, IReadOnlyList<string> messageIds, CancellationToken cancellationToken = default)
     {
         if (messageIds.Count == 0) return null;
         var ids = messageIds.ToArray();
-        // Only a reminder that really went out can be answered. The newest wins; only a few can match.
+        // Any state: the id is random and ours, so a match is a reply to our email. The newest wins; only a few can match.
         return (await dbContext.RenewalReminders.IgnoreQueryFilters()
-                .Where(item => item.ManagerId == managerId && item.Status == OutboundEmailStatus.Sent && ids.Contains(item.MessageId))
+                .Where(item => item.ManagerId == managerId && ids.Contains(item.MessageId))
                 .ToListAsync(cancellationToken))
             .OrderByDescending(item => item.CreatedAt)
             .FirstOrDefault();

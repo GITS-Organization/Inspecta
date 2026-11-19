@@ -1,8 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
+using Inspecta.Application.Contracts.Renewals;
+using Inspecta.Application.Interfaces;
 using Inspecta.Domain.Entities;
 using Inspecta.Domain.Enums;
+using Inspecta.Infrastructure.Repositories;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Inspecta.Domain.Tests;
 
@@ -67,6 +72,80 @@ public sealed class RenewalRequestApiTests(ApiHttpTests.Api api) : ExecutiveApiT
         Assert.Equal("requested", stored.GetProperty("state").GetString());
         Assert.Equal(json.GetProperty("id").GetGuid(), stored.GetProperty("requestId").GetGuid());
         Assert.Equal(1, RequestsOf(client));
+    }
+
+    [Fact]
+    public async Task TheErrorsNameTheMachinesAndTheRequestInProblems()
+    {
+        var world = SeedCompany();
+        var client = SeedClientWithEmail(world);
+        var scrapped = SeedMachine(client, 5, name: "Scrapped hoist");
+        Api.SeedAs(db => db.Items.Single(item => item.Id == scrapped).Retire());
+        var machine = SeedMachine(client, 6);
+        var reminder = SeedReminder(world, client, [machine]);
+        var coordinator = await SignedInAs(world.Coordinator.Email);
+
+        var refused = await Json(await coordinator.PostAsJsonAsync("/api/v1/renewals/requests", new { clientId = client, equipmentIds = new[] { scrapped } }));
+        Assert.Contains("Scrapped hoist: out of service", refused.GetProperty("problems").EnumerateArray().Select(item => item.GetString()));
+
+        var created = await Json(await coordinator.PostAsJsonAsync("/api/v1/renewals/requests", new { clientId = client, reminderId = reminder, equipmentIds = new[] { machine } }));
+        var again = await Json(await coordinator.PostAsJsonAsync("/api/v1/renewals/requests", new { clientId = client, reminderId = reminder, equipmentIds = new[] { machine } }));
+        Assert.Equal(created.GetProperty("id").GetString(), again.GetProperty("problems")[0].GetString());
+    }
+
+    [Fact]
+    public async Task AClaimThatIsLostAfterTheRequestWasMadeUndoesTheRequest()
+    {
+        var world = SeedCompany();
+        var client = SeedClientWithEmail(world);
+        var machine = SeedMachine(client, 6);
+        var reminder = SeedReminder(world, client, [machine]);
+        // Another click took the reminder between the check and the claim: the claim answers false.
+        using var losing = Api.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+            services.AddScoped<IRenewalsRepository>(provider => new LosesTheClaim(ActivatorUtilities.CreateInstance<EfRenewalsRepository>(provider)))));
+        var coordinator = await SignedInAs(world.Coordinator.Email, losing);
+
+        var response = await coordinator.PostAsJsonAsync("/api/v1/renewals/requests", new { clientId = client, reminderId = reminder, equipmentIds = new[] { machine } });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("renewal_request_exists", (await Json(response)).GetProperty("code").GetString());
+        Assert.Equal(0, RequestsOf(client));
+    }
+
+    private sealed class LosesTheClaim(IRenewalsRepository inner) : IRenewalsRepository
+    {
+        public Task<IReadOnlyList<RenewalClientRows>> ListDueAsync(Guid managerId, DateTimeOffset dueBefore, CancellationToken cancellationToken = default) => inner.ListDueAsync(managerId, dueBefore, cancellationToken);
+        public Task<RenewalClientInfo?> GetClientAsync(Guid managerId, Guid clientId, CancellationToken cancellationToken = default) => inner.GetClientAsync(managerId, clientId, cancellationToken);
+        public Task<IReadOnlyList<RenewalMachineInfo>> GetMachinesAsync(Guid managerId, IReadOnlyList<Guid> equipmentIds, CancellationToken cancellationToken = default) => inner.GetMachinesAsync(managerId, equipmentIds, cancellationToken);
+        public Task<RenewalReminder?> GetReminderBySendKeyAsync(Guid managerId, Guid sendKey, CancellationToken cancellationToken = default) => inner.GetReminderBySendKeyAsync(managerId, sendKey, cancellationToken);
+        public Task<RenewalReminder?> GetReminderAsync(Guid managerId, Guid reminderId, CancellationToken cancellationToken = default) => inner.GetReminderAsync(managerId, reminderId, cancellationToken);
+        public Task<bool> TryAddReminderAsync(RenewalReminder reminder, CancellationToken cancellationToken = default) => inner.TryAddReminderAsync(reminder, cancellationToken);
+        public Task SaveAsync(CancellationToken cancellationToken = default) => inner.SaveAsync(cancellationToken);
+        public Task<bool> TrySaveAsync(CancellationToken cancellationToken = default) => inner.TrySaveAsync(cancellationToken);
+        public Task ReloadReminderAsync(RenewalReminder reminder, CancellationToken cancellationToken = default) => inner.ReloadReminderAsync(reminder, cancellationToken);
+        public Task<bool> ClaimReminderAsync(Guid managerId, Guid reminderId, Guid requestId, Guid actorId, DateTimeOffset at, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<bool> CloseReminderAsync(Guid managerId, Guid reminderId, Guid actorId, DateTimeOffset at, CancellationToken cancellationToken = default) => inner.CloseReminderAsync(managerId, reminderId, actorId, at, cancellationToken);
+        public Task<(IReadOnlyList<RenewalReminder> Items, int Total)> ListRemindersAsync(Guid managerId, Guid? clientId, int page, int pageSize, CancellationToken cancellationToken = default) => inner.ListRemindersAsync(managerId, clientId, page, pageSize, cancellationToken);
+        public Task<IReadOnlyDictionary<Guid, RenewalReminder>> LatestByClientAsync(Guid managerId, IReadOnlyCollection<Guid> clientIds, CancellationToken cancellationToken = default) => inner.LatestByClientAsync(managerId, clientIds, cancellationToken);
+        public Task<IReadOnlyList<RenewalReminderReply>> RepliesAsync(IReadOnlyCollection<Guid> reminderIds, CancellationToken cancellationToken = default) => inner.RepliesAsync(reminderIds, cancellationToken);
+        public Task<RenewalReminder?> FindReminderByMessageIdAsync(Guid managerId, IReadOnlyList<string> messageIds, CancellationToken cancellationToken = default) => inner.FindReminderByMessageIdAsync(managerId, messageIds, cancellationToken);
+        public Task<bool> IsOwnReminderMessageAsync(Guid managerId, string messageId, CancellationToken cancellationToken = default) => inner.IsOwnReminderMessageAsync(managerId, messageId, cancellationToken);
+        public Task<bool> ReplyExistsAsync(Guid managerId, string messageId, CancellationToken cancellationToken = default) => inner.ReplyExistsAsync(managerId, messageId, cancellationToken);
+        public Task AddReplyAsync(RenewalReminderReply reply, RenewalReminder reminder, CancellationToken cancellationToken = default) => inner.AddReplyAsync(reply, reminder, cancellationToken);
+    }
+
+    [Fact]
+    public async Task AClientWithRemindersCannotBeDeletedForGoodAndSaysSo()
+    {
+        var world = SeedCompany();
+        var client = SeedClientWithEmail(world);
+        SeedReminder(world, client, [Guid.NewGuid()]);
+        var manager = await SignedInAs(world.Manager.Email);
+
+        var response = await manager.DeleteAsync($"/api/v1/clients/{client}");
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("client_in_use", (await Json(response)).GetProperty("code").GetString());
     }
 
     [Fact]

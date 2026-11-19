@@ -58,6 +58,12 @@ public sealed class PostgresQueryTranslationTests
             db.RenewalReminders.IgnoreQueryFilters().Where(item => item.ManagerId == manager && item.MessageId == "x").ToQueryString(),
             db.RenewalReminderReplies.IgnoreQueryFilters().Where(reply => reply.ManagerId == manager && reply.MessageId == "x").ToQueryString(),
             db.RenewalReminderReplies.AsNoTracking().Where(reply => ids.Contains(reply.ReminderId)).ToQueryString(),
+            db.ClientContacts.AsNoTracking().Where(contact => ids.Contains(contact.ClientId) && contact.Email != null && contact.Email != "")
+                .OrderByDescending(contact => contact.IsPrimary).ThenBy(contact => contact.Name)
+                .Select(contact => new { contact.ClientId, contact.Id, contact.Name, contact.Role, Email = contact.Email! }).ToQueryString(),
+            db.RenewalReminders.AsNoTracking().Where(item => item.ManagerId == manager && ids.Contains(item.ClientId)).ToQueryString(),
+            db.RenewalReminders.AsNoTracking().Where(item => item.ManagerId == manager).Select(item => new { item.Id, item.CreatedAt }).ToQueryString(),
+            db.RenewalReminders.Where(item => item.ManagerId == manager && item.Id == client && item.RequestId == null && item.ClosedAt == null).ToQueryString(),
             // The dashboard: the same queries as EfDashboardRepository.
             db.Requests.AsNoTracking().Where(item => item.Triage == RequestTriage.Request && item.ManagerId == manager && item.ClientId == client && item.InspectorId == client)
                 .GroupBy(item => item.Status).Select(group => new { Status = group.Key, Count = group.Count() }).ToQueryString(),

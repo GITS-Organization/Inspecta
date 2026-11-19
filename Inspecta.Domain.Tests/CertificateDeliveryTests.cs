@@ -408,7 +408,7 @@ public sealed class CertificateDeliveryTests : IDisposable
         public Task<IReadOnlyList<Client>> ListAsync(bool includeArchived, CancellationToken cancellationToken = default) => inner.ListAsync(includeArchived, cancellationToken);
         public async Task<IReadOnlyList<InspectionRequest>> GetRequestHistoryAsync(Guid clientId, CancellationToken cancellationToken = default) =>
             await db.Requests.Include(value => value.Items).Include(value => value.Certificates).Where(value => value.ClientId == clientId).ToListAsync(cancellationToken);
-        public Task<(int Requests, int Items)> CountDependenciesAsync(Guid clientId, CancellationToken cancellationToken = default) => inner.CountDependenciesAsync(clientId, cancellationToken);
+        public Task<(int Requests, int Items, int Reminders)> CountDependenciesAsync(Guid clientId, CancellationToken cancellationToken = default) => inner.CountDependenciesAsync(clientId, cancellationToken);
         public Task RemoveAsync(Client client, CancellationToken cancellationToken = default) => inner.RemoveAsync(client, cancellationToken);
         public Task SaveAsync(CancellationToken cancellationToken = default) => inner.SaveAsync(cancellationToken);
     }

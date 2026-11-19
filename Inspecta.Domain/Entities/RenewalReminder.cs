@@ -54,9 +54,9 @@ public sealed class RenewalReminder
     public string State =>
         RequestId is not null ? "requested"
         : ClosedAt is not null ? "closed"
+        : LastReplyAt is not null ? "replied"
         : Status == OutboundEmailStatus.Failed || IsStalePending ? "failed"
         : Status == OutboundEmailStatus.Pending ? "sending"
-        : LastReplyAt is not null ? "replied"
         : "sent";
 
     public static RenewalReminder Create(Guid managerId, Guid clientId, Guid sentById, Guid sendKey, string messageIdDomain)
@@ -121,10 +121,19 @@ public sealed class RenewalReminder
     public IReadOnlyList<ReminderMachine> GetMachines() =>
         JsonSerializer.Deserialize<List<ReminderMachine>>(MachinesJson, JsonOptions) ?? [];
 
-    /// <summary>The client answered (any number of times): only the newest date is kept.</summary>
+    /// <summary>
+    /// The client answered (any number of times): only the newest date is kept. An answer proves the email arrived, even when the mail server's own
+    /// answer was lost (the row says failed or still sending): the reminder then counts as sent.
+    /// </summary>
     public void RecordReply(DateTimeOffset at)
     {
         if (LastReplyAt is null || at > LastReplyAt) LastReplyAt = at;
+        if (Status != OutboundEmailStatus.Sent)
+        {
+            Status = OutboundEmailStatus.Sent;
+            SentAt ??= at;
+            LastError = null;
+        }
     }
 
     /// <summary>The reminder became a request. Once.</summary>

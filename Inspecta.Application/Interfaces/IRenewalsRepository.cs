@@ -26,8 +26,20 @@ public interface IRenewalsRepository
     Task SaveAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Saves the changes. <c>false</c> when another click changed the reminder first (the retry of a failed reminder, two clicks at the same moment): nothing was
+    /// saved and the caller does not send.
+    /// </summary>
+    Task<bool> TrySaveAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Reads the reminder again, after a conditional update changed it behind the tracked copy.</summary>
+    Task ReloadReminderAsync(RenewalReminder reminder, CancellationToken cancellationToken = default);
+
+    /// <summary>Closes the reminder only if it has no request and is not closed yet. <c>false</c> when it was claimed or closed meanwhile.</summary>
+    Task<bool> CloseReminderAsync(Guid managerId, Guid reminderId, Guid actorId, DateTimeOffset at, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Links the reminder to the request it became, only if it has none and is not closed. <c>false</c> when it was claimed meanwhile (two clicks at the same
-    /// moment): the caller then undoes the request it just made.
+    /// moment): the caller then throws, and the transaction it runs in undoes the request it just made.
     /// </summary>
     Task<bool> ClaimReminderAsync(Guid managerId, Guid reminderId, Guid requestId, Guid actorId, DateTimeOffset at, CancellationToken cancellationToken = default);
 
@@ -41,8 +53,11 @@ public interface IRenewalsRepository
 
     // ---- the mailbox import has no signed-in user: these are limited by the company id, never by the query filters.
 
-    /// <summary>The reminder, once it was sent, that one of the message ids (lowercase, no angle brackets) belongs to; ready to be changed.</summary>
-    Task<RenewalReminder?> FindSentReminderAsync(Guid managerId, IReadOnlyList<string> messageIds, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// The reminder that one of the message ids (lowercase, no angle brackets) belongs to, whatever its state; ready to be changed. The id is a random value made
+    /// by us: a match is a reply to our email even if the mail server's answer was lost and the row says failed.
+    /// </summary>
+    Task<RenewalReminder?> FindReminderByMessageIdAsync(Guid managerId, IReadOnlyList<string> messageIds, CancellationToken cancellationToken = default);
 
     /// <summary>Whether the message id is one of the reminders Inspecta sent.</summary>
     Task<bool> IsOwnReminderMessageAsync(Guid managerId, string messageId, CancellationToken cancellationToken = default);

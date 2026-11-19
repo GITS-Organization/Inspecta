@@ -337,14 +337,30 @@ public sealed class RenewalRemindersTests : IDisposable
     }
 
     [Fact]
-    public async Task AReminderThatWasNeverSentDoesNotCatchReplies()
+    public async Task AReplyToAReminderThatWentOutButWasMarkedFailedIsStillKeptWithItAndNeverBecomesARequest()
+    {
+        // The mail server accepted the message but the connection dropped before it said so: the row says failed, the client got the email and answers.
+        await using var db = Context();
+        sender.Failure = new EmailDeliveryException("timed out");
+        await Assert.ThrowsAsync<AuthException>(() => Service(db).SendReminderAsync(manager.Id, coordinator.Id, Send()));
+        var failed = await db.Set<RenewalReminder>().SingleAsync();
+        var requestsBefore = await db.Requests.CountAsync();
+
+        var outcome = await Replies(db).TryAttachAsync(Reply("<" + failed.MessageId + ">"), manager.Id, coordinator.Id, []);
+
+        Assert.Equal(ClientReplyOutcome.Attached, outcome);
+        Assert.Equal(requestsBefore, await db.Requests.CountAsync());
+        var shown = Assert.Single((await Service(db).ListRemindersAsync(manager.Id, client.Id, 1, 10)).Items);
+        Assert.Equal("replied", shown.State);
+        Assert.Single(shown.Replies);
+    }
+
+    [Fact]
+    public async Task AReminderThatWasNeverSentFromHereDoesNotCatchTheRepliesOfStrangers()
     {
         await using var db = Context();
-        sender.Failure = new EmailDeliveryException("refused");
-        await Assert.ThrowsAsync<AuthException>(() => Service(db).SendReminderAsync(manager.Id, coordinator.Id, Send()));
-        var failedId = (await db.Set<RenewalReminder>().SingleAsync()).MessageId;
 
-        var outcome = await Replies(db).TryAttachAsync(Reply("<" + failedId + ">"), manager.Id, coordinator.Id, []);
+        var outcome = await Replies(db).TryAttachAsync(Reply("<" + Guid.NewGuid().ToString("N") + "@integrity-intl.com>"), manager.Id, coordinator.Id, []);
 
         Assert.Equal(ClientReplyOutcome.NotAReply, outcome);
     }
@@ -352,16 +368,238 @@ public sealed class RenewalRemindersTests : IDisposable
     [Fact]
     public void TheEmailLayoutWithoutAnAppendixIsExactlyAsBefore()
     {
-        var plain = EmailLayout.Build("Hello", null, null);
-        var withNothing = EmailLayout.Build("Hello", null, null, appendix: null);
-        var withTable = EmailLayout.Build("Hello", null, null, appendix: ("TABLE-TEXT", "<table>TABLE-HTML</table>"));
+        // What is expected is written out; the HTML of a plain text is the one the layout already makes for it, and the appendix follows it directly.
+        var nl = Environment.NewLine;
+        var build = EmailLayout.Build("Hello", null, null);
+        Assert.Equal("Hello" + nl, build.Text);
+        Assert.Contains("Hello", build.Html);
+        Assert.DoesNotContain("TABLE", build.Html);
 
-        Assert.Equal(plain.Text, withNothing.Text);
-        Assert.Equal(plain.Html, withNothing.Html);
-        Assert.Contains("TABLE-TEXT", withTable.Text);
-        Assert.Contains("TABLE-HTML", withTable.Html);
-        Assert.True(withTable.Text.IndexOf("Hello", StringComparison.Ordinal) < withTable.Text.IndexOf("TABLE-TEXT", StringComparison.Ordinal));
+        var noBranding = EmailLayout.ForCoordinator("Hello", null, null, null, null);
+        Assert.Equal("Hello", noBranding.Text);
+        Assert.Equal(build.Html, noBranding.Html);
+        Assert.Empty(noBranding.InlineImages);
+
+        var withTable = EmailLayout.Build("Hello", null, null, appendix: ("TABLE-TEXT", "<table>TABLE-HTML</table>"));
+        Assert.Equal("Hello" + nl + nl + "TABLE-TEXT" + nl, withTable.Text);
+        Assert.Equal(build.Html + "<table>TABLE-HTML</table>", withTable.Html);
+
+        var noBrandingWithTable = EmailLayout.ForCoordinator("Hello", null, null, null, null, appendix: ("TABLE-TEXT", "<table>TABLE-HTML</table>"));
+        Assert.Equal("Hello" + nl + nl + "TABLE-TEXT", noBrandingWithTable.Text);
+        Assert.Equal(build.Html + "<table>TABLE-HTML</table>", noBrandingWithTable.Html);
+
+        var company = new EmailBranding("Integrity", "Alexandria", "www.integrity-intl.com", null);
+        var signed = EmailLayout.ForCoordinator("Hello", coordinator, "hager.samy@integrity-intl.com", null, new Fixed(company), appendix: ("TABLE-TEXT", "<table>TABLE-HTML</table>"));
+        Assert.True(signed.Text.IndexOf("TABLE-TEXT", StringComparison.Ordinal) < signed.Text.IndexOf("Hager Samy", StringComparison.Ordinal));
+        Assert.True(signed.Text.IndexOf("Hello", StringComparison.Ordinal) < signed.Text.IndexOf("TABLE-TEXT", StringComparison.Ordinal));
     }
+
+    private sealed class Fixed(EmailBranding value) : IEmailBranding
+    {
+        public EmailBranding Get() => value;
+    }
+
+    // ------------------------------------------------------------- the hard cases
+
+    [Fact]
+    public async Task EveryValueOfAMachineIsEncodedInTheHtmlOfTheEmail()
+    {
+        var odd = Machine("<b>Crane & \"Co\"</b>", "<i>SN-1</i>", 10);
+        await using (var seed = Context()) { seed.Add(odd); seed.SaveChanges(); }
+        await using var db = Context();
+
+        await Service(db).SendReminderAsync(manager.Id, coordinator.Id, Send(machines: odd));
+
+        var html = sender.Sent.Single().BodyHtml!;
+        Assert.DoesNotContain("<b>Crane", html);
+        Assert.DoesNotContain("<i>SN-1</i>", html);
+        Assert.Contains("&lt;b&gt;Crane &amp; &quot;Co&quot;&lt;/b&gt;", html);
+        Assert.Contains("&lt;i&gt;SN-1&lt;/i&gt;", html);
+    }
+
+    [Fact]
+    public async Task TheSubjectIsCleanedWhateverTheClientLocationHolds()
+    {
+        var tricky = Client.Create("Tricky Co.", managerId: manager.Id, location: "Cairo\r\nBcc: spy@example.com", certificatesEmail: "certs@tricky.com");
+        var machine = Item.Create(tricky.Id, "Crane");
+        machine.RecordInspection(DateTimeOffset.UtcNow.AddMonths(-11), DateTimeOffset.UtcNow.AddDays(5));
+        await using (var seed = Context()) { seed.AddRange(tricky, machine); seed.SaveChanges(); }
+        await using var db = Context();
+
+        await Service(db).SendReminderAsync(manager.Id, coordinator.Id, new SendRenewalReminderRequest(Guid.NewGuid(), tricky.Id, [machine.Id], "certs@tricky.com", "Dear client", null));
+
+        var subject = sender.Sent.Single().Subject;
+        Assert.DoesNotContain('\r', subject);
+        Assert.DoesNotContain('\n', subject);
+        // A subject made only of control characters falls back to the default one.
+        await Service(db).SendReminderAsync(manager.Id, coordinator.Id, new SendRenewalReminderRequest(Guid.NewGuid(), tricky.Id, [machine.Id], "certs@tricky.com", "Dear client", "\r\n\t"));
+        Assert.StartsWith("Periodic inspection due:", sender.Sent.Last().Subject);
+    }
+
+    [Fact]
+    public async Task TheMailServersWordsAreNeverShownOrKeptOnTheReminder()
+    {
+        await using var db = Context();
+        sender.Failure = new EmailDeliveryException("550 5.7.1 relay denied for 10.1.2.3 (internal-host.corp)");
+
+        var error = await Assert.ThrowsAsync<AuthException>(() => Service(db).SendReminderAsync(manager.Id, coordinator.Id, Send()));
+
+        Assert.Equal("email_delivery_failed", error.Code);
+        Assert.DoesNotContain("550", error.Message);
+        Assert.DoesNotContain("internal-host", error.Message);
+        var kept = await db.Set<RenewalReminder>().SingleAsync();
+        Assert.DoesNotContain("internal-host", kept.LastError);
+        Assert.DoesNotContain("550", kept.LastError);
+    }
+
+    [Fact]
+    public async Task ANeedlessReconnectLeavesNoRowAndSendsNothing()
+    {
+        await using var db = Context();
+        var service = new RenewalsService(
+            new EfRenewalsRepository(db), new EfCoordinatorEmailConfigRepository(db), new EfUserRepository(db), new QuotationTests.FakeProtector(), sender,
+            mailboxAuthenticator: new MustReconnect());
+
+        var error = await Assert.ThrowsAsync<AuthException>(() => service.SendReminderAsync(manager.Id, coordinator.Id, Send()));
+
+        Assert.Equal("mailbox_reconnect_required", error.Code);
+        Assert.Empty(sender.Sent);
+        Assert.Empty(await db.Set<RenewalReminder>().ToListAsync());
+    }
+
+    private sealed class MustReconnect : IMailboxAuthenticator
+    {
+        public Task<MailboxCredential> GetAsync(CoordinatorEmailConfig config, CancellationToken cancellationToken = default) =>
+            throw new AuthException("mailbox_reconnect_required", "Connect the mailbox again.", 409);
+    }
+
+    [Fact]
+    public async Task TheSameKeyAnswersWithTheSentReminderEvenIfThingsChangedSince()
+    {
+        await using var db = Context();
+        var key = Guid.NewGuid();
+        var first = await Service(db).SendReminderAsync(manager.Id, coordinator.Id, Send(key));
+        await using (var change = Context())
+        {
+            change.Items.Single(item => item.Id == crane.Id).Retire();
+            change.SaveChanges();
+        }
+
+        // A machine was retired and emailing is switched off since; the second click is still answered, and nothing is sent again.
+        var second = await Service(db, new QuoteDeliveryOptions(Enabled: false)).SendReminderAsync(manager.Id, coordinator.Id, Send(key));
+
+        Assert.False(second.Created);
+        Assert.Equal(first.Reminder.Id, second.Reminder.Id);
+        Assert.Single(sender.Sent);
+    }
+
+    [Fact]
+    public async Task ASendKeyBelongsToOneReminderOnly()
+    {
+        await using var db = Context();
+        var key = Guid.NewGuid();
+        await Service(db).SendReminderAsync(manager.Id, coordinator.Id, Send(key));
+        var other = Client.Create("Other Co.", managerId: manager.Id, certificatesEmail: "certs@other.com");
+        await using (var seed = Context()) { seed.Add(other); seed.SaveChanges(); }
+
+        var error = await Assert.ThrowsAsync<AuthException>(() => Service(db).SendReminderAsync(
+            manager.Id, coordinator.Id, new SendRenewalReminderRequest(key, other.Id, [crane.Id], "certs@other.com", "Hello", null)));
+
+        Assert.Equal("send_key_used", error.Code);
+        Assert.Single(sender.Sent);
+    }
+
+    [Fact]
+    public async Task TheDuplicateKeyRefusedByTheDatabaseIsReportedNotThrown()
+    {
+        var key = Guid.NewGuid();
+        await using (var first = Context())
+        {
+            var winner = RenewalReminder.Create(manager.Id, client.Id, coordinator.Id, key, "integrity-intl.com");
+            winner.BeginAttempt("certs@deltasteel.com", null, "hager.samy@integrity-intl.com", "Hager Samy", "Subject", "Message", []);
+            Assert.True(await new EfRenewalsRepository(first).TryAddReminderAsync(winner));
+        }
+        await using var second = Context();
+        var loser = RenewalReminder.Create(manager.Id, client.Id, coordinator.Id, key, "integrity-intl.com");
+        loser.BeginAttempt("certs@deltasteel.com", null, "hager.samy@integrity-intl.com", "Hager Samy", "Subject", "Message", []);
+
+        var added = await new EfRenewalsRepository(second).TryAddReminderAsync(loser);
+
+        Assert.False(added);
+        Assert.Single(await Context().Set<RenewalReminder>().ToListAsync());
+    }
+
+    [Fact]
+    public async Task TwoClicksOnRetryOfAFailedReminderLetOnlyOneAttemptThrough()
+    {
+        var failed = RenewalReminder.Create(manager.Id, client.Id, coordinator.Id, Guid.NewGuid(), "integrity-intl.com");
+        failed.BeginAttempt("certs@deltasteel.com", null, "hager.samy@integrity-intl.com", "Hager Samy", "Subject", "Message", []);
+        failed.MarkFailed("refused");
+        await using (var seed = Context()) { seed.Add(failed); seed.SaveChanges(); }
+
+        await using var one = Context();
+        await using var two = Context();
+        var repositoryOne = new EfRenewalsRepository(one);
+        var repositoryTwo = new EfRenewalsRepository(two);
+        var rowOne = (await repositoryOne.GetReminderAsync(manager.Id, failed.Id))!;
+        var rowTwo = (await repositoryTwo.GetReminderAsync(manager.Id, failed.Id))!;
+        rowOne.BeginAttempt("certs@deltasteel.com", null, "hager.samy@integrity-intl.com", "Hager Samy", "Subject", "Message", []);
+        rowTwo.BeginAttempt("certs@deltasteel.com", null, "hager.samy@integrity-intl.com", "Hager Samy", "Subject", "Message", []);
+
+        var firstWon = await repositoryOne.TrySaveAsync();
+        var secondWon = await repositoryTwo.TrySaveAsync();
+
+        Assert.True(firstWon);
+        Assert.False(secondWon);
+        Assert.Equal(2, (await Context().Set<RenewalReminder>().SingleAsync()).Attempts);
+    }
+
+    [Fact]
+    public async Task ARequestAndACloseCannotBothWinTheSameReminder()
+    {
+        var sent = RenewalReminder.Create(manager.Id, client.Id, coordinator.Id, Guid.NewGuid(), "integrity-intl.com");
+        sent.BeginAttempt("certs@deltasteel.com", null, "hager.samy@integrity-intl.com", "Hager Samy", "Subject", "Message", []);
+        sent.MarkSent();
+        await using (var seed = Context()) { seed.Add(sent); seed.SaveChanges(); }
+        await using var db = Context();
+        var repository = new EfRenewalsRepository(db);
+        var now = DateTimeOffset.UtcNow;
+        var requests = Enumerable.Range(0, 3).Select(_ => InspectionRequest.Create("Delta Steel Co.", "Site", client.Id, [RequestItem.Create("Crane", 1)], coordinator.Id, managerId: manager.Id)).ToList();
+        await using (var seed = Context()) { seed.Requests.AddRange(requests); seed.SaveChanges(); }
+
+        Assert.True(await repository.ClaimReminderAsync(manager.Id, sent.Id, requests[0].Id, coordinator.Id, now));
+        Assert.False(await repository.ClaimReminderAsync(manager.Id, sent.Id, requests[1].Id, coordinator.Id, now));
+        Assert.False(await repository.CloseReminderAsync(manager.Id, sent.Id, coordinator.Id, now));
+
+        var other = RenewalReminder.Create(manager.Id, client.Id, coordinator.Id, Guid.NewGuid(), "integrity-intl.com");
+        other.BeginAttempt("certs@deltasteel.com", null, "hager.samy@integrity-intl.com", "Hager Samy", "Subject", "Message", []);
+        other.MarkSent();
+        await using (var seed = Context()) { seed.Add(other); seed.SaveChanges(); }
+        Assert.True(await repository.CloseReminderAsync(manager.Id, other.Id, coordinator.Id, now));
+        Assert.False(await repository.ClaimReminderAsync(manager.Id, other.Id, requests[2].Id, coordinator.Id, now));
+    }
+
+    [Fact]
+    public async Task ARequestCannotBeMadeFromAReminderWithoutATransactionToUndoIt()
+    {
+        var sent = RenewalReminder.Create(manager.Id, client.Id, coordinator.Id, Guid.NewGuid(), "integrity-intl.com");
+        sent.BeginAttempt("certs@deltasteel.com", null, "hager.samy@integrity-intl.com", "Hager Samy", "Subject", "Message", []);
+        sent.MarkSent();
+        await using (var seed = Context()) { seed.Add(sent); seed.SaveChanges(); }
+        await using var db = Context();
+        var service = new RenewalsService(
+            new EfRenewalsRepository(db), new EfCoordinatorEmailConfigRepository(db), new EfUserRepository(db), new QuotationTests.FakeProtector(), sender,
+            inspectionRequests: System.Reflection.DispatchProxy.Create<IInspectionRequestService, NoRequests>(), transactions: null);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.CreateRequestAsync(manager.Id, coordinator.Id, new CreateRenewalRequest(client.Id, sent.Id, [crane.Id])));
+    }
+
+    private class NoRequests : System.Reflection.DispatchProxy
+    {
+        protected override object? Invoke(System.Reflection.MethodInfo? targetMethod, object?[]? args) => throw new InvalidOperationException("Not used by this test.");
+    }
+
 
     public void Dispose() => connection.Dispose();
 }

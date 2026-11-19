@@ -57,14 +57,16 @@ public sealed class RenewalsService(
             every.Count(days => days < 0), every.Count(days => days <= 30), every.Count(days => days <= 60), every.Count(days => days <= 90));
 
         bool InWindow(int days) => windowDays == 0 ? days < 0 : days <= windowDays;
+        // A client whose reminder is still waiting (sending, failed, sent or answered) stays on the list, even when its machines are outside the window.
+        var latest = await repository.LatestByClientAsync(managerId, clients.Select(item => item.Row.ClientId).ToList(), cancellationToken);
+        bool Waiting(Guid clientId) => latest.TryGetValue(clientId, out var reminder) && reminder.State is "sending" or "failed" or "sent" or "replied";
         var listed = clients
-            .Where(item => item.Machines.Any(machine => InWindow(machine.Days)))
+            .Where(item => item.Machines.Any(machine => InWindow(machine.Days)) || Waiting(item.Row.ClientId))
             .Where(item => string.IsNullOrWhiteSpace(search) || item.Row.Name.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase))
             .OrderBy(item => item.Machines.Min(machine => machine.Days)).ThenBy(item => item.Row.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         var shown = listed.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-        var latest = await repository.LatestByClientAsync(managerId, shown.Select(item => item.Row.ClientId).ToList(), cancellationToken);
         var pageOfClients = shown.Select(item =>
         {
             var inWindow = item.Machines.Where(machine => InWindow(machine.Days)).ToList();
@@ -145,11 +147,13 @@ public sealed class RenewalsService(
                     machine.LastInspectedOn ?? (machine.LastInspectionAt is { } last ? InvoiceCalendar.Of(last) : null), InvoiceCalendar.Of(due)));
         }
         if (problems.Count > 0)
-            throw new AuthException("machine_not_eligible", "These machines cannot go in the reminder: " + string.Join("; ", problems) + ".", 400);
+            throw new AuthException("machine_not_eligible", "These machines cannot go in the reminder: " + string.Join("; ", problems) + ".", 400) { Problems = problems };
 
-        var subject = string.IsNullOrWhiteSpace(request.Subject)
-            ? RenewalReminderEmail.DefaultSubject(machines.Count, string.IsNullOrWhiteSpace(client.Location) ? client.Name : client.Location!)
-            : CertificateDeliveryService.CleanSubject(request.Subject);
+        // Both the typed and the default subject are cleaned (no control characters, bounded); a typed one that is empty after cleaning falls back to the default.
+        var typed = string.IsNullOrWhiteSpace(request.Subject) ? string.Empty : CertificateDeliveryService.CleanSubject(request.Subject);
+        var subject = !string.IsNullOrWhiteSpace(typed)
+            ? typed
+            : CertificateDeliveryService.CleanSubject(RenewalReminderEmail.DefaultSubject(machines.Count, string.IsNullOrWhiteSpace(client.Location) ? client.Name : client.Location!));
         return new Checked(client, recipient, machines, subject, request.Message.Trim());
     }
 
@@ -175,6 +179,15 @@ public sealed class RenewalsService(
     {
         if (request.SendKey is not { } sendKey || sendKey == Guid.Empty)
             throw new AuthException("send_key_required", "The send key is required: it makes a double click send once.", 400);
+        // The same key is answered first, before anything else is checked: a reminder that was sent stays answered (200) even if a machine was retired, a
+        // contact was edited, the mailbox needs reconnecting or emailing was switched off since. Nothing is sent again.
+        var existing = await repository.GetReminderBySendKeyAsync(managerId, sendKey, cancellationToken);
+        if (existing is not null)
+        {
+            if (existing.ClientId != request.ClientId) throw new AuthException("send_key_used", "This send key belongs to another reminder.", 409);
+            if (await AlreadyHandledAsync(existing, cancellationToken) is { } done) return done;
+        }
+
         var checkedRequest = await CheckAsync(managerId, request, cancellationToken);
         // Temporarily switched off (QuoteDelivery:Enabled=false): nothing is emailed.
         if (options is { Enabled: false })
@@ -187,7 +200,6 @@ public sealed class RenewalsService(
         // Resolved before anything is recorded: a mailbox that must be connected again stops here with a clear 409 and leaves no row behind.
         var smtp = await QuoteDeliveryService.SmtpSettingsAsync(config, mailboxAuthenticator, secretProtector, cancellationToken);
 
-        var existing = await repository.GetReminderBySendKeyAsync(managerId, sendKey, cancellationToken);
         var row = existing;
         if (row is null)
         {
@@ -203,10 +215,14 @@ public sealed class RenewalsService(
         }
         else
         {
-            if (await AlreadyHandledAsync(row, cancellationToken) is { } done) return done;
-            if (row.ClientId != request.ClientId) throw new AuthException("send_key_used", "This send key belongs to another reminder.", 409);
+            // The retry of a failed (or abandoned) reminder. Two clicks at the same moment both read it: the first to save wins and the other sends nothing.
             row.BeginAttempt(checkedRequest.Recipient.Email, checkedRequest.Recipient.Name, fromAddress, coordinator.FullName, checkedRequest.Subject, checkedRequest.Message, checkedRequest.Machines);
-            await repository.SaveAsync(cancellationToken);
+            if (!await repository.TrySaveAsync(cancellationToken))
+            {
+                var current = await repository.GetReminderBySendKeyAsync(managerId, sendKey, cancellationToken);
+                if (current is not null && await AlreadyHandledAsync(current, cancellationToken) is { } handled) return handled;
+                throw new AuthException("reminder_in_progress", "This reminder is being sent. Wait for it to finish.", 409);
+            }
         }
 
         var table = RenewalReminderEmail.Table(checkedRequest.Machines);
@@ -223,9 +239,10 @@ public sealed class RenewalsService(
         }
         catch (Exception exception)
         {
-            row.MarkFailed(exception.Message);
+            // The mail server's own words (addresses, internal host names) are not shown or kept: they say nothing a coordinator can act on.
+            row.MarkFailed("The mail server did not accept the message.");
             await repository.SaveAsync(CancellationToken.None);
-            throw new AuthException("email_delivery_failed", "The email could not be sent: " + exception.Message, 502);
+            throw new AuthException("email_delivery_failed", "The email could not be sent. Try again, or check the mailbox settings.", 502);
         }
 
         // Recorded straight away: a retry with the same key finds the reminder already sent.
@@ -246,6 +263,8 @@ public sealed class RenewalsService(
     public async Task<RequestResponse> CreateRequestAsync(Guid managerId, Guid actorId, CreateRenewalRequest request, CancellationToken cancellationToken = default)
     {
         if (inspectionRequests is null) throw new InvalidOperationException("Requests are not available.");
+        // A request made from a reminder is undone when the reminder is claimed by another click: that needs the transaction.
+        if (request.ReminderId is not null && transactions is null) throw new InvalidOperationException("A request from a reminder needs a transaction.");
         if (request.EquipmentIds is null || request.EquipmentIds.Count == 0)
             throw new AuthException("machines_required", "Choose at least one machine.", 400);
         var client = await repository.GetClientAsync(managerId, request.ClientId, cancellationToken) ?? throw new KeyNotFoundException("Client was not found.");
@@ -255,7 +274,8 @@ public sealed class RenewalsService(
         {
             reminder = await repository.GetReminderAsync(managerId, reminderId, cancellationToken) ?? throw new KeyNotFoundException("Reminder was not found.");
             if (reminder.ClientId != client.Id) throw new AuthException("reminder_of_other_client", "This reminder belongs to another client.", 400);
-            if (reminder.RequestId is not null) throw new AuthException("renewal_request_exists", "A request was already created from this reminder.", 409);
+            if (reminder.RequestId is { } existingRequest)
+                throw new AuthException("renewal_request_exists", "A request was already created from this reminder.", 409) { Problems = [existingRequest.ToString()] };
             if (reminder.ClosedAt is not null) throw new AuthException("reminder_closed", "This reminder was closed.", 409);
             if (reminder.Status != OutboundEmailStatus.Sent) throw new AuthException("reminder_not_sent", "This reminder was not sent, so it has no answer to turn into a request.", 409);
         }
@@ -273,7 +293,7 @@ public sealed class RenewalsService(
             else items.Add(new CreateRequestItem { Name = machine.Name, EquipmentId = machine.Id, SerialNumber = machine.SerialNumber, Capacity = machine.Capacity, Quantity = 1 });
         }
         if (problems.Count > 0)
-            throw new AuthException("machine_not_eligible", "These machines cannot go on the request: " + string.Join("; ", problems) + ".", 400);
+            throw new AuthException("machine_not_eligible", "These machines cannot go on the request: " + string.Join("; ", problems) + ".", 400) { Problems = problems };
 
         var create = new CreateInspectionRequest
         {
@@ -302,8 +322,13 @@ public sealed class RenewalsService(
     {
         var reminder = await repository.GetReminderAsync(managerId, reminderId, cancellationToken) ?? throw new KeyNotFoundException("Reminder was not found.");
         if (reminder.RequestId is not null) throw new AuthException("renewal_request_exists", "A request was already created from this reminder.", 409);
-        reminder.Close(actorId, (clock ?? TimeProvider.System).GetUtcNow());
-        await repository.SaveAsync(cancellationToken);
+        if (reminder.ClosedAt is not null) return await ToResponseAsync(reminder, cancellationToken);
+
+        // Closed only if nothing claimed it meanwhile (a request made at the same moment wins and the close is refused).
+        var closed = await repository.CloseReminderAsync(managerId, reminderId, actorId, (clock ?? TimeProvider.System).GetUtcNow(), cancellationToken);
+        await repository.ReloadReminderAsync(reminder, cancellationToken);
+        if (!closed && reminder.RequestId is not null)
+            throw new AuthException("renewal_request_exists", "A request was already created from this reminder.", 409) { Problems = [reminder.RequestId.Value.ToString()] };
         return await ToResponseAsync(reminder, cancellationToken);
     }
 
@@ -316,19 +341,23 @@ public sealed class RenewalsService(
         pageSize = pageSize < 1 ? 50 : Math.Min(pageSize, MaxPageSize);
         var (items, total) = await repository.ListRemindersAsync(managerId, clientId, page, pageSize, cancellationToken);
         var replies = (await repository.RepliesAsync(items.Select(item => item.Id).ToList(), cancellationToken)).ToLookup(reply => reply.ReminderId);
-        var responses = new List<RenewalReminderResponse>();
-        foreach (var item in items) responses.Add(await ToResponseAsync(item, replies[item.Id].ToList(), cancellationToken));
+        var senders = new Dictionary<Guid, string>();
+        foreach (var senderId in items.Select(item => item.SentById).Distinct())
+            senders[senderId] = (await userRepository.GetByIdAsync(senderId, cancellationToken))?.FullName ?? "Unknown";
+        var responses = items.Select(item => Respond(item, senders[item.SentById], replies[item.Id].ToList())).ToList();
         return new RenewalReminderPage(total, responses);
     }
 
     private async Task<RenewalReminderResponse> ToResponseAsync(RenewalReminder row, CancellationToken cancellationToken) =>
         await ToResponseAsync(row, (await repository.RepliesAsync([row.Id], cancellationToken)).ToList(), cancellationToken);
 
-    private async Task<RenewalReminderResponse> ToResponseAsync(RenewalReminder row, IReadOnlyList<RenewalReminderReply> replies, CancellationToken cancellationToken)
+    private async Task<RenewalReminderResponse> ToResponseAsync(RenewalReminder row, IReadOnlyList<RenewalReminderReply> replies, CancellationToken cancellationToken) =>
+        Respond(row, (await userRepository.GetByIdAsync(row.SentById, cancellationToken))?.FullName ?? "Unknown", replies);
+
+    private static RenewalReminderResponse Respond(RenewalReminder row, string senderName, IReadOnlyList<RenewalReminderReply> replies)
     {
-        var sender = await userRepository.GetByIdAsync(row.SentById, cancellationToken);
         return new RenewalReminderResponse(
-            row.Id, row.ClientId, row.State, new RenewalReminderUser(row.SentById, sender?.FullName ?? "Unknown"), row.CreatedAt, row.SentAt, row.Attempts, row.LastError,
+            row.Id, row.ClientId, row.State, new RenewalReminderUser(row.SentById, senderName), row.CreatedAt, row.SentAt, row.Attempts, row.LastError,
             row.ToAddress, row.ToName, row.FromAddress, row.Subject, row.Message,
             row.GetMachines().Select(machine => new RenewalReminderMachine(machine.EquipmentId, machine.Name, machine.SerialNumber, machine.LastInspectedOn, machine.NextDueOn)).ToList(),
             replies.OrderBy(reply => reply.ReceivedAt)
@@ -341,8 +370,17 @@ public sealed class RenewalsService(
     {
         if (!string.IsNullOrWhiteSpace(reply.TextBody)) return reply.TextBody;
         if (string.IsNullOrWhiteSpace(reply.HtmlBody)) return string.Empty;
-        var withBreaks = Regex.Replace(reply.HtmlBody, @"<\s*(br|/p|/div|/tr|/li)\s*/?>", "\n", RegexOptions.IgnoreCase);
-        var withoutTags = Regex.Replace(withBreaks, @"<(script|style)[^>]*>.*?</\1>|<[^>]+>", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        return Regex.Replace(WebUtility.HtmlDecode(withoutTags), @"\n{3,}", "\n\n").Trim();
+        // A time limit on every pattern: a hostile page must not make this slow. When a limit is hit, no text is shown.
+        var limit = TimeSpan.FromMilliseconds(250);
+        try
+        {
+            var withBreaks = Regex.Replace(reply.HtmlBody, @"<\s*(br|/p|/div|/tr|/li)\s*/?>", "\n", RegexOptions.IgnoreCase, limit);
+            var withoutTags = Regex.Replace(withBreaks, @"<(script|style)[^>]*>.*?</\1>|<[^>]+>", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline, limit);
+            return Regex.Replace(WebUtility.HtmlDecode(withoutTags), @"\n{3,}", "\n\n", RegexOptions.None, limit).Trim();
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            return string.Empty;
+        }
     }
 }

@@ -46,7 +46,7 @@ public sealed class ClientReplyService(IClientReplyRepository repository, TimePr
     private async Task<ClientReplyOutcome> TryAttachToReminderAsync(
         IncomingEmail email, Guid managerId, IReadOnlyList<string> ownAddresses, IReadOnlyList<string> ids, IRenewalsRepository reminders, CancellationToken cancellationToken)
     {
-        var reminder = await reminders.FindSentReminderAsync(managerId, ids, cancellationToken);
+        var reminder = await reminders.FindReminderByMessageIdAsync(managerId, ids, cancellationToken);
         if (reminder is null) return ClientReplyOutcome.NotAReply;
 
         var messageId = MessageId(email.MessageId);

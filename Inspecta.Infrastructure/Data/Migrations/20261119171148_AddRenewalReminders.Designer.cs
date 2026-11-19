@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Inspecta.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(InspectaDbContext))]
-    [Migration("20261119164043_AddRenewalReminders")]
+    [Migration("20261119171148_AddRenewalReminders")]
     partial class AddRenewalReminders
     {
         /// <inheritdoc />
@@ -1722,6 +1722,7 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");

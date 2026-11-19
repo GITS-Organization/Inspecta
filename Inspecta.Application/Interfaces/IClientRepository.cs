@@ -14,8 +14,8 @@ public interface IClientRepository
         return (all.Skip(offset).Take(limit).ToArray(), all.Count);
     }
     Task<IReadOnlyList<InspectionRequest>> GetRequestHistoryAsync(Guid clientId, CancellationToken cancellationToken = default);
-    /// <summary>How many requests and registered items still point at the client (they block a permanent delete).</summary>
-    Task<(int Requests, int Items)> CountDependenciesAsync(Guid clientId, CancellationToken cancellationToken = default);
+    /// <summary>How many requests, registered items and renewal reminders still point at the client (they block a permanent delete).</summary>
+    Task<(int Requests, int Items, int Reminders)> CountDependenciesAsync(Guid clientId, CancellationToken cancellationToken = default);
 
     Task RemoveAsync(Client client, CancellationToken cancellationToken = default);
     Task SaveAsync(CancellationToken cancellationToken = default);

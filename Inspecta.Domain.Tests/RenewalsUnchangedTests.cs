@@ -1,7 +1,9 @@
 using System.Net;
+using Inspecta.Application.Interfaces;
 using Inspecta.Domain.Entities;
 using Inspecta.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Inspecta.Domain.Tests;
 
@@ -38,6 +40,28 @@ public sealed class RenewalsUnchangedTests(ApiHttpTests.Api api) : ExecutiveApiT
             });
         });
         Assert.NotEqual(overdue, soon);
+    }
+
+    [Fact]
+    public async Task TheApplicationsOwnReplyServiceKeepsAReplyToAReminderAndLeavesOtherMailAlone()
+    {
+        var world = SeedCompany();
+        var client = SeedClient(world, "Steel", location: "Cairo");
+        var reminder = RenewalReminder.Create(world.Company.Id, client, world.Coordinator.Id, Guid.NewGuid(), "integrity-intl.com");
+        reminder.BeginAttempt("certs@steel.com", null, "hager@integrity-intl.com", "Hager Samy", "Periodic inspection due", "Dear client", []);
+        reminder.MarkSent();
+        Api.SeedAs(db => db.RenewalReminders.Add(reminder));
+
+        // The real service, as the application builds it: if it stopped being given the renewals repository, a reply would become a request again.
+        using var scope = Api.Services.CreateScope();
+        var replies = scope.ServiceProvider.GetRequiredService<IClientReplyService>();
+        IncomingEmail Mail(string? inReplyTo) => new(
+            "1", 1, "We can do 2 December.", null, "someone@steel.com", "Someone", "Re: Periodic inspection due", [], [], [], [], [],
+            $"<{Guid.NewGuid():N}@steel.com>", inReplyTo, null, DateTimeOffset.UtcNow);
+
+        Assert.Equal(ClientReplyOutcome.Attached, await replies.TryAttachAsync(Mail("<" + reminder.MessageId + ">"), world.Company.Id, world.Coordinator.Id, []));
+        Assert.Equal(ClientReplyOutcome.NotAReply, await replies.TryAttachAsync(Mail(null), world.Company.Id, world.Coordinator.Id, []));
+        Assert.Equal(ClientReplyOutcome.NotAReply, await replies.TryAttachAsync(Mail("<unknown@x.com>"), world.Company.Id, world.Coordinator.Id, []));
     }
 
     [Fact]

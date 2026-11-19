@@ -43,9 +43,9 @@ public abstract class ExecutiveApiTestBase
             Api.AddUser($"ex-owner-{number}@example.com", UserRole.Admin));
     }
 
-    protected async Task<HttpClient> SignedInAs(string email)
+    protected async Task<HttpClient> SignedInAs(string email, Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>? host = null)
     {
-        var client = Api.CreateClient();
+        var client = (host ?? Api).CreateClient();
         client.DefaultRequestHeaders.Add("X-Forwarded-For", "10.66.77." + Interlocked.Increment(ref caller));
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", new { email, password = ApiHttpTests.Password });
         if (!response.IsSuccessStatusCode) throw new InvalidOperationException($"login of {email} answered {(int)response.StatusCode}");
