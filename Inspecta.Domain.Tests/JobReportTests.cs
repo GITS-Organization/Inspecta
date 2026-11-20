@@ -243,7 +243,7 @@ public sealed class JobReportTests : IDisposable
     public async Task RenamedProgramZipAndUnknownTypesAreRefused()
     {
         await Start();
-        var program = "MZ\u0090\u0000 this is a program"u8.ToArray();
+        var program = new byte[] { 0x4D, 0x5A, 0x90, 0x00, 3, 0, 0, 0 };
         var elf = new byte[] { 0x7F, 0x45, 0x4C, 0x46, 2, 1, 1 };
         var zip = new byte[] { 0x50, 0x4B, 3, 4, 20, 0 };
 
@@ -283,6 +283,7 @@ public sealed class JobReportTests : IDisposable
             ("a.gif", "GIF89a"u8.ToArray(), "image/gif"),
             ("a.txt", "Notes"u8.ToArray(), "text/plain"),
             ("a.csv", "a,b"u8.ToArray(), "text/csv"),
+            ("MZ-123 notes.txt", "MZ-123 inspection notes"u8.ToArray(), "text/plain"),
             ("a.doc", [0xD0, 0xCF, 0x11, 0xE0, 1], "application/msword"),
             ("a.docx", [0x50, 0x4B, 3, 4], "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
             ("a.xls", [0xD0, 0xCF, 0x11, 0xE0, 1], "application/vnd.ms-excel"),

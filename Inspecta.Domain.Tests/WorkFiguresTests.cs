@@ -185,8 +185,8 @@ public sealed class WorkFiguresTests
         var people = new[]
         {
             new ExecPerson(busy, "Busy", UserRole.Inspector, true, null),
-            new ExecPerson(away, "Away", UserRole.Inspector, true, At(-8)),
-            new ExecPerson(back, "Back", UserRole.Inspector, true, At(3))
+            new ExecPerson(away, "Away", UserRole.Inspector, true, DateTimeOffset.UtcNow.AddDays(8)),
+            new ExecPerson(back, "Back", UserRole.Inspector, true, DateTimeOffset.UtcNow.AddDays(-3))
         };
         var requests = new[] { Request(JobStatus.InProgress, 3, inspector: busy), Request(JobStatus.Assigned, 2, inspector: busy), Request(JobStatus.SentToClient, 9, inspector: busy) };
         var certificates = new[] { Certificate(2, inspector: busy), Certificate(40, inspector: busy) };
@@ -194,7 +194,7 @@ public sealed class WorkFiguresTests
         var rows = WorkFigures.Inspectors(people, requests, certificates, Today.AddDays(-30), Today).ToDictionary(row => row.Name);
 
         Assert.Equal((1, 2), (rows["Busy"].Certificates, rows["Busy"].Jobs));
-        Assert.Equal(Today.AddDays(8), rows["Away"].OnLeaveUntil);
+        Assert.Equal(Inspecta.Application.Services.InvoiceCalendar.Of(people[1].OnLeaveUntil!.Value), rows["Away"].OnLeaveUntil);
         Assert.Null(rows["Back"].OnLeaveUntil);
     }
 

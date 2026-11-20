@@ -58,9 +58,19 @@ internal static class UploadedFileRules
         _ => true
     };
 
-    /// <summary>A Windows program (starts with MZ) or a Linux one (starts with 0x7F ELF), whatever the extension says.</summary>
+    /// <summary>
+    /// A Windows program (MZ header with the usual 0x90 0x00 after it, or a PE header where the header says) or a Linux one (0x7F ELF),
+    /// whatever the extension says. A plain text that merely starts with the letters MZ (a project code, for example) is not a program.
+    /// </summary>
     public static bool LooksLikeProgram(byte[] content) =>
-        StartsWith(content, "MZ"u8) || StartsWith(content, [0x7F, 0x45, 0x4C, 0x46]);
+        StartsWith(content, [0x4D, 0x5A, 0x90, 0x00]) || HasPortableExecutableHeader(content) || StartsWith(content, [0x7F, 0x45, 0x4C, 0x46]);
+
+    private static bool HasPortableExecutableHeader(byte[] content)
+    {
+        if (!StartsWith(content, "MZ"u8) || content.Length < 64) return false;
+        var offset = BitConverter.ToInt32(content, 60);
+        return offset >= 0 && offset <= content.Length - 4 && content.AsSpan(offset, 4).SequenceEqual("PE\0\0"u8);
+    }
 
     private static bool StartsWith(byte[] content, ReadOnlySpan<byte> prefix) => content.AsSpan().StartsWith(prefix);
 }
