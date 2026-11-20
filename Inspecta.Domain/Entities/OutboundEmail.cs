@@ -32,6 +32,12 @@ public sealed class OutboundEmail
     public string? References { get; private set; }
     public string AttachmentFileName { get; private set; } = string.Empty;
     public byte[] AttachmentContent { get; private set; } = [];
+
+    /// <summary>
+    /// For a quotation: what the PDF in this email printed from the company and the coordinator (a <c>QuotationContentSnapshot</c> as JSON). A retry that
+    /// finds the email already sent keeps the quotation with this, so the stored content is always what the client really received.
+    /// </summary>
+    public string? ContentSnapshotJson { get; private set; }
     public int Attempts { get; private set; }
     public string? LastError { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
@@ -82,7 +88,8 @@ public sealed class OutboundEmail
         string? references,
         string attachmentFileName,
         byte[] attachmentContent,
-        IEnumerable<string>? cc = null)
+        IEnumerable<string>? cc = null,
+        string? contentSnapshotJson = null)
     {
         if (Status == OutboundEmailStatus.Sent)
             throw new InvalidOperationException("This email was already sent.");
@@ -102,6 +109,7 @@ public sealed class OutboundEmail
         References = string.IsNullOrWhiteSpace(references) ? null : references.Trim();
         AttachmentFileName = attachmentFileName;
         AttachmentContent = attachmentContent;
+        ContentSnapshotJson = string.IsNullOrWhiteSpace(contentSnapshotJson) ? null : contentSnapshotJson;
         Status = OutboundEmailStatus.Pending;
         Attempts++;
         LastError = null;

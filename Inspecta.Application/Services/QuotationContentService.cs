@@ -62,7 +62,7 @@ public sealed class QuotationContentService(
     public async Task<QuotationContentSnapshot> CaptureAsync(
         InspectionRequest request, AppUser? coordinator, CompanyBranding? branding, CancellationToken cancellationToken = default)
     {
-        var content = await LiveContentAsync(request.ManagerId, branding, cancellationToken);
+        var content = ResolveContacts(await LiveContentAsync(request.ManagerId, branding, cancellationToken), branding);
         return new QuotationContentSnapshot(
             content,
             coordinator?.FullName ?? string.Empty,
@@ -70,6 +70,23 @@ public sealed class QuotationContentService(
             string.IsNullOrWhiteSpace(coordinator?.Phone) ? null : coordinator.Phone,
             // The coordinator's sign-in email, which is always there, not the mailbox they send from.
             string.IsNullOrWhiteSpace(coordinator?.Email) ? null : coordinator.Email);
+    }
+
+    // A company on the earlier layout prints its profile contacts for any contact it left empty. They are copied into what is kept with a sent
+    // quotation, so it does not follow a later change of the profile. (The earlier layout printed only the first email, so only that is copied.)
+    private static QuotationCompanyContent ResolveContacts(QuotationCompanyContent content, CompanyBranding? branding)
+    {
+        if (branding is null || QuotationEffectiveCompany.UsesBuiltInLayout(branding)) return content;
+        var contacts = content.Contacts;
+        var email = branding.Emails.FirstOrDefault();
+        return content with
+        {
+            Contacts = new QuotationContacts(
+                contacts.Addresses.Count > 0 ? contacts.Addresses : string.IsNullOrWhiteSpace(branding.Address) ? [] : [branding.Address],
+                contacts.Phones.Count > 0 ? contacts.Phones : branding.Phones,
+                contacts.Emails.Count > 0 ? contacts.Emails : string.IsNullOrWhiteSpace(email) ? [] : [email],
+                string.IsNullOrWhiteSpace(contacts.Website) ? branding.Website : contacts.Website)
+        };
     }
 
     private async Task<QuotationCompanyContent> LiveContentAsync(Guid? companyId, CompanyBranding? branding, CancellationToken cancellationToken)

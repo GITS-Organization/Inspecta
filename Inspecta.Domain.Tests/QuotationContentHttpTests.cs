@@ -209,6 +209,20 @@ public sealed class QuotationContentHttpTests : IClassFixture<ApiHttpTests.Api>
         Assert.Equal("Senior Coordinator", me.GetProperty("jobTitle").GetString());
         Assert.Equal("+20 100 111 2222", me.GetProperty("phone").GetString());
 
+        // A field that is left out keeps its value (the phone is also set by the company admin and printed in emails); only an empty one clears it.
+        var titleOnly = await client.PutAsJsonAsync("/api/v1/auth/me/signature", new { jobTitle = "Lead" });
+        Assert.Equal(HttpStatusCode.OK, titleOnly.StatusCode);
+        var me1 = await (await client.GetAsync("/api/v1/auth/me")).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Lead", me1.GetProperty("jobTitle").GetString());
+        Assert.Equal("+20 100 111 2222", me1.GetProperty("phone").GetString());
+        await client.PutAsJsonAsync("/api/v1/auth/me/signature", new { phone = "+20 7" });
+        var me1b = await (await client.GetAsync("/api/v1/auth/me")).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Lead", me1b.GetProperty("jobTitle").GetString());
+        Assert.Equal("+20 7", me1b.GetProperty("phone").GetString());
+        await client.PutAsJsonAsync("/api/v1/auth/me/signature", new { jobTitle = (string?)null, phone = (string?)null });
+        var me1c = await (await client.GetAsync("/api/v1/auth/me")).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Lead", me1c.GetProperty("jobTitle").GetString());
+
         var cleared = await client.PutAsJsonAsync("/api/v1/auth/me/signature", new { jobTitle = "", phone = " " });
         Assert.Equal(HttpStatusCode.OK, cleared.StatusCode);
         var me2 = await (await client.GetAsync("/api/v1/auth/me")).Content.ReadFromJsonAsync<JsonElement>();

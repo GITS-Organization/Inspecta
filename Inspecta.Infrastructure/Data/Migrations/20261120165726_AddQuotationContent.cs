@@ -24,6 +24,12 @@ namespace Inspecta.Infrastructure.Data.Migrations
                 type: "text",
                 nullable: true);
 
+            migrationBuilder.AddColumn<string>(
+                name: "ContentSnapshotJson",
+                table: "OutboundEmails",
+                type: "text",
+                nullable: true);
+
             migrationBuilder.CreateTable(
                 name: "CompanyQuotationContents",
                 columns: table => new
@@ -54,6 +60,10 @@ namespace Inspecta.Infrastructure.Data.Migrations
             migrationBuilder.DropColumn(
                 name: "CompanyContentJson",
                 table: "Quotes");
+
+            migrationBuilder.DropColumn(
+                name: "ContentSnapshotJson",
+                table: "OutboundEmails");
         }
     }
 }

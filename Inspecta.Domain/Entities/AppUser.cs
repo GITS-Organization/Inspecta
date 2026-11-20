@@ -34,11 +34,21 @@ public class AppUser
     public const int MaxJobTitle = 100;
     public const int MaxPhone = 40;
 
-    /// <summary>Sets the job title and the phone the user prints in the signature of their quotations. Empty clears one. Trimmed, control characters removed.</summary>
+    /// <summary>
+    /// Sets the job title and the phone the user prints in the signature of their quotations. A value left out (<c>null</c>) keeps that field as
+    /// it is (the phone is also set by the company admin and printed in emails); an empty one clears it. Trimmed, control characters removed. The
+    /// phone is checked against its limit only when it is really being changed, so an older, longer phone does not stop a job title being saved.
+    /// </summary>
     public void SetSignatureDetails(string? jobTitle, string? phone)
     {
-        var title = CompanyProfile.Optional(jobTitle, "Job title", MaxJobTitle);
-        var number = CompanyProfile.Optional(phone, "Phone", MaxPhone);
+        var title = jobTitle is null ? JobTitle : CompanyProfile.Optional(jobTitle, "Job title", MaxJobTitle);
+        var number = Phone;
+        if (phone is not null)
+        {
+            var cleaned = string.Concat(phone.Where(character => !char.IsControl(character))).Trim();
+            number = cleaned.Length == 0 ? null : cleaned == Phone ? Phone : CompanyProfile.Optional(cleaned, "Phone", MaxPhone);
+        }
+
         JobTitle = title;
         Phone = number;
     }

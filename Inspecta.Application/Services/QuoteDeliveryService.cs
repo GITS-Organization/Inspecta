@@ -158,7 +158,8 @@ public sealed class QuoteDeliveryService(
             source is null ? null : string.Join(' ', new[] { source.References, source.MessageId }.Where(value => !string.IsNullOrWhiteSpace(value))),
             pdf.FileName,
             pdf.Content,
-            plan.Cc);
+            plan.Cc,
+            snapshot?.ToJson());
 
         if (existing is null) await outboundEmailRepository.AddAsync(row, cancellationToken);
         else await outboundEmailRepository.SaveAsync(cancellationToken);

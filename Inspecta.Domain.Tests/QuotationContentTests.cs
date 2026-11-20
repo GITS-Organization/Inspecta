@@ -41,7 +41,9 @@ public sealed class QuotationContentTests
 
     private sealed class FakeBranding(CompanyBranding? branding) : ICompanyBrandingProvider
     {
-        public Task<CompanyBranding?> GetAsync(Guid? managerId, CancellationToken cancellationToken = default) => Task.FromResult(branding);
+        public CompanyBranding? Value { get; set; } = branding;
+
+        public Task<CompanyBranding?> GetAsync(Guid? managerId, CancellationToken cancellationToken = default) => Task.FromResult(Value);
     }
 
     private sealed class FakeCompanies(params Guid[] ids) : ICompanyRepository
@@ -60,15 +62,16 @@ public sealed class QuotationContentTests
     private sealed class Setup
     {
         public FakeContentRepository Repository { get; } = new();
+        public FakeBranding Branding { get; }
         public QuotationContentService Content { get; }
         public QuotationTests.Fixture Fixture { get; }
 
         public Setup(CompanyBranding? branding = null)
         {
             var users = new IncomingEmailRequestTests.FakeUserRepository([QuotationTests.Coordinator]);
-            var provider = new FakeBranding(branding);
-            Content = new QuotationContentService(Repository, provider, users);
-            Fixture = QuotationTests.Fixture.WithContent(Content, companyBranding: provider);
+            Branding = new FakeBranding(branding);
+            Content = new QuotationContentService(Repository, Branding, users);
+            Fixture = QuotationTests.Fixture.WithContent(Content, companyBranding: Branding);
         }
 
         public Task<QuotationContentResponse> Save(string term, string account = "123") => Content.SaveAsync(
@@ -131,7 +134,13 @@ public sealed class QuotationContentTests
     {
         var other = new Setup(NourBranding());
         var otherModel = await other.PdfModel((await other.PricedDraft()).Id);
-        Assert.Equal(Of(QuotationCompanyContent.Empty), Of(otherModel.Content));
+        Assert.Empty(otherModel.Content!.Terms);
+        Assert.Empty(otherModel.Content.BankAccounts);
+        // The contacts it prints are its profile's, copied in so a sent quotation does not follow later profile edits.
+        Assert.Equal(["12 Nile St"], otherModel.Content.Contacts.Addresses);
+        Assert.Equal(["+20 1"], otherModel.Content.Contacts.Phones);
+        Assert.Equal(["info@nour.example"], otherModel.Content.Contacts.Emails);
+        Assert.Equal("nour.example", otherModel.Content.Contacts.Website);
 
         var builtIn = new Setup();
         var builtInModel = await builtIn.PdfModel((await builtIn.PricedDraft()).Id);
@@ -235,12 +244,13 @@ public sealed class QuotationContentTests
         { "short swift", new SaveQuotationContentRequest { BankAccounts = [Account(swift: "CIBE")] } },
         { "swift of 9", new SaveQuotationContentRequest { BankAccounts = [Account(swift: "CIBEEGCX0")] } },
         { "4 addresses", new SaveQuotationContentRequest { Contacts = new QuotationContentContacts(Addresses: ["a", "b", "c", "d"]) } },
-        { "address too long", new SaveQuotationContentRequest { Contacts = new QuotationContentContacts(Addresses: [new string('a', 301)]) } },
+        { "address too long", new SaveQuotationContentRequest { Contacts = new QuotationContentContacts(Addresses: [new string('a', 121)]) } },
         { "4 phones", new SaveQuotationContentRequest { Contacts = new QuotationContentContacts(Phones: ["1", "2", "3", "4"]) } },
-        { "phone too long", new SaveQuotationContentRequest { Contacts = new QuotationContentContacts(Phones: [new string('1', 41)]) } },
+        { "phone too long", new SaveQuotationContentRequest { Contacts = new QuotationContentContacts(Phones: [new string('1', 31)]) } },
         { "4 emails", new SaveQuotationContentRequest { Contacts = new QuotationContentContacts(Emails: ["a@x", "b@x", "c@x", "d@x"]) } },
+        { "email too long", new SaveQuotationContentRequest { Contacts = new QuotationContentContacts(Emails: [new string('e', 96) + "@x.co"]) } },
         { "email without @", new SaveQuotationContentRequest { Contacts = new QuotationContentContacts(Emails: ["nobody.example"]) } },
-        { "website too long", new SaveQuotationContentRequest { Contacts = new QuotationContentContacts(Website: new string('w', 201)) } }
+        { "website too long", new SaveQuotationContentRequest { Contacts = new QuotationContentContacts(Website: new string('w', 101)) } }
     };
 
     [Theory]
@@ -266,7 +276,7 @@ public sealed class QuotationContentTests
         {
             Terms = Enumerable.Range(0, 12).Select(index => Term(new string('t', 120), points: 15, bank: index == 0, pointLength: 600)).Select((term, index) => term with { ShowBankAccounts = index == 0 }).ToArray(),
             BankAccounts = Enumerable.Range(0, 5).Select(index => Account(number: new string('1', 40), iban: "EG64 0010 0089 0000 0100 0728 5319 3".Replace(" ", string.Empty)[..29], swift: index % 2 == 0 ? "CIBEEGCX" : "CIBEEGCX089")).ToArray(),
-            Contacts = new QuotationContentContacts(["a", "b", "c"], ["1", "2", "3"], ["a@x.example", "b@x.example", "c@x.example"], new string('w', 200))
+            Contacts = new QuotationContentContacts([new string('a', 120), "b", "c"], [new string('1', 30), "2", "3"], [new string('e', 95) + "@x.co", "b@x.example", "c@x.example"], new string('w', 100))
         }, QuotationTests.CoordinatorId);
 
         Assert.Equal(12, saved.Terms.Count);
@@ -326,7 +336,7 @@ public sealed class QuotationContentTests
         }
         finally
         {
-            QuotationTests.Coordinator.SetSignatureDetails(null, null);
+            QuotationTests.Coordinator.SetSignatureDetails("", "");
         }
     }
 
@@ -353,7 +363,7 @@ public sealed class QuotationContentTests
         }
         finally
         {
-            QuotationTests.Coordinator.SetSignatureDetails(null, null);
+            QuotationTests.Coordinator.SetSignatureDetails("", "");
         }
     }
 
@@ -390,7 +400,7 @@ public sealed class QuotationContentTests
         }
         finally
         {
-            QuotationTests.Coordinator.SetSignatureDetails(null, null);
+            QuotationTests.Coordinator.SetSignatureDetails("", "");
         }
 
         Assert.Null((await setup.Entity(draft.Id)).CompanyContentJson);
@@ -454,6 +464,73 @@ public sealed class QuotationContentTests
         Assert.Equal("Sent", setup.Fixture.Pdf.LastModel!.Content!.Terms[0].Title);
     }
 
+    [Fact]
+    public async Task ARetryAfterALostSaveStoresWhatWasReallyEmailedNotAFreshCapture()
+    {
+        var setup = new Setup();
+        await setup.Save("Emailed");
+        var draft = await setup.PricedDraft();
+        var request = setup.Fixture.Request;
+        var quote = await setup.Entity(draft.Id);
+
+        // The first send reached the client with the content as it was, but the quotation was never marked as sent (the save was lost).
+        var emailedFrom = await setup.Content.CaptureAsync(request, QuotationTests.Coordinator, null);
+        await setup.Fixture.Delivery.DeliverAsync(request, quote, Domain.Enums.OutboundEmailKind.Offer, null, default, emailedFrom);
+        Assert.Single(setup.Fixture.Sender.Sent);
+        Assert.False(quote.IsSent);
+
+        // The company edits its content, and the coordinator presses Send again: the email is not sent twice.
+        await setup.Save("Edited");
+        await setup.Fixture.Service.SendAsync(request.Id, draft.Id, QuotationTests.CoordinatorId, "coordinator");
+
+        Assert.Single(setup.Fixture.Sender.Sent);
+        var kept = QuotationContentSnapshot.FromJson((await setup.Entity(draft.Id)).CompanyContentJson);
+        Assert.Equal("Emailed", kept!.Content.Terms[0].Title);
+        Assert.Equal(Of(emailedFrom.Content), Of(kept.Content));
+        Assert.Equal("Emailed", (await setup.PdfModel(draft.Id)).Content!.Terms[0].Title);
+    }
+
+    [Fact]
+    public async Task ASentQuotationOfACompanyWithoutSavedContactsIsFullyFrozenAndKeepsItsProfileContacts()
+    {
+        var setup = new Setup(NourBranding());
+        var draft = await setup.PricedDraft();
+        await setup.Fixture.Service.SendAsync(setup.Fixture.Request.Id, draft.Id, QuotationTests.CoordinatorId, "coordinator");
+
+        // The company then changes the contacts of its profile.
+        setup.Branding.Value = NourBranding() with { Address = "99 New St", Phones = ["+20 999"], Emails = ["new@nour.example"], Website = "new.example" };
+
+        var model = await setup.PdfModel(draft.Id);
+        var company = QuotationEffectiveCompany.Of(model, DefaultCompanyProfile.Instance);
+        Assert.Equal("12 Nile St", company.Address);
+        Assert.Equal(["+20 1"], company.Phones);
+        Assert.Equal("info@nour.example", company.Email);
+        Assert.Equal("nour.example", company.Website);
+
+        // A draft of the same company follows the profile as before.
+        var second = new Setup(NourBranding());
+        var other = await second.PricedDraft();
+        second.Branding.Value = NourBranding() with { Address = "99 New St" };
+        Assert.Equal("99 New St", QuotationEffectiveCompany.Of(await second.PdfModel(other.Id), DefaultCompanyProfile.Instance).Address);
+    }
+
+    [Fact]
+    public async Task SavedContactsWinOverTheProfileAndOnlyTheEmptyOnesAreFilledFromIt()
+    {
+        var setup = new Setup(NourBranding());
+        await setup.Content.SaveAsync(CompanyId, new SaveQuotationContentRequest
+        {
+            Terms = [new QuotationContentTerm("T", ["p"])],
+            Contacts = new QuotationContentContacts(Phones: ["+20 555"])
+        }, QuotationTests.CoordinatorId);
+
+        var model = await setup.PdfModel((await setup.PricedDraft()).Id);
+
+        Assert.Equal(["+20 555"], model.Content!.Contacts.Phones);
+        Assert.Equal(["12 Nile St"], model.Content.Contacts.Addresses);
+        Assert.Equal(["info@nour.example"], model.Content.Contacts.Emails);
+    }
+
     // ---- The signature (step 3) ----------------------------------------------------------------------------------------
 
     [Fact]
@@ -489,7 +566,7 @@ public sealed class QuotationContentTests
         }
         finally
         {
-            QuotationTests.Coordinator.SetSignatureDetails(null, null);
+            QuotationTests.Coordinator.SetSignatureDetails("", "");
         }
     }
 
@@ -506,9 +583,40 @@ public sealed class QuotationContentTests
         Assert.Throws<ArgumentException>(() => user.SetSignatureDetails(null, new string('1', 41)));
         Assert.Equal("Senior Coordinator", user.JobTitle);
 
-        user.SetSignatureDetails("", " ");
+        // A missing value leaves that field as it is; only an empty one clears it.
+        user.SetSignatureDetails("Lead", null);
+        Assert.Equal("Lead", user.JobTitle);
+        Assert.Equal("+20 100", user.Phone);
+        user.SetSignatureDetails(null, "+20 200");
+        Assert.Equal("Lead", user.JobTitle);
+        Assert.Equal("+20 200", user.Phone);
+
+        user.SetSignatureDetails("", null);
         Assert.Null(user.JobTitle);
+        Assert.Equal("+20 200", user.Phone);
+        user.SetSignatureDetails(null, " ");
         Assert.Null(user.Phone);
+    }
+
+    [Fact]
+    public void AUserWhosePhoneWasSetLongerThanTheLimitCanStillSaveOnlyTheJobTitle()
+    {
+        var longPhone = new string('1', 55);
+        var user = AppUser.Create("long@example.com", "Long", Domain.Enums.UserRole.Coordinator, phone: longPhone);
+
+        user.SetSignatureDetails("Senior Coordinator", null);
+        Assert.Equal("Senior Coordinator", user.JobTitle);
+        Assert.Equal(longPhone, user.Phone);
+
+        // Sending the same phone back (a form pre-filled from the account) changes nothing and is not refused.
+        user.SetSignatureDetails("Lead", " " + longPhone + " ");
+        Assert.Equal("Lead", user.JobTitle);
+        Assert.Equal(longPhone, user.Phone);
+
+        // A different phone is checked against the limit.
+        Assert.Throws<ArgumentException>(() => user.SetSignatureDetails("Other", new string('2', 41)));
+        Assert.Equal("Lead", user.JobTitle);
+        Assert.Equal(longPhone, user.Phone);
     }
 
     // ---- Who may edit -----------------------------------------------------------------------------------------------------

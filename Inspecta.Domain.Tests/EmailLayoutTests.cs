@@ -129,4 +129,20 @@ public sealed class EmailLayoutTests
         Assert.Empty(plain.InlineImages);
         Assert.Equal("Technical Manager", EmailLayout.JobTitleOf(UserRole.TechnicalManager));
     }
+
+    [Fact]
+    public void ACoordinatorWhoSetAJobTitleSignsTheEmailWithItLikeTheQuotationPdf()
+    {
+        var coordinator = AppUser.Create("hager@integrity-intl.com", "Hager Samy", UserRole.Coordinator);
+        coordinator.SetSignatureDetails("Senior Coordinator", null);
+
+        var signed = EmailLayout.ForCoordinator("Regards,", coordinator, "hager@integrity-intl.com", null, new FixedBranding(Branding));
+
+        Assert.Contains("Senior Coordinator", signed.Text);
+        Assert.DoesNotContain("Business Coordinator", signed.Text);
+
+        // Cleared again: the title of the role is printed as before.
+        coordinator.SetSignatureDetails("", null);
+        Assert.Contains("Business Coordinator", EmailLayout.ForCoordinator("Regards,", coordinator, "hager@integrity-intl.com", null, new FixedBranding(Branding)).Text);
+    }
 }

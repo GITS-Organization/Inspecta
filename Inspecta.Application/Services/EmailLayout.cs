@@ -86,7 +86,9 @@ public static class EmailLayout
             return appendix is { } block
                 ? new LaidOutEmail(bodyText + Environment.NewLine + Environment.NewLine + block.Text, CertificateDeliveryService.PlainTextToHtml(bodyText) + block.Html, [])
                 : new LaidOutEmail(bodyText, CertificateDeliveryService.PlainTextToHtml(bodyText), []);
-        var signature = new EmailSignatureInfo(coordinator.FullName, JobTitleOf(coordinator.Role), coordinator.Phone, fromAddress, branding.Get());
+        // The title the person set themselves (also printed on their quotations), else the title of their role.
+        var signature = new EmailSignatureInfo(
+            coordinator.FullName, string.IsNullOrWhiteSpace(coordinator.JobTitle) ? JobTitleOf(coordinator.Role) : coordinator.JobTitle, coordinator.Phone, fromAddress, branding.Get());
         return Build(bodyText, signature, Quote(source), logoSource, appendix);
     }
 

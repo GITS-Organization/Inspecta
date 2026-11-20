@@ -40,10 +40,10 @@ public sealed class CompanyQuotationContent
     public const int MaxAccountNumber = 40;
     public const int MaxIban = 34;
     public const int MaxContacts = 3;
-    public const int MaxAddress = 300;
-    public const int MaxPhone = 40;
-    public const int MaxEmail = 320;
-    public const int MaxWebsite = 200;
+    public const int MaxAddress = 120;
+    public const int MaxPhone = 30;
+    public const int MaxEmail = 100;
+    public const int MaxWebsite = 100;
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly Regex IbanShape = new("^[A-Za-z0-9 ]+$", RegexOptions.Compiled | RegexOptions.CultureInvariant);

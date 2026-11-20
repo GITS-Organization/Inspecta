@@ -225,7 +225,7 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
             column.Item().PaddingTop(16).Column(signature =>
             {
                 signature.Item().Text(model.PreparedBy).Bold().FontSize(12).FontColor(PdfTheme.Navy);
-                foreach (var line in SignatureLines(model)) signature.Item().Text(line).FontColor(PdfTheme.Muted);
+                foreach (var line in SignatureLines(model)) signature.Item().Text(line).FontColor(PdfTheme.Muted).ClampLines(2);
                 signature.Item().Text(company.Name).FontColor(PdfTheme.Muted);
             });
         });

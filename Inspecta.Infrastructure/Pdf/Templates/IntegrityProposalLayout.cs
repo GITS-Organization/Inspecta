@@ -173,7 +173,8 @@ internal static class IntegrityProposalLayout
         row.RelativeItem().BorderTop(3).BorderColor(accent).Background(tint).Padding(9).Column(cell =>
         {
             cell.Item().PaddingBottom(4).Text(label).Bold().FontSize(7.5f).LetterSpacing(0.3f).FontColor(accent);
-            foreach (var line in lines) cell.Item().Text(line).FontSize(8).FontColor(Text);
+            // A line longer than the cell is cut after two lines: the footer of every page carries the full value.
+            foreach (var line in lines) cell.Item().Text(line).FontSize(8).FontColor(Text).ClampLines(2);
         });
 
     // ---- Page frame --------------------------------------------------------------------------------------------
@@ -254,7 +255,7 @@ internal static class IntegrityProposalLayout
                 foreach (var email in EmailsOf(company)) FooterLine(block, email);
                 block.Item().BorderTop(0.4f).BorderColor(Color.FromHex("#4A66A6")).PaddingHorizontal(6).PaddingVertical(2).Row(row =>
                 {
-                    row.RelativeItem().Text(company.Website).FontSize(7).FontColor(White);
+                    row.RelativeItem().Text(company.Website).FontSize(7).FontColor(White).ClampLines(1);
                     row.AutoItem().Text("Confidential").Bold().FontSize(6.5f).FontColor(White);
                 });
             });
@@ -265,7 +266,7 @@ internal static class IntegrityProposalLayout
     {
         if (string.IsNullOrWhiteSpace(text)) return;
         column.Item().BorderTop(0.4f).BorderColor(Color.FromHex("#4A66A6")).PaddingHorizontal(6).PaddingVertical(2)
-            .Text(text).FontSize(7).FontColor(White);
+            .Text(text).FontSize(7).FontColor(White).ClampLines(2);
     }
 
     // ---- Building blocks ---------------------------------------------------------------------------------------
@@ -389,7 +390,7 @@ internal static class IntegrityProposalLayout
             column.Item().PaddingTop(14).Width(230).BorderTop(1.2f).BorderColor(Navy).PaddingTop(6).Column(signature =>
             {
                 signature.Item().Text(model.PreparedBy).Bold().FontSize(11.5f).FontColor(Navy).ClampLines(2);
-                foreach (var line in QuotationPdfTemplate.SignatureLines(model)) signature.Item().Text(line);
+                foreach (var line in QuotationPdfTemplate.SignatureLines(model)) signature.Item().Text(line).ClampLines(2);
             });
             column.Item().PaddingTop(8).Text(company.Name.ToUpperInvariant()).Bold().FontSize(8.5f).LetterSpacing(0.25f).FontColor(DarkGreen);
         });

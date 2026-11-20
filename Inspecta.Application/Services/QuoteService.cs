@@ -514,9 +514,11 @@ public sealed class QuoteService(
 
         // Delivery comes first: if it fails nothing about the quote or the request has changed yet.
         var content = await CaptureContentAsync(request, cancellationToken);
-        await deliveryService.DeliverAsync(request, quote, OutboundEmailKind.Offer, ToDraft(email), cancellationToken, content);
+        var delivered = await deliveryService.DeliverAsync(request, quote, OutboundEmailKind.Offer, ToDraft(email), cancellationToken, content);
 
-        quote.Send(content?.ToJson());
+        // What is kept is what the PDF in the email really printed: for an email an earlier attempt already sent (its save was lost) that is what that
+        // email was drawn from, not a fresh capture of content that may have been edited since.
+        quote.Send(delivered?.ContentSnapshotJson ?? content?.ToJson());
         request.TransitionTo(SentStatusOf(quote), actorId);
 
         // A new offer is out: what the client wrote about the previous one is cleared.
@@ -638,11 +640,11 @@ public sealed class QuoteService(
 
         // A draft that is accepted is sent at the same time, so it is kept with what the email carried; one already sent keeps what it was sent with.
         var content = quote.IsSent ? null : await CaptureContentAsync(request, cancellationToken);
-        await deliveryService.DeliverAsync(request, quote, OutboundEmailKind.Accept, ToDraft(email), cancellationToken, content);
+        var delivered = await deliveryService.DeliverAsync(request, quote, OutboundEmailKind.Accept, ToDraft(email), cancellationToken, content);
 
         if (!quote.IsSent)
         {
-            quote.Send(content?.ToJson());
+            quote.Send(delivered?.ContentSnapshotJson ?? content?.ToJson());
             request.TransitionTo(SentStatusOf(quote), actorId);
         }
 

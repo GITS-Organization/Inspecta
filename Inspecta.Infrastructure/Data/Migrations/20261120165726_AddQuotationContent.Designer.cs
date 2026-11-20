@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Inspecta.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(InspectaDbContext))]
-    [Migration("20261120160156_AddQuotationContent")]
+    [Migration("20261120165726_AddQuotationContent")]
     partial class AddQuotationContent
     {
         /// <inheritdoc />
@@ -1337,6 +1337,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("ContentSnapshotJson")
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
