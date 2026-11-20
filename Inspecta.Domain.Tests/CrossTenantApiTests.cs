@@ -192,6 +192,36 @@ public sealed class CrossTenantApiTests : IClassFixture<ApiHttpTests.Api>
     }
 
     [Fact]
+    public async Task ReportsOfAnotherCompanyAreNotReachable()
+    {
+        var coordinator = api.AddUser($"reports-coordinator-{Next()}@example.com", UserRole.Coordinator, api.ManagerA);
+        var request = InspectionRequest.Create($"{Marker} client {Next()}", "Cairo", null, [RequestItem.Create("Mobile crane", 1)], coordinator.Id, managerId: api.ManagerA);
+        var fileName = $"{Marker.ToLowerInvariant()}-report-{Next()}.pdf";
+        var report = JobReportFile.Create(api.ManagerA, request.Id, null, coordinator.Id, "Uploader A", fileName, "application/pdf", "%PDF-1.4 a-only"u8.ToArray());
+        api.SeedAs(db =>
+        {
+            db.Requests.Add(request);
+            db.JobReportFiles.Add(report);
+        });
+        var b = await ManagerB();
+        var path = $"/api/v1/quotation-queue/{request.Id}/reports";
+        var body = new { fileName = "mine.pdf", contentBase64 = Convert.ToBase64String("%PDF-1.4"u8.ToArray()) };
+
+        await Denied(await b.GetAsync(path), "GET reports", fileName);
+        await Denied(await b.GetAsync($"{path}/{report.Id}"), "GET report file", fileName);
+        await Denied(await b.PostAsJsonAsync(path, body), "POST report");
+        await Denied(await b.DeleteAsync($"{path}/{report.Id}"), "DELETE report", fileName);
+        await Denied(await b.GetAsync($"/api/v1/quotation-queue/{request.Id}/machines"), "GET machines of a job with reports");
+        await Denied(await b.GetAsync($"/api/v1/quotation-queue/{request.Id}/certificates/preview.zip"), "GET preview zip of a job with reports");
+
+        var a = await ManagerA();
+        var list = await a.GetAsync(path);
+        Assert.Equal(HttpStatusCode.OK, list.StatusCode);
+        Assert.Contains(fileName, await list.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, (await a.GetAsync($"{path}/{report.Id}")).StatusCode);
+    }
+
+    [Fact]
     public async Task TeamMembersOfAnotherTenantAreNotReachable()
     {
         var email = $"{Marker.ToLowerInvariant()}-member-{Next()}@example.com";

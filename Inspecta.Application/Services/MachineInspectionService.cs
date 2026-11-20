@@ -22,7 +22,9 @@ public sealed class MachineInspectionService(
     CertificateDeliveryService? deliveryService = null,
     IQrCodeRenderer? qrCodes = null,
     ITransactionRunner? transactions = null,
-    ICompanyBrandingProvider? companyBranding = null) : IMachineInspectionService
+    ICompanyBrandingProvider? companyBranding = null,
+    IJobReportRepository? jobReports = null,
+    JobReportOptions? reportOptions = null) : IMachineInspectionService
 {
     private const int MaxTextLength = 4000;
 
@@ -586,8 +588,12 @@ public sealed class MachineInspectionService(
             entries.Add(($"{number:00}-{SafeName(item.Name)}.pdf", pdf.Content));
         }
 
-        if (entries.Count == 0) throw new KeyNotFoundException("No certificate of this job has been saved yet.");
-        return new DownloadFile(CertificateDeliveryService.Zip([], entries), $"preview-{SafeName(request.ClientName)}.zip", "application/zip");
+        // The inspector's reports go next to the certificates, under reports/.
+        var reports = jobReports is null
+            ? []
+            : JobReportRules.ZipEntries(JobReportRules.Live(await jobReports.ListWithContentAsync(request.Id, cancellationToken), DateTimeOffset.UtcNow));
+        if (entries.Count == 0 && reports.Count == 0) throw new KeyNotFoundException("No certificate of this job has been saved yet.");
+        return new DownloadFile(CertificateDeliveryService.Zip([], entries.Concat(reports)), $"preview-{SafeName(request.ClientName)}.zip", "application/zip");
     }
 
     /// <summary>The QR code of an approved certificate (the one printed on it) as a PNG, to send to the client.</summary>
@@ -684,6 +690,9 @@ public sealed class MachineInspectionService(
         foreach (var certificate in request.Certificates.Where(value => value.IsApproved && !value.IsDelivered))
             certificate.MarkDelivered(sentTo);
         request.TransitionTo(JobStatus.SentToClient, actorId, note);
+        // The report files' clock starts with the delivery (email, email switched off or by hand), saved with it in one go: a failed email never reaches here.
+        if (jobReports is not null)
+            await jobReports.StageRetentionAsync(request.Id, DateTimeOffset.UtcNow + (reportOptions ?? new JobReportOptions()).Retention, cancellationToken);
         await requestRepository.SaveAsync(request, cancellationToken);
     }
 
@@ -834,6 +843,11 @@ public sealed class MachineInspectionService(
         }
 
         var delivered = await DeliveryInfoAsync(request, cancellationToken);
+        // The coordinator's view of the reports starts at approval, like the certificates.
+        var reportCount = jobReports is null || role == "coordinator" && !JobReportRules.IsApproved(request.Status)
+            ? 0
+            : await jobReports.CountForRequestAsync(request.Id, DateTimeOffset.UtcNow, cancellationToken);
+        var canUploadReports = jobReports is not null && JobReportRules.IsOpenForUpload(request.Status) && CanEdit(request, actorId, role);
         var isReviewer = IsTheReviewerOf(request, actorId, role);
         var waitingForDecision = isReviewer && request.Status == JobStatus.CertificateSubmitted;
         var blockers = waitingForDecision ? ReviewBlockers(request) : [];
@@ -866,7 +880,9 @@ public sealed class MachineInspectionService(
                 ? $"/api/v1/quotation-queue/{request.Id}/certificates/preview.zip"
                 : null,
             // The request itself (client, contact, items, original email, history), so a screen needs no second call. Not for inspectors.
-            Request: role == "inspector" ? null : RequestResponseMapper.Map(request));
+            Request: role == "inspector" ? null : RequestResponseMapper.Map(request),
+            ReportCount: reportCount,
+            CanUploadReports: canUploadReports);
     }
 
     private async Task<MachineFormResponse> BuildFormAsync(

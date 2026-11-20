@@ -143,6 +143,11 @@ builder.Services.AddSingleton(new Inspecta.Application.Certificates.CertificateO
     builder.Configuration["Certificates:PublicBaseUrl"] is { Length: > 0 } publicBaseUrl ? publicBaseUrl : "https://api.gitsplatform.com"));
 builder.Services.AddSingleton<IQrCodeRenderer, QrCodeRenderer>();
 builder.Services.AddScoped<ITransactionRunner, EfTransactionRunner>();
+// Report files of a job (step 1): kept in the database, deleted JobReports:RetentionDays (30) after the job is delivered.
+builder.Services.AddSingleton(new Inspecta.Application.Services.JobReportOptions(
+    builder.Configuration.GetValue("JobReports:RetentionDays", Inspecta.Application.Services.JobReportOptions.DefaultRetentionDays)));
+builder.Services.AddScoped<IJobReportRepository, EfJobReportRepository>();
+builder.Services.AddScoped<IJobReportService, JobReportService>();
 builder.Services.AddScoped<IMachineInspectionService, MachineInspectionService>();
 builder.Services.AddScoped<IDirectCertificationService, DirectCertificationService>();
 builder.Services.AddScoped<IJobMachineService, JobMachineService>();

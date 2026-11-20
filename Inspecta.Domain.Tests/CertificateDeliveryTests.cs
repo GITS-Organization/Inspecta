@@ -542,6 +542,108 @@ public sealed class CertificateDeliveryTests : IDisposable
         await Assert.ThrowsAsync<AuthException>(() => Run(true, service => service.GetCertificatesZipAsync(requestId, coordinator.Id, "coordinator")));
     }
 
+    // ---- The 30-day clock of the inspector's report files ---------------------------------------------------------
+
+    private async Task<Guid[]> SeedReportsAsync()
+    {
+        await using var db = CreateContext();
+        var files = new[] { "weld.pdf", "photos.pdf" }
+            .Select(name => JobReportFile.Create(manager.Id, requestId, null, inspector.Id, inspector.FullName, name, "application/pdf", "%PDF-1.4 x"u8.ToArray()))
+            .ToArray();
+        db.JobReportFiles.AddRange(files);
+        await db.SaveChangesAsync();
+        return files.Select(file => file.Id).ToArray();
+    }
+
+    private async Task<DateTimeOffset?[]> ExpiriesAsync()
+    {
+        await using var db = CreateContext();
+        return db.JobReportFiles.Where(file => file.RequestId == requestId).Select(file => file.ExpiresAt).AsEnumerable().ToArray();
+    }
+
+    private static void AssertThirtyDaysFromNow(DateTimeOffset?[] expiries)
+    {
+        Assert.Equal(2, expiries.Length);
+        Assert.All(expiries, expires =>
+        {
+            Assert.NotNull(expires);
+            Assert.InRange(expires!.Value, DateTimeOffset.UtcNow.AddDays(30).AddMinutes(-5), DateTimeOffset.UtcNow.AddDays(30).AddMinutes(5));
+        });
+    }
+
+    [Fact]
+    public async Task DeliveryByEmailStampsTheExpiryOnEveryReport()
+    {
+        await ApprovedJobAsync(fromEmail: true);
+        await SeedReportsAsync();
+        Assert.All(await ExpiriesAsync(), expires => Assert.Null(expires));
+
+        await Run(true, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest()));
+
+        Assert.Single(sender.Sent);
+        AssertThirtyDaysFromNow(await ExpiriesAsync());
+    }
+
+    [Fact]
+    public async Task DeliveryWithEmailSwitchedOffStampsTheExpiryOnEveryReport()
+    {
+        await ApprovedJobAsync(fromEmail: true);
+        await SeedReportsAsync();
+
+        await Run(false, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest()));
+
+        Assert.Empty(sender.Sent);
+        AssertThirtyDaysFromNow(await ExpiriesAsync());
+    }
+
+    [Fact]
+    public async Task ManualDeliveryStartsTheThirtyDaysToo()
+    {
+        await ApprovedJobAsync(fromEmail: true);
+        await SeedReportsAsync();
+
+        await Run(true, service => service.DeliverManuallyAsync(requestId, coordinator.Id, "coordinator", new ManualDeliveryRequest { DeliveredTo = "Mr Hassan" }));
+
+        Assert.Empty(sender.Sent);
+        AssertThirtyDaysFromNow(await ExpiriesAsync());
+    }
+
+    [Fact]
+    public async Task AFailedEmailLeavesTheReportsWithoutAnExpiry()
+    {
+        microsoftMailbox = true;
+        var stub = new StubMailboxAuthenticator { Reject = true };
+        authenticator = stub;
+        await ApprovedJobAsync(fromEmail: true);
+        await SeedReportsAsync();
+
+        await Assert.ThrowsAsync<AuthException>(() =>
+            Run(true, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest())));
+        Assert.All(await ExpiriesAsync(), expires => Assert.Null(expires));
+
+        stub.Reject = false;
+        await Run(true, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest()));
+        AssertThirtyDaysFromNow(await ExpiriesAsync());
+    }
+
+    [Fact]
+    public async Task ADeliveryOfAJobWithoutReportsSendsWhatItSentBefore()
+    {
+        await ApprovedJobAsync(fromEmail: true);
+
+        var delivered = await Run(true, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest()));
+
+        Assert.True(delivered.Delivery!.EmailSent);
+        var email = Assert.Single(sender.Sent);
+        Assert.Equal(2, 1 + email.MoreAttachments!.Count); // the two certificates, nothing else
+        Assert.EndsWith(".pdf", email.AttachmentFileName);
+        await using var db = CreateContext();
+        Assert.Empty(db.JobReportFiles.ToList());
+        var names = db.CertificateDeliveries.Single().AttachmentNames.Split("; ");
+        Assert.Equal(2, names.Length);
+        Assert.All(names, name => Assert.EndsWith(".pdf", name));
+    }
+
     // ---- Setup --------------------------------------------------------------------------------------------------
 
     private async Task StartJobAsync(bool fromEmail, bool configureMailbox)
@@ -638,7 +740,8 @@ public sealed class CertificateDeliveryTests : IDisposable
             pdfServices.GetRequiredService<IPdfGenerator>(),
             files,
             null,
-            delivery);
+            delivery,
+            jobReports: new EfJobReportRepository(db));
         return await action(service);
     }
 

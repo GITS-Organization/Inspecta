@@ -93,6 +93,8 @@ public sealed record MachineProgress(int Total, int Submitted, int Approved, int
 /// user whether those buttons apply to the job now. When <c>canReview</c> is true but <c>canApprove</c> is not, <c>reviewBlockers</c>
 /// says why (a machine without a submitted certificate); the job can still be sent back. <c>previewZipUrl</c> downloads every
 /// certificate in one ZIP. <c>reviewHistory</c> lists the technical manager's comments each time the job was sent back, newest first.
+/// <c>reportCount</c> is the number of report files of the job the caller may see (the coordinator's count starts at approval) and
+/// <c>canUploadReports</c> says whether the caller can add one now.
 /// </summary>
 public sealed record MachineListResponse(
     Guid RequestId,
@@ -111,7 +113,9 @@ public sealed record MachineListResponse(
     IReadOnlyList<string>? ReviewBlockers = null,
     string? PreviewZipUrl = null,
     Requests.RequestResponse? Request = null,
-    bool CanEditCertificateDetails = false);
+    bool CanEditCertificateDetails = false,
+    int ReportCount = 0,
+    bool CanUploadReports = false);
 
 /// <summary>One comment of the technical manager: on the whole job (<c>requestItemId</c> empty) or on one machine.</summary>
 public sealed record ReviewCommentResponse(DateTimeOffset At, string? By, Guid? RequestItemId, string? MachineName, string Text);

@@ -99,7 +99,13 @@ public sealed class PostgresQueryTranslationTests
             db.CompanyQuotationContents.AsNoTracking().Where(content => content.CompanyId == manager).ToQueryString(),
             db.CompanyQuotationContents.Where(content => content.CompanyId == manager).ToQueryString(),
             db.Quotes.AsNoTracking().Where(quote => quote.CompanyContentJson != null && quote.Id == manager).Select(quote => quote.CompanyContentJson).ToQueryString(),
-            db.QuotationDrafts.IgnoreQueryFilters().Where(draft => draft.SourceUid == 1u).ToQueryString()
+            db.QuotationDrafts.IgnoreQueryFilters().Where(draft => draft.SourceUid == 1u).ToQueryString(),
+            // The report files of a job (EfJobReportRepository): lists without the bytes, by id with them, the expiry stage and the count.
+            db.JobReportFiles.AsNoTracking().Where(file => file.RequestId == manager).ToQueryString(),
+            db.JobReportFiles.AsNoTracking().Where(file => file.RequestId == manager).Select(file => file.ExpiresAt).ToQueryString(),
+            db.JobReportFiles.AsNoTracking().Include(file => file.Body).Where(file => file.RequestId == manager && file.Id == client).ToQueryString(),
+            db.JobReportFiles.AsNoTracking().Include(file => file.Body).Where(file => file.RequestId == manager).ToQueryString(),
+            db.JobReportFiles.Where(file => file.RequestId == manager && file.ExpiresAt == null).ToQueryString()
         };
 
         Assert.All(queries, sql => Assert.False(string.IsNullOrWhiteSpace(sql)));

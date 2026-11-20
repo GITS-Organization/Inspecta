@@ -35,6 +35,7 @@ public sealed class InspectaDbContext(
     public DbSet<QuotationDraft> QuotationDrafts => Set<QuotationDraft>();
     public DbSet<CertificateCounter> CertificateCounters => Set<CertificateCounter>();
     public DbSet<IssuedCertificateFile> IssuedCertificateFiles => Set<IssuedCertificateFile>();
+    public DbSet<JobReportFile> JobReportFiles => Set<JobReportFile>();
     public DbSet<ReviewComment> ReviewComments => Set<ReviewComment>();
     public DbSet<CertificateDelivery> CertificateDeliveries => Set<CertificateDelivery>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
@@ -279,7 +280,28 @@ public sealed class InspectaDbContext(
         issuedContent.Property(item => item.Bytes).IsRequired();
         // Only ever read through its file, which carries the team filter.
 
-        var delivery = modelBuilder.Entity<CertificateDelivery>();
+        // A report file of a job. The job owns it (deleted with it); the machine link is optional and is emptied when the machine leaves the job.
+        var jobReport = modelBuilder.Entity<JobReportFile>();
+        jobReport.HasKey(item => item.Id);
+        jobReport.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
+        jobReport.HasIndex(item => item.RequestId);
+        jobReport.HasIndex(item => item.ExpiresAt);
+        jobReport.HasIndex(item => item.ManagerId);
+        jobReport.Property(item => item.UploadedByName).HasMaxLength(JobReportFile.MaxUploaderNameLength);
+        jobReport.Property(item => item.FileName).HasMaxLength(JobReportFile.MaxFileNameLength);
+        jobReport.Property(item => item.ContentType).HasMaxLength(JobReportFile.MaxContentTypeLength);
+        jobReport.Property(item => item.Sha256).HasMaxLength(64);
+        jobReport.HasOne<InspectionRequest>().WithMany().HasForeignKey(item => item.RequestId).OnDelete(DeleteBehavior.Cascade);
+        jobReport.HasOne<RequestItem>().WithMany().HasForeignKey(item => item.RequestItemId).OnDelete(DeleteBehavior.SetNull);
+        jobReport.HasOne(item => item.Body).WithOne().HasForeignKey<JobReportContent>(body => body.JobReportFileId)
+            .IsRequired().OnDelete(DeleteBehavior.Cascade);
+        var jobReportContent = modelBuilder.Entity<JobReportContent>();
+        jobReportContent.HasKey(item => item.JobReportFileId);
+        jobReportContent.ToTable("JobReportContents");
+        jobReportContent.Property(item => item.Bytes).IsRequired();
+        // Only ever read through its file, which carries the team filter.
+
+        var delivery =modelBuilder.Entity<CertificateDelivery>();
         delivery.HasKey(item => item.Id);
         delivery.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
         delivery.HasIndex(item => item.RequestId);

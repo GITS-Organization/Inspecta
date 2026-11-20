@@ -114,6 +114,11 @@ public sealed class PermissionGuardTests
         ["MachineInspectionController.DeliverToClient"] = "admin,technical_manager,coordinator",
         ["MachineInspectionController.SendTestEmail"] = "admin,technical_manager,coordinator",
         ["MachineInspectionController.DeliverManually"] = "admin,technical_manager,coordinator",
+        // Inspector reports on a job (2026-11-20): new in this step, so the lines are the agreed rights, not a record of the past.
+        ["JobReportsController.List"] = "admin,technical_manager,coordinator,inspector",
+        ["JobReportsController.Upload"] = "admin,technical_manager,coordinator,inspector",
+        ["JobReportsController.Download"] = "admin,technical_manager,coordinator,inspector",
+        ["JobReportsController.Delete"] = "admin,technical_manager,coordinator,inspector",
         ["ManagerTeamController.List"] = "admin,company_admin",
         ["ManagerTeamController.Create"] = "admin,company_admin",
         ["ManagerTeamController.GetById"] = "admin,company_admin",

@@ -1278,6 +1278,79 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.ToTable("Items", (string)null);
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.JobReportContent", b =>
+                {
+                    b.Property<Guid>("JobReportFileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Bytes")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("JobReportFileId");
+
+                    b.ToTable("JobReportContents", (string)null);
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.JobReportFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ContentLength")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<Guid>("ManagerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RequestItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("UploadedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UploadedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("ManagerId");
+
+                    b.HasIndex("RequestId");
+
+                    b.HasIndex("RequestItemId");
+
+                    b.ToTable("JobReportFiles");
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.JobStatusHistory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2122,6 +2195,29 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Navigation("Client");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.JobReportContent", b =>
+                {
+                    b.HasOne("Inspecta.Domain.Entities.JobReportFile", null)
+                        .WithOne("Body")
+                        .HasForeignKey("Inspecta.Domain.Entities.JobReportContent", "JobReportFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.JobReportFile", b =>
+                {
+                    b.HasOne("Inspecta.Domain.Entities.InspectionRequest", null)
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Inspecta.Domain.Entities.RequestItem", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.JobStatusHistory", b =>
                 {
                     b.HasOne("Inspecta.Domain.Entities.InspectionRequest", "Request")
@@ -2281,6 +2377,11 @@ namespace Inspecta.Infrastructure.Data.Migrations
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.IssuedCertificateFile", b =>
+                {
+                    b.Navigation("Body");
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.JobReportFile", b =>
                 {
                     b.Navigation("Body");
                 });
