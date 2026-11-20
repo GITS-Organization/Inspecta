@@ -136,7 +136,7 @@ public sealed class JobReportService(
             throw new ArgumentException($"'{name}' is larger than {JobReportRules.MaxFileBytes / (1024 * 1024)} MB.");
         if (UploadedFileRules.LooksLikeProgram(content))
             throw new ArgumentException($"'{name}' looks like a program, which cannot be added.");
-        if (!UploadedFileRules.MatchesType(extension, content))
+        if (!UploadedFileRules.MatchesType(extension, content) || !UploadedFileRules.IsGenuineOfficeFile(extension, content))
             throw new ArgumentException($"'{name}' is not what its extension says.");
         return (name, contentType, content);
     }

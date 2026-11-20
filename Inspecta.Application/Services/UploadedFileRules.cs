@@ -59,6 +59,24 @@ internal static class UploadedFileRules
     };
 
     /// <summary>
+    /// A .docx, .xlsx or .pptx is a ZIP that holds a <c>[Content_Types].xml</c> entry; a ZIP of anything else renamed to one of them is refused.
+    /// Other extensions are not affected.
+    /// </summary>
+    public static bool IsGenuineOfficeFile(string extension, byte[] content)
+    {
+        if (extension.ToLowerInvariant() is not (".docx" or ".xlsx" or ".pptx")) return true;
+        try
+        {
+            using var archive = new System.IO.Compression.ZipArchive(new MemoryStream(content), System.IO.Compression.ZipArchiveMode.Read);
+            return archive.GetEntry("[Content_Types].xml") is not null;
+        }
+        catch (Exception exception) when (exception is InvalidDataException or NotSupportedException or IOException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// A Windows program (MZ header with the usual 0x90 0x00 after it, or a PE header where the header says) or a Linux one (0x7F ELF),
     /// whatever the extension says. A plain text that merely starts with the letters MZ (a project code, for example) is not a program.
     /// </summary>

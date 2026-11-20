@@ -261,6 +261,8 @@ public sealed class JobReportTests : IDisposable
                      ("fake.pdf", "This is not a pdf"u8.ToArray()),
                      ("fake.png", Pdf),
                      ("fake.docx", Pdf),
+                     ("zip-renamed.docx", new byte[] { 0x50, 0x4B, 3, 4, 20, 0 }),
+                     ("other-zip.xlsx", OtherZip()),
                      ("empty.pdf", [])
                  })
             await Assert.ThrowsAsync<ArgumentException>(() => Upload(inspector, "inspector", name, content));
@@ -268,6 +270,24 @@ public sealed class JobReportTests : IDisposable
         await Assert.ThrowsAsync<ArgumentException>(() => Reports(service => service.UploadAsync(
             requestId, inspector.Id, "inspector", new UploadJobReportRequest { FileName = "a.pdf", ContentBase64 = "not base64!" })));
         Assert.Empty((await Reports(service => service.ListAsync(requestId, inspector.Id, "inspector"))).Files);
+    }
+
+    // A minimal Office file: a ZIP that holds the [Content_Types].xml entry every .docx, .xlsx and .pptx has.
+    private static byte[] Office() => Zip("[Content_Types].xml");
+
+    // A real ZIP that is not an Office file.
+    private static byte[] OtherZip() => Zip("payload.bin");
+
+    private static byte[] Zip(string entryName)
+    {
+        using var stream = new MemoryStream();
+        using (var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            using var writer = new StreamWriter(archive.CreateEntry(entryName).Open());
+            writer.Write("x");
+        }
+
+        return stream.ToArray();
     }
 
     [Fact]
@@ -285,11 +305,11 @@ public sealed class JobReportTests : IDisposable
             ("a.csv", "a,b"u8.ToArray(), "text/csv"),
             ("MZ-123 notes.txt", "MZ-123 inspection notes"u8.ToArray(), "text/plain"),
             ("a.doc", [0xD0, 0xCF, 0x11, 0xE0, 1], "application/msword"),
-            ("a.docx", [0x50, 0x4B, 3, 4], "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+            ("a.docx", Office(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
             ("a.xls", [0xD0, 0xCF, 0x11, 0xE0, 1], "application/vnd.ms-excel"),
-            ("a.xlsx", [0x50, 0x4B, 3, 4], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            ("a.xlsx", Office(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
             ("a.ppt", [0xD0, 0xCF, 0x11, 0xE0, 1], "application/vnd.ms-powerpoint"),
-            ("a.pptx", [0x50, 0x4B, 3, 4], "application/vnd.openxmlformats-officedocument.presentationml.presentation")
+            ("a.pptx", Office(), "application/vnd.openxmlformats-officedocument.presentationml.presentation")
         };
 
         foreach (var (name, content, contentType) in types)
