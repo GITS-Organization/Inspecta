@@ -8,7 +8,7 @@ public interface IClientService
     Task<IReadOnlyList<ClientResponse>> ListAsync(bool includeArchived, CancellationToken cancellationToken = default);
     Task<Contracts.PagedList<ClientResponse>> ListPageAsync(bool includeArchived, int offset, int limit, CancellationToken cancellationToken = default);
     Task<ClientResponse?> GetByIdAsync(Guid clientId, CancellationToken cancellationToken = default);
-    Task<ClientHistoryResponse?> GetHistoryAsync(Guid clientId, CancellationToken cancellationToken = default);
+    Task<ClientHistoryResponse?> GetHistoryAsync(Guid clientId, Guid? actorId = null, string? role = null, CancellationToken cancellationToken = default);
     Task<ClientResponse> UpdateAsync(Guid clientId, UpdateClientRequest request, CancellationToken cancellationToken = default);
     Task ArchiveAsync(Guid clientId, CancellationToken cancellationToken = default);
 

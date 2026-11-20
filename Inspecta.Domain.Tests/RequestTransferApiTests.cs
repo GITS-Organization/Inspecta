@@ -89,7 +89,7 @@ public sealed class RequestTransferApiTests : IClassFixture<ApiHttpTests.Api>
         var email = SeedEmailRequest(owner);
         var client = await SignedInAs(other.Email);
 
-        Assert.Equal(HttpStatusCode.Forbidden, (await Transfer(client, manual.Id, target.Id)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await Transfer(client, manual.Id, target.Id)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await Transfer(client, email.Id, target.Id)).StatusCode);
     }
 

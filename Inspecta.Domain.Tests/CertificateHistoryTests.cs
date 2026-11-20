@@ -72,6 +72,27 @@ public sealed class CertificateHistoryTests
         Assert.Equal(requestItem.Id, certificateHistory.RequestItemId);
     }
 
+    [Fact]
+    public async Task ACoordinatorSeesOnlyTheirOwnRequestsInTheClientHistoryAndTheirOwnCertificates()
+    {
+        var client = Client.Create("Acme");
+        var mine = Guid.NewGuid();
+        var colleague = Guid.NewGuid();
+        var own = InspectionRequest.Create("Acme", "Cairo", client.Id, [RequestItem.Create("Crane", 1)], mine);
+        var others = InspectionRequest.Create("Acme", "Cairo", client.Id, [RequestItem.Create("Tank", 1)], colleague);
+        var service = new ClientService(new FakeClientRepository(client, own, others), new FakeUserRepository());
+
+        var ofCoordinator = await service.GetHistoryAsync(client.Id, mine, "coordinator");
+        var ofManager = await service.GetHistoryAsync(client.Id, Guid.NewGuid(), "technical_manager");
+
+        Assert.Equal(own.Id, Assert.Single(ofCoordinator!.Requests).Request.Id);
+        Assert.Equal(2, ofManager!.Requests.Count);
+
+        var certificates = new CertificateService(new FakeCertificateRepository(others), new FakeRequestRepository(others));
+        Assert.Null(await certificates.ListAsync(others.Id, mine, "coordinator"));
+        Assert.NotNull(await certificates.ListAsync(others.Id, colleague, "coordinator"));
+    }
+
     private static SaveCertificateDraftRequest CompleteDraft() => new()
     {
         Texts = new Dictionary<string, string>
@@ -161,7 +182,7 @@ public sealed class CertificateHistoryTests
         public Task SaveAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
-    private sealed class FakeClientRepository(Client client, InspectionRequest request) : IClientRepository
+    private sealed class FakeClientRepository(Client client, params InspectionRequest[] requests) : IClientRepository
     {
         public Task AddAsync(Client value, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
@@ -181,10 +202,10 @@ public sealed class CertificateHistoryTests
             Guid clientId,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<InspectionRequest>>(
-                request.ClientId == clientId ? [request] : []);
+                requests.Where(request => request.ClientId == clientId).ToArray());
 
         public Task<(int Requests, int Items, int Reminders)> CountDependenciesAsync(Guid clientId, CancellationToken cancellationToken = default) =>
-            Task.FromResult((request.ClientId == clientId ? 1 : 0, 0, 0));
+            Task.FromResult((requests.Count(request => request.ClientId == clientId), 0, 0));
 
         public Task RemoveAsync(Client value, CancellationToken cancellationToken = default) => Task.CompletedTask;
 

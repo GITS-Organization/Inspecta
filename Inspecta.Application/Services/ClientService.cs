@@ -56,12 +56,15 @@ public sealed class ClientService(
         return client is null ? null : Map(client);
     }
 
-    public async Task<ClientHistoryResponse?> GetHistoryAsync(Guid clientId, CancellationToken cancellationToken = default)
+    public async Task<ClientHistoryResponse?> GetHistoryAsync(Guid clientId, Guid? actorId = null, string? role = null, CancellationToken cancellationToken = default)
     {
         var client = await clientRepository.GetByIdAsync(clientId, tracking: false, cancellationToken);
         if (client is null) return null;
 
         var requests = await clientRepository.GetRequestHistoryAsync(clientId, cancellationToken);
+        // A coordinator sees only their own requests in the client history; managers and the platform owner see the whole client.
+        if (role == "coordinator" && actorId is Guid coordinatorId)
+            requests = requests.Where(request => RequestAccess.IsVisible(request, coordinatorId, role)).ToArray();
         var issued = certificateFiles is null
             ? new Dictionary<Guid, IReadOnlyList<ClientCertificateResponse>>()
             : (await ClientCertificateService.MapAsync(certificateFiles, await certificateFiles.ListForClientAsync(clientId, cancellationToken), cancellationToken))

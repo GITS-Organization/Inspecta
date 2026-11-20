@@ -26,7 +26,7 @@ public sealed class QuotationQueueController(IQuoteService quoteService, IInspec
     ///   Narrow it to the jobs waiting on one person with <c>review</c> (technical manager: every machine submitted),
     ///   <c>returned</c> (inspector: sent back to fix), <c>approved</c> (coordinator: ready to hand over) or <c>delivered</c>.
     /// Leave <c>status</c> out to get all of them; every row says which queue it is in with <c>queue</c>. A coordinator
-    /// sees their own email requests and the team's manual ones; a manager sees their team; Admin sees everything (narrow
+    /// sees only the requests they own (manual or email; a request moves to a colleague with the transfer); a manager sees their team; Admin sees everything (narrow
     /// it with <c>managerId</c>). An inspector only gets their own jobs, without prices, so <c>unassigned</c> is always empty
     /// for them. <c>inspectorId</c> narrows to the jobs of one inspector. <c>q</c> searches client, quotation number and
     /// location. <c>from</c> and <c>to</c> (<c>yyyy-MM-dd</c>, either or both, both days included, UTC) keep only the jobs whose quotation was made in that period. <c>pageSize</c> defaults to 50 (max 100). Every row has <c>requestId</c> for the next calls.

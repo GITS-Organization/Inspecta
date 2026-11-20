@@ -14,8 +14,8 @@ namespace Inspecta.Api.Controllers;
 public sealed class QuotationsController(IQuoteService quoteService) : ControllerBase
 {
     /// <summary>
-    /// List quotations, newest activity first. A coordinator sees the quotations of their own email requests and of the
-    /// team's manual requests; managers see their team, Admin sees everything. An inspector only gets the accepted
+    /// List quotations, newest activity first. A coordinator sees only the quotations of the requests they own (manual or email; a request moves to a colleague with the transfer);
+    /// managers see their team, Admin sees everything. An inspector only gets the accepted
     /// quotations of the jobs assigned to them, without any price.
     /// </summary>
     /// <remarks>

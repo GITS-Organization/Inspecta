@@ -446,8 +446,8 @@ public sealed class InspectionRequestService(
     }
 
     /// <summary>
-    /// Gives an accepted job to one inspector. A coordinator may assign what they can manage (their own email requests
-    /// and the team's manual ones); managers and Admin may assign any request they can see.
+    /// Gives an accepted job to one inspector. A coordinator may assign what they can manage (the requests they own);
+    /// managers and Admin may assign any request they can see.
     /// </summary>
     public async Task<RequestResponse> AssignAsync(Guid requestId, Guid actorId, string role, Guid inspectorId, DateTimeOffset scheduledAt, string? note, CancellationToken cancellationToken = default, Guid? reviewerId = null)
     {

@@ -5,7 +5,7 @@ namespace Inspecta.Application.Interfaces;
 
 /// <summary>Which invoices a list call may return, beyond the company filter applied by the data layer.</summary>
 /// <param name="CoordinatorId">
-/// Coordinator scope: invoices of manual requests stay visible to the whole team, those of email requests only to the coordinator that received them.
+/// Coordinator scope: only the invoices of the requests this coordinator owns (manual or email).
 /// </param>
 /// <param name="ManagerId">Only invoices of this company (used by the platform owner to narrow the global view).</param>
 /// <param name="PaymentState"><c>unpaid</c>, <c>partial</c> or <c>paid</c>.</param>

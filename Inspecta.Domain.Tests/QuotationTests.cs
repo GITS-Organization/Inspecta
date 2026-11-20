@@ -1254,6 +1254,31 @@ public sealed class QuotationTests
     }
 
     [Fact]
+    public async Task AnotherCoordinatorOfTheTeamNeitherSeesNorWorksOnAColleaguesManualRequest()
+    {
+        var manual = InspectionRequest.Create(
+            "Al Noor", "Cairo", null, [RequestItem.Create("Crane", 1)], CoordinatorId, managerId: ManagerId);
+        var fixture = new Fixture(manual);
+        fixture.Quotes.RequestOf = id => id == manual.Id ? manual : null;
+        var quote = await fixture.Service.CreateAsync(manual.Id, CoordinatorId, "coordinator", new CreateQuoteRequest());
+        await fixture.Service.UpdateAsync(manual.Id, quote.Id, CoordinatorId, "coordinator", new UpdateQuoteRequest
+        {
+            Items = [new UpdateQuoteItem { RequestItemId = manual.Items[0].Id, UnitPricePiastres = 500 }]
+        });
+        await fixture.Service.AcceptAsync(manual.Id, quote.Id, CoordinatorId, "coordinator");
+        var colleague = Guid.NewGuid();
+
+        // The owner sees it; a colleague of the same team does not, in the queue, the quotation list or by id. The manager still sees all.
+        Assert.Single(await fixture.Service.ListQueueAsync(CoordinatorId, "coordinator", QuotationQueue.Unassigned, new QuotationQueueQuery()));
+        Assert.Empty(await fixture.Service.ListQueueAsync(colleague, "coordinator", QuotationQueue.Unassigned, new QuotationQueueQuery()));
+        Assert.Empty(await fixture.Service.ListQueueAsync(colleague, "coordinator", null, new QuotationQueueQuery()));
+        Assert.Single(await fixture.Service.ListVisibleAsync(CoordinatorId, "coordinator", new QuoteListQuery()));
+        Assert.Empty(await fixture.Service.ListVisibleAsync(colleague, "coordinator", new QuoteListQuery()));
+        Assert.Single(await fixture.Service.ListQueueAsync(ManagerId, "technical_manager", QuotationQueue.Unassigned, new QuotationQueueQuery()));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => fixture.Service.CreateAsync(manual.Id, colleague, "coordinator", new CreateQuoteRequest()));
+    }
+
+    [Fact]
     public async Task ARequestNotLinkedToAClientCanStillBeSent()
     {
         var request = CompleteRequest(out var crane, out var receiver, clientId: null);
@@ -1894,7 +1919,7 @@ public sealed class QuotationTests
             return Task.FromResult<IReadOnlyList<Quote>>(quotes
                 .Where(quote => quote.Request is not null)
                 .Where(quote => filter.CoordinatorId is not Guid coordinatorId ||
-                    quote.Request!.Source != RequestSource.Email || quote.Request.CoordinatorId == coordinatorId)
+                    quote.Request!.CoordinatorId == coordinatorId)
                 .Where(quote => filter.InspectorId is not Guid inspectorId || quote.Request!.InspectorId == inspectorId)
                 .Where(quote => filter.ReviewerId is not Guid reviewerId || quote.Request!.ReviewerId == reviewerId)
                 .Where(quote => filter.Assigned is not bool assigned || (quote.Request!.InspectorId is not null) == assigned)

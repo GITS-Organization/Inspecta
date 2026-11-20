@@ -41,7 +41,8 @@ public sealed class ClientsController(IClientService clientService) : Controller
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ClientHistoryResponse>> GetHistory(Guid clientId, CancellationToken cancellationToken)
     {
-        var history = await clientService.GetHistoryAsync(clientId, cancellationToken);
+        Guid.TryParse(User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value, out var actorId);
+        var history = await clientService.GetHistoryAsync(clientId, actorId == Guid.Empty ? null : actorId, User.FindFirst("role")?.Value, cancellationToken);
         return history is null ? NotFound() : Ok(history);
     }
 

@@ -28,8 +28,7 @@ public sealed class EfQuoteRepository(InspectaDbContext dbContext) : IQuoteRepos
             .AsSplitQuery()
             .Where(quote => quote.Request != null);
         if (filter.CoordinatorId is Guid coordinatorId)
-            query = query.Where(quote =>
-                quote.Request!.Source != RequestSource.Email || quote.Request.CoordinatorId == coordinatorId);
+            query = query.Where(quote => quote.Request!.CoordinatorId == coordinatorId);
         if (filter.ManagerId is Guid managerId) query = query.Where(quote => quote.Request!.ManagerId == managerId);
         if (filter.InspectorId is Guid inspectorId) query = query.Where(quote => quote.Request!.InspectorId == inspectorId);
         if (filter.ReviewerId is Guid reviewerId) query = query.Where(quote => quote.Request!.ReviewerId == reviewerId);

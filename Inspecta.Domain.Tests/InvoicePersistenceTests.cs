@@ -137,7 +137,7 @@ public sealed class InvoicePersistenceTests : IDisposable
     }
 
     [Fact]
-    public async Task List_for_a_coordinator_hides_the_email_requests_of_other_coordinators()
+    public async Task List_for_a_coordinator_hides_the_requests_of_other_coordinators_manual_or_email()
     {
         var company = Guid.NewGuid();
         var mine = Guid.NewGuid();
@@ -156,8 +156,9 @@ public sealed class InvoicePersistenceTests : IDisposable
         await using var db = CreateContext("coordinator", company);
         var visible = await new EfInvoiceRepository(db).ListAsync(new InvoiceListFilter(CoordinatorId: mine));
 
-        Assert.Equal(2, visible.Total);
-        Assert.DoesNotContain(visible.Items, item => item.Id == emailOfOther.Invoice.Id);
+        Assert.Equal(1, visible.Total);
+        Assert.Equal(ownInvoice.Id, Assert.Single(visible.Items).Id);
+        Assert.DoesNotContain(visible.Items, item => item.Id == emailOfOther.Invoice.Id || item.Id == manualOfOther.Id);
     }
 
     [Fact]

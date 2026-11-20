@@ -37,7 +37,7 @@ public sealed class EfInvoiceRepository(InspectaDbContext dbContext) : IInvoiceR
             query = query.Where(invoice => dbContext.Requests.Any(request => request.Id == invoice.RequestId && request.ReviewerId == reviewerId));
         if (filter.CoordinatorId is Guid coordinatorId)
             query = query.Where(invoice => dbContext.Requests.Any(request =>
-                request.Id == invoice.RequestId && (request.Source != RequestSource.Email || request.CoordinatorId == coordinatorId)));
+                request.Id == invoice.RequestId && request.CoordinatorId == coordinatorId));
 
         var rows = await query.ToListAsync(cancellationToken);
         IEnumerable<Invoice> matching = rows;

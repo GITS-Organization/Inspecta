@@ -6,7 +6,7 @@ namespace Inspecta.Application.Interfaces;
 /// <summary>Which requests a list call may return, beyond the tenant filter applied by the data layer.</summary>
 /// <param name="InspectorId">Only requests assigned to this inspector.</param>
 /// <param name="CoordinatorId">
-/// Coordinator scope: manual requests stay visible to the whole team, email requests only to the coordinator that received them.
+/// Coordinator scope: only the requests this coordinator owns, manual or email.
 /// </param>
 /// <param name="ManagerId">Only requests of this team (used by Admin to narrow the global view).</param>
 /// <param name="Triage">Real requests or "maybe" emails.</param>

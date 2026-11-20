@@ -4,8 +4,7 @@ namespace Inspecta.Application.Interfaces;
 
 /// <summary>Which quotations a list call may return, beyond the tenant filter applied by the data layer.</summary>
 /// <param name="CoordinatorId">
-/// Coordinator scope: quotations of manual requests stay visible to the whole team, those of email requests only to
-/// the coordinator that received them.
+/// Coordinator scope: only the quotations of the requests this coordinator owns (manual or email).
 /// </param>
 /// <param name="ManagerId">Only quotations of this team (used by Admin to narrow the global view).</param>
 /// <param name="Open">True for open quotations, false for closed ones (accepted or rejected).</param>

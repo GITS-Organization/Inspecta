@@ -159,7 +159,8 @@ public sealed class CertificateService(
         ?? throw new KeyNotFoundException("Request item was not found.");
 
     private static bool CanAccess(InspectionRequest request, Guid actorId, string role) =>
-        role is "admin" or "coordinator" or "technical_manager" ||
+        role is "admin" or "technical_manager" ||
+        (role == "coordinator" && RequestAccess.IsVisible(request, actorId, role)) ||
         (role == "inspector" && request.InspectorId == actorId);
 
     private static bool CanEdit(InspectionRequest request, Guid actorId, string role) =>
