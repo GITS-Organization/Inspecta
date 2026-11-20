@@ -653,7 +653,7 @@ public sealed class MachineInspectionService(
         else
         {
             // Every report of the job goes with the certificates unless the coordinator unticked it (only when an email is really sent).
-            var reports = deliveryService.Enabled ? await ReportsForEmailAsync(request, delivery.ExcludedReportIds, cancellationToken) : [];
+            var reports = deliveryService.Enabled ? await ReportsForEmailAsync(request, delivery.ExcludedReportIds, cancellationToken) : null;
             sent = await deliveryService.DeliverAsync(
                 request, files, new CertificateEmailDraft(delivery.SentTo, delivery.Cc, delivery.Subject, delivery.Message, extra, reports), cancellationToken);
         }
@@ -706,23 +706,30 @@ public sealed class MachineInspectionService(
     }
 
     /// <summary>
-    /// The reports of the job that go in the email, with their bytes: every live report except the ones the coordinator unticked. An id that is not a
-    /// report of this job is a 400. Nothing is read from the database beyond the list when no report is chosen.
+    /// The reports of the job that go in the email: every live report except the ones the coordinator unticked. Only the list is read here (names and
+    /// sizes); the bytes are read later, by <see cref="CertificateReportSelection.LoadAsync"/>, after the size check and under the send lock. An id that is
+    /// not (or no longer) a report of this job matches nothing and is ignored, so a retry never fails on it and a report of another job or company can
+    /// never be reached. Null when no report goes.
     /// </summary>
-    private async Task<IReadOnlyList<EmailAttachment>> ReportsForEmailAsync(
+    private async Task<CertificateReportSelection?> ReportsForEmailAsync(
         InspectionRequest request, IReadOnlyList<Guid>? excludedIds, CancellationToken cancellationToken)
     {
-        if (jobReports is null) return [];
-        var all = await jobReports.ListForRequestAsync(request.Id, cancellationToken);
+        if (jobReports is null) return null;
         var excluded = (excludedIds ?? []).ToHashSet();
-        if (excluded.Any(id => all.All(file => file.Id != id)))
-            throw new ArgumentException("A report that was left out is not a report of this job.");
+        var chosen = JobReportRules.Live(await jobReports.ListForRequestAsync(request.Id, cancellationToken), DateTimeOffset.UtcNow)
+            .Where(file => !excluded.Contains(file.Id))
+            .ToList();
+        if (chosen.Count == 0) return null;
 
-        var chosen = JobReportRules.Live(all, DateTimeOffset.UtcNow).Where(file => !excluded.Contains(file.Id)).Select(file => file.Id).ToList();
-        if (chosen.Count == 0) return [];
-        var withBytes = await jobReports.ListWithContentAsync(request.Id, chosen, cancellationToken);
-        var names = JobReportRules.UniqueNames(withBytes);
-        return withBytes.Select((file, index) => new EmailAttachment(names[index], file.Content, file.ContentType)).ToArray();
+        var names = JobReportRules.UniqueNames(chosen);
+        var nameOf = chosen.Select((file, index) => (file.Id, Name: names[index])).ToDictionary(item => item.Id, item => item.Name);
+        var ids = chosen.Select(file => file.Id).ToList();
+        var jobReportsRepository = jobReports;
+        return new CertificateReportSelection(
+            names,
+            chosen.Sum(file => (long)file.ContentLength),
+            async token => (await jobReportsRepository.ListWithContentAsync(request.Id, ids, token))
+                .Select(file => new EmailAttachment(nameOf[file.Id], file.Content, file.ContentType)).ToArray());
     }
 
     public async Task<DeliveryPreviewResponse> PreviewDeliveryAsync(

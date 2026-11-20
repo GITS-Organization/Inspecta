@@ -36,6 +36,7 @@ public sealed class CertificateDeliveryTests : IDisposable
     private bool microsoftMailbox;
     private IMailboxAuthenticator? authenticator;
     private JobReportOptions? reportOptions;
+    private int reportLoads;
 
     public CertificateDeliveryTests()
     {
@@ -744,7 +745,7 @@ public sealed class CertificateDeliveryTests : IDisposable
     }
 
     [Fact]
-    public async Task AnExcludedIdThatIsNotAReportOfThisJobIsRefusedAndNothingChanges()
+    public async Task AnExcludedIdThatIsNotAReportOfThisJobIsIgnoredAndAnotherJobsReportIsNeverSent()
     {
         await ApprovedJobAsync(fromEmail: true);
         await SeedReportsAsync();
@@ -757,19 +758,117 @@ public sealed class CertificateDeliveryTests : IDisposable
             otherJobsReport = await SeedReportAsync("other.pdf", 20, forRequest: other.Id);
         }
 
+        // An id that is not (or no longer) a report of this job matches nothing, so it is ignored: it cannot hide a report and a retry never fails on it.
         foreach (var wrong in new[] { otherJobsReport, Guid.NewGuid() })
+            await Run(true, service => service.SendTestDeliveryAsync(
+                requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest { ExcludedReportIds = [wrong] }));
+        Assert.All(sender.Sent, email => Assert.Equal(["weld.pdf", "photos.pdf"], SentNames(email)[2..]));
+        Assert.Equal(2, sender.Sent.Count);
+
+        sender.Sent.Clear();
+        await Run(true, service => service.DeliverAsync(
+            requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest { ExcludedReportIds = [otherJobsReport, Guid.NewGuid()] }));
+
+        var names = SentNames(Assert.Single(sender.Sent));
+        Assert.Equal(["weld.pdf", "photos.pdf"], names[2..]); // both own reports went, the other job's file never
+        Assert.DoesNotContain("other.pdf", names);
+        await using var check = CreateContext();
+        Assert.DoesNotContain("other.pdf", check.CertificateDeliveries.Single().AttachmentNames);
+        Assert.Null(check.JobReportFiles.Single(file => file.Id == otherJobsReport).ExpiresAt); // the other job is untouched
+    }
+
+    [Fact]
+    public async Task ARetryAfterTheEmailWentOutButWasNotSavedSaysAlreadyEmailedEvenWhenAnUntickedReportIsGone()
+    {
+        await ApprovedJobAsync(fromEmail: true);
+        await SeedReportsAsync();
+        await using (var db = CreateContext())
         {
-            await Assert.ThrowsAsync<ArgumentException>(() => Run(true, service => service.DeliverAsync(
-                requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest { ExcludedReportIds = [wrong] })));
-            await Assert.ThrowsAsync<ArgumentException>(() => Run(true, service => service.SendTestDeliveryAsync(
-                requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest { ExcludedReportIds = [wrong] })));
+            // The first call sent the email and then failed before it saved the job: the record says sent, the job is still approved.
+            var earlier = CertificateDelivery.Create(manager.Id, requestId, "buyer@alnoor.com", "Inspection Certificates", "body", "<first@alnoor.com>", ["a.pdf"]);
+            earlier.MarkSent();
+            db.CertificateDeliveries.Add(earlier);
+            await db.SaveChangesAsync();
         }
 
-        Assert.Empty(sender.Sent);
-        Assert.Equal(JobStatus.CertificateApproved, await StatusAsync());
-        await using var check = CreateContext();
-        Assert.Empty(check.CertificateDeliveries.ToList());
-        Assert.All(await ExpiriesAsync(), expires => Assert.Null(expires));
+        var again = await Run(true, service => service.DeliverAsync(
+            requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest { ExcludedReportIds = [Guid.NewGuid()] }));
+
+        Assert.True(again.Delivery!.EmailSent);
+        Assert.Contains("already emailed", again.Delivery.Notice);
+        Assert.Empty(sender.Sent); // never a second email
+        Assert.Equal(0, reportLoads); // and the report bytes were not read for it
+        Assert.Equal(JobStatus.SentToClient, await StatusAsync());
+        AssertThirtyDaysFromNow(await ExpiriesAsync());
+    }
+
+    [Fact]
+    public async Task TheReportBytesAreNotReadWhenTheEmailIsTooLargeAndAreReadOnceOtherwise()
+    {
+        await ApprovedJobAsync(fromEmail: true);
+        var ids = new[]
+        {
+            await SeedReportAsync("scan1.pdf", 10 * 1024 * 1024, minutesAgo: 10),
+            await SeedReportAsync("scan2.pdf", 10 * 1024 * 1024, minutesAgo: 5)
+        };
+
+        foreach (var attempt in new Func<MachineInspectionService, Task>[]
+                 {
+                     service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest()),
+                     service => service.SendTestDeliveryAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest())
+                 })
+        {
+            var refused = await Assert.ThrowsAsync<AuthException>(() => Run(true, async service => { await attempt(service); return 0; }));
+            Assert.Equal("email_too_large", refused.Code);
+        }
+
+        Assert.Equal(0, reportLoads); // the size is known from the list, before any bytes are read
+
+        await Run(true, service => service.DeliverAsync(
+            requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest { ExcludedReportIds = [ids[0]] }));
+        Assert.Equal(1, reportLoads);
+    }
+
+    [Fact]
+    public async Task ADoubleClickOrATestEmailDuringARealSendDoesNotReadTheReportBytesAgain()
+    {
+        await ApprovedJobAsync(fromEmail: true);
+        await SeedReportsAsync();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        sender.Hold = release.Task;
+
+        var first = Run(true, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest()));
+        await sender.Started.Task;
+
+        var second = await Assert.ThrowsAsync<AuthException>(() =>
+            Run(true, service => service.DeliverAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest())));
+        var test = await Assert.ThrowsAsync<AuthException>(() =>
+            Run(true, service => service.SendTestDeliveryAsync(requestId, coordinator.Id, "coordinator", new DeliverCertificatesRequest())));
+        Assert.Equal("delivery_in_progress", second.Code);
+        Assert.Equal("delivery_in_progress", test.Code);
+
+        release.SetResult();
+        await first;
+        Assert.Single(sender.Sent);
+        Assert.Equal(1, reportLoads);
+    }
+
+    [Fact]
+    public void TheNamesOfTheAttachmentsAreCutToTheColumnSoAHugeListCannotFailTheSave()
+    {
+        var names = Enumerable.Range(0, 100).Select(number => $"CERT-2026-{number:0000}-{new string('c', 60)}.pdf")
+            .Concat(Enumerable.Range(0, 20).Select(number => new string((char)('a' + number), 145) + ".pdf"));
+        Assert.True(string.Join("; ", names).Length > CertificateDelivery.MaxAttachmentNamesLength); // the list really is too long for the column
+
+        var created = CertificateDelivery.Create(manager.Id, Guid.NewGuid(), "buyer@alnoor.com", "s", "b", "<id@alnoor.com>", names);
+        Assert.Equal(CertificateDelivery.MaxAttachmentNamesLength, created.AttachmentNames.Length);
+        Assert.StartsWith("CERT-2026-0000", created.AttachmentNames);
+
+        created.Revise("buyer@alnoor.com", [], "s", "b", names.Concat(names));
+        Assert.Equal(CertificateDelivery.MaxAttachmentNamesLength, created.AttachmentNames.Length);
+
+        var short_ = CertificateDelivery.Create(manager.Id, Guid.NewGuid(), "buyer@alnoor.com", "s", "b", "<id@alnoor.com>", ["a.pdf", "b.pdf"]);
+        Assert.Equal("a.pdf; b.pdf", short_.AttachmentNames); // a normal list is kept as it is
     }
 
     [Fact]
@@ -787,7 +886,7 @@ public sealed class CertificateDeliveryTests : IDisposable
 
         Assert.Equal("email_too_large", refused.Code);
         Assert.Equal(409, refused.StatusCode);
-        Assert.Contains("20", refused.Message);
+        Assert.Contains("17", refused.Message);
         Assert.Contains("MB", refused.Message);
         Assert.Empty(sender.Sent);
         Assert.Equal(JobStatus.CertificateApproved, await StatusAsync());
@@ -817,7 +916,7 @@ public sealed class CertificateDeliveryTests : IDisposable
     [Fact]
     public async Task TheCapFollowsTheConfiguredValue()
     {
-        reportOptions = new JobReportOptions(maxEmailBytes: 50L * 1024 * 1024);
+        reportOptions = new JobReportOptions(maxEmailBytes: 25L * 1024 * 1024);
         await ApprovedJobAsync(fromEmail: true);
         await SeedReportAsync("scan1.pdf", 10 * 1024 * 1024);
         await SeedReportAsync("scan2.pdf", 10 * 1024 * 1024);
@@ -826,8 +925,8 @@ public sealed class CertificateDeliveryTests : IDisposable
 
         Assert.Equal(4, SentNames(Assert.Single(sender.Sent)).Length);
         Assert.Equal(1024 * 1024, new JobReportOptions(maxEmailBytes: 0).MaxEmailBytes);
-        Assert.Equal(100L * 1024 * 1024, new JobReportOptions(maxEmailBytes: long.MaxValue).MaxEmailBytes);
-        Assert.Equal(20L * 1024 * 1024, new JobReportOptions().MaxEmailBytes);
+        Assert.Equal(25L * 1024 * 1024, new JobReportOptions(maxEmailBytes: long.MaxValue).MaxEmailBytes);
+        Assert.Equal(17825792, new JobReportOptions().MaxEmailBytes); // 17 MB raw: about 23 MB once the mail is base64 encoded
     }
 
     [Fact]
@@ -911,7 +1010,7 @@ public sealed class CertificateDeliveryTests : IDisposable
         var withoutReports = await Run(true, service => service.PreviewDeliveryAsync(requestId, coordinator.Id, "coordinator"));
         Assert.Empty(withoutReports.Reports!);
         Assert.Equal(0, withoutReports.ReportsTotalBytes);
-        Assert.Equal(20L * 1024 * 1024, withoutReports.MaxEmailBytes);
+        Assert.Equal(17825792, withoutReports.MaxEmailBytes);
         Assert.Equal(2, withoutReports.Attachments.Count);
         Assert.True(withoutReports.CanSend);
 
@@ -1107,11 +1206,30 @@ public sealed class CertificateDeliveryTests : IDisposable
             files,
             null,
             delivery,
-            jobReports: new EfJobReportRepository(db),
+            jobReports: new CountingReportRepository(new EfJobReportRepository(db), () => Interlocked.Increment(ref reportLoads)),
             reportOptions: reportOptions);
         return await action(service);
     }
 
+
+    /// <summary>The real repository, counting how often the bytes of chosen reports are read (the overload used for the email).</summary>
+    private sealed class CountingReportRepository(IJobReportRepository inner, Action onLoadChosen) : IJobReportRepository
+    {
+        public Task<IReadOnlyList<JobReportFile>> ListForRequestAsync(Guid requestId, CancellationToken cancellationToken = default) => inner.ListForRequestAsync(requestId, cancellationToken);
+        public Task<int> CountForRequestAsync(Guid requestId, DateTimeOffset now, CancellationToken cancellationToken = default) => inner.CountForRequestAsync(requestId, now, cancellationToken);
+        public Task<JobReportFile?> GetWithContentAsync(Guid requestId, Guid fileId, CancellationToken cancellationToken = default) => inner.GetWithContentAsync(requestId, fileId, cancellationToken);
+        public Task<IReadOnlyList<JobReportFile>> ListWithContentAsync(Guid requestId, CancellationToken cancellationToken = default) => inner.ListWithContentAsync(requestId, cancellationToken);
+        public Task<IReadOnlyList<JobReportFile>> ListWithContentAsync(Guid requestId, IReadOnlyCollection<Guid> fileIds, CancellationToken cancellationToken = default)
+        {
+            onLoadChosen();
+            return inner.ListWithContentAsync(requestId, fileIds, cancellationToken);
+        }
+
+        public Task<int> DeleteExpiredAsync(DateTimeOffset now, int batchSize, CancellationToken cancellationToken = default) => inner.DeleteExpiredAsync(now, batchSize, cancellationToken);
+        public Task AddAsync(JobReportFile file, CancellationToken cancellationToken = default) => inner.AddAsync(file, cancellationToken);
+        public Task<bool> DeleteAsync(Guid requestId, Guid fileId, CancellationToken cancellationToken = default) => inner.DeleteAsync(requestId, fileId, cancellationToken);
+        public Task StageRetentionAsync(Guid requestId, DateTimeOffset expiresAt, CancellationToken cancellationToken = default) => inner.StageRetentionAsync(requestId, expiresAt, cancellationToken);
+    }
     private InspectaDbContext CreateContext()
     {
         var accessor = new HttpContextAccessor

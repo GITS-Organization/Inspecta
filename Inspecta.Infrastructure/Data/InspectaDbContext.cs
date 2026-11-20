@@ -310,7 +310,7 @@ public sealed class InspectaDbContext(
         delivery.Ignore(item => item.Cc);
         delivery.Property(item => item.Subject).HasMaxLength(500);
         delivery.Property(item => item.MessageId).HasMaxLength(255);
-        delivery.Property(item => item.AttachmentNames).HasMaxLength(8000);
+        delivery.Property(item => item.AttachmentNames).HasMaxLength(CertificateDelivery.MaxAttachmentNamesLength);
 
         var emailConfig = modelBuilder.Entity<CoordinatorEmailConfig>();
         emailConfig.HasKey(item => item.CoordinatorId);

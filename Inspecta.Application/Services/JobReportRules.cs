@@ -46,17 +46,17 @@ public static class JobReportRules
 
 /// <summary>
 /// How long report files are kept after the job is delivered (<c>JobReports:RetentionDays</c>, 30 by default, between 1 and 365) and how big the
-/// certificates email may be when it carries reports (<c>JobReports:MaxEmailBytes</c>, 20 MB by default, between 1 MB and 100 MB).
+/// certificates email may be when it carries reports (<c>JobReports:MaxEmailBytes</c>, 17 MB raw by default, between 1 MB and 25 MB).
 /// </summary>
 public sealed class JobReportOptions(int retentionDays = JobReportOptions.DefaultRetentionDays, long maxEmailBytes = JobReportOptions.DefaultMaxEmailBytes)
 {
     public const int DefaultRetentionDays = 30;
-    public const long DefaultMaxEmailBytes = 20 * 1024 * 1024;
+    public const long DefaultMaxEmailBytes = 17 * 1024 * 1024; // raw bytes: base64 makes the mail about a third bigger, so 17 MB stays under a 25 MB server limit
 
     public int RetentionDays { get; } = Math.Clamp(retentionDays, 1, 365);
 
     /// <summary>The most the attachments of one certificates email may total when at least one report goes with it.</summary>
-    public long MaxEmailBytes { get; } = Math.Clamp(maxEmailBytes, 1024 * 1024, 100 * 1024 * 1024);
+    public long MaxEmailBytes { get; } = Math.Clamp(maxEmailBytes, 1024 * 1024, 25 * 1024 * 1024);
 
     public TimeSpan Retention => TimeSpan.FromDays(RetentionDays);
 }

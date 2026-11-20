@@ -3,6 +3,9 @@ namespace Inspecta.Domain.Entities;
 /// <summary>An email that carried the approved certificates of a job to the client.</summary>
 public sealed class CertificateDelivery
 {
+    /// <summary>The room the database column has for the attachment names, joined with "; ".</summary>
+    public const int MaxAttachmentNamesLength = 8000;
+
     private CertificateDelivery() { }
 
     public Guid Id { get; private set; }
@@ -38,7 +41,7 @@ public sealed class CertificateDelivery
             Subject = subject,
             BodyText = bodyText,
             MessageId = messageId,
-            AttachmentNames = string.Join("; ", attachmentNames),
+            AttachmentNames = JoinNames(attachmentNames),
             CreatedAt = DateTimeOffset.UtcNow
         };
     }
@@ -52,7 +55,14 @@ public sealed class CertificateDelivery
         CcAddresses = string.Join("; ", cc);
         Subject = subject;
         BodyText = bodyText;
-        AttachmentNames = string.Join("; ", attachmentNames);
+        AttachmentNames = JoinNames(attachmentNames);
+    }
+
+    // A long list is cut to the column (like LastError below): the record is only a note of what went out, and a save must never fail on it.
+    private static string JoinNames(IEnumerable<string> names)
+    {
+        var joined = string.Join("; ", names);
+        return joined.Length > MaxAttachmentNamesLength ? joined[..MaxAttachmentNamesLength] : joined;
     }
 
     public IReadOnlyList<string> Cc => CcAddresses.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

@@ -22,7 +22,14 @@ public sealed record CertificateEmailDraft(
     string? Subject = null,
     string? Body = null,
     IReadOnlyList<EmailAttachment>? Extra = null,
-    IReadOnlyList<EmailAttachment>? Reports = null);
+    CertificateReportSelection? Reports = null);
+
+/// <summary>
+/// The inspector's reports chosen for the email, known from the list alone: their names and total size now, their bytes only when <see cref="LoadAsync"/> is
+/// called (after the size check and while this job's send lock is held), so a refused or repeated request never reads them.
+/// </summary>
+public sealed record CertificateReportSelection(
+    IReadOnlyList<string> Names, long TotalBytes, Func<CancellationToken, Task<IReadOnlyList<EmailAttachment>>> LoadAsync);
 
 /// <summary>Who the certificates would be emailed to, and what the email would say.</summary>
 public sealed record CertificateDeliveryPlan(
@@ -132,7 +139,7 @@ public sealed class CertificateDeliveryService(
             copies,
             subject,
             body,
-            AttachmentNames(files).Concat(draft?.Reports?.Select(file => file.FileName) ?? []).Concat(draft?.Extra?.Select(file => file.FileName) ?? []).ToArray(),
+            AttachmentNames(files).Concat(draft?.Reports?.Names ?? []).Concat(draft?.Extra?.Select(file => file.FileName) ?? []).ToArray(),
             replies && string.IsNullOrWhiteSpace(draft?.To),
             config is not null && coordinator is not null ? QuoteDeliveryService.ResolveFromAddress(config, coordinator) : null,
             coordinator?.FullName,
@@ -187,10 +194,11 @@ public sealed class CertificateDeliveryService(
 
         if (request.CoordinatorId is not Guid coordinatorId || request.ManagerId is not Guid managerId)
             throw new InvalidOperationException("The request has no coordinator to send the email from.");
+        EnsureEmailFits(files, draft); // from the sizes alone: no report bytes are read for an email that is too large
         var (_, coordinator, fromAddress, smtp) = await MailboxAsync(coordinatorId, cancellationToken);
         var source = plan.RepliesToOriginalEmail ? await requestRepository.GetEmailAsync(request.Id, cancellationToken) : null;
 
-        var attachments = AssembleAttachments(files, draft);
+        var attachments = await AssembleAttachmentsAsync(files, draft, cancellationToken);
         var row = await deliveryRepository.GetPendingAsync(request.Id, cancellationToken);
         var isNew = row is null;
         if (row is null)
@@ -241,10 +249,34 @@ public sealed class CertificateDeliveryService(
         if (request.CoordinatorId is not Guid coordinatorId)
             throw new InvalidOperationException("The request has no coordinator to send the email from.");
 
+        // With reports the bytes are read, so the same one-at-a-time rule as the real send applies: a test email during a send (or two clicks) reads them once.
+        var gate = draft?.Reports is { Names.Count: > 0 } ? InFlight.GetOrAdd(request.Id, _ => new SemaphoreSlim(1, 1)) : null;
+        if (gate is not null && !await gate.WaitAsync(0, cancellationToken))
+            throw new AuthException("delivery_in_progress", "These certificates are already being emailed. Wait for it to finish.", 409);
+        try
+        {
+            return await SendTestOnceAsync(request, files, draft, toAddress, toName, coordinatorId, cancellationToken);
+        }
+        finally
+        {
+            gate?.Release();
+        }
+    }
+
+    private async Task<CertificateTestResult> SendTestOnceAsync(
+        InspectionRequest request,
+        IReadOnlyList<IssuedCertificateFile> files,
+        CertificateEmailDraft? draft,
+        string toAddress,
+        string? toName,
+        Guid coordinatorId,
+        CancellationToken cancellationToken)
+    {
         var plan = await PlanAsync(request, files, draft, cancellationToken);
+        EnsureEmailFits(files, draft);
         var (_, coordinator, fromAddress, smtp) = await MailboxAsync(coordinatorId, cancellationToken);
         var subject = "[TEST] " + plan.Subject;
-        var attachments = AssembleAttachments(files, draft);
+        var attachments = await AssembleAttachmentsAsync(files, draft, cancellationToken);
         var messageId = $"<{Guid.NewGuid():N}@{QuoteDeliveryService.DomainOf(fromAddress)}>";
         try
         {
@@ -332,23 +364,33 @@ public sealed class CertificateDeliveryService(
     }
 
     /// <summary>
-    /// What goes in the email, in this order: the certificates (the PDFs, or one ZIP above 18 MB), the job's reports, the coordinator's own files.
-    /// Only when at least one report goes, the whole email must fit <c>JobReports:MaxEmailBytes</c>: a job without reports is never checked, so it
-    /// sends exactly what it always did. Too large answers 409 <c>email_too_large</c> before anything is recorded or sent.
+    /// The one size rule, from sizes alone: the certificate PDFs at their own size (the ZIP made above 18 MB is never smaller than about that, so it is not
+    /// counted differently), plus the reports that go, plus the coordinator's own files, must be at most <c>JobReports:MaxEmailBytes</c> (raw bytes). It is
+    /// checked only when at least one report goes: a job without reports sends exactly what it always did. Too large answers 409 <c>email_too_large</c>
+    /// before anything is read, recorded or sent. The delivery preview warns with the same sum (it does not know the coordinator's own files).
     /// </summary>
-    private EmailAttachment[] AssembleAttachments(IReadOnlyList<IssuedCertificateFile> files, CertificateEmailDraft? draft)
+    private void EnsureEmailFits(IReadOnlyList<IssuedCertificateFile> files, CertificateEmailDraft? draft)
     {
-        var attachments = BuildAttachments(files).Concat(draft?.Reports ?? []).Concat(draft?.Extra ?? []).ToArray();
-        if (draft?.Reports is not { Count: > 0 }) return attachments;
+        if (draft?.Reports is not { Names.Count: > 0 } reports) return;
 
         var limit = (reportOptions ?? new JobReportOptions()).MaxEmailBytes;
-        var total = attachments.Sum(file => (long)file.Content.Length);
+        var total = EmailBytes(files.Sum(file => (long)file.ContentLength), reports.TotalBytes, draft.Extra?.Sum(file => (long)file.Content.Length) ?? 0);
         if (total > limit)
             throw new AuthException(
                 "email_too_large",
                 $"With the reports the email would be {Megabytes(total)} MB and the limit is {Megabytes(limit)} MB. Untick some reports (or remove an extra file) and try again.",
                 409);
-        return attachments;
+    }
+
+    /// <summary>The size an email is judged by: certificates + reports + the coordinator's own files, raw bytes.</summary>
+    internal static long EmailBytes(long certificateBytes, long reportBytes, long extraBytes) => certificateBytes + reportBytes + extraBytes;
+
+    /// <summary>What goes in the email, in this order: the certificates (the PDFs, or one ZIP above 18 MB), the job's reports (read only now), the coordinator's own files.</summary>
+    private static async Task<EmailAttachment[]> AssembleAttachmentsAsync(
+        IReadOnlyList<IssuedCertificateFile> files, CertificateEmailDraft? draft, CancellationToken cancellationToken)
+    {
+        var reports = draft?.Reports is { Names.Count: > 0 } selection ? await selection.LoadAsync(cancellationToken) : [];
+        return BuildAttachments(files).Concat(reports).Concat(draft?.Extra ?? []).ToArray();
     }
 
     /// <summary>A size for people: megabytes with one decimal, no trailing zero.</summary>
