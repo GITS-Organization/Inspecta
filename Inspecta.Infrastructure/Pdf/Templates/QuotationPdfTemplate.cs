@@ -61,10 +61,15 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
     protected override void ComposeDocument(IDocumentContainer document, QuotationPdfModel model)
     {
         var company = model.Company ?? DefaultCompanyProfile.Instance;
-        var sections = new Sections(company);
 
-        // The cover is a drawing of the first customer; other companies start with the contents.
-        if (model.Branding is null) ComposeCover(document, model, company);
+        // The built-in company (Integrity), with or without a saved profile that keeps the built-in details, has its own proposal design; every other company keeps the earlier layout in its own identity.
+        if (model.Branding is null or { UsesBuiltInDetails: true })
+        {
+            IntegrityProposalLayout.Compose(document, model, company);
+            return;
+        }
+
+        var sections = new Sections(company);
         StandardPage(document, model, company, content => ComposeContents(content, sections));
         StandardPage(document, model, company, content => ComposeCoverLetter(content, model, company, sections));
         if (sections.About || sections.Vision)
@@ -76,61 +81,6 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
         if (sections.Terms)
             StandardPage(document, model, company, content => ComposeTerms(content, model, company, sections));
         ComposeThankYou(document, model, company);
-    }
-
-    // ---- Cover -------------------------------------------------------------------------------------------------
-
-    // The illustration, title, labels and signature line are part of the cover image. The sample values printed in
-    // it are covered with white boxes and the real values are written over them.
-    private static void ComposeCover(IDocumentContainer document, QuotationPdfModel model, QuotationCompanyProfile company) =>
-        document.Page(page =>
-        {
-            page.Size(PageSizes.A4);
-            page.Margin(0);
-            page.DefaultTextStyle(style => style.FontFamily(PdfTheme.FontFamily).FontColor(PdfTheme.Navy).Bold());
-            page.Content().Layers(layers =>
-            {
-                layers.PrimaryLayer().Image(PdfAssets.QuotationCover).FitUnproportionally();
-
-                CoverField(layers, 168.4f, 453.8f, 320f, 43f, model.ClientName, 26, 16);
-                CoverField(layers, 138.1f, 533.9f, 156.6f, 26.1f, model.ContactName ?? "-", 20, 11);
-                CoverField(layers, 346.1f, 533.9f, 152f, 26.1f, model.Subject, 14, 8, maxLines: 2);
-                CoverField(layers, 108.6f, 600f, 149f, 26f, model.QuotationNumber, 20, 10);
-                CoverField(layers, 276.2f, 600f, 94.3f, 26f, FormatDate(model.IssuedAt), 16.5f, 9);
-                CoverField(layers, 388.1f, 600f, 96f, 26f, FormatDate(model.ValidUntil), 16.5f, 9, PdfTheme.DarkGreen);
-                CoverField(layers, 79.1f, 726.6f, 215.6f, 25.3f, model.PreparedBy, 18, 11);
-                CoverField(layers, 79.1f, 752.4f, 215.6f, 14f, model.PreparedByTitle, 10.5f, 8, PdfTheme.Muted, bold: false);
-            });
-            _ = company;
-        });
-
-    private static void CoverField(
-        LayersDescriptor layers,
-        float x,
-        float y,
-        float width,
-        float height,
-        string value,
-        float maxSize,
-        float minSize,
-        Color? color = null,
-        bool bold = true,
-        int maxLines = 1)
-    {
-        var size = FitFontSize(value, width - 4, maxSize, minSize, bold ? 0.6f : 0.52f);
-        var block = layers.Layer()
-            .OffsetX(x).OffsetY(y)
-            .Width(width).Height(height)
-            .Background(PdfTheme.White)
-            .PaddingLeft(2)
-            .AlignMiddle()
-            .Text(value)
-            .FontSize(size)
-            .FontColor(color ?? PdfTheme.Navy)
-            .LineHeight(1f)
-            .ClampLines(maxLines);
-        if (bold) block.Bold();
-        else block.NormalWeight();
     }
 
     // ---- Standard page frame ---------------------------------------------------------------------------------------
@@ -620,7 +570,7 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
             .Text(Format(number)).Bold().FontSize(fontSize).FontColor(PdfTheme.White);
 
     // Text between ** markers is bold.
-    private static void Rich(TextDescriptor text, string markup)
+    internal static void Rich(TextDescriptor text, string markup)
     {
         var parts = markup.Split("**");
         for (var index = 0; index < parts.Length; index++)
@@ -632,7 +582,7 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
     }
 
     // "Payment terms: 90 days..." becomes "**Payment terms:** 90 days...".
-    private static string EmphasizeLeadIn(string note)
+    internal static string EmphasizeLeadIn(string note)
     {
         var colon = note.IndexOf(':', StringComparison.Ordinal);
         if (colon is < 3 or > 36 || note.Contains("**", StringComparison.Ordinal)) return note;
@@ -642,19 +592,13 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
             : note;
     }
 
-    private static float FitFontSize(string text, float maxWidth, float maxSize, float minSize, float charWidth)
-    {
-        var length = Math.Max(text.Length, 1);
-        return Math.Clamp(maxWidth / (length * charWidth), minSize, maxSize);
-    }
-
-    private static string FormatDate(DateTimeOffset value) =>
+    internal static string FormatDate(DateTimeOffset value) =>
         value.ToString("dd-MM-yyyy", CultureInfo.InvariantCulture);
 
-    private static string Format(int value) => value.ToString(CultureInfo.InvariantCulture);
+    internal static string Format(int value) => value.ToString(CultureInfo.InvariantCulture);
 
     // Prices are stored in piastres. Whole amounts print without decimals ("12,000 EGP"); an item without a price prints as a dash.
-    private static string FormatMoney(long? piastres)
+    internal static string FormatMoney(long? piastres)
     {
         if (piastres is not long value) return "—";
         var format = value % 100 == 0 ? "N0" : "N2";

@@ -18,6 +18,7 @@
     <PackageReference Include="QRCoder" Version="1.8.1" />
     <PackageReference Include="QuestPDF" Version="2026.8.0" />
     <EmbeddedResource Include="Pdf\Assets\*.png" />
+    <EmbeddedResource Include="Pdf\Assets\*.jpg" />
     <EmbeddedResource Include="Pdf\Fonts\*.ttf" />
     <ProjectReference Include="..\Inspecta.Application\Inspecta.Application.csproj" />
     <ProjectReference Include="..\Inspecta.Domain\Inspecta.Domain.csproj" />

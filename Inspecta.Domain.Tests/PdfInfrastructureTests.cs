@@ -27,14 +27,78 @@ public sealed class PdfInfrastructureTests
     }
 
     [Fact]
-    public void TheQuotationHasTheTenPagesOfTheReferenceDesignAndStaysSmallEnoughToEmail()
+    public void TheQuotationHasThePagesOfTheCompanysNewProposalDesignAndStaysSmallEnoughToEmail()
     {
         using var provider = BuildProvider();
 
         var file = provider.GetRequiredService<IPdfGenerator>().Generate(Model("INT/417/2026 rev01", "Delta Steel Co."));
 
-        Assert.Equal(10, PageCount(file.Content));
+        // Cover, contents, cover letter, about and vision, two service tables, the accreditation certificate, scope of work,
+        // technical methodology, cost and pricing, and the terms (which run onto a second page).
+        Assert.Equal(12, PageCount(file.Content));
         Assert.True(file.Content.Length < 1_000_000, $"The PDF is {file.Content.Length} bytes.");
+    }
+
+    [Fact]
+    public void AnotherCompanysQuotationKeepsTheEarlierLayoutAndNeverGetsTheIntegrityProposalPages()
+    {
+        using var provider = BuildProvider();
+        var own = new CompanyBranding("Nour Inspection", "Nour Inspection", "Nour Inspection", "", "", [], [], "", "", null, null, "#112233", "#445566");
+
+        var file = provider.GetRequiredService<IPdfGenerator>().Generate(Model("NI/1/2026", "Delta Steel Co.") with
+        {
+            Branding = own,
+            Company = own.ToQuotationProfile()
+        });
+
+        Assert.Equal(5, PageCount(file.Content));
+    }
+
+    [Fact]
+    public void ACompanyThatKeepsTheBuiltInDetailsGetsTheProposalDesignEvenWithASavedProfile()
+    {
+        using var provider = BuildProvider();
+        var builtIn = new CompanyBranding("Integrity", "Integrity", "Integrity", "", "", [], [], "", "", null, null, "#112233", "#445566",
+            UsesBuiltInDetails: true, KeepsBuiltInIdentity: true);
+
+        var file = provider.GetRequiredService<IPdfGenerator>().Generate(Model("INT/417/2026 rev01", "Delta Steel Co.") with
+        {
+            Branding = builtIn,
+            Company = builtIn.ToQuotationProfile()
+        });
+
+        Assert.Equal(12, PageCount(file.Content));
+    }
+
+    [Fact]
+    public void QuotationsDrawnAtTheSameTimeDoNotDisturbEachOther()
+    {
+        using var provider = BuildProvider();
+        var generator = provider.GetRequiredService<IPdfGenerator>();
+
+        var counts = new int[8];
+        Parallel.For(0, counts.Length, index =>
+            counts[index] = PageCount(generator.Generate(Model($"INT/{index}/2026", "Delta Steel Co.")).Content));
+
+        Assert.All(counts, count => Assert.Equal(12, count));
+    }
+
+    [Fact]
+    public void AQuotationWithoutItemsOrPricesStillRenders()
+    {
+        using var provider = BuildProvider();
+        var generator = provider.GetRequiredService<IPdfGenerator>();
+
+        var empty = generator.Generate(Model("INT/1/2026", "Delta Steel Co.") with { Items = [], ContactName = null, ScopeOfWork = [], Notes = [] });
+        var unpriced = generator.Generate(Model("INT/2/2026", "Delta Steel Co.") with
+        {
+            Items = [new QuotationPdfItem("Air receiver", "Air receiver - 3000 L", null, 2, null, "Per Visit")],
+            DiscountPercent = 10,
+            VatPercent = 14
+        });
+
+        Assert.Equal(12, PageCount(empty.Content));
+        Assert.Equal(12, PageCount(unpriced.Content));
     }
 
     [Theory]
@@ -85,7 +149,7 @@ public sealed class PdfInfrastructureTests
             Notes = Enumerable.Repeat("A long note that goes on and on to take some room on the page, repeated many times.", 30).ToArray()
         });
 
-        Assert.True(PageCount(file.Content) > 10);
+        Assert.True(PageCount(file.Content) > 12);
     }
 
     [Fact]
@@ -100,7 +164,8 @@ public sealed class PdfInfrastructureTests
             PreparedBy = new string('P', 200)
         });
 
-        Assert.Equal(10, PageCount(file.Content));
+        // Absurdly long values wrap onto at most one more page (the cover letter); in practice the subject is cut to 80 characters before it gets here.
+        Assert.InRange(PageCount(file.Content), 12, 13);
     }
 
     [Fact]

@@ -93,33 +93,34 @@ public static class DefaultCompanyProfile
         ],
         Terms:
         [
-            new QuotationTermsSection("7.1 Invoicing and Payment",
+            new QuotationTermsSection("Invoicing and Payment",
             [
                 "INTEGRITY will issue and submit an invoice upon completion of the job.",
-                "The Client agrees to pay 100 % against the reports."
+                "The Client agrees to pay **50 %** as advance.",
+                "The Client agrees to pay **50 %** against the reports."
             ]),
-            new QuotationTermsSection("7.2 Offer Validity",
+            new QuotationTermsSection("Offer Validity",
             [
                 "This proposal is made in good faith and remains valid for **{days} days** from the date of issue."
             ]),
-            new QuotationTermsSection("7.3 Payment details",
+            new QuotationTermsSection("Payment Details",
             [
                 "Payments can be made via cash or check.",
                 "Bank details will be provided upon request."
             ]),
-            new QuotationTermsSection("7.4 Bank Account", [], ShowBankAccounts: true),
-            new QuotationTermsSection("7.5 INTEGRITY Obligations",
+            new QuotationTermsSection("Bank Account", [], ShowBankAccounts: true),
+            new QuotationTermsSection("INTEGRITY Obligations",
             [
-                "Upon request, INTEGRITY shall mobilize the spare parts to the client site.",
-                "All tasks will be executed in compliance with INTEGRITY **QHSE rules and regulations**, as well as safety practices and procedures."
+                "Execute the scope of work to a professional technical standard, in line with the referenced codes and standards.",
+                "Comply with site HSE regulations and equip our engineers with full PPE.",
+                "Maintain strict confidentiality of all client information, data, and findings obtained during the work, and not disclose them to any third party without prior written consent (Non-Disclosure Agreement, NDA)."
             ]),
-            new QuotationTermsSection("7.6 Client Obligations",
+            new QuotationTermsSection("Client Obligations",
             [
-                "The Client is responsible for obtaining all required **site/gate passes, permits, safety cards, and inductions** prior to the mobilization of INTEGRITY’s team.",
-                "The safety of equipment and the inspection personnel during the inspection will be the Client’s responsibility, including any associated costs and arrangements.",
-                "The Client shall provide full support to INTEGRITY’s team for proper execution of the job. This includes the provision of related instruments, safety equipment, and emergency medical facilities.",
-                "The Client’s authorized representative or contractor at the site shall coordinate with INTEGRITY team to ensure all necessary arrangements are in place to facilitate the work.",
-                "INTEGRITY shall not be held liable for delays caused by the Client, its subcontractors, or unforeseen circumstances beyond INTEGRITY control."
+                "Provide the necessary site permits and safe access for Integrity International Inspection engineers.",
+                "Provide all drawings and technical information required to execute the scope (equipment lists, layouts, etc.).",
+                "Ensure the security of the assigned crew and their equipment while on site.",
+                "Provide machine identification data required for analysis, including bearing designations, cross-section details, and gear tooth counts, as applicable."
             ])
         ],
         BankAccounts:
@@ -129,7 +130,10 @@ public static class DefaultCompanyProfile
                 "100072853193", "EG640010008900000100072853193", "CIBEEGCX089"),
             new QuotationBankAccount(
                 "Integrity International for Inspection", "Commercial International Bank (CIB)", "USD",
-                "100072840806", "EG570010008900000100072840806", "CIBEEGCX089")
+                "100072840806", "EG570010008900000100072840806", "CIBEEGCX089"),
+            new QuotationBankAccount(
+                "Integrity International for Inspection", "Commercial International Bank (CIB)", "EUR",
+                "100076863387", "EG820010003400000100076863387", "CIBEEGCX089")
         ],
         ServicesLabel: "Integrity Services");
 }

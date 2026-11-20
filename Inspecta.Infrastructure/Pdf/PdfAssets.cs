@@ -6,12 +6,31 @@ namespace Inspecta.Infrastructure.Pdf;
 /// <summary>Images embedded in the assembly and small SVG drawings shared by the templates.</summary>
 public static class PdfAssets
 {
-    private static readonly Lazy<byte[]> QuotationCoverImage = new(() => Load("quotation-cover.png"));
     private static readonly Lazy<byte[]> LogoImage = new(() => Load("logo.png"));
     private static readonly Lazy<byte[]> CertificateLogoImage = new(() => Load("certificate-logo.png"));
     private static readonly Lazy<byte[]> AccreditationsImage = new(() => Load("accreditations.png"));
 
-    public static byte[] QuotationCover => QuotationCoverImage.Value;
+    private static readonly Lazy<byte[]> ProposalBandImage = new(() => Load("proposal-band.jpg"));
+    private static readonly Lazy<byte[]> ProposalLogoImage = new(() => Load("proposal-logo.png"));
+    private static readonly Lazy<byte[]> ProposalWatermarkImage = new(() => Load("proposal-watermark.png"));
+    private static readonly Lazy<byte[]> ProposalAccreditationImage = new(() => Load("proposal-accreditation.jpg"));
+    private static readonly Lazy<byte[]> ProposalStripImage = new(() => Load("proposal-strip.png"));
+
+    /// <summary>The blue-to-green band behind the title of the proposal cover.</summary>
+    public static byte[] ProposalBand => ProposalBandImage.Value;
+
+    /// <summary>The company logo (symbol and name) of the proposal design, used on the cover and in the page header.</summary>
+    public static byte[] ProposalLogo => ProposalLogoImage.Value;
+
+    /// <summary>The faded logo behind the text of every proposal page.</summary>
+    public static byte[] ProposalWatermark => ProposalWatermarkImage.Value;
+
+    /// <summary>The EGAC accreditation certificate printed on its own page of the proposal.</summary>
+    public static byte[] ProposalAccreditation => ProposalAccreditationImage.Value;
+
+    /// <summary>The thin blue-to-green strip down the left edge of every proposal page.</summary>
+    public static byte[] ProposalStrip => ProposalStripImage.Value;
+
     public static byte[] Logo => LogoImage.Value;
 
     /// <summary>The logo of the certificate forms ("Integrity International for Inspection").</summary>
