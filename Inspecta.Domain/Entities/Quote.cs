@@ -83,6 +83,13 @@ public sealed class Quote
     public DateTimeOffset? ClientRespondedAt { get; private set; }
     public DateTimeOffset? SentAt { get; private set; }
 
+    /// <summary>
+    /// What the quotation printed from the company and the coordinator when it was sent (terms, bank accounts, contacts, the signature lines), as JSON.
+    /// Set once by <see cref="Send"/> and never changed, so a sent quotation keeps printing what the client was sent. Empty for a quotation sent
+    /// before this was kept, and for a draft.
+    /// </summary>
+    public string? CompanyContentJson { get; private set; }
+
     /// <summary>Set when a newer revision (a counter offer) replaced this sent quotation.</summary>
     public DateTimeOffset? SupersededAt { get; private set; }
     public DateTimeOffset? LastReminderAt { get; private set; }
@@ -342,8 +349,8 @@ public sealed class Quote
         return reference.Length == 0 ? suffix.Trim() : reference + suffix;
     }
 
-    /// <summary>Marks the quotation as sent to the client. Every item must be priced.</summary>
-    public void Send()
+    /// <summary>Marks the quotation as sent to the client. Every item must be priced. <paramref name="companyContentJson"/> is what the PDF was drawn with (see <see cref="CompanyContentJson"/>).</summary>
+    public void Send(string? companyContentJson = null)
     {
         EnsureEditable();
         if (GetItems().Count == 0)
@@ -354,6 +361,7 @@ public sealed class Quote
             throw new InvalidOperationException("Quote total must match its line items less the discount.");
 
         SentAt = DateTimeOffset.UtcNow;
+        CompanyContentJson = string.IsNullOrWhiteSpace(companyContentJson) ? null : companyContentJson;
         ValidUntil = SentAt.Value.AddDays(ValidForDays);
         UpdatedAt = SentAt.Value;
     }

@@ -8,9 +8,10 @@ internal static class QuotationPdfModelFactory
 {
     private const int MaxSubjectLength = 80;
 
-    // A draft previews (and is sent) as if issued now; a quotation that was already sent keeps its dates.
+    // A draft previews (and is sent) as if issued now; a quotation that was already sent keeps its dates. print is what the company and the coordinator print
+    // (the saved content and the signature lines), the snapshot of a sent quotation or the live values of a draft; without it the quotation prints as it did before it existed.
     public static QuotationPdfModel Create(
-        Quote quote, InspectionRequest request, string preparedBy, DateTimeOffset now, CompanyBranding? branding = null)
+        Quote quote, InspectionRequest request, string preparedBy, DateTimeOffset now, CompanyBranding? branding = null, QuotationContentSnapshot? print = null)
     {
         var issuedAt = quote.SentAt ?? now;
         var validUntil = quote.IsSent ? quote.ValidUntil : issuedAt.AddDays(quote.ValidForDays);
@@ -24,8 +25,8 @@ internal static class QuotationPdfModelFactory
             issuedAt,
             validUntil,
             quote.ValidForDays,
-            preparedBy,
-            QuotationDefaults.PreparedByTitle,
+            print?.PreparedBy ?? preparedBy,
+            print?.PreparedByTitle ?? QuotationDefaults.PreparedByTitle,
             quote.Message,
             items
                 .Select(item => new QuotationPdfItem(
@@ -36,7 +37,10 @@ internal static class QuotationPdfModelFactory
             branding?.ToQuotationProfile(),
             branding,
             quote.DiscountPercent,
-            quote.VatPercent);
+            quote.VatPercent,
+            print?.Content,
+            print?.PreparedByPhone,
+            print?.PreparedByEmail);
     }
 
     // "Mobile crane, Air receiver": the distinct item types in order.

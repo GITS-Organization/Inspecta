@@ -1,3 +1,4 @@
+using Inspecta.Application.Pdf.Models;
 using Inspecta.Domain.Entities;
 using Inspecta.Domain.Enums;
 
@@ -35,13 +36,15 @@ public interface IQuoteDeliveryService
     /// no source email (a manual request), in which case nothing is sent. The caller changes the quote and request
     /// state only after this returns, so a failed delivery leaves them untouched.
     /// </summary>
+    /// <param name="snapshot">What the PDF prints from the company and the coordinator when the quotation is being sent: the caller keeps the same values with the quotation. Left out, the quotation prints what is true now (a draft) or what it was sent with.</param>
     /// <exception cref="Exceptions.EmailDeliveryException">The mail server rejected or could not receive the message.</exception>
     Task<OutboundEmail?> DeliverAsync(
         InspectionRequest request,
         Quote quote,
         OutboundEmailKind kind,
         QuoteEmailDraft? draft = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        QuotationContentSnapshot? snapshot = null);
 
     /// <summary>The email that would go out, with the coordinator's edits applied. Sends nothing and changes nothing.</summary>
     Task<QuoteEmailPlan> PlanAsync(
@@ -49,5 +52,6 @@ public interface IQuoteDeliveryService
         Quote quote,
         OutboundEmailKind kind,
         QuoteEmailDraft? draft,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        QuotationContentSnapshot? snapshot = null);
 }

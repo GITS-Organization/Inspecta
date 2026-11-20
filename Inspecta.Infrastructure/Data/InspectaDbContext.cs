@@ -23,6 +23,7 @@ public sealed class InspectaDbContext(
     public DbSet<RequestEmail> RequestEmails => Set<RequestEmail>();
     public DbSet<ClientMailRule> ClientMailRules => Set<ClientMailRule>();
     public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();
+    public DbSet<CompanyQuotationContent> CompanyQuotationContents => Set<CompanyQuotationContent>();
     public DbSet<ClientReply> ClientReplies => Set<ClientReply>();
     public DbSet<OutboundEmail> OutboundEmails => Set<OutboundEmail>();
     public DbSet<RenewalReminder> RenewalReminders => Set<RenewalReminder>();
@@ -61,6 +62,7 @@ public sealed class InspectaDbContext(
         user.Property(item => item.Email).HasMaxLength(320).IsRequired();
         user.HasIndex(item => item.Email).IsUnique();
         user.Property(item => item.FullName).HasMaxLength(200).IsRequired();
+        user.Property(item => item.JobTitle).HasMaxLength(AppUser.MaxJobTitle);
         user.Property(item => item.PasswordHash).HasMaxLength(512).IsRequired();
         user.Property(item => item.Role).HasConversion<string>().HasMaxLength(32);
         user.Property(item => item.QualificationsJson).HasMaxLength(4000).IsRequired();
@@ -332,6 +334,16 @@ public sealed class InspectaDbContext(
         companyProfile.Property(item => item.UsesBuiltInDetails).HasDefaultValue(false);
         companyProfile.Property(item => item.PrimaryColor).HasMaxLength(7).IsRequired();
         companyProfile.Property(item => item.AccentColor).HasMaxLength(7).IsRequired();
+
+        // No query filter, like the profile: it is always read by the company id, which the API takes from the caller (or the platform owner names).
+        var quotationContent = modelBuilder.Entity<CompanyQuotationContent>();
+        quotationContent.HasKey(item => item.CompanyId);
+        quotationContent.Ignore(item => item.Terms);
+        quotationContent.Ignore(item => item.BankAccounts);
+        quotationContent.Ignore(item => item.Contacts);
+        quotationContent.Property(item => item.TermsJson).IsRequired();
+        quotationContent.Property(item => item.BankAccountsJson).IsRequired();
+        quotationContent.Property(item => item.ContactsJson).IsRequired();
 
         var clientReply = modelBuilder.Entity<ClientReply>();
         clientReply.HasKey(item => item.Id);

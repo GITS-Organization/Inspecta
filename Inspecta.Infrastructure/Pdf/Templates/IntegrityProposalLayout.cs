@@ -31,19 +31,16 @@ internal static class IntegrityProposalLayout
     private static readonly Color Muted = Color.FromHex("#51607A");
     private static readonly Color White = Color.FromHex("#FFFFFF");
 
-    // The company's contact details as printed on its proposals (the profile of the company holds the name only).
-    private static readonly string[] Addresses =
-    [
-        "21 Nakib Sherif Ramzy St, Smouha, Alexandria, Egypt",
-        "522 Hassan Shafiq El-Masry, Al-Narges District, Cairo, Egypt"
-    ];
-
-    private static readonly string[] Phones = ["+20 100 091 4066", "+20 109 998 3254"];
-    private static readonly string[] Emails = ["rewan.khattab@integrity-intl.com", "nada.ali@integrity-intl.com"];
-    private const string Website = "www.integrity-intl.com";
     // Images used on many pages are loaded once per document and shared by its pages, so each is stored once in the PDF and the file stays
     // small enough to email. They are made for each document rather than kept in statics, so two documents drawn at once share nothing.
     private sealed record Pictures(Image Logo, Image Strip, Image Watermark);
+
+    // The proposal prints the lists of the company details; a profile that only has the single address or email still prints it.
+    private static IReadOnlyList<string> AddressesOf(QuotationCompanyProfile company) =>
+        company.Addresses ?? (string.IsNullOrWhiteSpace(company.Address) ? [] : [company.Address]);
+
+    private static IReadOnlyList<string> EmailsOf(QuotationCompanyProfile company) =>
+        company.Emails ?? (string.IsNullOrWhiteSpace(company.Email) ? [] : [company.Email]);
 
 
     private const string CirclesSvg =
@@ -141,9 +138,9 @@ internal static class IntegrityProposalLayout
 
                 column.Item().PaddingTop(22).PaddingHorizontal(50).Row(row =>
                 {
-                    CoverContact(row, "PHONE", Green, RowGreen, Phones);
-                    CoverContact(row, "EMAIL", Blue, BandBlue, Emails);
-                    CoverContact(row, "ADDRESS", Green, RowGreen, Addresses);
+                    CoverContact(row, "PHONE", Green, RowGreen, company.Phones);
+                    CoverContact(row, "EMAIL", Blue, BandBlue, EmailsOf(company));
+                    CoverContact(row, "ADDRESS", Green, RowGreen, AddressesOf(company));
                 });
 
                 column.Item().PaddingTop(18).PaddingHorizontal(50).Column(bar =>
@@ -252,21 +249,24 @@ internal static class IntegrityProposalLayout
             {
                 block.Item().PaddingHorizontal(6).PaddingVertical(3).Text(company.Name.ToUpperInvariant())
                     .Bold().FontSize(7.5f).LetterSpacing(0.2f).FontColor(White).ClampLines(1);
-                FooterLine(block, string.Join("  /  ", Addresses));
-                FooterLine(block, string.Join("  |  ", Phones));
-                foreach (var email in Emails) FooterLine(block, email);
+                FooterLine(block, string.Join("  /  ", AddressesOf(company)));
+                FooterLine(block, string.Join("  |  ", company.Phones));
+                foreach (var email in EmailsOf(company)) FooterLine(block, email);
                 block.Item().BorderTop(0.4f).BorderColor(Color.FromHex("#4A66A6")).PaddingHorizontal(6).PaddingVertical(2).Row(row =>
                 {
-                    row.RelativeItem().Text(Website).FontSize(7).FontColor(White);
+                    row.RelativeItem().Text(company.Website).FontSize(7).FontColor(White);
                     row.AutoItem().Text("Confidential").Bold().FontSize(6.5f).FontColor(White);
                 });
             });
             column.Item().Height(3).Background(Green);
         });
 
-    private static void FooterLine(ColumnDescriptor column, string text) =>
+    private static void FooterLine(ColumnDescriptor column, string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
         column.Item().BorderTop(0.4f).BorderColor(Color.FromHex("#4A66A6")).PaddingHorizontal(6).PaddingVertical(2)
             .Text(text).FontSize(7).FontColor(White);
+    }
 
     // ---- Building blocks ---------------------------------------------------------------------------------------
 
@@ -389,7 +389,7 @@ internal static class IntegrityProposalLayout
             column.Item().PaddingTop(14).Width(230).BorderTop(1.2f).BorderColor(Navy).PaddingTop(6).Column(signature =>
             {
                 signature.Item().Text(model.PreparedBy).Bold().FontSize(11.5f).FontColor(Navy).ClampLines(2);
-                signature.Item().Text(model.PreparedByTitle);
+                foreach (var line in QuotationPdfTemplate.SignatureLines(model)) signature.Item().Text(line);
             });
             column.Item().PaddingTop(8).Text(company.Name.ToUpperInvariant()).Bold().FontSize(8.5f).LetterSpacing(0.25f).FontColor(DarkGreen);
         });

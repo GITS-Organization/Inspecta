@@ -17,4 +17,8 @@ public sealed record AuthUserResponse(
 	SubscriptionStatus? SubscriptionStatus,
 	DateTimeOffset? SubscriptionEndDate,
 	/// <summary>What the user may do (see the permission map): the screens show or hide their buttons by it.</summary>
-	IReadOnlyList<string>? Permissions = null);
+	IReadOnlyList<string>? Permissions = null,
+	/// <summary>Printed under the name in the signature of the quotations this user prepares; null prints "Coordinator".</summary>
+	string? JobTitle = null,
+	/// <summary>Printed under the name in the signature of the quotations this user prepares, after the job title.</summary>
+	string? Phone = null);

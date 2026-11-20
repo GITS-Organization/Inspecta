@@ -80,6 +80,26 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>Set the signed-in user's own job title and phone, printed under their name in the cover letter of the quotations they prepare.</summary>
+    /// <remarks>
+    /// Any signed-in user. An empty value clears it (no title prints "Coordinator", no phone prints no phone line). The email printed there is the sign-in email.
+    /// Too long (title over 100, phone over 40 characters) is <c>400 bad_request</c>. Only quotations sent afterwards use the new values; drafts show them at once.
+    /// </remarks>
+    [Authorize]
+    [HttpPut("me/signature")]
+    [ProducesResponseType<AuthUserResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<AuthUserResponse>> UpdateMySignature([FromBody] UpdateMySignatureRequest request, CancellationToken cancellationToken)
+    {
+        var subject = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        if (!Guid.TryParse(subject, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        return Ok(await authService.UpdateMySignatureAsync(userId, request, cancellationToken));
+    }
+
     /// <summary>Revoke the supplied refresh token or all refresh tokens for the current user.</summary>
     [Authorize]
     [HttpPost("logout")]

@@ -480,7 +480,9 @@ public sealed class UserManagementService(
         user.CreatedById,
         company?.GetEffectiveSubscriptionStatus(),
         company?.SubscriptionEndDate,
-        Authorization.RolePermissions.For(Authorization.RoleNames.Of(user.Role)));
+        Authorization.RolePermissions.For(Authorization.RoleNames.Of(user.Role)),
+        user.JobTitle,
+        user.Phone);
 
     private async Task<AuthUserResponse> ResponseAsync(AppUser user, CancellationToken cancellationToken) =>
         ToResponse(user, companies is not null && user.CompanyId is { } id ? await companies.GetByIdAsync(id, tracking: false, cancellationToken) : null);

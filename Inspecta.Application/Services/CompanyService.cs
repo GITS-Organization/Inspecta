@@ -132,5 +132,7 @@ public sealed class CompanyService(
         user.CreatedById,
         company.GetEffectiveSubscriptionStatus(),
         company.SubscriptionEndDate,
-        Authorization.RolePermissions.For(Authorization.RoleNames.Of(user.Role)));
+        Authorization.RolePermissions.For(Authorization.RoleNames.Of(user.Role)),
+        user.JobTitle,
+        user.Phone);
 }

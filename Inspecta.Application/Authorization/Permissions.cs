@@ -10,6 +10,7 @@ public static class Permissions
     // The platform owner (Gits) and the companies.
     public const string PlatformAdminister = "Platform.Administer";
     public const string CompanyEditIdentity = "Company.EditIdentity";
+    public const string CompanyEditQuotationContent = "Company.EditQuotationContent";
     public const string AccountsManage = "Accounts.Manage";
     public const string CompanyView = "Company.View";
     public const string CompanySetDefaultReviewer = "Company.SetDefaultReviewer";

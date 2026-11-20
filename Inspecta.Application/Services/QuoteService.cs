@@ -4,6 +4,7 @@ using Inspecta.Application.Contracts.Requests;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
 using Inspecta.Application.Pdf;
+using Inspecta.Application.Pdf.Models;
 using Inspecta.Domain.Entities;
 using Inspecta.Domain.Enums;
 
@@ -19,7 +20,8 @@ public sealed class QuoteService(
     IRequestEquipmentRegistrar? equipmentRegistrar = null,
     ICompanyBrandingProvider? companyBranding = null,
     IClientReplyRepository? clientReplies = null,
-    IInvoiceRepository? invoiceRepository = null) : IQuoteService
+    IInvoiceRepository? invoiceRepository = null,
+    IQuotationContentProvider? quotationContent = null) : IQuoteService
 {
     public async Task<IReadOnlyList<QuoteResponse>> ListAsync(
         Guid requestId,
@@ -472,8 +474,22 @@ public sealed class QuoteService(
             ? await userRepository.GetByIdAsync(coordinatorId, cancellationToken)
             : null;
         var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
+        // A sent quotation prints what it was sent with; a draft prints the company's content and the coordinator's signature as they are now.
+        var print = quotationContent is null ? null : await quotationContent.ForQuoteAsync(quote, request, coordinator, company, cancellationToken);
         return pdfGenerator.Generate(QuotationPdfModelFactory.Create(
-            quote, request, coordinator?.FullName ?? string.Empty, DateTimeOffset.UtcNow, company));
+            quote, request, coordinator?.FullName ?? string.Empty, DateTimeOffset.UtcNow, company, print));
+    }
+
+    // What the quotation prints from the company and the coordinator right now, to be stored with it when it is sent. The PDF that is emailed
+    // is drawn from the very same values, so what the client got is what every later download shows.
+    private async Task<QuotationContentSnapshot?> CaptureContentAsync(InspectionRequest request, CancellationToken cancellationToken)
+    {
+        if (quotationContent is null) return null;
+        var coordinator = request.CoordinatorId is Guid coordinatorId
+            ? await userRepository.GetByIdAsync(coordinatorId, cancellationToken)
+            : null;
+        var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
+        return await quotationContent.CaptureAsync(request, coordinator, company, cancellationToken);
     }
 
     /// <summary>
@@ -497,9 +513,10 @@ public sealed class QuoteService(
         EnsureAllItemsPriced(quote);
 
         // Delivery comes first: if it fails nothing about the quote or the request has changed yet.
-        await deliveryService.DeliverAsync(request, quote, OutboundEmailKind.Offer, ToDraft(email), cancellationToken);
+        var content = await CaptureContentAsync(request, cancellationToken);
+        await deliveryService.DeliverAsync(request, quote, OutboundEmailKind.Offer, ToDraft(email), cancellationToken, content);
 
-        quote.Send();
+        quote.Send(content?.ToJson());
         request.TransitionTo(SentStatusOf(quote), actorId);
 
         // A new offer is out: what the client wrote about the previous one is cleared.
@@ -619,11 +636,13 @@ public sealed class QuoteService(
             throw new InvalidOperationException("The request is not in the right stage to accept this quote.");
         if (!quote.IsSent) EnsureAllItemsPriced(quote);
 
-        await deliveryService.DeliverAsync(request, quote, OutboundEmailKind.Accept, ToDraft(email), cancellationToken);
+        // A draft that is accepted is sent at the same time, so it is kept with what the email carried; one already sent keeps what it was sent with.
+        var content = quote.IsSent ? null : await CaptureContentAsync(request, cancellationToken);
+        await deliveryService.DeliverAsync(request, quote, OutboundEmailKind.Accept, ToDraft(email), cancellationToken, content);
 
         if (!quote.IsSent)
         {
-            quote.Send();
+            quote.Send(content?.ToJson());
             request.TransitionTo(SentStatusOf(quote), actorId);
         }
 

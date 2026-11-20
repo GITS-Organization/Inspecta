@@ -95,6 +95,10 @@ public sealed class PostgresQueryTranslationTests
                                !item.IsArchived && item.ArchivedAt == null && item.Client!.ArchivedAt == null)
                 .Where(item => item.Client!.ManagerId == manager).Where(item => item.ClientId == client)
                 .Select(item => new { item.Id, item.Name, item.SerialNumber, item.ClientId, ClientName = item.Client!.Name, Due = item.NextInspectionDueAt!.Value }).ToQueryString(),
+            // The quotation content of a company (EfCompanyQuotationContentRepository): read by the company id, tracked for a save and not tracked for a read.
+            db.CompanyQuotationContents.AsNoTracking().Where(content => content.CompanyId == manager).ToQueryString(),
+            db.CompanyQuotationContents.Where(content => content.CompanyId == manager).ToQueryString(),
+            db.Quotes.AsNoTracking().Where(quote => quote.CompanyContentJson != null && quote.Id == manager).Select(quote => quote.CompanyContentJson).ToQueryString(),
             db.QuotationDrafts.IgnoreQueryFilters().Where(draft => draft.SourceUid == 1u).ToQueryString()
         };
 

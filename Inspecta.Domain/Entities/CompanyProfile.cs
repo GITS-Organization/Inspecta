@@ -146,7 +146,7 @@ public sealed class CompanyProfile
         return text ?? throw new ArgumentException($"{field} is required.");
     }
 
-    private static string? Optional(string? value, string field, int maxLength)
+    internal static string? Optional(string? value, string field, int maxLength)
     {
         var text = string.Concat((value ?? string.Empty).Where(character => !char.IsControl(character))).Trim();
         if (text.Length == 0) return null;

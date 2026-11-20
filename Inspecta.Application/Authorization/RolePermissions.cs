@@ -53,6 +53,7 @@ public static class RolePermissions
     [
         (Permissions.PlatformAdminister, [Admin]),
         (Permissions.CompanyEditIdentity, [Admin, CompanyAdmin]),
+        (Permissions.CompanyEditQuotationContent, [Admin, Manager, CompanyAdmin]),
         (Permissions.AccountsManage, [Admin, CompanyAdmin]),
         (Permissions.CompanyView, [Admin, Manager, Coordinator, Inspector, CompanyAdmin]),
         (Permissions.CompanySetDefaultReviewer, [Admin, CompanyAdmin]),

@@ -11,7 +11,7 @@ namespace Inspecta.Api.Controllers;
 /// <summary>The caller's own company: what it is, who reviews by default, and its identity (logo, accreditations, colours, contacts).</summary>
 [ApiController]
 [Route("api/v1/company")]
-public sealed class CompanyController(ICompanyService companies, ICompanyProfileService profiles) : ControllerBase
+public sealed class CompanyController(ICompanyService companies, ICompanyProfileService profiles, IQuotationContentService quotationContent) : ControllerBase
 {
     /// <summary>The caller's company. The platform owner names it with <c>companyId</c>.</summary>
     [HttpGet]
@@ -49,6 +49,32 @@ public sealed class CompanyController(ICompanyService companies, ICompanyProfile
     public async Task<ActionResult<CompanyProfileResponse>> SaveProfile(
         SaveCompanyProfileRequest request, [FromQuery] Guid? companyId, CancellationToken cancellationToken) =>
         Ok(await profiles.SaveAsync(Resolve(companyId), request, cancellationToken));
+
+    /// <summary>What the company prints in its quotations: the sections of its terms, its bank accounts and the contacts on the cover and in the footer.</summary>
+    /// <remarks>
+    /// The technical manager, the company admin or the platform owner (with <c>companyId</c>). Always 200: <c>isDefault</c> is true while nothing was saved, and the lists are then the
+    /// default (the built-in content for the built-in company, empty for any other). A quotation that was already sent keeps what it was sent with.
+    /// </remarks>
+    [HttpGet("quotation-content")]
+    [RequirePermission(Permissions.CompanyEditQuotationContent)]
+    [ProducesResponseType<QuotationContentResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<QuotationContentResponse>> GetQuotationContent([FromQuery] Guid? companyId, CancellationToken cancellationToken) =>
+        Ok(await quotationContent.GetAsync(Resolve(companyId), cancellationToken));
+
+    /// <summary>Replace what the company prints in its quotations (everything is replaced by what is sent; the last save wins).</summary>
+    /// <remarks>
+    /// Limits: 12 terms sections (title up to 120 characters, 15 points of up to 600, at most one section with <c>showBankAccounts</c>), 5 bank accounts, 3 addresses, 3 phones and 3 emails.
+    /// Anything over a limit is <c>400 bad_request</c> with a readable message and saves nothing. Only quotations sent afterwards use it; drafts show it at once.
+    /// </remarks>
+    [HttpPut("quotation-content")]
+    [RequirePermission(Permissions.CompanyEditQuotationContent)]
+    [ProducesResponseType<QuotationContentResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<QuotationContentResponse>> SaveQuotationContent(
+        SaveQuotationContentRequest request, [FromQuery] Guid? companyId, CancellationToken cancellationToken) =>
+        Ok(await quotationContent.SaveAsync(Resolve(companyId), request, User.GetUserId(), cancellationToken));
 
     // A company member always works on their own company; the platform owner must say which.
     private Guid Resolve(Guid? requested)

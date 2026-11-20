@@ -169,6 +169,15 @@ public class AuthService : IAuthService
             await _userRepository.RevokeOtherRefreshTokensAsync(user.Id, HashToken(request.RefreshToken), cancellationToken);
     }
 
+    public async Task<AuthUserResponse> UpdateMySignatureAsync(Guid userId, UpdateMySignatureRequest request, CancellationToken cancellationToken = default)
+    {
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new AuthException("unauthorized", "The account no longer exists.");
+        user.SetSignatureDetails(request.JobTitle, request.Phone);
+        await _userRepository.SaveAsync(user, cancellationToken);
+        return await ResponseAsync(user, cancellationToken);
+    }
+
     public async Task LogoutAsync(Guid userId, string? rawRefreshToken, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(rawRefreshToken))
@@ -201,7 +210,9 @@ public class AuthService : IAuthService
             user.CreatedById,
             company?.GetEffectiveSubscriptionStatus(),
             company?.SubscriptionEndDate,
-            Authorization.RolePermissions.For(Authorization.RoleNames.Of(user.Role)));
+            Authorization.RolePermissions.For(Authorization.RoleNames.Of(user.Role)),
+            user.JobTitle,
+            user.Phone);
 
     // Everyone but the platform owner works inside a company, and the company must be on with a valid subscription.
     private async Task EnsureManagerSubscriptionActiveAsync(

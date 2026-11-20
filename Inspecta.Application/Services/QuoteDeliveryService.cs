@@ -3,6 +3,7 @@ using System.Text;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
 using Inspecta.Application.Pdf;
+using Inspecta.Application.Pdf.Models;
 using Inspecta.Domain.Entities;
 using Inspecta.Domain.Enums;
 
@@ -19,7 +20,8 @@ public sealed class QuoteDeliveryService(
     QuoteDeliveryOptions? options = null,
     IEmailBranding? branding = null,
     ICompanyBrandingProvider? companyBranding = null,
-    IMailboxAuthenticator? mailboxAuthenticator = null) : IQuoteDeliveryService
+    IMailboxAuthenticator? mailboxAuthenticator = null,
+    IQuotationContentProvider? quotationContent = null) : IQuoteDeliveryService
 {
     /// <summary>The outgoing server and sign-in of a coordinator mailbox: the password, or a fresh Microsoft access token.</summary>
     internal static async Task<SmtpSettings> SmtpSettingsAsync(
@@ -40,7 +42,8 @@ public sealed class QuoteDeliveryService(
         Quote quote,
         OutboundEmailKind kind,
         QuoteEmailDraft? draft,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        QuotationContentSnapshot? snapshot = null)
     {
         var source = await requestRepository.GetEmailAsync(request.Id, cancellationToken);
         var (toAddress, toName, replies) = ResolveTarget(source, draft);
@@ -58,7 +61,8 @@ public sealed class QuoteDeliveryService(
             throw new ArgumentException($"The email text is longer than {CertificateDeliveryService.MaxBodyLength} characters.");
         var fromAddress = config is null || coordinator is null ? null : ResolveFromAddress(config, coordinator);
         var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
-        var pdfName = pdfGenerator.Generate(QuotationPdfModelFactory.Create(quote, request, coordinator?.FullName ?? string.Empty, DateTimeOffset.UtcNow, company)).FileName;
+        snapshot ??= quotationContent is null ? null : await quotationContent.ForQuoteAsync(quote, request, coordinator, company, cancellationToken);
+        var pdfName = pdfGenerator.Generate(QuotationPdfModelFactory.Create(quote, request, coordinator?.FullName ?? string.Empty, DateTimeOffset.UtcNow, company, snapshot)).FileName;
 
         // While emailing is off nothing is sent, so nothing about the address or the mailbox can stop the Send button.
         var blockers = new List<string>();
@@ -84,14 +88,15 @@ public sealed class QuoteDeliveryService(
         Quote quote,
         OutboundEmailKind kind,
         QuoteEmailDraft? draft = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        QuotationContentSnapshot? snapshot = null)
     {
         var gate = InFlight.GetOrAdd($"{quote.Id}:{kind}", _ => new SemaphoreSlim(1, 1));
         if (!await gate.WaitAsync(0, cancellationToken))
             throw new Exceptions.AuthException("delivery_in_progress", "This email is already being sent. Wait for it to finish.", 409);
         try
         {
-            return await DeliverOnceAsync(request, quote, kind, draft, cancellationToken);
+            return await DeliverOnceAsync(request, quote, kind, draft, snapshot, cancellationToken);
         }
         finally
         {
@@ -104,6 +109,7 @@ public sealed class QuoteDeliveryService(
         Quote quote,
         OutboundEmailKind kind,
         QuoteEmailDraft? draft,
+        QuotationContentSnapshot? snapshot,
         CancellationToken cancellationToken)
     {
         // Temporarily switched off (QuoteDelivery:Enabled=false): nothing is emailed, the quotation and request still change state.
@@ -133,10 +139,11 @@ public sealed class QuoteDeliveryService(
         // Resolved before anything is recorded: a mailbox that must be connected again stops here with a clear 409
         // and leaves no half-finished email behind that would block the retry.
         var smtpSettings = await SmtpSettingsAsync(config, mailboxAuthenticator, secretProtector, cancellationToken);
-        var plan = await PlanAsync(request, quote, kind, draft, cancellationToken);
-
         var company = companyBranding is null ? null : await companyBranding.GetAsync(request.ManagerId, cancellationToken);
-        var pdf = pdfGenerator.Generate(QuotationPdfModelFactory.Create(quote, request, coordinator.FullName, DateTimeOffset.UtcNow, company));
+        // The PDF and the preview of it are drawn from the same values: the ones the caller keeps with the quotation as it is sent, or what it was sent with.
+        snapshot ??= quotationContent is null ? null : await quotationContent.ForQuoteAsync(quote, request, coordinator, company, cancellationToken);
+        var plan = await PlanAsync(request, quote, kind, draft, cancellationToken, snapshot);
+        var pdf = pdfGenerator.Generate(QuotationPdfModelFactory.Create(quote, request, coordinator.FullName, DateTimeOffset.UtcNow, company, snapshot));
         var row = existing;
         if (row is null)
             row = OutboundEmail.Create(managerId, request.Id, quote.Id, kind, DomainOf(fromAddress));

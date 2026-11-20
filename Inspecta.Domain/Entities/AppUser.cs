@@ -27,6 +27,21 @@ public class AppUser
     public string FullName { get; private set; } = string.Empty;
     public string Name => FullName;
     public string? Phone { get; private set; }
+
+    /// <summary>The title printed under the name in the signature of the quotations this user prepares (for example "Senior Coordinator"). Empty prints "Coordinator".</summary>
+    public string? JobTitle { get; private set; }
+
+    public const int MaxJobTitle = 100;
+    public const int MaxPhone = 40;
+
+    /// <summary>Sets the job title and the phone the user prints in the signature of their quotations. Empty clears one. Trimmed, control characters removed.</summary>
+    public void SetSignatureDetails(string? jobTitle, string? phone)
+    {
+        var title = CompanyProfile.Optional(jobTitle, "Job title", MaxJobTitle);
+        var number = CompanyProfile.Optional(phone, "Phone", MaxPhone);
+        JobTitle = title;
+        Phone = number;
+    }
     public string PasswordHash { get; private set; } = string.Empty;
     public UserRole Role { get; private set; } = UserRole.Inspector;
     public bool IsActive { get; private set; } = true;

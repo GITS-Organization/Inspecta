@@ -55,6 +55,10 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.Property<bool>("IsOnLeave")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("JobTitle")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<DateTimeOffset?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -491,6 +495,34 @@ namespace Inspecta.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("CompanyProfiles");
+                });
+
+            modelBuilder.Entity("Inspecta.Domain.Entities.CompanyQuotationContent", b =>
+                {
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BankAccountsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContactsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TermsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("CompanyId");
+
+                    b.ToTable("CompanyQuotationContents");
                 });
 
             modelBuilder.Entity("Inspecta.Domain.Entities.CoordinatorEmailConfig", b =>
@@ -1502,6 +1534,9 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
                     b.Property<DateTimeOffset?>("ClientRespondedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CompanyContentJson")
+                        .HasColumnType("text");
 
                     b.Property<string>("ContactName")
                         .HasMaxLength(200)

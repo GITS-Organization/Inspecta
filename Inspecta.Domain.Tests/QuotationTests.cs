@@ -13,7 +13,7 @@ namespace Inspecta.Domain.Tests;
 public sealed class QuotationTests
 {
     internal static readonly Guid ManagerId = Guid.NewGuid();
-    private static readonly AppUser Coordinator = AppUser.Create("coordinator@example.com", "Eng. Ahmed", UserRole.Coordinator, managerId: ManagerId);
+    internal static readonly AppUser Coordinator = AppUser.Create("coordinator@example.com", "Eng. Ahmed", UserRole.Coordinator, managerId: ManagerId);
     internal static readonly Guid CoordinatorId = Coordinator.Id;
 
     [Fact]
@@ -1691,13 +1691,17 @@ public sealed class QuotationTests
         public static Fixture WithMailbox(CoordinatorEmailConfig config, IMailboxAuthenticator authenticator) =>
             new(null, true, null, null, config, authenticator, []);
 
+        /// <summary>A fixture whose quotations print the content the given provider says (the company's saved content and the coordinator's signature), as in the running API.</summary>
+        public static Fixture WithContent(IQuotationContentProvider content, bool configured = true, ICompanyBrandingProvider? companyBranding = null) =>
+            new(null, configured, null, null, null, null, [], content, companyBranding);
+
         public Fixture(InspectionRequest? request = null, bool configured = true, IRequestEquipmentRegistrar? registrar = null, QuoteDeliveryOptions? delivery = null, params AppUser[] extraUsers)
             : this(request, configured, registrar, delivery, null, null, extraUsers)
         {
         }
 
         private Fixture(InspectionRequest? request, bool configured, IRequestEquipmentRegistrar? registrar, QuoteDeliveryOptions? delivery,
-            CoordinatorEmailConfig? mailbox, IMailboxAuthenticator? authenticator, AppUser[] extraUsers)
+            CoordinatorEmailConfig? mailbox, IMailboxAuthenticator? authenticator, AppUser[] extraUsers, IQuotationContentProvider? content = null, ICompanyBrandingProvider? companyBranding = null)
         {
             Request = request ?? CompleteRequest(out _, out _, Guid.NewGuid());
             Crane = Request.Items.ElementAtOrDefault(0)!;
@@ -1717,12 +1721,14 @@ public sealed class QuotationTests
                 Pdf,
                 Sender,
                 delivery,
-                mailboxAuthenticator: authenticator);
+                mailboxAuthenticator: authenticator,
+                quotationContent: content,
+                companyBranding: companyBranding);
             Replies = new FakeReplies();
             Invoices = new FakeInvoices();
             Service = new QuoteService(
                 Quotes, Requests, Pdf, Delivery, Outbox, new IncomingEmailRequestTests.FakeUserRepository([Coordinator, .. extraUsers]), registrar,
-                clientReplies: Replies, invoiceRepository: Invoices);
+                clientReplies: Replies, invoiceRepository: Invoices, quotationContent: content, companyBranding: companyBranding);
         }
 
         public FakeReplies Replies { get; }

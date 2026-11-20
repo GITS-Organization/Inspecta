@@ -60,10 +60,11 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
 
     protected override void ComposeDocument(IDocumentContainer document, QuotationPdfModel model)
     {
-        var company = model.Company ?? DefaultCompanyProfile.Instance;
+        // The terms, bank accounts and contacts of the quotation are put over the company details once, here, so both layouts read one company.
+        var company = QuotationEffectiveCompany.Of(model, DefaultCompanyProfile.Instance);
 
         // The built-in company (Integrity), with or without a saved profile that keeps the built-in details, has its own proposal design; every other company keeps the earlier layout in its own identity.
-        if (model.Branding is null or { UsesBuiltInDetails: true })
+        if (QuotationEffectiveCompany.UsesBuiltInLayout(model.Branding))
         {
             IntegrityProposalLayout.Compose(document, model, company);
             return;
@@ -224,7 +225,7 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
             column.Item().PaddingTop(16).Column(signature =>
             {
                 signature.Item().Text(model.PreparedBy).Bold().FontSize(12).FontColor(PdfTheme.Navy);
-                signature.Item().Text(model.PreparedByTitle).FontColor(PdfTheme.Muted);
+                foreach (var line in SignatureLines(model)) signature.Item().Text(line).FontColor(PdfTheme.Muted);
                 signature.Item().Text(company.Name).FontColor(PdfTheme.Muted);
             });
         });
@@ -568,6 +569,15 @@ public sealed class QuotationPdfTemplate : QuestPdfTemplate<QuotationPdfModel>
         container.Width(diameter).Height(diameter).Background(color).CornerRadius(diameter / 2)
             .AlignCenter().AlignMiddle()
             .Text(Format(number)).Bold().FontSize(fontSize).FontColor(PdfTheme.White);
+
+    // Under the name in the signature: the job title ("Coordinator" when there is none), then the phone and the email when the coordinator has them.
+    public static IReadOnlyList<string> SignatureLines(QuotationPdfModel model)
+    {
+        var lines = new List<string> { string.IsNullOrWhiteSpace(model.PreparedByTitle) ? QuotationDefaults.PreparedByTitle : model.PreparedByTitle.Trim() };
+        if (!string.IsNullOrWhiteSpace(model.PreparedByPhone)) lines.Add(model.PreparedByPhone.Trim());
+        if (!string.IsNullOrWhiteSpace(model.PreparedByEmail)) lines.Add(model.PreparedByEmail.Trim());
+        return lines;
+    }
 
     // Text between ** markers is bold.
     internal static void Rich(TextDescriptor text, string markup)
