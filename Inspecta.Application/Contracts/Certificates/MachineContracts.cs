@@ -163,7 +163,13 @@ public sealed record DeliveryPreviewResponse(
     bool AlreadyDelivered = false,
     string? TestEmailTo = null,
     IReadOnlyList<DeliveryCertificate>? Certificates = null,
-    string? BodyHtml = null);
+    string? BodyHtml = null,
+    IReadOnlyList<DeliveryReport>? Reports = null,
+    long ReportsTotalBytes = 0,
+    long MaxEmailBytes = 0);
+
+/// <summary>One report file of the job that goes in the email unless the coordinator unticks it (send its <c>id</c> in <c>excludedReportIds</c>).</summary>
+public sealed record DeliveryReport(Guid Id, string FileName, long SizeBytes, string? MachineName);
 
 /// <summary>The test copy of the email went to this address.</summary>
 public sealed record TestEmailResponse(string SentTo, string Subject);
@@ -312,6 +318,12 @@ public sealed record DeliverCertificatesRequest
 
     /// <summary>Extra files to send with the certificates (at most 5, 15 MB together): the certificates stay first.</summary>
     public IReadOnlyList<Mail.EmailAttachmentUpload>? Attachments { get; init; }
+
+    /// <summary>
+    /// Report files of the job that must NOT go with the email. Leave out (or empty) to send every report of the job; an id that is not a report
+    /// of this job answers 400.
+    /// </summary>
+    public IReadOnlyList<Guid>? ExcludedReportIds { get; init; }
 }
 
 /// <summary>Hand the certificates over without sending an email (given on paper, by chat, picked up...).</summary>

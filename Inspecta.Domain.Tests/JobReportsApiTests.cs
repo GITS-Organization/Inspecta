@@ -124,6 +124,39 @@ public sealed class JobReportsApiTests : IClassFixture<ApiHttpTests.Api>
     }
 
     [Fact]
+    public async Task AllTheReportsComeInOneZipOverHttpWithTheSameAccessRulesAsTheList()
+    {
+        var (requestId, inspector, coordinator) = StartedJob();
+        var client = await SignedInAs(inspector.Email);
+        var path = $"/api/v1/quotation-queue/{requestId}/reports";
+        var zipPath = $"{path}.zip";
+
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync(zipPath)).StatusCode); // no report yet
+        Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync(path, Body("Weld report.pdf", "%PDF-1.4 one"u8.ToArray()))).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync(path, Body("Weld report.pdf", "%PDF-1.4 two"u8.ToArray()))).StatusCode);
+
+        var zip = await client.GetAsync(zipPath);
+
+        Assert.Equal(HttpStatusCode.OK, zip.StatusCode);
+        Assert.Equal("application/zip", zip.Content.Headers.ContentType!.MediaType);
+        Assert.Equal("attachment", zip.Content.Headers.ContentDisposition!.DispositionType);
+        Assert.StartsWith("reports-", zip.Content.Headers.ContentDisposition.FileNameStar ?? zip.Content.Headers.ContentDisposition.FileName!.Trim('"'));
+        Assert.Equal("nosniff", zip.Headers.GetValues("X-Content-Type-Options").Single());
+        using (var archive = new System.IO.Compression.ZipArchive(new MemoryStream(await zip.Content.ReadAsByteArrayAsync())))
+            Assert.Equal(["reports/Weld report (2).pdf", "reports/Weld report.pdf"], archive.Entries.Select(entry => entry.FullName).Order());
+
+        var coordinatorClient = await SignedInAs(coordinator.Email);
+        var early = await coordinatorClient.GetAsync(zipPath);
+        Assert.Equal(HttpStatusCode.Conflict, early.StatusCode);
+        Assert.Contains("not_approved", await early.Content.ReadAsStringAsync());
+
+        var other = await SignedInAs(StartedJob().Inspector.Email);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync(zipPath)).StatusCode);
+        using var anonymous = api.CreateClient();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync(zipPath)).StatusCode);
+    }
+
+    [Fact]
     public async Task AReportAddedAfterTheSubmitIsLocked()
     {
         var (requestId, inspector, _) = StartedJob();

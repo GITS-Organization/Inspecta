@@ -21,7 +21,8 @@ public sealed record CertificateEmailDraft(
     IReadOnlyList<string>? Cc = null,
     string? Subject = null,
     string? Body = null,
-    IReadOnlyList<EmailAttachment>? Extra = null);
+    IReadOnlyList<EmailAttachment>? Extra = null,
+    IReadOnlyList<EmailAttachment>? Reports = null);
 
 /// <summary>Who the certificates would be emailed to, and what the email would say.</summary>
 public sealed record CertificateDeliveryPlan(
@@ -64,7 +65,8 @@ public sealed class CertificateDeliveryService(
     CertificateDeliveryOptions? options = null,
     IEmailBranding? branding = null,
     ICompanyBrandingProvider? companyBranding = null,
-    IMailboxAuthenticator? mailboxAuthenticator = null)
+    IMailboxAuthenticator? mailboxAuthenticator = null,
+    JobReportOptions? reportOptions = null)
 {
     // Above this many bytes the PDFs travel as one ZIP: mail servers refuse very large messages.
     private const int MaxAttachedBytes = 18 * 1024 * 1024;
@@ -130,7 +132,7 @@ public sealed class CertificateDeliveryService(
             copies,
             subject,
             body,
-            AttachmentNames(files).Concat(draft?.Extra?.Select(file => file.FileName) ?? []).ToArray(),
+            AttachmentNames(files).Concat(draft?.Reports?.Select(file => file.FileName) ?? []).Concat(draft?.Extra?.Select(file => file.FileName) ?? []).ToArray(),
             replies && string.IsNullOrWhiteSpace(draft?.To),
             config is not null && coordinator is not null ? QuoteDeliveryService.ResolveFromAddress(config, coordinator) : null,
             coordinator?.FullName,
@@ -188,7 +190,7 @@ public sealed class CertificateDeliveryService(
         var (_, coordinator, fromAddress, smtp) = await MailboxAsync(coordinatorId, cancellationToken);
         var source = plan.RepliesToOriginalEmail ? await requestRepository.GetEmailAsync(request.Id, cancellationToken) : null;
 
-        var attachments = BuildAttachments(files).Concat(draft?.Extra ?? []).ToArray();
+        var attachments = AssembleAttachments(files, draft);
         var row = await deliveryRepository.GetPendingAsync(request.Id, cancellationToken);
         var isNew = row is null;
         if (row is null)
@@ -242,10 +244,11 @@ public sealed class CertificateDeliveryService(
         var plan = await PlanAsync(request, files, draft, cancellationToken);
         var (_, coordinator, fromAddress, smtp) = await MailboxAsync(coordinatorId, cancellationToken);
         var subject = "[TEST] " + plan.Subject;
+        var attachments = AssembleAttachments(files, draft);
         var messageId = $"<{Guid.NewGuid():N}@{QuoteDeliveryService.DomainOf(fromAddress)}>";
         try
         {
-            await SendAsync(smtp, coordinator, fromAddress, toAddress, toName, [], subject, plan.Body, messageId, null, BuildAttachments(files).Concat(draft?.Extra ?? []).ToArray(), await CompanyAsync(request, cancellationToken), cancellationToken);
+            await SendAsync(smtp, coordinator, fromAddress, toAddress, toName, [], subject, plan.Body, messageId, null, attachments, await CompanyAsync(request, cancellationToken), cancellationToken);
         }
         catch (Exception exception)
         {
@@ -327,6 +330,29 @@ public sealed class CertificateDeliveryService(
 
         return stream.ToArray();
     }
+
+    /// <summary>
+    /// What goes in the email, in this order: the certificates (the PDFs, or one ZIP above 18 MB), the job's reports, the coordinator's own files.
+    /// Only when at least one report goes, the whole email must fit <c>JobReports:MaxEmailBytes</c>: a job without reports is never checked, so it
+    /// sends exactly what it always did. Too large answers 409 <c>email_too_large</c> before anything is recorded or sent.
+    /// </summary>
+    private EmailAttachment[] AssembleAttachments(IReadOnlyList<IssuedCertificateFile> files, CertificateEmailDraft? draft)
+    {
+        var attachments = BuildAttachments(files).Concat(draft?.Reports ?? []).Concat(draft?.Extra ?? []).ToArray();
+        if (draft?.Reports is not { Count: > 0 }) return attachments;
+
+        var limit = (reportOptions ?? new JobReportOptions()).MaxEmailBytes;
+        var total = attachments.Sum(file => (long)file.Content.Length);
+        if (total > limit)
+            throw new AuthException(
+                "email_too_large",
+                $"With the reports the email would be {Megabytes(total)} MB and the limit is {Megabytes(limit)} MB. Untick some reports (or remove an extra file) and try again.",
+                409);
+        return attachments;
+    }
+
+    /// <summary>A size for people: megabytes with one decimal, no trailing zero.</summary>
+    internal static string Megabytes(long bytes) => (bytes / 1048576.0).ToString("0.#", CultureInfo.InvariantCulture);
 
     private static IReadOnlyList<EmailAttachment> BuildAttachments(IReadOnlyList<IssuedCertificateFile> files)
     {

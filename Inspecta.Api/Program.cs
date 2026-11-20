@@ -143,9 +143,11 @@ builder.Services.AddSingleton(new Inspecta.Application.Certificates.CertificateO
     builder.Configuration["Certificates:PublicBaseUrl"] is { Length: > 0 } publicBaseUrl ? publicBaseUrl : "https://api.gitsplatform.com"));
 builder.Services.AddSingleton<IQrCodeRenderer, QrCodeRenderer>();
 builder.Services.AddScoped<ITransactionRunner, EfTransactionRunner>();
-// Report files of a job (step 1): kept in the database, deleted JobReports:RetentionDays (30) after the job is delivered.
+// Report files of a job: kept in the database, emailed with the certificates (at most JobReports:MaxEmailBytes, 20 MB, in total) and deleted
+// JobReports:RetentionDays (30) after the job is delivered, by JobReportCleanupBackgroundService.
 builder.Services.AddSingleton(new Inspecta.Application.Services.JobReportOptions(
-    builder.Configuration.GetValue("JobReports:RetentionDays", Inspecta.Application.Services.JobReportOptions.DefaultRetentionDays)));
+    builder.Configuration.GetValue("JobReports:RetentionDays", Inspecta.Application.Services.JobReportOptions.DefaultRetentionDays),
+    builder.Configuration.GetValue("JobReports:MaxEmailBytes", Inspecta.Application.Services.JobReportOptions.DefaultMaxEmailBytes)));
 builder.Services.AddScoped<IJobReportRepository, EfJobReportRepository>();
 builder.Services.AddScoped<IJobReportService, JobReportService>();
 builder.Services.AddScoped<IMachineInspectionService, MachineInspectionService>();
@@ -196,6 +198,7 @@ builder.Services.AddScoped<IMailboxAuthenticator, Inspecta.Application.Services.
 builder.Services.AddScoped<IMicrosoftMailboxConnectionService, Inspecta.Application.Services.MicrosoftMailboxConnectionService>();
 builder.Services.AddHostedService<EmailSyncBackgroundService>();
 builder.Services.AddHostedService<MaybeCleanupBackgroundService>();
+builder.Services.AddHostedService<JobReportCleanupBackgroundService>();
 
 var signingKey = builder.Configuration["Jwt:SigningKey"];
 if (string.IsNullOrWhiteSpace(signingKey) || Encoding.UTF8.GetByteCount(signingKey) < 32)

@@ -28,6 +28,35 @@ public sealed class EfJobReportRepository(InspectaDbContext dbContext) : IJobRep
         Oldest(await dbContext.JobReportFiles.AsNoTracking().Include(file => file.Body)
             .Where(file => file.RequestId == requestId).ToListAsync(cancellationToken));
 
+    public async Task<IReadOnlyList<JobReportFile>> ListWithContentAsync(Guid requestId, IReadOnlyCollection<Guid> fileIds, CancellationToken cancellationToken = default)
+    {
+        if (fileIds.Count == 0) return [];
+        var ids = fileIds.ToList();
+        return Oldest(await dbContext.JobReportFiles.AsNoTracking().Include(file => file.Body)
+            .Where(file => file.RequestId == requestId && ids.Contains(file.Id)).ToListAsync(cancellationToken));
+    }
+
+    // The clean-up has no signed-in user, so the company filter would hide every file: it is bypassed on purpose (registered in FilterBypassGuardTests).
+    // The files whose expiry has passed are picked here, not in SQL (the tests run on SQLite, which cannot compare dates that carry an offset; what is read is
+    // only the id and the expiry of the files of delivered jobs, a few thousand small rows at most for the 30 days they live). They are then deleted by id in
+    // batches, so a run never holds one huge transaction. The bytes go with the file (ON DELETE CASCADE).
+    public async Task<int> DeleteExpiredAsync(DateTimeOffset now, int batchSize, CancellationToken cancellationToken = default)
+    {
+        var withExpiry = await dbContext.JobReportFiles.IgnoreQueryFilters().AsNoTracking()
+            .Where(file => file.ExpiresAt != null)
+            .Select(file => new { file.Id, ExpiresAt = file.ExpiresAt!.Value })
+            .ToListAsync(cancellationToken);
+
+        var deleted = 0;
+        foreach (var batch in withExpiry.Where(file => file.ExpiresAt <= now).Select(file => file.Id).Chunk(Math.Max(1, batchSize)))
+        {
+            var ids = batch.ToList();
+            deleted += await dbContext.JobReportFiles.IgnoreQueryFilters().Where(file => ids.Contains(file.Id)).ExecuteDeleteAsync(cancellationToken);
+        }
+
+        return deleted;
+    }
+
     public async Task AddAsync(JobReportFile file, CancellationToken cancellationToken = default)
     {
         dbContext.JobReportFiles.Add(file);

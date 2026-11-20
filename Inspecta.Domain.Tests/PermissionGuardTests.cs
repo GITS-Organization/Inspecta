@@ -119,6 +119,8 @@ public sealed class PermissionGuardTests
         ["JobReportsController.Upload"] = "admin,technical_manager,coordinator,inspector",
         ["JobReportsController.Download"] = "admin,technical_manager,coordinator,inspector",
         ["JobReportsController.Delete"] = "admin,technical_manager,coordinator,inspector",
+        // Step 2 (2026-11-21): all the reports of a job in one ZIP, same permission as the list.
+        ["JobReportsController.DownloadAll"] = "admin,technical_manager,coordinator,inspector",
         ["ManagerTeamController.List"] = "admin,company_admin",
         ["ManagerTeamController.Create"] = "admin,company_admin",
         ["ManagerTeamController.GetById"] = "admin,company_admin",

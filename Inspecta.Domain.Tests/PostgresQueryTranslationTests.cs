@@ -105,7 +105,12 @@ public sealed class PostgresQueryTranslationTests
             db.JobReportFiles.AsNoTracking().Where(file => file.RequestId == manager).Select(file => file.ExpiresAt).ToQueryString(),
             db.JobReportFiles.AsNoTracking().Include(file => file.Body).Where(file => file.RequestId == manager && file.Id == client).ToQueryString(),
             db.JobReportFiles.AsNoTracking().Include(file => file.Body).Where(file => file.RequestId == manager).ToQueryString(),
-            db.JobReportFiles.Where(file => file.RequestId == manager && file.ExpiresAt == null).ToQueryString()
+            db.JobReportFiles.Where(file => file.RequestId == manager && file.ExpiresAt == null).ToQueryString(),
+            // Step 2: the files chosen for the email (by id, with their bytes) and the clean-up's read of ids with their expiry, compared in memory because SQLite cannot compare offsets (EfJobReportRepository.DeleteExpiredAsync).
+            // The delete itself is ExecuteDeleteAsync, which ToQueryString cannot show: that one is only proved by running it (the SQLite clean-up tests and, once, the real database).
+            db.JobReportFiles.AsNoTracking().Include(file => file.Body).Where(file => file.RequestId == manager && ids.Contains(file.Id)).ToQueryString(),
+            db.JobReportFiles.IgnoreQueryFilters().AsNoTracking().Where(file => file.ExpiresAt != null).Select(file => new { file.Id, ExpiresAt = file.ExpiresAt!.Value }).ToQueryString(),
+            db.JobReportFiles.IgnoreQueryFilters().Where(file => ids.Contains(file.Id)).ToQueryString()
         };
 
         Assert.All(queries, sql => Assert.False(string.IsNullOrWhiteSpace(sql)));

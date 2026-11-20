@@ -65,6 +65,26 @@ public sealed class JobReportsController(IJobReportService reports, ILogger<JobR
         return File(file.Content, file.ContentType, file.FileName);
     }
 
+    /// <summary>Download every report of the job in one ZIP (always as an attachment).</summary>
+    /// <remarks>
+    /// The files are in the ZIP with their own names (<c>Weld report.pdf</c>, then <c>Weld report (2).pdf</c> for a second file with the same name).
+    /// Same access as the list: the inspector of the job, technical managers and Admin; the owning coordinator from approval (<c>409 not_approved</c>
+    /// before). <c>404</c> when the job has no report left (none added, or all expired). This is how the coordinator gets the reports after the
+    /// job is delivered, until they are deleted 30 days later.
+    /// </remarks>
+    [RequirePermission(Permissions.CertificatesView)]
+    [HttpGet("~/api/v1/quotation-queue/{requestId:guid}/reports.zip")]
+    [Produces("application/zip")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DownloadAll(Guid requestId, CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actorId, out var role)) return Unauthorized();
+        var file = await reports.DownloadAllAsync(requestId, actorId, role, cancellationToken);
+        return File(file.Content, file.ContentType, file.FileName);
+    }
+
     /// <summary>Remove one report file and its bytes for good.</summary>
     /// <remarks>
     /// The uploader while the inspection is in progress or returned (<c>409 reports_locked</c> after the submit); the job's reviewer or Admin any time

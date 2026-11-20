@@ -516,6 +516,67 @@ public sealed class JobReportTests : IDisposable
         Assert.Equal("Check the brake.", await text.ReadToEndAsync());
     }
 
+    // ---- All the reports in one ZIP (step 2) -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task EveryLiveReportComesInOneZipForThoseWhoCanSeeThem()
+    {
+        await Start();
+        await Upload(inspector, "inspector", "Weld report.pdf", Pdf, forkliftItemId);
+        await Upload(inspector, "inspector", "Weld report.pdf", Pdf);
+        await Upload(manager, "technical_manager", "notes.txt", "Check the brake."u8.ToArray());
+        var gone = await Upload(inspector, "inspector", "gone.pdf", Pdf);
+        await using (var db = CreateContext())
+        {
+            db.JobReportFiles.Single(file => file.Id == gone.Id).StartRetention(DateTimeOffset.UtcNow.AddMinutes(-1));
+            await db.SaveChangesAsync();
+        }
+
+        foreach (var (user, role) in new[] { (inspector, "inspector"), (manager, "technical_manager"), (otherManager, "technical_manager"), (inspector, "admin") })
+        {
+            var zip = await Reports(service => service.DownloadAllAsync(requestId, user.Id, role));
+
+            Assert.Equal("application/zip", zip.ContentType);
+            Assert.StartsWith("reports-Al-Noor-Industries", zip.FileName);
+            Assert.EndsWith(".zip", zip.FileName);
+            Assert.Equal(["reports/Weld report.pdf", "reports/Weld report (2).pdf", "reports/notes.txt"], EntryNames(zip.Content));
+        }
+
+        // The report is in the ZIP byte for byte.
+        using var archive = new ZipArchive(new MemoryStream((await Reports(service => service.DownloadAllAsync(requestId, manager.Id, "technical_manager"))).Content));
+        using var entry = archive.GetEntry("reports/notes.txt")!.Open();
+        using var text = new StreamReader(entry);
+        Assert.Equal("Check the brake.", await text.ReadToEndAsync());
+    }
+
+    [Fact]
+    public async Task TheZipIsNotFoundWhenThereAreNoLiveReportsAndFollowsTheSameAccessRulesAsTheList()
+    {
+        await Start();
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Reports(service => service.DownloadAllAsync(requestId, inspector.Id, "inspector")));
+
+        var added = await Upload(inspector, "inspector", "a.pdf", Pdf);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Reports(service => service.DownloadAllAsync(requestId, otherInspector.Id, "inspector")));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Reports(service => service.DownloadAllAsync(requestId, otherCoordinator.Id, "coordinator")));
+
+        // The owning coordinator has it from approval only.
+        var early = await Assert.ThrowsAsync<AuthException>(() => Reports(service => service.DownloadAllAsync(requestId, coordinator.Id, "coordinator")));
+        Assert.Equal("not_approved", early.Code);
+        Assert.Equal(409, early.StatusCode);
+        await MoveTo(JobStatus.CertificateSubmitted);
+        await MoveTo(JobStatus.CertificateApproved);
+        Assert.Equal(["reports/a.pdf"], EntryNames((await Reports(service => service.DownloadAllAsync(requestId, coordinator.Id, "coordinator"))).Content));
+
+        // After the 30 days nothing is left to download, even before the clean-up runs.
+        await using (var db = CreateContext())
+        {
+            db.JobReportFiles.Single(file => file.Id == added.Id).StartRetention(DateTimeOffset.UtcNow.AddMinutes(-1));
+            await db.SaveChangesAsync();
+        }
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Reports(service => service.DownloadAllAsync(requestId, coordinator.Id, "coordinator")));
+    }
+
     // ---- Settings -----------------------------------------------------------------------------------------------
 
     [Fact]

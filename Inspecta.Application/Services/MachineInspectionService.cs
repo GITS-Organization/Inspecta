@@ -645,10 +645,19 @@ public sealed class MachineInspectionService(
 
         var client = await FindClientAsync(request, cancellationToken);
         var files = await certificateFiles.ListForRequestAsync(request.Id, cancellationToken);
+        var extra = ExtraEmailAttachments.Decode(delivery.Attachments);
         // The email goes first: if the mail server refuses it nothing below changes and the call can be repeated.
-        var sent = deliveryService is null
-            ? new CertificateDeliveryResult(false, null, "Email delivery is not available, so no email was sent. The certificates are marked as handed over.")
-            : await deliveryService.DeliverAsync(request, files, new CertificateEmailDraft(delivery.SentTo, delivery.Cc, delivery.Subject, delivery.Message, ExtraEmailAttachments.Decode(delivery.Attachments)), cancellationToken);
+        CertificateDeliveryResult sent;
+        if (deliveryService is null)
+            sent = new CertificateDeliveryResult(false, null, "Email delivery is not available, so no email was sent. The certificates are marked as handed over.");
+        else
+        {
+            // Every report of the job goes with the certificates unless the coordinator unticked it (only when an email is really sent).
+            var reports = deliveryService.Enabled ? await ReportsForEmailAsync(request, delivery.ExcludedReportIds, cancellationToken) : [];
+            sent = await deliveryService.DeliverAsync(
+                request, files, new CertificateEmailDraft(delivery.SentTo, delivery.Cc, delivery.Subject, delivery.Message, extra, reports), cancellationToken);
+        }
+
         var sentTo = sent.SentTo ?? (string.IsNullOrWhiteSpace(delivery.SentTo) ? client?.CertificatesEmail : delivery.SentTo);
         await MarkDeliveredAsync(request, actorId, sentTo, string.IsNullOrWhiteSpace(sentTo) ? null : $"Delivered to {sentTo}", cancellationToken);
         return (await BuildListAsync(request, actorId, role, cancellationToken)) with
@@ -696,6 +705,26 @@ public sealed class MachineInspectionService(
         await requestRepository.SaveAsync(request, cancellationToken);
     }
 
+    /// <summary>
+    /// The reports of the job that go in the email, with their bytes: every live report except the ones the coordinator unticked. An id that is not a
+    /// report of this job is a 400. Nothing is read from the database beyond the list when no report is chosen.
+    /// </summary>
+    private async Task<IReadOnlyList<EmailAttachment>> ReportsForEmailAsync(
+        InspectionRequest request, IReadOnlyList<Guid>? excludedIds, CancellationToken cancellationToken)
+    {
+        if (jobReports is null) return [];
+        var all = await jobReports.ListForRequestAsync(request.Id, cancellationToken);
+        var excluded = (excludedIds ?? []).ToHashSet();
+        if (excluded.Any(id => all.All(file => file.Id != id)))
+            throw new ArgumentException("A report that was left out is not a report of this job.");
+
+        var chosen = JobReportRules.Live(all, DateTimeOffset.UtcNow).Where(file => !excluded.Contains(file.Id)).Select(file => file.Id).ToList();
+        if (chosen.Count == 0) return [];
+        var withBytes = await jobReports.ListWithContentAsync(request.Id, chosen, cancellationToken);
+        var names = JobReportRules.UniqueNames(withBytes);
+        return withBytes.Select((file, index) => new EmailAttachment(names[index], file.Content, file.ContentType)).ToArray();
+    }
+
     public async Task<DeliveryPreviewResponse> PreviewDeliveryAsync(
         Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
     {
@@ -711,10 +740,23 @@ public sealed class MachineInspectionService(
                 file.QrData);
         }).ToArray();
         var alreadyDelivered = request.Status == JobStatus.SentToClient;
+
+        // The job's reports: all of them are listed (ticked by default); the coordinator sends the ones to leave out in excludedReportIds.
+        var live = jobReports is null
+            ? []
+            : JobReportRules.Live(await jobReports.ListForRequestAsync(request.Id, cancellationToken), DateTimeOffset.UtcNow).ToList();
+        var reportNames = JobReportRules.UniqueNames(live);
+        var reports = live
+            .Select((file, index) => new DeliveryReport(file.Id, reportNames[index], file.ContentLength, request.Items.FirstOrDefault(item => item.Id == file.RequestItemId)?.Name))
+            .ToArray();
+        var reportsTotal = live.Sum(file => (long)file.ContentLength);
+        var maxEmailBytes = (reportOptions ?? new JobReportOptions()).MaxEmailBytes;
+
         if (deliveryService is null)
             return new DeliveryPreviewResponse(
                 false, null, null, string.Empty, string.Empty, files.Select(file => file.FileName).ToArray(), false, "Email delivery is not available.",
-                Cc: [], CanSend: false, Blockers: ["Email delivery is not available."], AlreadyDelivered: alreadyDelivered, Certificates: certificates);
+                Cc: [], CanSend: false, Blockers: ["Email delivery is not available."], AlreadyDelivered: alreadyDelivered, Certificates: certificates,
+                Reports: reports, ReportsTotalBytes: reportsTotal, MaxEmailBytes: maxEmailBytes);
 
         var plan = await deliveryService.PlanAsync(request, files, null, cancellationToken);
         var blockers = new List<string>();
@@ -722,9 +764,12 @@ public sealed class MachineInspectionService(
         if (!deliveryService.Enabled) blockers.Add("Email delivery is switched off: handing the certificates over will not send this email.");
         if (plan.ToAddress is null) blockers.Add("There is no address to email: the request has no source email and the client has no certificates email. Type one.");
         if (!plan.MailboxConfigured) blockers.Add("The coordinator's mailbox is not set up, so nothing can be sent from it.");
+        // The certificates and all the reports together would not fit one email: the coordinator unticks some (the server checks again when sending).
+        if (deliveryService.Enabled && !alreadyDelivered && reports.Length > 0 && files.Sum(file => (long)file.ContentLength) + reportsTotal > maxEmailBytes)
+            blockers.Add($"The reports are too large to email together with the certificates ({CertificateDeliveryService.Megabytes(files.Sum(file => (long)file.ContentLength) + reportsTotal)} MB, the limit is {CertificateDeliveryService.Megabytes(maxEmailBytes)} MB). Untick some reports.");
         var tester = await userRepository.GetByIdAsync(actorId, cancellationToken);
         return new DeliveryPreviewResponse(
-            deliveryService.Enabled, plan.ToAddress, plan.ToName, plan.Subject, plan.Body, plan.AttachmentNames, plan.RepliesToOriginalEmail,
+            deliveryService.Enabled, plan.ToAddress, plan.ToName, plan.Subject, plan.Body, plan.AttachmentNames.Concat(reportNames).ToArray(), plan.RepliesToOriginalEmail,
             blockers.Count > 0 ? blockers[0] : null,
             plan.Cc,
             plan.FromAddress,
@@ -733,7 +778,10 @@ public sealed class MachineInspectionService(
             AlreadyDelivered: alreadyDelivered,
             TestEmailTo: deliveryService.Enabled && plan.MailboxConfigured ? tester?.Email : null,
             Certificates: certificates,
-            BodyHtml: plan.BodyHtml);
+            BodyHtml: plan.BodyHtml,
+            Reports: reports,
+            ReportsTotalBytes: reportsTotal,
+            MaxEmailBytes: maxEmailBytes);
     }
 
     /// <summary>Sends the email exactly as it would go out, marked [TEST], to the signed-in user only. Nothing changes.</summary>
@@ -746,8 +794,10 @@ public sealed class MachineInspectionService(
         var files = await certificateFiles.ListForRequestAsync(request.Id, cancellationToken);
         var tester = await userRepository.GetByIdAsync(actorId, cancellationToken)
             ?? throw new KeyNotFoundException("User was not found.");
+        var extra = ExtraEmailAttachments.Decode(draft.Attachments);
+        var reports = await ReportsForEmailAsync(request, draft.ExcludedReportIds, cancellationToken); // the same reports as the real email
         var result = await deliveryService.SendTestAsync(
-            request, files, new CertificateEmailDraft(draft.SentTo, draft.Cc, draft.Subject, draft.Message, ExtraEmailAttachments.Decode(draft.Attachments)), tester.Email, tester.FullName, cancellationToken);
+            request, files, new CertificateEmailDraft(draft.SentTo, draft.Cc, draft.Subject, draft.Message, extra, reports), tester.Email, tester.FullName, cancellationToken);
         return new TestEmailResponse(result.SentTo, result.Subject);
     }
 
@@ -763,7 +813,11 @@ public sealed class MachineInspectionService(
             : files.Where(file => !string.IsNullOrWhiteSpace(file.QrData))
                 .Select(file => ($"qr/{Path.GetFileNameWithoutExtension(file.FileName)}.png", qrCodes.RenderPng(file.QrData!)))
                 .ToArray();
-        return new DownloadFile(CertificateDeliveryService.Zip(files, qrImages), $"certificates-{SafeName(request.ClientName)}.zip", "application/zip");
+        // The inspector's reports go under reports/ while they exist; after they expire this is exactly the ZIP it always was.
+        var reports = jobReports is null
+            ? []
+            : JobReportRules.ZipEntries(JobReportRules.Live(await jobReports.ListWithContentAsync(request.Id, cancellationToken), DateTimeOffset.UtcNow));
+        return new DownloadFile(CertificateDeliveryService.Zip(files, qrImages.Concat(reports)), $"certificates-{SafeName(request.ClientName)}.zip", "application/zip");
     }
 
     // The job's approved certificates are for the coordinator side (owner, technical manager, Admin) once every machine is approved.
@@ -779,7 +833,7 @@ public sealed class MachineInspectionService(
         return request;
     }
 
-    private static string SafeName(string value)
+    internal static string SafeName(string value)
     {
         var cleaned = new string(value.Select(character => char.IsLetterOrDigit(character) ? character : '-').ToArray()).Trim('-');
         return cleaned.Length > 0 ? cleaned : "client";

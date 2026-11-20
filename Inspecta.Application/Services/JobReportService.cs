@@ -61,6 +61,18 @@ public sealed class JobReportService(
         return new DownloadFile(file.Content, file.FileName, file.ContentType);
     }
 
+    public async Task<DownloadFile> DownloadAllAsync(Guid requestId, Guid actorId, string role, CancellationToken cancellationToken = default)
+    {
+        var request = await LoadAsync(requestId, actorId, role, cancellationToken);
+        EnsureCanRead(request, actorId, role);
+        var files = JobReportRules.Live(await reports.ListWithContentAsync(request.Id, cancellationToken), DateTimeOffset.UtcNow).ToList();
+        if (files.Count == 0) throw new KeyNotFoundException("This job has no reports.");
+        return new DownloadFile(
+            CertificateDeliveryService.Zip([], JobReportRules.ZipEntries(files)),
+            $"reports-{MachineInspectionService.SafeName(request.ClientName)}.zip",
+            "application/zip");
+    }
+
     public async Task<JobReportListResponse> DeleteAsync(
         Guid requestId, Guid fileId, Guid actorId, string role, CancellationToken cancellationToken = default)
     {

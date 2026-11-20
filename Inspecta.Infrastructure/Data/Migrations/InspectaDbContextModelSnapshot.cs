@@ -141,8 +141,8 @@ namespace Inspecta.Infrastructure.Data.Migrations
 
                     b.Property<string>("AttachmentNames")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
 
                     b.Property<int>("Attempts")
                         .HasColumnType("integer");

@@ -17,6 +17,15 @@ public interface IJobReportRepository
     /// <summary>The job's files with their bytes, oldest first (for the preview ZIP).</summary>
     Task<IReadOnlyList<JobReportFile>> ListWithContentAsync(Guid requestId, CancellationToken cancellationToken = default);
 
+    /// <summary>The given files of the job with their bytes, oldest first (what goes in the email).</summary>
+    Task<IReadOnlyList<JobReportFile>> ListWithContentAsync(Guid requestId, IReadOnlyCollection<Guid> fileIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The clean-up: deletes every file, of every company, whose expiry is at or before <paramref name="now"/>, in batches of <paramref name="batchSize"/>.
+    /// Runs without a signed-in user, so it bypasses the company filter on purpose. Returns how many files were deleted.
+    /// </summary>
+    Task<int> DeleteExpiredAsync(DateTimeOffset now, int batchSize, CancellationToken cancellationToken = default);
+
     Task AddAsync(JobReportFile file, CancellationToken cancellationToken = default);
 
     /// <summary>Deletes the file and its bytes; false when there was no such file on the job.</summary>

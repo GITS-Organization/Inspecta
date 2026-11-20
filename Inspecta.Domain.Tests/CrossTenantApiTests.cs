@@ -213,12 +213,14 @@ public sealed class CrossTenantApiTests : IClassFixture<ApiHttpTests.Api>
         await Denied(await b.DeleteAsync($"{path}/{report.Id}"), "DELETE report", fileName);
         await Denied(await b.GetAsync($"/api/v1/quotation-queue/{request.Id}/machines"), "GET machines of a job with reports");
         await Denied(await b.GetAsync($"/api/v1/quotation-queue/{request.Id}/certificates/preview.zip"), "GET preview zip of a job with reports");
+        await Denied(await b.GetAsync($"{path}.zip"), "GET all reports zip", fileName);
 
         var a = await ManagerA();
         var list = await a.GetAsync(path);
         Assert.Equal(HttpStatusCode.OK, list.StatusCode);
         Assert.Contains(fileName, await list.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.OK, (await a.GetAsync($"{path}/{report.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await a.GetAsync($"{path}.zip")).StatusCode);
     }
 
     [Fact]

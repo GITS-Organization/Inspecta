@@ -22,26 +22,41 @@ public static class JobReportRules
     /// <summary>The files as ZIP entries under <c>reports/</c>: the cleaned names, made unique (<c>name (2).pdf</c>). Files must be loaded with their bytes.</summary>
     public static IReadOnlyList<(string Name, byte[] Content)> ZipEntries(IEnumerable<JobReportFile> files)
     {
+        var list = files.ToList();
+        var names = UniqueNames(list);
+        return list.Select((file, index) => ($"reports/{names[index]}", file.Content)).ToArray();
+    }
+
+    /// <summary>The names the files go by in a ZIP and in the email, in the same order: the cleaned names, made unique (<c>name (2).pdf</c>).</summary>
+    public static IReadOnlyList<string> UniqueNames(IEnumerable<JobReportFile> files)
+    {
         var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var entries = new List<(string Name, byte[] Content)>();
+        var names = new List<string>();
         foreach (var file in files)
         {
             var name = file.FileName;
             for (var copy = 2; !used.Add(name); copy++)
                 name = $"{Path.GetFileNameWithoutExtension(file.FileName)} ({copy}){Path.GetExtension(file.FileName)}";
-            entries.Add(($"reports/{name}", file.Content));
+            names.Add(name);
         }
 
-        return entries;
+        return names;
     }
 }
 
-/// <summary>How long report files are kept after the job is delivered (<c>JobReports:RetentionDays</c>, 30 by default, between 1 and 365).</summary>
-public sealed class JobReportOptions(int retentionDays = JobReportOptions.DefaultRetentionDays)
+/// <summary>
+/// How long report files are kept after the job is delivered (<c>JobReports:RetentionDays</c>, 30 by default, between 1 and 365) and how big the
+/// certificates email may be when it carries reports (<c>JobReports:MaxEmailBytes</c>, 20 MB by default, between 1 MB and 100 MB).
+/// </summary>
+public sealed class JobReportOptions(int retentionDays = JobReportOptions.DefaultRetentionDays, long maxEmailBytes = JobReportOptions.DefaultMaxEmailBytes)
 {
     public const int DefaultRetentionDays = 30;
+    public const long DefaultMaxEmailBytes = 20 * 1024 * 1024;
 
     public int RetentionDays { get; } = Math.Clamp(retentionDays, 1, 365);
+
+    /// <summary>The most the attachments of one certificates email may total when at least one report goes with it.</summary>
+    public long MaxEmailBytes { get; } = Math.Clamp(maxEmailBytes, 1024 * 1024, 100 * 1024 * 1024);
 
     public TimeSpan Retention => TimeSpan.FromDays(RetentionDays);
 }
