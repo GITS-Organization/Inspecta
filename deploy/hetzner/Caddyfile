@@ -1,0 +1,18 @@
+# Caddy gets and renews the HTTPS certificates by itself (Let's Encrypt). The API sits behind it on the internal Docker network.
+{
+	email {$ACME_EMAIL}
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:8080 {
+		# The API takes the caller's address from the last X-Forwarded-For hop, which is the one Caddy appends.
+		header_up X-Forwarded-Proto {scheme}
+	}
+	# Request bodies carry report files as base64 (up to about 14 MB); allow a little more than the API's own limit.
+	request_body {
+		max_size 32MB
+	}
+}
+
+# Later, a certificate page per company (see the QR plan): add one block per domain here, or switch on-demand TLS with an `ask` endpoint.
