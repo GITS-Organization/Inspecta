@@ -28,9 +28,11 @@ chown -R deploy:deploy /home/deploy/.ssh
 chmod 700 /home/deploy/.ssh && chmod 600 /home/deploy/.ssh/authorized_keys
 
 # SSH: keys only, no root password login
-sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/sshd_config
-sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
-systemctl reload ssh || systemctl reload sshd
+printf 'PasswordAuthentication no
+PermitRootLogin prohibit-password
+' > /etc/ssh/sshd_config.d/00-inspecta.conf
+sshd -t && (systemctl reload ssh || systemctl reload sshd)
+sshd -T | grep -iE "^(passwordauthentication|permitrootlogin)"
 
 # Firewall: only SSH and the web ports. (Docker publishes 80/443 itself; the database has no published port.)
 ufw default deny incoming
@@ -40,6 +42,12 @@ ufw allow 80/tcp
 ufw allow 443/tcp
 ufw allow 443/udp
 ufw --force enable
+
+# Docker logs must not fill the disk
+mkdir -p /etc/docker
+printf '{"log-driver":"json-file","log-opts":{"max-size":"10m","max-file":"5"}}
+' > /etc/docker/daemon.json
+systemctl restart docker
 
 # Automatic security updates and a small swap file (the first build of the API needs memory)
 dpkg-reconfigure -f noninteractive unattended-upgrades

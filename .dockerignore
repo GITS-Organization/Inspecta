@@ -11,3 +11,7 @@
 .env
 .env.*
 !.env.example
+
+# Deployment: secrets and customer data never go into an image
+deploy/
+**/backups

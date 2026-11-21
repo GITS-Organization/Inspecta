@@ -49,3 +49,7 @@ app.*.symbols
 
 # Obfuscation related
 app.*.map.json
+
+# Server backups hold customer data
+deploy/hetzner/backups/
+deploy/hetzner/.env

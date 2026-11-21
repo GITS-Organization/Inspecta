@@ -4,8 +4,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-set -a; . ./.env; set +a
-USER_NAME="${POSTGRES_USER:-inspecta}"
+envval() { grep -E "^$1=" .env | tail -n 1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' || true; }
+USER_NAME="$(envval POSTGRES_USER)"; USER_NAME="${USER_NAME:-inspecta}"
 LATEST="$(ls -1t backups/inspecta-*.dump 2>/dev/null | head -n 1 || true)"
 if [ -z "${LATEST}" ]; then echo "No backup found in ./backups. Run ./backup.sh first."; exit 1; fi
 echo "Restoring ${LATEST} into a throwaway database..."

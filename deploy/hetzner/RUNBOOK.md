@@ -45,7 +45,9 @@ cp .env.example .env
 ./gen-secrets.sh          # بيطبع قيم جديدة للأسرار: انسخها بإيدك لملف .env
 nano .env                 # املا API_DOMAIN (api2...) و ACME_EMAIL و BOOTSTRAP_ADMIN_* والباقي
 chmod 600 .env
+mkdir -m 700 backups
 ```
+**`ACME_EMAIL` لازم إيميل حقيقي (مش `you@example.com`) وإلا Let's Encrypt هيرفض الشهادة.** القيم اللي فيها مسافات (زي الاسم الكامل) اكتبها بين علامتي تنصيص.
 **ما تبعتش قيم الـ `.env` لأي حد ولا في شات.** احفظ نسخة منها في مدير كلمات السر عندك: لو ضاع `IMAP_ENCRYPTION_KEY` كلمات سر الصناديق المحفوظة مش هتتفك.
 
 ## 5) التشغيل
@@ -59,7 +61,7 @@ docker compose logs api --tail 50
 ## 6) أول حساب وأول عميل حقيقي
 1. ادخل بحساب الـ Bootstrap Admin (من `.env`) وغيّر كلمة السر فورًا.
 2. من الـ admin console (غيّر عنوان الـ API فيه للعنوان الجديد) أنشئ شركة Integrity والـ technical manager والـ coordinators.
-3. **شيل** `BOOTSTRAP_ADMIN_PASSWORD` من `.env` بعد أول دخول، ثم `docker compose up -d`.
+3. بعد أول دخول **امسح القيم التلاتة** `BOOTSTRAP_ADMIN_EMAIL` و`BOOTSTRAP_ADMIN_FULL_NAME` و`BOOTSTRAP_ADMIN_PASSWORD` من `.env` (سيبهم فاضيين كلهم، مش واحد بس، وإلا الـ API مش هيقوم)، ثم `docker compose up -d`.
 
 ## 7) الـ backup (قبل أي شهادة حقيقية)
 ```
@@ -100,3 +102,17 @@ docker compose restart api
 df -h ; docker system df                   # المساحة
 ```
 **المساحة:** ملفات الـ reports بتتخزن في قاعدة البيانات وبتتمسح بعد 30 يوم. راقب `df -h` شهريًا.
+
+## الاسترجاع (لو حصلت مشكلة في البيانات)
+1. وقف الـ API: `docker compose stop api caddy`
+2. امسح القاعدة وأنشئها فاضية:
+   `docker compose exec -T db dropdb -U inspecta inspecta && docker compose exec -T db createdb -U inspecta inspecta`
+3. استرجع الملف: `docker compose exec -T db pg_restore -U inspecta -d inspecta --no-owner < backups/<الملف>.dump`
+4. ارجع بالكود للنسخة اللي تناسب الـ backup (`update.sh` بيطبع اسم الـ backup ورقم النسخة قبل كل تحديث): `git checkout --detach <commit>`
+5. `docker compose up -d`
+(لو غيّرت `POSTGRES_USER` أو `POSTGRES_DB` في `.env` استخدم نفس القيم بدل `inspecta`.) جرّب الخطوات دي مرة على سيرفر تجريبي قبل ما تحتاجها.
+
+## ملاحظات
+- **شهادات التجربة (الخطوة 8):** أي شهادة تتصدر على العنوان التجريبي بيفضل الـ QR بتاعها شاير على `api2...` وهي بتفضل في القاعدة الحقيقية بعد التحويل. الأحسن تجرّب بحساب شركة تجريبية وتمسحها، أو تبقى `api2` شغال وشاير على نفس السيرفر.
+- **الـ backup بيحتوي بيانات العملاء:** الملفات في `backups/` بصلاحية المستخدم `deploy` بس. لو بتنسخهم برّه السيرفر استخدم remote مشفّر (`rclone crypt`) أو Storage Box خاص بيك.
+- **تنبيه فشل الـ backup:** فعّل خدمة مجانية زي healthchecks.io وضيف في آخر `backup.sh` أمر `curl -fsS <رابط الـ ping>` علشان توصلك رسالة لو الـ backup وقف.

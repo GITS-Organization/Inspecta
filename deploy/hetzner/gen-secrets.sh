@@ -6,4 +6,5 @@ set -euo pipefail
 echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)"
 echo "JWT_SIGNING_KEY=$(openssl rand -hex 48)"
 echo "IMAP_ENCRYPTION_KEY=$(openssl rand -base64 32)"
-echo "BOOTSTRAP_ADMIN_PASSWORD=$(openssl rand -base64 18 | tr -d '/+=' | cut -c1-20)"
+# The API refuses a password without upper case, lower case, a digit and a symbol (at least 12 characters): this one always has all four.
+echo "BOOTSTRAP_ADMIN_PASSWORD=$(openssl rand -hex 12)-Aa1"
