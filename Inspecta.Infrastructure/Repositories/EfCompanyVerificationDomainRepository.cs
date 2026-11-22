@@ -14,11 +14,16 @@ public sealed class EfCompanyVerificationDomainRepository(InspectaDbContext dbCo
             .Select(domain => (Guid?)domain.ManagerId)
             .FirstOrDefaultAsync(cancellationToken);
 
-    public Task<string?> FindPrimaryHostAsync(Guid companyId, CancellationToken cancellationToken = default) =>
-        dbContext.CompanyVerificationDomains.AsNoTracking()
+    // Normally exactly one primary. If two ever exist (a failed save, a manual fix), the newest wins, then the lower host: picked in memory,
+    // because the SQLite test host cannot ORDER BY a DateTimeOffset and a company has a handful of rows.
+    public async Task<string?> FindPrimaryHostAsync(Guid companyId, CancellationToken cancellationToken = default)
+    {
+        var primaries = await dbContext.CompanyVerificationDomains.AsNoTracking()
             .Where(domain => domain.ManagerId == companyId && domain.IsPrimary)
-            .Select(domain => domain.Host)
-            .FirstOrDefaultAsync(cancellationToken);
+            .Select(domain => new { domain.Host, domain.CreatedAt })
+            .ToListAsync(cancellationToken);
+        return primaries.OrderByDescending(domain => domain.CreatedAt).ThenBy(domain => domain.Host, StringComparer.Ordinal).Select(domain => domain.Host).FirstOrDefault();
+    }
 
     public async Task<IReadOnlyList<CompanyVerificationDomain>> ListAsync(Guid companyId, bool tracking, CancellationToken cancellationToken = default)
     {
@@ -32,8 +37,6 @@ public sealed class EfCompanyVerificationDomainRepository(InspectaDbContext dbCo
         dbContext.CompanyVerificationDomains.Add(domain);
         return Task.CompletedTask;
     }
-
-    public void Remove(CompanyVerificationDomain domain) => dbContext.CompanyVerificationDomains.Remove(domain);
 
     public Task SaveAsync(CancellationToken cancellationToken = default) => dbContext.SaveChangesAsync(cancellationToken);
 }

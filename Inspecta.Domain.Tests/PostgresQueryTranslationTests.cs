@@ -111,12 +111,11 @@ public sealed class PostgresQueryTranslationTests
             db.JobReportFiles.AsNoTracking().Include(file => file.Body).Where(file => file.RequestId == manager && ids.Contains(file.Id)).ToQueryString(),
             db.JobReportFiles.IgnoreQueryFilters().AsNoTracking().Where(file => file.ExpiresAt != null).Select(file => new { file.Id, ExpiresAt = file.ExpiresAt!.Value }).ToQueryString(),
             db.JobReportFiles.IgnoreQueryFilters().Where(file => ids.Contains(file.Id)).ToQueryString(),
-            // The verification domains of a company (EfCompanyVerificationDomainRepository): which company owns a host (the one lookup that bypasses the filter), the primary host, the list and a delete by id. No ordering by date (SQLite cannot).
+            // The verification domains of a company (EfCompanyVerificationDomainRepository): which company owns a host (the one lookup that bypasses the filter), the primary candidates (picked in memory) and the list. No ordering by date (SQLite cannot).
             db.CompanyVerificationDomains.IgnoreQueryFilters().AsNoTracking().Where(domain => domain.Host == "verify.acme.example").Select(domain => (Guid?)domain.ManagerId).ToQueryString(),
-            db.CompanyVerificationDomains.AsNoTracking().Where(domain => domain.ManagerId == manager && domain.IsPrimary).Select(domain => domain.Host).ToQueryString(),
+            db.CompanyVerificationDomains.AsNoTracking().Where(domain => domain.ManagerId == manager && domain.IsPrimary).Select(domain => new { domain.Host, domain.CreatedAt }).ToQueryString(),
             db.CompanyVerificationDomains.AsNoTracking().Where(domain => domain.ManagerId == manager).ToQueryString(),
             db.CompanyVerificationDomains.Where(domain => domain.ManagerId == manager).ToQueryString(),
-            db.CompanyVerificationDomains.Where(domain => domain.ManagerId == manager && domain.Id == client).ToQueryString()
         };
 
         Assert.All(queries, sql => Assert.False(string.IsNullOrWhiteSpace(sql)));

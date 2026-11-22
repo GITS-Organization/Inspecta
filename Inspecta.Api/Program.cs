@@ -142,7 +142,8 @@ builder.Services.AddScoped<ICertificateService, CertificateService>();
 builder.Services.AddScoped<ICertificateFileRepository, EfCertificateFileRepository>();
 builder.Services.AddScoped<ICertificateDeliveryRepository, EfCertificateDeliveryRepository>();
 builder.Services.AddSingleton(new Inspecta.Application.Certificates.CertificateOptions(
-    builder.Configuration["Certificates:PublicBaseUrl"] is { Length: > 0 } publicBaseUrl ? publicBaseUrl : "https://api.gitsplatform.com"));
+    builder.Configuration["Certificates:PublicBaseUrl"] is { Length: > 0 } publicBaseUrl ? publicBaseUrl : "https://api.gitsplatform.com",
+    Inspecta.Application.Certificates.VerificationHost.ParseList(builder.Configuration["Certificates:ReservedHosts"])));
 builder.Services.AddSingleton<IQrCodeRenderer, QrCodeRenderer>();
 builder.Services.AddScoped<ITransactionRunner, EfTransactionRunner>();
 // Report files of a job: kept in the database, emailed with the certificates (at most JobReports:MaxEmailBytes, 20 MB, in total) and deleted

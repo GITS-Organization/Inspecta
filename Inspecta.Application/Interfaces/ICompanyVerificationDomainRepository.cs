@@ -11,15 +11,13 @@ public interface ICompanyVerificationDomainRepository
     /// </summary>
     Task<Guid?> FindCompanyIdByHostAsync(string host, CancellationToken cancellationToken = default);
 
-    /// <summary>The host new certificates of the company use, or null when it has no primary address.</summary>
+    /// <summary>The host new certificates of the company use, or null when it has no primary address. If two primaries ever exist, the newest wins (then the lower host).</summary>
     Task<string?> FindPrimaryHostAsync(Guid companyId, CancellationToken cancellationToken = default);
 
     /// <summary>The company's addresses (tracked when it is going to change them), in no particular order.</summary>
     Task<IReadOnlyList<CompanyVerificationDomain>> ListAsync(Guid companyId, bool tracking, CancellationToken cancellationToken = default);
 
     Task AddAsync(CompanyVerificationDomain domain, CancellationToken cancellationToken = default);
-
-    void Remove(CompanyVerificationDomain domain);
 
     Task SaveAsync(CancellationToken cancellationToken = default);
 }

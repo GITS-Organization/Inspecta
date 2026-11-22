@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Inspecta.Application.Certificates;
 using Inspecta.Domain.Entities;
 using Inspecta.Infrastructure.Data;
@@ -97,6 +98,63 @@ public sealed class VerificationDomainTests
         Assert.True(VerificationHost.Check("certs.acme.example", ownHost: "certs.inspecta.example").IsValid);
         Assert.Equal("certs.inspecta.example", VerificationHost.HostOf("https://certs.inspecta.example/"));
         Assert.Null(VerificationHost.HostOf("not a url"));
+    }
+
+    [Theory]
+    [InlineData("onrender.com")]
+    [InlineData("inspecta.onrender.com")]
+    [InlineData("A.B.OnRender.com")]
+    public void AnAddressOfTheHostingProviderIsReserved(string input)
+    {
+        Assert.Equal("host_reserved", VerificationHost.Check(input).ErrorCode);
+        Assert.True(VerificationHost.Check("notonrender.com").IsValid);
+    }
+
+    [Fact]
+    public void HostsListedInTheConfigurationAreReservedAndAnEmptyListReservesNothingMore()
+    {
+        var reserved = VerificationHost.ParseList(" Verify.Inspecta.example, , staging.inspecta.example ");
+
+        Assert.Equal(["verify.inspecta.example", "staging.inspecta.example"], reserved);
+        Assert.Equal("host_reserved", VerificationHost.Check("VERIFY.inspecta.example", reservedHosts: reserved).ErrorCode);
+        Assert.Equal("host_reserved", VerificationHost.Check("staging.inspecta.example", reservedHosts: reserved).ErrorCode);
+        Assert.True(VerificationHost.Check("other.inspecta.example", reservedHosts: reserved).IsValid);
+        Assert.Empty(VerificationHost.ParseList(null));
+        Assert.Empty(VerificationHost.ParseList("  "));
+        Assert.True(VerificationHost.Check("verify.inspecta.example", reservedHosts: VerificationHost.ParseList("")).IsValid);
+        Assert.Equal(["verify.inspecta.example"], new CertificateOptions("https://x.example", reserved.Take(1).ToArray()).ReservedHosts);
+    }
+
+    [Fact]
+    public async Task WhenTwoPrimariesExistTheNewestIsUsedAndTheHostBreaksATie()
+    {
+        await using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<InspectaDbContext>().UseSqlite(connection).Options;
+        var admin = new Microsoft.AspNetCore.Http.HttpContextAccessor
+        {
+            HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+            {
+                User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity([new System.Security.Claims.Claim("role", "admin")], "test"))
+            }
+        };
+        await using var db = new InspectaDbContext(options, new CurrentTenant(admin));
+        db.Database.EnsureCreated();
+        var company = Guid.NewGuid();
+        var other = Guid.NewGuid();
+        var now = new DateTimeOffset(2026, 11, 20, 9, 0, 0, TimeSpan.Zero);
+        db.CompanyVerificationDomains.AddRange(
+            CompanyVerificationDomain.Create(company, "old.example.org", true, now.AddDays(-5)),
+            CompanyVerificationDomain.Create(company, "b-new.example.org", true, now),
+            CompanyVerificationDomain.Create(company, "a-new.example.org", true, now),
+            CompanyVerificationDomain.Create(company, "retired.example.org", false, now.AddDays(5)),
+            CompanyVerificationDomain.Create(other, "zzz.example.org", true, now.AddDays(9)));
+        await db.SaveChangesAsync();
+        var repository = new Inspecta.Infrastructure.Repositories.EfCompanyVerificationDomainRepository(db);
+
+        Assert.Equal("a-new.example.org", await repository.FindPrimaryHostAsync(company));
+        Assert.Equal("zzz.example.org", await repository.FindPrimaryHostAsync(other));
+        Assert.Null(await repository.FindPrimaryHostAsync(Guid.NewGuid()));
     }
 
     [Fact]

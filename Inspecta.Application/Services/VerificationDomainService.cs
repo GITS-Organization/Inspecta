@@ -6,7 +6,7 @@ using Inspecta.Domain.Entities;
 
 namespace Inspecta.Application.Services;
 
-/// <summary>A company's own certificate verification addresses: list them, choose the primary one, remove an old one.</summary>
+/// <summary>A company's own certificate verification addresses: list them and choose the primary one. A host, once registered, stays reserved for its company (there is no delete), so another company can never take it over and break the QR codes already printed.</summary>
 public sealed class VerificationDomainService(ICompanyVerificationDomainRepository domains, CertificateOptions? options = null)
 {
     public async Task<IReadOnlyList<VerificationDomainResponse>> ListAsync(Guid companyId, CancellationToken cancellationToken = default) =>
@@ -18,7 +18,8 @@ public sealed class VerificationDomainService(ICompanyVerificationDomainReposito
     /// </summary>
     public async Task<VerificationDomainResponse> SetPrimaryAsync(Guid companyId, string? host, CancellationToken cancellationToken = default)
     {
-        var check = VerificationHost.Check(host, VerificationHost.HostOf((options ?? new CertificateOptions()).PublicBaseUrl));
+        var configured = options ?? new CertificateOptions();
+        var check = VerificationHost.Check(host, VerificationHost.HostOf(configured.PublicBaseUrl), configured.ReservedHosts);
         if (!check.IsValid) throw new AuthException(check.ErrorCode!, check.Message!, 400);
 
         var owner = await domains.FindCompanyIdByHostAsync(check.Host!, cancellationToken);
@@ -38,20 +39,6 @@ public sealed class VerificationDomainService(ICompanyVerificationDomainReposito
         else existing.MakePrimary();
         await domains.SaveAsync(cancellationToken);
         return Map(existing);
-    }
-
-    /// <summary>
-    /// Removes an address. The primary one cannot be removed (choose another primary first): certificates are issued with it. An old,
-    /// non-primary address can go.
-    /// </summary>
-    public async Task DeleteAsync(Guid companyId, Guid id, CancellationToken cancellationToken = default)
-    {
-        var domain = (await domains.ListAsync(companyId, tracking: true, cancellationToken)).FirstOrDefault(value => value.Id == id)
-            ?? throw new KeyNotFoundException("Verification address was not found.");
-        if (domain.IsPrimary)
-            throw new AuthException("primary_domain", "This is the address new certificates use. Choose another primary address first.", 409);
-        domains.Remove(domain);
-        await domains.SaveAsync(cancellationToken);
     }
 
     // The primary first, then by name: ordering in memory (a company has a handful, and SQLite cannot order by a date).

@@ -81,7 +81,7 @@ public sealed class CompanyController(
     /// <summary>The addresses the company's certificates can point to (the QR code opens <c>https://{host}/verify/{code}</c>), the primary one first.</summary>
     /// <remarks>
     /// The technical manager, the company admin or the platform owner (with <c>companyId</c>). An empty list means the QR codes use the platform address.
-    /// HTTPS for a new address is set up by us for now; it becomes automatic later.
+    /// Read only for the company: the platform owner sets the address (a company asks us), after DNS and HTTPS are verified; it becomes automatic later.
     /// </remarks>
     [HttpGet("verification-domains")]
     [RequirePermission(Permissions.CompanyEditQuotationContent)]
@@ -90,32 +90,22 @@ public sealed class CompanyController(
         [FromQuery] Guid? companyId, CancellationToken cancellationToken) =>
         Ok(await verificationDomains.ListAsync(Resolve(companyId), cancellationToken));
 
-    /// <summary>Make an address the company's primary verification address: certificates issued from now on print a QR code that opens it.</summary>
+    /// <summary>Make an address the company's primary verification address: certificates issued from now on print a QR code that opens it. Platform owner only.</summary>
     /// <remarks>
-    /// Send only the host, for example <c>{"host":"verify.yourcompany.com"}</c> (no https://, path or port; letters, digits, hyphens and dots; not an address of the service).
+    /// Platform owner only, with <c>companyId</c>: until the automatic DNS and HTTPS check exists, the owner activates an address after verifying them by hand
+    /// (a company asks us to set it), so a host that is not live yet never reaches a printed QR code. Send only the host, for example <c>{"host":"verify.yourcompany.com"}</c>
+    /// (no https://, path or port; letters, digits, hyphens and dots; not an address of the service or of the hosting provider).
     /// A new host is added; a host the company already has is made primary; the old primary stays in the list so QR codes already printed keep working.
-    /// Errors: <c>400 invalid_host</c>, <c>400 host_reserved</c>, <c>409 host_taken</c> (another company uses it).
+    /// A registered host stays reserved for its company (there is no delete). Errors: <c>400 invalid_host</c>, <c>400 host_reserved</c>, <c>409 host_taken</c> (another company uses it).
     /// </remarks>
     [HttpPut("verification-domain")]
-    [RequirePermission(Permissions.CompanyEditQuotationContent)]
+    [RequirePermission(Permissions.PlatformAdminister)]
     [ProducesResponseType<VerificationDomainResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<VerificationDomainResponse>> SetVerificationDomain(
         SetVerificationDomainRequest request, [FromQuery] Guid? companyId, CancellationToken cancellationToken) =>
         Ok(await verificationDomains.SetPrimaryAsync(Resolve(companyId), request.Host, cancellationToken));
-
-    /// <summary>Remove an old verification address. The primary one cannot be removed (409 <c>primary_domain</c>): choose another primary first.</summary>
-    [HttpDelete("verification-domains/{id:guid}")]
-    [RequirePermission(Permissions.CompanyEditQuotationContent)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> DeleteVerificationDomain(Guid id, [FromQuery] Guid? companyId, CancellationToken cancellationToken)
-    {
-        await verificationDomains.DeleteAsync(Resolve(companyId), id, cancellationToken);
-        return NoContent();
-    }
 
     // A company member always works on their own company; the platform owner must say which.
     private Guid Resolve(Guid? requested)

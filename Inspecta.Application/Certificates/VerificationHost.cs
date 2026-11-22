@@ -14,14 +14,17 @@ public static class VerificationHost
     /// <summary>The service's own domain: it and everything under it is reserved.</summary>
     public const string ReservedDomain = "gitsplatform.com";
 
+    /// <summary>The hosting provider's own domain: a company cannot use an address of it (it is not theirs and could change hands).</summary>
+    public const string ProviderDomain = "onrender.com";
+
     private const int MaxLength = 253;
     private static readonly Regex Label = new("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>
     /// Checks and normalises a host typed by a person. <paramref name="ownHost"/> is the host of the configured public address
-    /// (<c>Certificates:PublicBaseUrl</c>), which is reserved as well.
+    /// (<c>Certificates:PublicBaseUrl</c>), which is reserved as well, and <paramref name="reservedHosts"/> (<c>Certificates:ReservedHosts</c>).
     /// </summary>
-    public static HostCheck Check(string? input, string? ownHost = null)
+    public static HostCheck Check(string? input, string? ownHost = null, IEnumerable<string>? reservedHosts = null)
     {
         var host = input?.Trim().ToLowerInvariant();
         if (string.IsNullOrEmpty(host)) return Invalid("Enter the address, for example verify.yourcompany.com.");
@@ -41,8 +44,9 @@ public static class VerificationHost
             return Invalid("Each part of the address must be 1 to 63 letters, digits or hyphens, and cannot start or end with a hyphen.");
         if (labels[^1].All(char.IsAsciiDigit)) return Invalid("The address cannot be an IP address.");
 
-        if (host == ReservedDomain || host.EndsWith("." + ReservedDomain, StringComparison.Ordinal) || host == ownHost?.Trim().ToLowerInvariant())
-            return new HostCheck(null, "host_reserved", "This address belongs to the service itself. Use an address under your own domain.");
+        if (IsUnder(host, ReservedDomain) || IsUnder(host, ProviderDomain) || host == ownHost?.Trim().ToLowerInvariant() ||
+            reservedHosts?.Any(reserved => host == reserved.Trim().ToLowerInvariant()) == true)
+            return new HostCheck(null, "host_reserved", "This address is reserved. Use an address under your own domain.");
         return new HostCheck(host, null, null);
     }
 
@@ -53,6 +57,12 @@ public static class VerificationHost
     /// <summary>A request host as the public page sees it: lower-case, without a trailing dot.</summary>
     public static string? Normalize(string? host) =>
         host?.Trim().TrimEnd('.').ToLowerInvariant() is { Length: > 0 } value ? value : null;
+
+    /// <summary>The hosts of a comma separated setting (<c>Certificates:ReservedHosts</c>), lower-case; empty or missing gives none.</summary>
+    public static IReadOnlyList<string> ParseList(string? value) =>
+        (value ?? string.Empty).Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(host => host.ToLowerInvariant()).ToArray();
+
+    private static bool IsUnder(string host, string domain) => host == domain || host.EndsWith("." + domain, StringComparison.Ordinal);
 
     private static HostCheck Invalid(string message) => new(null, "invalid_host", message);
 }

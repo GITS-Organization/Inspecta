@@ -9,7 +9,7 @@ namespace Inspecta.Domain.Tests;
 
 /// <summary>
 /// A company's own verification address over HTTP: what the public page answers on a registered host and on any other, and who may
-/// list, set and delete the addresses.
+/// list and set the addresses (setting is the platform owner only).
 /// </summary>
 public sealed class VerificationDomainHttpTests : IClassFixture<ApiHttpTests.Api>
 {
@@ -165,15 +165,18 @@ public sealed class VerificationDomainHttpTests : IClassFixture<ApiHttpTests.Api
     public async Task AnOldHostStaysRegisteredAfterANewPrimaryIsChosenSoOldQrCodesKeepWorking()
     {
         var team = NewTeam();
-        var client = await SignIn(team.Manager.Email);
+        var owner = await SignInOwner();
 
-        Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync("/api/v1/company/verification-domain", new { host = "new." + team.Host })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await owner.PutAsJsonAsync($"/api/v1/company/verification-domain?companyId={team.Company.Id}", new { host = "new." + team.Host })).StatusCode);
 
         Assert.Equal(HttpStatusCode.OK, (await Public($"/verify/{team.Code}", team.Host)).Status);
         Assert.Equal(HttpStatusCode.OK, (await Public($"/verify/{team.Code}", "new." + team.Host)).Status);
     }
 
     // ---- The endpoints: who may use them -----------------------------------------------------------------------------
+
+    private async Task<HttpClient> SignInOwner() =>
+        await SignIn(api.AddUser($"domain-owner-{Interlocked.Increment(ref sequence)}@example.com", UserRole.Admin).Email);
 
     [Fact]
     public async Task NoSignInIsRefusedAndACoordinatorOrInspectorIsForbidden()
@@ -183,46 +186,57 @@ public sealed class VerificationDomainHttpTests : IClassFixture<ApiHttpTests.Api
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/v1/company/verification-domains")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.PutAsJsonAsync("/api/v1/company/verification-domain", new { host = "a.example.org" })).StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.DeleteAsync($"/api/v1/company/verification-domains/{Guid.NewGuid()}")).StatusCode);
 
         foreach (var user in new[] { team.Coordinator, team.Inspector })
         {
             var client = await SignIn(user.Email);
             Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/v1/company/verification-domains")).StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden, (await client.PutAsJsonAsync("/api/v1/company/verification-domain", new { host = "b.example.org" })).StatusCode);
-            Assert.Equal(HttpStatusCode.Forbidden, (await client.DeleteAsync($"/api/v1/company/verification-domains/{Guid.NewGuid()}")).StatusCode);
         }
     }
 
     [Fact]
-    public async Task TheCompanyAdminAndTheTechnicalManagerListAndSetTheirOwnHost()
+    public async Task TheCompanyAdminAndTheTechnicalManagerListTheirHostsButCannotChooseTheQrTarget()
     {
-        var team = NewTeam(registerHost: false);
+        var team = NewTeam();
 
-        foreach (var (user, host) in new[] { (team.CompanyAdmin, "admin-set.example.org"), (team.Manager, "manager-set.example.org") })
+        foreach (var user in new[] { team.CompanyAdmin, team.Manager })
         {
             var client = await SignIn(user.Email);
-            var put = await client.PutAsJsonAsync("/api/v1/company/verification-domain", new { host });
-            Assert.Equal(HttpStatusCode.OK, put.StatusCode);
-            var saved = await Read(put);
-            Assert.Equal(host, saved.GetProperty("host").GetString());
-            Assert.True(saved.GetProperty("isPrimary").GetBoolean());
-            Assert.NotEqual(Guid.Empty, saved.GetProperty("id").GetGuid());
-            Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/v1/company/verification-domains")).StatusCode);
+            var list = await Read(await client.GetAsync("/api/v1/company/verification-domains"));
+            Assert.Equal(team.Host, Assert.Single(list.EnumerateArray()).GetProperty("host").GetString());
+            // Only the platform owner sets it, once DNS and HTTPS are verified: a host that is not live yet must not reach printed QR codes.
+            Assert.Equal(HttpStatusCode.Forbidden, (await client.PutAsJsonAsync("/api/v1/company/verification-domain", new { host = "not-live-yet.example.org" })).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await client.PutAsJsonAsync($"/api/v1/company/verification-domain?companyId={team.Company.Id}", new { host = "not-live-yet.example.org" })).StatusCode);
         }
+
+        Assert.Single(IdsOf(team.Company.Id));
     }
 
     [Fact]
-    public async Task APersonOfOneCompanyCannotNameAnotherCompany()
+    public async Task ThereIsNoDeleteEndpoint()
+    {
+        var team = NewTeam();
+        var id = IdsOf(team.Company.Id).Single();
+        var owner = await SignInOwner();
+
+        foreach (var client in new[] { owner, await SignIn(team.Manager.Email), await SignIn(team.CompanyAdmin.Email) })
+        {
+            var response = await client.DeleteAsync($"/api/v1/company/verification-domains/{id}?companyId={team.Company.Id}");
+            Assert.True(response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed, response.StatusCode.ToString());
+        }
+
+        Assert.Single(IdsOf(team.Company.Id));
+    }
+
+    [Fact]
+    public async Task APersonOfOneCompanyCannotReadAnotherCompany()
     {
         var mine = NewTeam();
         var other = NewTeam();
         var client = await SignIn(mine.Manager.Email);
-        var otherDomain = IdsOf(other.Company.Id).Single();
 
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync($"/api/v1/company/verification-domains?companyId={other.Company.Id}")).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await client.PutAsJsonAsync($"/api/v1/company/verification-domain?companyId={other.Company.Id}", new { host = "sneaky.example.org" })).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await client.DeleteAsync($"/api/v1/company/verification-domains/{otherDomain}?companyId={other.Company.Id}")).StatusCode);
         // Naming its own company is fine.
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/v1/company/verification-domains?companyId={mine.Company.Id}")).StatusCode);
     }
@@ -231,15 +245,20 @@ public sealed class VerificationDomainHttpTests : IClassFixture<ApiHttpTests.Api
     public async Task ThePlatformOwnerMustNameTheCompanyAndThenActsOnIt()
     {
         var team = NewTeam(registerHost: false);
-        var owner = api.AddUser($"domain-owner-{Interlocked.Increment(ref sequence)}@example.com", UserRole.Admin);
-        var client = await SignIn(owner.Email);
+        var client = await SignInOwner();
 
         var missing = await client.GetAsync("/api/v1/company/verification-domains");
         Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
         Assert.Equal("company_required", (await Read(missing)).GetProperty("code").GetString());
+        var missingPut = await client.PutAsJsonAsync("/api/v1/company/verification-domain", new { host = "owner-set.example.org" });
+        Assert.Equal(HttpStatusCode.BadRequest, missingPut.StatusCode);
+        Assert.Equal("company_required", (await Read(missingPut)).GetProperty("code").GetString());
 
         var put = await client.PutAsJsonAsync($"/api/v1/company/verification-domain?companyId={team.Company.Id}", new { host = "owner-set.example.org" });
         Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+        var saved = await Read(put);
+        Assert.True(saved.GetProperty("isPrimary").GetBoolean());
+        Assert.NotEqual(Guid.Empty, saved.GetProperty("id").GetGuid());
         var list = await Read(await client.GetAsync($"/api/v1/company/verification-domains?companyId={team.Company.Id}"));
         Assert.Equal("owner-set.example.org", Assert.Single(list.EnumerateArray()).GetProperty("host").GetString());
     }
@@ -251,11 +270,11 @@ public sealed class VerificationDomainHttpTests : IClassFixture<ApiHttpTests.Api
     {
         var mine = NewTeam(registerHost: false);
         var other = NewTeam();
-        var client = await SignIn(mine.Manager.Email);
+        var client = await SignInOwner();
 
         async Task<(HttpStatusCode, string?)> Put(string? host)
         {
-            var response = await client.PutAsJsonAsync("/api/v1/company/verification-domain", new { host });
+            var response = await client.PutAsJsonAsync($"/api/v1/company/verification-domain?companyId={mine.Company.Id}", new { host });
             return (response.StatusCode, (await Read(response)).GetProperty("code").GetString());
         }
 
@@ -265,10 +284,11 @@ public sealed class VerificationDomainHttpTests : IClassFixture<ApiHttpTests.Api
         Assert.Equal((HttpStatusCode.BadRequest, "invalid_host"), await Put(null));
         Assert.Equal((HttpStatusCode.BadRequest, "host_reserved"), await Put("api.gitsplatform.com"));
         Assert.Equal((HttpStatusCode.BadRequest, "host_reserved"), await Put("certs.gitsplatform.com"));
+        Assert.Equal((HttpStatusCode.BadRequest, "host_reserved"), await Put("inspecta.onrender.com"));
         Assert.Equal((HttpStatusCode.Conflict, "host_taken"), await Put(other.Host));
         Assert.Equal((HttpStatusCode.Conflict, "host_taken"), await Put(other.Host.ToUpperInvariant()));
 
-        Assert.Empty((await Read(await client.GetAsync("/api/v1/company/verification-domains"))).EnumerateArray());
+        Assert.Empty((await Read(await client.GetAsync($"/api/v1/company/verification-domains?companyId={mine.Company.Id}"))).EnumerateArray());
         Assert.Single(IdsOf(other.Company.Id)); // the other company keeps its host
     }
 
@@ -276,10 +296,11 @@ public sealed class VerificationDomainHttpTests : IClassFixture<ApiHttpTests.Api
     public async Task SettingANewPrimaryKeepsTheOldHostsAndEnablingAnOldOneAgainPromotesIt()
     {
         var team = NewTeam(registerHost: false);
-        var client = await SignIn(team.CompanyAdmin.Email);
-        async Task<JsonElement> Put(string host) => await Read(await client.PutAsJsonAsync("/api/v1/company/verification-domain", new { host }));
+        var client = await SignInOwner();
+        async Task<JsonElement> Put(string host) =>
+            await Read(await client.PutAsJsonAsync($"/api/v1/company/verification-domain?companyId={team.Company.Id}", new { host }));
         async Task<List<(string Host, bool Primary, Guid Id)>> List() =>
-            (await Read(await client.GetAsync("/api/v1/company/verification-domains"))).EnumerateArray()
+            (await Read(await client.GetAsync($"/api/v1/company/verification-domains?companyId={team.Company.Id}"))).EnumerateArray()
                 .Select(row => (row.GetProperty("host").GetString()!, row.GetProperty("isPrimary").GetBoolean(), row.GetProperty("id").GetGuid())).ToList();
 
         var first = await Put("one.example.org");
@@ -303,37 +324,15 @@ public sealed class VerificationDomainHttpTests : IClassFixture<ApiHttpTests.Api
     }
 
     [Fact]
-    public async Task ThePrimaryCannotBeDeletedButAnOldHostCanAndAnUnknownIdIsNotFound()
-    {
-        var team = NewTeam(registerHost: false);
-        var client = await SignIn(team.Manager.Email);
-        var old = await Read(await client.PutAsJsonAsync("/api/v1/company/verification-domain", new { host = "old.example.org" }));
-        var primary = await Read(await client.PutAsJsonAsync("/api/v1/company/verification-domain", new { host = "primary.example.org" }));
-
-        var refused = await client.DeleteAsync($"/api/v1/company/verification-domains/{primary.GetProperty("id").GetGuid()}");
-        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
-        Assert.Equal("primary_domain", (await Read(refused)).GetProperty("code").GetString());
-
-        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/v1/company/verification-domains/{old.GetProperty("id").GetGuid()}")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await client.DeleteAsync($"/api/v1/company/verification-domains/{old.GetProperty("id").GetGuid()}")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await client.DeleteAsync($"/api/v1/company/verification-domains/{Guid.NewGuid()}")).StatusCode);
-        Assert.Equal("primary.example.org", Assert.Single((await Read(await client.GetAsync("/api/v1/company/verification-domains"))).EnumerateArray()).GetProperty("host").GetString());
-    }
-
-    [Fact]
-    public async Task OneCompanyNeverSeesOrDeletesAnotherCompanysHosts()
+    public async Task OneCompanyNeverSeesAnotherCompanysHosts()
     {
         var mine = NewTeam();
         var other = NewTeam();
         var client = await SignIn(mine.Manager.Email);
-        var otherDomain = IdsOf(other.Company.Id).Single();
 
         var list = await Read(await client.GetAsync("/api/v1/company/verification-domains"));
         Assert.Equal(mine.Host, Assert.Single(list.EnumerateArray()).GetProperty("host").GetString());
         Assert.DoesNotContain(other.Host, list.GetRawText());
-
-        Assert.Equal(HttpStatusCode.NotFound, (await client.DeleteAsync($"/api/v1/company/verification-domains/{otherDomain}")).StatusCode);
-        Assert.Single(IdsOf(other.Company.Id));
     }
 
     private List<Guid> IdsOf(Guid company)
