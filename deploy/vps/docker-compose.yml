@@ -1,4 +1,4 @@
-# Inspecta on one Hetzner Cloud server: Caddy (HTTPS) -> API -> PostgreSQL.
+# Inspecta on one VPS (Hostinger, Hetzner, Vultr...): Caddy (HTTPS) -> API -> PostgreSQL.
 # Run from this folder: `docker compose up -d --build`. All secrets come from the `.env` file next to this one (see .env.example).
 # The database is on the internal network only: nothing but Caddy listens on the internet (ports 80 and 443).
 

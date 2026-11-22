@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # One-time setup of a fresh Ubuntu 22.04/24.04 server (run as root): updates, firewall, Docker, automatic security updates.
-# Before you run it: add your SSH key to the server from the Hetzner console and check you can sign in with it.
+# Before you run it: the server must be created with your SSH key (root must have /root/.ssh/authorized_keys), and you must have checked that you can sign in with it.
 # After: sign in as the `deploy` user (same key) and follow RUNBOOK.md.
 set -euo pipefail
 
 if [ "$(id -u)" -ne 0 ]; then echo "Run as root."; exit 1; fi
+if [ ! -s /root/.ssh/authorized_keys ]; then
+  echo "No SSH key found for root (/root/.ssh/authorized_keys is empty). Add your SSH key to the server first (see RUNBOOK.md step 1): this script switches SSH to keys only and would lock you out."
+  exit 1
+fi
 
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get -y upgrade

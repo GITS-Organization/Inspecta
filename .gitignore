@@ -51,5 +51,5 @@ app.*.symbols
 app.*.map.json
 
 # Server backups hold customer data
-deploy/hetzner/backups/
-deploy/hetzner/.env
+deploy/vps/backups/
+deploy/vps/.env

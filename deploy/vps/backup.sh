@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Daily database backup: a compressed pg_dump kept in ./backups (the newest BACKUP_KEEP_DAYS days).
-# If RCLONE_REMOTE is set in .env (for example a Hetzner Storage Box configured with `rclone config`), each dump is also copied there.
+# If RCLONE_REMOTE is set in .env (for example a storage box or S3-compatible bucket configured with `rclone config`), each dump is also copied there.
 # Run by hand or by cron (see RUNBOOK.md). The exit code is not 0 when the backup or the off-server copy failed.
 set -euo pipefail
 umask 077

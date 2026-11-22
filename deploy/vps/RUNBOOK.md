@@ -1,29 +1,38 @@
-# نقل Inspecta من Render إلى سيرفر Hetzner (خطوة بخطوة)
+# نقل Inspecta من Render إلى سيرفر VPS (Hostinger) خطوة بخطوة
 
 الهدف: سيرفر واحد فيه **Caddy** (HTTPS) و**API** و**PostgreSQL** جديدة وفاضية لأول عميل حقيقي، مع backup يومي وتجربة استرجاع.
 مفيش بيانات تتنقل من Render، فمفيش downtime: نجهّز السيرفر الجديد على عنوان تجريبي، نجرّبه، وبعدين نحوّل الدومين.
+الملفات في هذا المجلد بتشتغل على أي VPS فيه Ubuntu (Hostinger أو Hetzner أو Vultr...)، مش مربوطة بمزوّد.
 
 ## 0) القرارات اللي اتاخدت
-- **المزوّد: Hetzner Cloud** (أرخص وأحسن من Hostinger VPS في الدعم والشبكة والـ API). مفيش عندهم موقع في مصر أو السعودية.
-- **الموقع: Falkenstein أو Nuremberg (ألمانيا)**: نفس مسافة Frankfurt الحالية على Render، يعني نفس سرعة الوصول من مصر والسعودية.
-- **المواصفات: CX32 أو CPX21** (4 vCPU تقريبًا، 4 إلى 8GB RAM)، **Ubuntu 24.04**. السعر حوالي 8 إلى 16 يورو في الشهر (راجع صفحة الأسعار).
-- لو عميل سعودي طلب استضافة **داخل المملكة**: نعمل نسخة منفصلة بنفس هذه الملفات عند مزوّد سعودي. لا تتغير الخطوات.
+- **المزوّد: Hostinger VPS** (بديل Hetzner اللي تحققه بطيء). نختار **KVM 2** (2 vCPU، 8GB RAM، 100GB NVMe). السعر حوالي 9 دولار في الشهر بعرض 24 شهر، لكن **اشترِ شهر أو سنة بس** علشان ما تتحبسش، وعندهم ضمان استرجاع 30 يوم (تأكد من الشروط وقت الشراء).
+- **الموقع:** **ألمانيا (Frankfurt)** لو متاح في قايمة الأماكن وقت الشراء، وإلا فرنسا. **المكان بيتثبت بعد الإعداد**، فاختاره صح من أول مرة.
+- **نظام التشغيل:** **Ubuntu 24.04 عادي** (مش قالب فيه لوحة تحكم ولا Docker جاهز؛ السكريبت بيثبّت Docker بنفسه).
+- **الإيميل:** لازم السيرفر يوصل لـ `smtp.office365.com:587` و`outlook.office365.com:993`. بنختبرهم في الخطوة 2 قبل أي حاجة.
+- لو عميل سعودي طلب استضافة **داخل المملكة**: نعمل نسخة منفصلة بنفس هذه الملفات عند مزوّد سعودي.
 
 ## 1) إنت تعمل (حوالي ساعة)
-1. اعمل حساب Hetzner، وأنشئ **Project** جديد.
-2. أضف **SSH key**: من جهازك `ssh-keygen -t ed25519` ثم انسخ محتوى الملف `.pub` في Hetzner > Security > SSH keys.
-3. أنشئ **Server**: Falkenstein، Ubuntu 24.04، النوع CX32 أو CPX21، اختر الـ SSH key، وفعّل خيار **Backups** (يزوّد 20% من السعر، لقطة كاملة للسيرفر فوق الـ backup بتاعنا).
-4. من Hetzner > Firewalls: اسمح بـ 22 و80 و443 فقط (اختياري، السكريبت بيعمل firewall على السيرفر كمان).
-5. **الدومين:** ضيف سجل `A` لعنوان تجريبي، مثلًا `api2.gitsplatform.com`، يشاور على IP السيرفر. (الدومين الأساسي `api.gitsplatform.com` بيتحوّل في الخطوة 9.)
+1. **مفتاح SSH:** من جهازك (PowerShell) `ssh-keygen -t ed25519` ثم اعرض المفتاح العام: `Get-Content $env:USERPROFILE\.ssh\id_ed25519.pub` وانسخه.
+2. في Hostinger: اشترِ **VPS KVM 2** ثم في إعداد النظام اختر **Ubuntu 24.04 (OS only)**، والموقع **Germany/Frankfurt**، وحط **مفتاح الـ SSH** اللي نسخته (أو أضفه من hPanel > VPS > Settings > SSH keys). كلمة سر الـ root اللي بيطلبوها احفظها في مدير كلمات السر، بس إحنا هنقفل الدخول بكلمة سر.
+3. **من لوحة Hostinger:** فعّل **Backups/Snapshots** لو متاحة (لقطة كاملة للسيرفر فوق الـ backup بتاعنا). لو فيه خدمة Malware scanner (Monarx) سيبها شغالة.
+4. **الدومين:** ضيف سجل `A` لعنوان تجريبي، مثلًا `api2.gitsplatform.com`، يشاور على IP السيرفر. (الدومين الأساسي `api.gitsplatform.com` بيتحوّل في الخطوة 9.)
 
-## 2) تجهيز السيرفر (مرة واحدة)
+## 2) اختبار أول (دقيقتين، قبل أي تجهيز)
+ادخل بـ `ssh root@<IP>` وجرّب:
+```
+nc -zv -w 5 smtp.office365.com 587
+nc -zv -w 5 outlook.office365.com 993
+```
+لو الاتنين `succeeded` كمّل. لو أي واحد فشل، **ما تكمّلش**: افتح تذكرة لـ Hostinger عن بورت 587 الخارج، أو ننقل لمزوّد تاني (Vultr مثلًا) قبل ما نضيع وقت.
+
+## 2b) تجهيز السيرفر (مرة واحدة)
 من جهازك (من مجلد المشروع) انسخ السكريبت للسيرفر ثم شغّله:
 ```
-scp deploy/hetzner/server-setup.sh root@<IP>:/root/
+scp deploy/vps/server-setup.sh root@<IP>:/root/
 ssh root@<IP> "bash /root/server-setup.sh"
 ```
-السكريبت: يحدّث النظام، يثبّت Docker، يعمل مستخدم `deploy`، يقفل الدخول بكلمة سر (مفاتيح فقط)، يشغّل firewall و fail2ban وتحديثات الأمان التلقائية، ويضبط التوقيت على القاهرة.
-بعدها ادخل بالمستخدم الجديد: `ssh deploy@<IP>`
+السكريبت يرفض يشتغل لو مفيش مفتاح SSH للـ root (علشان ما يقفلش عليك الدخول). هو: يحدّث النظام، يثبّت Docker، يعمل مستخدم `deploy`، يقفل الدخول بكلمة سر (مفاتيح فقط)، يشغّل firewall و fail2ban وتحديثات الأمان التلقائية، ويضبط التوقيت على القاهرة.
+**قبل ما تقفل الجلسة:** افتح نافذة تانية وجرّب `ssh deploy@<IP>` وتأكد إنها دخلت.
 
 ## 3) الكود على السيرفر
 الـ repo خاص، فنحتاج **Deploy key** للقراءة فقط:
@@ -36,7 +45,7 @@ cat ~/.ssh/inspecta_deploy.pub     # انسخه
 printf 'Host github.com\n  IdentityFile ~/.ssh/inspecta_deploy\n' >> ~/.ssh/config
 git clone git@github.com:GITS-Organization/Inspecta.git ~/inspecta
 cd ~/inspecta && git checkout backend
-cd deploy/hetzner
+cd deploy/vps
 ```
 
 ## 4) ملف الإعدادات `.env`
@@ -68,9 +77,9 @@ docker compose logs api --tail 50
 ./backup.sh && ls -lh backups/
 ./restore-test.sh                 # لازم يخلص بـ "the backup can be restored"
 crontab -e                        # ضيف السطر ده:
-0 3 * * * /home/deploy/inspecta/deploy/hetzner/backup.sh >> /home/deploy/backup.log 2>&1
+0 3 * * * /home/deploy/inspecta/deploy/vps/backup.sh >> /home/deploy/backup.log 2>&1
 ```
-**نسخة خارج السيرفر:** اعمل Hetzner **Storage Box** (حوالي 4 يورو)، اضبطه بـ `rclone config` (اسم الـ remote مثلًا `storagebox`) وحط الاسم في `RCLONE_REMOTE` في `.env`. من غير ده النسخ بتفضل على نفس السيرفر.
+**نسخة خارج السيرفر:** اعمل مكان تخزين خارجي رخيص (**Hetzner Storage Box** حوالي 4 يورو، أو أي bucket متوافق مع S3 زي Backblaze B2 أو Cloudflare R2)، اضبطه بـ `rclone config` (اسم الـ remote مثلًا `storagebox`) وحط الاسم في `RCLONE_REMOTE` في `.env`. من غير ده النسخ بتفضل على نفس السيرفر.
 جرّب الاسترجاع مرة كل شهر.
 
 ## 8) تجربة قبل التحويل (على العنوان التجريبي)
@@ -78,7 +87,7 @@ crontab -e                        # ضيف السطر ده:
 - طلب جديد ← عرض سعر ← قبول ← تعيين inspector ← فحص ← شهادة ← اعتماد.
 - QR الشهادة بيفتح صفحة التحقق، وتنزيل الـ PDF شغال.
 - رفع report من الـ inspector وظهوره عند المراجعة.
-- ربط صندوق Outlook وقراءة إيميل جديد. **الإيميل الخارج:** Hetzner بتقفل بورت 25 (وأحيانًا 465) على الحسابات الجديدة. إحنا بنستخدم 587 مع Outlook، فالمفروض يشتغل. لو أي إرسال فشل بـ "mail server did not answer" افتح تذكرة لـ Hetzner لفتح البورت.
+- ربط صندوق Outlook وقراءة إيميل جديد. **الإيميل الخارج:** بعض المزوّدين بيقفلوا بورت 25 و465. إحنا بنستخدم 587 مع Outlook وبنختبره في الخطوة 2. لو أي إرسال فشل بـ "mail server did not answer" افتح تذكرة للمزوّد لفتح البورت.
 - بعد ما الإرسال التجريبي ينجح بس: `QUOTE_DELIVERY_ENABLED=true` و `CERTIFICATE_DELIVERY_ENABLED=true` في `.env` ثم `docker compose up -d`.
 
 ## 9) التحويل (دقايق)
@@ -89,7 +98,7 @@ crontab -e                        # ضيف السطر ده:
 
 ## التحديث بعد كده
 ```
-cd ~/inspecta/deploy/hetzner && ./update.sh          # backup ثم آخر backend ثم build ثم health check
+cd ~/inspecta/deploy/vps && ./update.sh          # backup ثم آخر backend ثم build ثم health check
 ./update.sh <commit>                                 # للرجوع لنسخة قديمة من الكود
 ```
 الـ migrations بتتطبق لوحدها عند التشغيل. الرجوع بالكود لا يرجّع بيانات: للبيانات استخدم الـ backup.
