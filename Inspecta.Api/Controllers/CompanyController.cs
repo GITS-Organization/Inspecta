@@ -4,6 +4,7 @@ using Inspecta.Application.Contracts.Companies;
 using Inspecta.Application.Contracts.Company;
 using Inspecta.Application.Exceptions;
 using Inspecta.Application.Interfaces;
+using Inspecta.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Inspecta.Api.Controllers;
@@ -11,7 +12,8 @@ namespace Inspecta.Api.Controllers;
 /// <summary>The caller's own company: what it is, who reviews by default, and its identity (logo, accreditations, colours, contacts).</summary>
 [ApiController]
 [Route("api/v1/company")]
-public sealed class CompanyController(ICompanyService companies, ICompanyProfileService profiles, IQuotationContentService quotationContent) : ControllerBase
+public sealed class CompanyController(
+    ICompanyService companies, ICompanyProfileService profiles, IQuotationContentService quotationContent, VerificationDomainService verificationDomains) : ControllerBase
 {
     /// <summary>The caller's company. The platform owner names it with <c>companyId</c>.</summary>
     [HttpGet]
@@ -75,6 +77,45 @@ public sealed class CompanyController(ICompanyService companies, ICompanyProfile
     public async Task<ActionResult<QuotationContentResponse>> SaveQuotationContent(
         SaveQuotationContentRequest request, [FromQuery] Guid? companyId, CancellationToken cancellationToken) =>
         Ok(await quotationContent.SaveAsync(Resolve(companyId), request, User.GetUserId(), cancellationToken));
+
+    /// <summary>The addresses the company's certificates can point to (the QR code opens <c>https://{host}/verify/{code}</c>), the primary one first.</summary>
+    /// <remarks>
+    /// The technical manager, the company admin or the platform owner (with <c>companyId</c>). An empty list means the QR codes use the platform address.
+    /// HTTPS for a new address is set up by us for now; it becomes automatic later.
+    /// </remarks>
+    [HttpGet("verification-domains")]
+    [RequirePermission(Permissions.CompanyEditQuotationContent)]
+    [ProducesResponseType<IReadOnlyList<VerificationDomainResponse>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<VerificationDomainResponse>>> GetVerificationDomains(
+        [FromQuery] Guid? companyId, CancellationToken cancellationToken) =>
+        Ok(await verificationDomains.ListAsync(Resolve(companyId), cancellationToken));
+
+    /// <summary>Make an address the company's primary verification address: certificates issued from now on print a QR code that opens it.</summary>
+    /// <remarks>
+    /// Send only the host, for example <c>{"host":"verify.yourcompany.com"}</c> (no https://, path or port; letters, digits, hyphens and dots; not an address of the service).
+    /// A new host is added; a host the company already has is made primary; the old primary stays in the list so QR codes already printed keep working.
+    /// Errors: <c>400 invalid_host</c>, <c>400 host_reserved</c>, <c>409 host_taken</c> (another company uses it).
+    /// </remarks>
+    [HttpPut("verification-domain")]
+    [RequirePermission(Permissions.CompanyEditQuotationContent)]
+    [ProducesResponseType<VerificationDomainResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<VerificationDomainResponse>> SetVerificationDomain(
+        SetVerificationDomainRequest request, [FromQuery] Guid? companyId, CancellationToken cancellationToken) =>
+        Ok(await verificationDomains.SetPrimaryAsync(Resolve(companyId), request.Host, cancellationToken));
+
+    /// <summary>Remove an old verification address. The primary one cannot be removed (409 <c>primary_domain</c>): choose another primary first.</summary>
+    [HttpDelete("verification-domains/{id:guid}")]
+    [RequirePermission(Permissions.CompanyEditQuotationContent)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeleteVerificationDomain(Guid id, [FromQuery] Guid? companyId, CancellationToken cancellationToken)
+    {
+        await verificationDomains.DeleteAsync(Resolve(companyId), id, cancellationToken);
+        return NoContent();
+    }
 
     // A company member always works on their own company; the platform owner must say which.
     private Guid Resolve(Guid? requested)

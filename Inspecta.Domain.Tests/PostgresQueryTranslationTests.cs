@@ -110,7 +110,13 @@ public sealed class PostgresQueryTranslationTests
             // The delete itself is ExecuteDeleteAsync, which ToQueryString cannot show: that one is only proved by running it (the SQLite clean-up tests and, once, the real database).
             db.JobReportFiles.AsNoTracking().Include(file => file.Body).Where(file => file.RequestId == manager && ids.Contains(file.Id)).ToQueryString(),
             db.JobReportFiles.IgnoreQueryFilters().AsNoTracking().Where(file => file.ExpiresAt != null).Select(file => new { file.Id, ExpiresAt = file.ExpiresAt!.Value }).ToQueryString(),
-            db.JobReportFiles.IgnoreQueryFilters().Where(file => ids.Contains(file.Id)).ToQueryString()
+            db.JobReportFiles.IgnoreQueryFilters().Where(file => ids.Contains(file.Id)).ToQueryString(),
+            // The verification domains of a company (EfCompanyVerificationDomainRepository): which company owns a host (the one lookup that bypasses the filter), the primary host, the list and a delete by id. No ordering by date (SQLite cannot).
+            db.CompanyVerificationDomains.IgnoreQueryFilters().AsNoTracking().Where(domain => domain.Host == "verify.acme.example").Select(domain => (Guid?)domain.ManagerId).ToQueryString(),
+            db.CompanyVerificationDomains.AsNoTracking().Where(domain => domain.ManagerId == manager && domain.IsPrimary).Select(domain => domain.Host).ToQueryString(),
+            db.CompanyVerificationDomains.AsNoTracking().Where(domain => domain.ManagerId == manager).ToQueryString(),
+            db.CompanyVerificationDomains.Where(domain => domain.ManagerId == manager).ToQueryString(),
+            db.CompanyVerificationDomains.Where(domain => domain.ManagerId == manager && domain.Id == client).ToQueryString()
         };
 
         Assert.All(queries, sql => Assert.False(string.IsNullOrWhiteSpace(sql)));

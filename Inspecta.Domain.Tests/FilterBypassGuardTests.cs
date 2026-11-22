@@ -16,6 +16,8 @@ public sealed class FilterBypassGuardTests
         ["EfClientMailRuleRepository.cs"] = 3,
         ["EfClientReplyRepository.cs"] = 6,
         ["EfClientRepository.cs"] = 3,
+        // The public page has no signed-in user and the company endpoints must see a host another company owns: one lookup of "which company owns this host", returning only a company id.
+        ["EfCompanyVerificationDomainRepository.cs"] = 1,
         ["EfEmailSyncRepository.cs"] = 10,
         ["EfEquipmentCatalog.cs"] = 1,
         ["EfEquipmentRepository.cs"] = 2,

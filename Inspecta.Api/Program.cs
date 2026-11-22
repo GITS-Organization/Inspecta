@@ -92,6 +92,8 @@ builder.Services.AddScoped<IRequestRepository, EfRequestRepository>();
 builder.Services.AddScoped<IClientMailRuleRepository, EfClientMailRuleRepository>();
 builder.Services.AddScoped<ICompanyProfileRepository, EfCompanyProfileRepository>();
 builder.Services.AddScoped<ICompanyQuotationContentRepository, EfCompanyQuotationContentRepository>();
+builder.Services.AddScoped<ICompanyVerificationDomainRepository, EfCompanyVerificationDomainRepository>();
+builder.Services.AddScoped<VerificationDomainService>();
 builder.Services.AddScoped<QuotationContentService>();
 builder.Services.AddScoped<IQuotationContentService>(provider => provider.GetRequiredService<QuotationContentService>());
 builder.Services.AddScoped<IQuotationContentProvider>(provider => provider.GetRequiredService<QuotationContentService>());

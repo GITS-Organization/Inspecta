@@ -525,6 +525,35 @@ namespace Inspecta.Infrastructure.Data.Migrations
                     b.ToTable("CompanyQuotationContents");
                 });
 
+            modelBuilder.Entity("Inspecta.Domain.Entities.CompanyVerificationDomain", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Host")
+                        .IsRequired()
+                        .HasMaxLength(253)
+                        .HasColumnType("character varying(253)");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ManagerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Host")
+                        .IsUnique();
+
+                    b.HasIndex("ManagerId");
+
+                    b.ToTable("CompanyVerificationDomains");
+                });
+
             modelBuilder.Entity("Inspecta.Domain.Entities.CoordinatorEmailConfig", b =>
                 {
                     b.Property<Guid>("CoordinatorId")

@@ -24,6 +24,7 @@ public sealed class InspectaDbContext(
     public DbSet<ClientMailRule> ClientMailRules => Set<ClientMailRule>();
     public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();
     public DbSet<CompanyQuotationContent> CompanyQuotationContents => Set<CompanyQuotationContent>();
+    public DbSet<CompanyVerificationDomain> CompanyVerificationDomains => Set<CompanyVerificationDomain>();
     public DbSet<ClientReply> ClientReplies => Set<ClientReply>();
     public DbSet<OutboundEmail> OutboundEmails => Set<OutboundEmail>();
     public DbSet<RenewalReminder> RenewalReminders => Set<RenewalReminder>();
@@ -366,6 +367,15 @@ public sealed class InspectaDbContext(
         quotationContent.Property(item => item.TermsJson).IsRequired();
         quotationContent.Property(item => item.BankAccountsJson).IsRequired();
         quotationContent.Property(item => item.ContactsJson).IsRequired();
+
+        // A company's own verification addresses. Tenant filter like the other company tables; the one lookup of "which company owns this host"
+        // (the public page, and the check that a host is free) bypasses it on purpose in EfCompanyVerificationDomainRepository.
+        var verificationDomain = modelBuilder.Entity<CompanyVerificationDomain>();
+        verificationDomain.HasKey(item => item.Id);
+        verificationDomain.HasQueryFilter(item => IsTenantAdmin || TenantId != null && item.ManagerId == TenantId);
+        verificationDomain.HasIndex(item => item.Host).IsUnique();
+        verificationDomain.HasIndex(item => item.ManagerId);
+        verificationDomain.Property(item => item.Host).HasMaxLength(CompanyVerificationDomain.MaxHostLength).IsRequired();
 
         var clientReply = modelBuilder.Entity<ClientReply>();
         clientReply.HasKey(item => item.Id);

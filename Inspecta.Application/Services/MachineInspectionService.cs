@@ -24,7 +24,8 @@ public sealed class MachineInspectionService(
     ITransactionRunner? transactions = null,
     ICompanyBrandingProvider? companyBranding = null,
     IJobReportRepository? jobReports = null,
-    JobReportOptions? reportOptions = null) : IMachineInspectionService
+    JobReportOptions? reportOptions = null,
+    ICompanyVerificationDomainRepository? verificationDomains = null) : IMachineInspectionService
 {
     private const int MaxTextLength = 4000;
 
@@ -184,7 +185,7 @@ public sealed class MachineInspectionService(
         if (problems.Count > 0)
             throw new AuthException("certificate_incomplete", $"Complete the certificate first. Missing: {string.Join("; ", problems)}.", 409) { Problems = problems };
 
-        var equipment = await ApplySubmitAsync(item, certificate, texts, cancellationToken);
+        var equipment = await ApplySubmitAsync(request, item, certificate, texts, cancellationToken);
         MoveToReviewWhenEveryMachineIsSubmitted(request, actorId);
         await requestRepository.SaveAsync(request, cancellationToken);
         return await BuildFormAsync(request, item, certificate, actorId, role, cancellationToken, equipment);
@@ -236,7 +237,7 @@ public sealed class MachineInspectionService(
             throw new AuthException("nothing_to_submit", "Every certificate of this job was already submitted.", 409);
 
         foreach (var (item, certificate) in ready)
-            await ApplySubmitAsync(item, certificate, certificate.TextsOf(), cancellationToken);
+            await ApplySubmitAsync(request, item, certificate, certificate.TextsOf(), cancellationToken);
         MoveToReviewWhenEveryMachineIsSubmitted(request, actorId);
         await requestRepository.SaveAsync(request, cancellationToken);
         return await BuildListAsync(request, actorId, role, cancellationToken);
@@ -245,7 +246,7 @@ public sealed class MachineInspectionService(
     // What submitting one certificate does: the standard text, the inspector's name and qualifications, and the QR (made on the first submit
     // and kept, so the technical manager previews the certificate with it).
     private async Task<Item?> ApplySubmitAsync(
-        RequestItem item, InspectionCertificate certificate, IReadOnlyDictionary<string, string> texts, CancellationToken cancellationToken)
+        InspectionRequest request, RequestItem item, InspectionCertificate certificate, IReadOnlyDictionary<string, string> texts, CancellationToken cancellationToken)
     {
         var (match, equipment) = await ResolveAsync(item, cancellationToken);
         var finalTexts = MachineFormRules.WithDefaults(texts);
@@ -260,7 +261,7 @@ public sealed class MachineInspectionService(
         if (certificate.VerificationCode is null)
         {
             var reserved = NewVerificationCode();
-            certificate.ReserveVerification(reserved, (options ?? new CertificateOptions()).VerifyUrl(reserved));
+            certificate.ReserveVerification(reserved, await VerifyUrlAsync(request.ManagerId, reserved, cancellationToken));
         }
 
         return equipment;
@@ -304,7 +305,7 @@ public sealed class MachineInspectionService(
         // The code and QR were reserved on submit and are kept; older submissions get them now.
         var code = certificate.VerificationCode ?? NewVerificationCode();
         certificate.ApproveForm(
-            actorId, reviewer?.FullName ?? string.Empty, number, code, certificate.QrData ?? (options ?? new CertificateOptions()).VerifyUrl(code), signature);
+            actorId, reviewer?.FullName ?? string.Empty, number, code, certificate.QrData ?? await VerifyUrlAsync(request.ManagerId, code, cancellationToken), signature);
         if (approval is { RememberSignature: true } && !string.IsNullOrWhiteSpace(approval.Signature))
             reviewer?.SetSignature(approval.Signature);
 
@@ -1251,6 +1252,13 @@ public sealed class MachineInspectionService(
 
     // Long enough that a code cannot be guessed from the QR of another certificate.
     private static string NewVerificationCode() => Guid.NewGuid().ToString("N")[..16].ToUpperInvariant();
+
+    // The address the QR code opens: the company's own primary verification host when it has one, otherwise the platform address as always.
+    private async Task<string> VerifyUrlAsync(Guid? companyId, string code, CancellationToken cancellationToken)
+    {
+        var host = verificationDomains is not null && companyId is { } id ? await verificationDomains.FindPrimaryHostAsync(id, cancellationToken) : null;
+        return host is null ? (options ?? new CertificateOptions()).VerifyUrl(code) : CertificateOptions.VerifyUrlOn(host, code);
+    }
 
     private static Dictionary<string, T> Merge<T>(IReadOnlyDictionary<string, T> current, IReadOnlyDictionary<string, T> changes)
     {

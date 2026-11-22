@@ -20,12 +20,16 @@ public sealed class VerificationController(ClientCertificateService certificates
 {
     public const string RateLimitPolicy = "verify";
 
+    // The host the request was opened on (no port). Only Request.Host: the proxy keeps the original Host, and X-Forwarded-Host is never read
+    // (the forwarded-headers middleware is configured for X-Forwarded-For and -Proto only), so a caller cannot pick which company's rules apply.
+    private string RequestHost => Request.Host.Host;
+
     /// <summary>The page a person sees after scanning the QR code.</summary>
     [HttpGet("/verify/{code}")]
     [Produces("text/html")]
     public async Task<ContentResult> Page(string code, CancellationToken cancellationToken)
     {
-        var result = await certificates.VerifyAsync(code, DateOnly.FromDateTime(DateTime.UtcNow), cancellationToken);
+        var result = await certificates.VerifyAsync(code, DateOnly.FromDateTime(DateTime.UtcNow), cancellationToken, RequestHost);
         Response.Headers.CacheControl = "no-store";
         // A page of text with one inline style: no scripts, no framing, nothing fetched from elsewhere.
         Response.Headers.ContentSecurityPolicy = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
@@ -42,7 +46,7 @@ public sealed class VerificationController(ClientCertificateService certificates
     [Produces("application/pdf")]
     public async Task<IActionResult> Pdf(string code, CancellationToken cancellationToken)
     {
-        var file = await certificates.GetPdfByCodeAsync(code, cancellationToken);
+        var file = await certificates.GetPdfByCodeAsync(code, cancellationToken, RequestHost);
         if (file is null) return NotFound();
         Response.Headers.CacheControl = "no-store";
         // Inline, so a phone opens it in the browser; the name is used when it is saved.
@@ -56,7 +60,7 @@ public sealed class VerificationController(ClientCertificateService certificates
     [ProducesResponseType<CertificateVerificationResponse>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<CertificateVerificationResponse>> Json(string code, CancellationToken cancellationToken)
     {
-        var result = await certificates.VerifyAsync(code, DateOnly.FromDateTime(DateTime.UtcNow), cancellationToken);
+        var result = await certificates.VerifyAsync(code, DateOnly.FromDateTime(DateTime.UtcNow), cancellationToken, RequestHost);
         Response.Headers.CacheControl = "no-store";
         return result.Valid ? Ok(result) : NotFound(result);
     }

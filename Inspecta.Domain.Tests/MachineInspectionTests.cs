@@ -130,6 +130,59 @@ public sealed class MachineInspectionTests : IDisposable
         Assert.Equal(403, denied.StatusCode);
     }
 
+    // ---- The QR address of a company with its own verification domain --------------------------------------------------
+
+    private void RegisterPrimaryHost(Guid company, string host)
+    {
+        using var db = CreateContext();
+        foreach (var existing in db.CompanyVerificationDomains.Where(value => value.ManagerId == company && value.IsPrimary).ToList()) existing.Demote();
+        db.CompanyVerificationDomains.Add(CompanyVerificationDomain.Create(company, host, isPrimary: true));
+        db.SaveChanges();
+    }
+
+    [Fact]
+    public async Task TheQrOfACompanyWithAPrimaryDomainOpensItsOwnAddressAndStaysSoWhenThePrimaryChangesLater()
+    {
+        RegisterPrimaryHost(manager.Id, "verify.alnoor.example");
+        RegisterPrimaryHost(Guid.NewGuid(), "verify.someone-else.example"); // another company's domain changes nothing here
+        await Start();
+        await Run(service => service.SaveFormAsync(requestId, forkliftItemId, inspector.Id, "inspector", CompleteForm("forklift")));
+        await Run(service => service.SubmitAsync(requestId, forkliftItemId, inspector.Id, "inspector"));
+
+        string reserved;
+        await using (var db = CreateContext())
+        {
+            var certificate = db.Certificates.AsNoTracking().Single(value => value.RequestItemId == forkliftItemId);
+            reserved = certificate.VerificationCode!;
+            Assert.Equal($"https://verify.alnoor.example/verify/{reserved}", certificate.QrData);
+        }
+
+        RegisterPrimaryHost(manager.Id, "certs.alnoor.example"); // a later change does not touch a certificate that already has its QR
+        await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", CompleteForm("basic")));
+        await Run(service => service.SubmitAsync(requestId, chainItemId, inspector.Id, "inspector"));
+        await Run(service => service.ApproveAsync(requestId, forkliftItemId, manager.Id, "technical_manager"));
+
+        await using var check = CreateContext();
+        var forklift = check.Certificates.AsNoTracking().Single(value => value.RequestItemId == forkliftItemId);
+        var chain = check.Certificates.AsNoTracking().Single(value => value.RequestItemId == chainItemId);
+        Assert.Equal($"https://verify.alnoor.example/verify/{reserved}", forklift.QrData);
+        Assert.Equal($"https://certs.alnoor.example/verify/{chain.VerificationCode}", chain.QrData);
+        Assert.Equal(forklift.QrData, check.IssuedCertificateFiles.AsNoTracking().Single(value => value.VerificationCode == reserved).QrData);
+    }
+
+    [Fact]
+    public async Task ACompanyWithoutADomainStillGetsThePlatformAddress()
+    {
+        RegisterPrimaryHost(Guid.NewGuid(), "verify.someone-else.example");
+        await Start();
+        await Run(service => service.SaveFormAsync(requestId, chainItemId, inspector.Id, "inspector", CompleteForm("basic")));
+        await Run(service => service.SubmitAsync(requestId, chainItemId, inspector.Id, "inspector"));
+
+        await using var db = CreateContext();
+        var certificate = db.Certificates.AsNoTracking().Single(value => value.RequestItemId == chainItemId);
+        Assert.Equal($"https://api.gitsplatform.com/verify/{certificate.VerificationCode}", certificate.QrData);
+    }
+
     // The same JSON options as the API (camelCase, snake_case enums).
     private static readonly System.Text.Json.JsonSerializerOptions Json = new(System.Text.Json.JsonSerializerDefaults.Web)
     {
@@ -1719,7 +1772,8 @@ public sealed class MachineInspectionTests : IDisposable
             pdfServices.GetRequiredService<IPdfGenerator>(),
             new EfCertificateFileRepository(db),
             qrCodes: new Inspecta.Infrastructure.Services.QrCodeRenderer(),
-            transactions: new EfTransactionRunner(db));
+            transactions: new EfTransactionRunner(db),
+            verificationDomains: new EfCompanyVerificationDomainRepository(db));
         return await action(service);
     }
 

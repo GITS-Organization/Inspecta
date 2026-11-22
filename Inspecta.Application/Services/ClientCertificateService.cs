@@ -1,3 +1,4 @@
+using Inspecta.Application.Certificates;
 using Inspecta.Application.Contracts.Certificates;
 using Inspecta.Application.Interfaces;
 using Inspecta.Application.Pdf;
@@ -9,7 +10,8 @@ public sealed class ClientCertificateService(
     IClientRepository clientRepository,
     ICertificateFileRepository certificateFiles,
     IQrCodeRenderer? qrCodes = null,
-    ICompanyBrandingProvider? companyBranding = null)
+    ICompanyBrandingProvider? companyBranding = null,
+    ICompanyVerificationDomainRepository? verificationDomains = null)
 {
     /// <summary>The issuer of a certificate drawn with the built-in identity of the first customer.</summary>
     public const string Issuer = "Integrity International Inspection";
@@ -68,13 +70,13 @@ public sealed class ClientCertificateService(
     /// Checks a code from a QR. <c>valid</c> says the certificate was issued by us; <c>status</c> is <c>valid</c> or, once its
     /// next examination date has passed, <c>expired</c>. Shows only what is printed on the certificate itself.
     /// </summary>
-    public async Task<CertificateVerificationResponse> VerifyAsync(string? code, DateOnly today, CancellationToken cancellationToken = default)
+    public async Task<CertificateVerificationResponse> VerifyAsync(string? code, DateOnly today, CancellationToken cancellationToken = default, string? host = null)
     {
         var normalized = Normalize(code);
         if (normalized is null)
             return Unknown();
         var file = await certificateFiles.FindByVerificationCodeAsync(normalized, cancellationToken);
-        if (file is null) return Unknown();
+        if (file is null || !await HostMayShowAsync(host, file.ManagerId, cancellationToken)) return Unknown();
         var expired = file.NextExaminationDate is { } next && next < today;
         return new CertificateVerificationResponse(
             true,
@@ -100,12 +102,23 @@ public sealed class ClientCertificateService(
     /// The issued PDF behind a QR code, for the public page's download button. Anyone holding the code may download it:
     /// the code is 16 random characters and the route is rate limited.
     /// </summary>
-    public async Task<PdfFile?> GetPdfByCodeAsync(string? code, CancellationToken cancellationToken = default)
+    public async Task<PdfFile?> GetPdfByCodeAsync(string? code, CancellationToken cancellationToken = default, string? host = null)
     {
         var normalized = Normalize(code);
         if (normalized is null) return null;
         var file = await certificateFiles.GetByVerificationCodeAsync(normalized, cancellationToken);
-        return file is null ? null : new PdfFile(file.Content, file.FileName);
+        return file is null || !await HostMayShowAsync(host, file.ManagerId, cancellationToken) ? null : new PdfFile(file.Content, file.FileName);
+    }
+
+    /// <summary>
+    /// A host that is registered to a company only shows that company's certificates: a code of another company answers like an unknown
+    /// one. A host nobody registered (the platform address, localhost, anything else) shows any code, as before. <paramref name="host"/> is
+    /// the request host; it is never taken from a forwarded header.
+    /// </summary>
+    private async Task<bool> HostMayShowAsync(string? host, Guid certificateCompanyId, CancellationToken cancellationToken)
+    {
+        if (verificationDomains is null || VerificationHost.Normalize(host) is not { } normalized) return true;
+        return await verificationDomains.FindCompanyIdByHostAsync(normalized, cancellationToken) is not { } owner || owner == certificateCompanyId;
     }
 
     /// <summary>Where the public page downloads the certificate from.</summary>
