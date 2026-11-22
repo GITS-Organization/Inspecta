@@ -4777,6 +4777,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try a different certificate number, quotation or client.'**
   String get sentNoResultsHint;
+
+  /// No description provided for @reportsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
+  String get reportsTitle;
+
+  /// No description provided for @reportsAddAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add report'**
+  String get reportsAddAction;
+
+  /// No description provided for @reportsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No reports attached yet.'**
+  String get reportsEmpty;
+
+  /// No description provided for @reportsEmptyReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'No reports were attached to this job.'**
+  String get reportsEmptyReadOnly;
+
+  /// No description provided for @reportsLimitsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to {files} files, {fileMb} MB each and {totalMb} MB in all. PDF, images, text and Office files.'**
+  String reportsLimitsHint(int files, int fileMb, int totalMb);
+
+  /// No description provided for @reportsExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'These files will be deleted on {date}.'**
+  String reportsExpiry(String date);
+
+  /// No description provided for @reportsWholeJob.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole job'**
+  String get reportsWholeJob;
+
+  /// No description provided for @reportsMachineSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Which machine is this report for?'**
+  String get reportsMachineSheetTitle;
+
+  /// No description provided for @reportsMachineSheetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. Pick “Whole job” if it covers more than one.'**
+  String get reportsMachineSheetHint;
+
+  /// No description provided for @reportsRemoveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this report?'**
+  String get reportsRemoveTitle;
+
+  /// No description provided for @reportsRemoveMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} will be removed from the job.'**
+  String reportsRemoveMessage(String name);
+
+  /// No description provided for @reportsRemoveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get reportsRemoveAction;
+
+  /// No description provided for @reportsRemoveTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove report'**
+  String get reportsRemoveTooltip;
+
+  /// No description provided for @reportsDownloadAllAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Download all (ZIP)'**
+  String get reportsDownloadAllAction;
+
+  /// No description provided for @reportsAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Report added.'**
+  String get reportsAdded;
+
+  /// No description provided for @reportsRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Report removed.'**
+  String get reportsRemoved;
+
+  /// No description provided for @reportsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'File saved.'**
+  String get reportsSaved;
+
+  /// No description provided for @reportsSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The file could not be saved.'**
+  String get reportsSaveFailed;
+
+  /// No description provided for @reportsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'The reports could not be loaded.'**
+  String get reportsLoadError;
+
+  /// No description provided for @reportsErrorForbidden.
+  ///
+  /// In en, this message translates to:
+  /// **'You can\'t do that with this report.'**
+  String get reportsErrorForbidden;
+
+  /// No description provided for @reportsErrorNotTheReviewer.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the technical manager reviewing this job can remove this report.'**
+  String get reportsErrorNotTheReviewer;
+
+  /// No description provided for @reportsErrorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'That report is no longer there. Refresh and try again.'**
+  String get reportsErrorNotFound;
+
+  /// No description provided for @reportsErrorLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports can\'t be changed now: the job is no longer in progress or returned.'**
+  String get reportsErrorLocked;
+
+  /// No description provided for @reportsErrorLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'The job has reached its report limit. Remove a file first.'**
+  String get reportsErrorLimit;
+
+  /// No description provided for @reportsErrorNotApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports are available once the certificates are approved.'**
+  String get reportsErrorNotApproved;
+
+  /// No description provided for @reportsErrorBadRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'The file was refused. Check its type and size.'**
+  String get reportsErrorBadRequest;
+
+  /// No description provided for @reportsErrorType.
+  ///
+  /// In en, this message translates to:
+  /// **'That file type isn\'t accepted. Use PDF, PNG, JPG, GIF, TXT, CSV or an Office file.'**
+  String get reportsErrorType;
+
+  /// No description provided for @reportsErrorHeic.
+  ///
+  /// In en, this message translates to:
+  /// **'HEIC photos aren\'t accepted. Convert it to JPEG first.'**
+  String get reportsErrorHeic;
+
+  /// No description provided for @reportsErrorEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'That file is empty.'**
+  String get reportsErrorEmpty;
+
+  /// No description provided for @reportsErrorTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'That file is over {mb} MB.'**
+  String reportsErrorTooLarge(int mb);
+
+  /// No description provided for @reportsErrorUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'That file could not be read.'**
+  String get reportsErrorUnreadable;
+
+  /// No description provided for @deliveryReportsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports from the inspector'**
+  String get deliveryReportsTitle;
+
+  /// No description provided for @deliveryReportsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'They are sent with the certificates. Untick any you don\'t want to send.'**
+  String get deliveryReportsHint;
+
+  /// No description provided for @deliveryEmailSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Email size: {size} of {limit}'**
+  String deliveryEmailSize(String size, String limit);
+
+  /// No description provided for @deliveryEmailTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'With these reports the email is over the {limit} limit. Untick some reports.'**
+  String deliveryEmailTooLarge(String limit);
+
+  /// No description provided for @deliveryErrorEmailTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'The email is too large with these reports. Nothing was sent. Untick some reports and send again.'**
+  String get deliveryErrorEmailTooLarge;
 }
 
 class _AppLocalizationsDelegate

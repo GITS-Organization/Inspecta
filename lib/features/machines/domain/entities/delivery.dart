@@ -18,6 +18,9 @@ class DeliveryCertificate extends Equatable {
   /// (`/quotation-queue/{id}/machines/{itemId}/pdf`).
   final String? pdfUrl;
 
+  /// The PDF's size, counted against the email's size limit.
+  final int sizeBytes;
+
   const DeliveryCertificate({
     required this.number,
     this.requestItemId,
@@ -27,6 +30,7 @@ class DeliveryCertificate extends Equatable {
     this.nextExaminationDate,
     this.checkUrl,
     this.pdfUrl,
+    this.sizeBytes = 0,
   });
 
   @override
@@ -39,7 +43,26 @@ class DeliveryCertificate extends Equatable {
     nextExaminationDate,
     checkUrl,
     pdfUrl,
+    sizeBytes,
   ];
+}
+
+/// One of the inspector's report files the delivery email carries, as the
+/// preview lists it. The coordinator can untick it to leave it out.
+class DeliveryReport extends Equatable {
+  final String id;
+
+  /// The name it will have in the email.
+  final String fileName;
+  final int sizeBytes;
+
+  /// Null for the job as a whole.
+  final String? machineName;
+
+  const DeliveryReport({required this.id, required this.fileName, required this.sizeBytes, this.machineName});
+
+  @override
+  List<Object?> get props => [id, fileName, sizeBytes, machineName];
 }
 
 /// The email that would go to the client with the job's certificates
@@ -57,6 +80,21 @@ class DeliveryPreview extends Equatable {
   final bool canSend;
   final List<String> blockers;
 
+  /// The inspector's reports, all ticked to go unless the coordinator unticks
+  /// them; empty when the job has none.
+  final List<DeliveryReport> reports;
+
+  /// The most the email may weigh when it carries reports: the certificate
+  /// PDFs plus the ticked reports, in raw bytes (17 MB by default).
+  final int maxEmailBytes;
+
+  /// What the API says when the certificates and every report together are
+  /// over [maxEmailBytes]. It is a warning the coordinator clears by
+  /// unticking, not a reason to stop.
+  static const reportsBlockerMarker = 'Untick some reports';
+
+  static const defaultMaxEmailBytes = 17825792;
+
   const DeliveryPreview({
     this.to,
     this.cc = const [],
@@ -65,10 +103,34 @@ class DeliveryPreview extends Equatable {
     this.certificates = const [],
     this.canSend = false,
     this.blockers = const [],
+    this.reports = const [],
+    this.maxEmailBytes = defaultMaxEmailBytes,
   });
 
+  /// The blockers that unticking reports clears.
+  List<String> get reportBlockers => [
+    for (final blocker in blockers)
+      if (blocker.contains(reportsBlockerMarker)) blocker,
+  ];
+
+  /// The blockers that stay whatever is ticked.
+  List<String> get hardBlockers => [
+    for (final blocker in blockers)
+      if (!blocker.contains(reportsBlockerMarker)) blocker,
+  ];
+
   @override
-  List<Object?> get props => [to, cc, subject, body, certificates, canSend, blockers];
+  List<Object?> get props => [
+    to,
+    cc,
+    subject,
+    body,
+    certificates,
+    canSend,
+    blockers,
+    reports,
+    maxEmailBytes,
+  ];
 }
 
 /// What went out when a job was delivered (`POST …/deliver-to-client`, or the

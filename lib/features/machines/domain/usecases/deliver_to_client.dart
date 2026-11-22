@@ -13,5 +13,13 @@ class DeliverToClient {
     List<String>? cc,
     String? subject,
     String? message,
-  }) => _repository.deliverToClient(requestId, sentTo: sentTo, cc: cc, subject: subject, message: message);
+    List<String>? excludedReportIds,
+  }) => _repository.deliverToClient(
+    requestId,
+    sentTo: sentTo,
+    cc: cc,
+    subject: subject,
+    message: message,
+    excludedReportIds: excludedReportIds,
+  );
 }

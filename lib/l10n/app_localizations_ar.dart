@@ -2659,4 +2659,133 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get sentNoResultsHint => 'جرّب رقم شهادة أو عرض أو عميل مختلفًا.';
+
+  @override
+  String get reportsTitle => 'التقارير';
+
+  @override
+  String get reportsAddAction => 'إضافة تقرير';
+
+  @override
+  String get reportsEmpty => 'لم يتم إرفاق أي تقارير بعد.';
+
+  @override
+  String get reportsEmptyReadOnly => 'لم يتم إرفاق أي تقارير بهذه المهمة.';
+
+  @override
+  String reportsLimitsHint(int files, int fileMb, int totalMb) {
+    return 'حتى $files ملفًا، بحد أقصى $fileMb ميغابايت للملف و$totalMb ميغابايت إجمالًا. ملفات PDF وصور ونصوص وملفات Office.';
+  }
+
+  @override
+  String reportsExpiry(String date) {
+    return 'سيتم حذف هذه الملفات في $date.';
+  }
+
+  @override
+  String get reportsWholeJob => 'المهمة كاملة';
+
+  @override
+  String get reportsMachineSheetTitle => 'لأي معدة هذا التقرير؟';
+
+  @override
+  String get reportsMachineSheetHint =>
+      'اختياري. اختر «المهمة كاملة» إذا كان يشمل أكثر من معدة.';
+
+  @override
+  String get reportsRemoveTitle => 'إزالة هذا التقرير؟';
+
+  @override
+  String reportsRemoveMessage(String name) {
+    return 'ستتم إزالة $name من المهمة.';
+  }
+
+  @override
+  String get reportsRemoveAction => 'إزالة';
+
+  @override
+  String get reportsRemoveTooltip => 'إزالة التقرير';
+
+  @override
+  String get reportsDownloadAllAction => 'تنزيل الكل (ZIP)';
+
+  @override
+  String get reportsAdded => 'تمت إضافة التقرير.';
+
+  @override
+  String get reportsRemoved => 'تمت إزالة التقرير.';
+
+  @override
+  String get reportsSaved => 'تم حفظ الملف.';
+
+  @override
+  String get reportsSaveFailed => 'تعذّر حفظ الملف.';
+
+  @override
+  String get reportsLoadError => 'تعذّر تحميل التقارير.';
+
+  @override
+  String get reportsErrorForbidden =>
+      'لا يمكنك تنفيذ هذا الإجراء على هذا التقرير.';
+
+  @override
+  String get reportsErrorNotTheReviewer =>
+      'يمكن للمدير الفني الذي يراجع هذه المهمة فقط إزالة هذا التقرير.';
+
+  @override
+  String get reportsErrorNotFound =>
+      'هذا التقرير لم يعد موجودًا. حدّث الصفحة وحاول مرة أخرى.';
+
+  @override
+  String get reportsErrorLocked =>
+      'لا يمكن تغيير التقارير الآن: المهمة لم تعد قيد التنفيذ أو معادة.';
+
+  @override
+  String get reportsErrorLimit =>
+      'وصلت المهمة إلى حد التقارير. أزل ملفًا أولًا.';
+
+  @override
+  String get reportsErrorNotApproved => 'تتوفر التقارير بعد اعتماد الشهادات.';
+
+  @override
+  String get reportsErrorBadRequest => 'تم رفض الملف. تحقق من نوعه وحجمه.';
+
+  @override
+  String get reportsErrorType =>
+      'نوع الملف غير مقبول. استخدم PDF أو PNG أو JPG أو GIF أو TXT أو CSV أو ملف Office.';
+
+  @override
+  String get reportsErrorHeic => 'صور HEIC غير مقبولة. حوّلها إلى JPEG أولًا.';
+
+  @override
+  String get reportsErrorEmpty => 'هذا الملف فارغ.';
+
+  @override
+  String reportsErrorTooLarge(int mb) {
+    return 'حجم هذا الملف يتجاوز $mb ميغابايت.';
+  }
+
+  @override
+  String get reportsErrorUnreadable => 'تعذّرت قراءة هذا الملف.';
+
+  @override
+  String get deliveryReportsTitle => 'تقارير المفتش';
+
+  @override
+  String get deliveryReportsHint =>
+      'تُرسل مع الشهادات. ألغِ تحديد ما لا تريد إرساله.';
+
+  @override
+  String deliveryEmailSize(String size, String limit) {
+    return 'حجم البريد: $size من $limit';
+  }
+
+  @override
+  String deliveryEmailTooLarge(String limit) {
+    return 'مع هذه التقارير يتجاوز البريد الحد المسموح ($limit). ألغِ تحديد بعض التقارير.';
+  }
+
+  @override
+  String get deliveryErrorEmailTooLarge =>
+      'البريد كبير جدًا مع هذه التقارير. لم يُرسل شيء. ألغِ تحديد بعض التقارير وأرسل مرة أخرى.';
 }

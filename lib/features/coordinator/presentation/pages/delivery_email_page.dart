@@ -10,6 +10,7 @@ import '../../../../core/shared/m_card.dart';
 import '../../../../core/shared/m_notice.dart';
 import '../../../../core/shared/m_primary_button.dart';
 import '../../../../core/shared/m_text_field.dart';
+import '../../../../core/utils/file_size.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/pdf_preview_page.dart';
 import '../../../../injection.dart';
@@ -176,6 +177,7 @@ class _EmailViewState extends State<_EmailView> {
                     previous.preview != current.preview ||
                     previous.cc != current.cc ||
                     previous.isSending != current.isSending ||
+                    previous.excludedReportIds != current.excludedReportIds ||
                     previous.to != current.to,
                 builder: (context, state) {
                   if (state.status == DeliveryEmailStatus.error) {
@@ -210,11 +212,13 @@ class _EmailViewState extends State<_EmailView> {
                     keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                     children: [
-                      if (preview.blockers.isNotEmpty) ...[
+                      // The "too large" blocker is not here: unticking reports
+                      // clears it, so it is a warning under the reports.
+                      if (preview.hardBlockers.isNotEmpty) ...[
                         MNotice(
                           type: MNoticeType.error,
                           title: t.emailCannotSendTitle,
-                          message: preview.blockers.join('\n'),
+                          message: preview.hardBlockers.join('\n'),
                         ),
                         const SizedBox(height: 12),
                       ],
@@ -338,6 +342,71 @@ class _EmailViewState extends State<_EmailView> {
                                       : () => _previewPdf(certificate),
                                 ),
                               ],
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (preview.reports.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Text(t.deliveryReportsTitle, style: AppTextStyles.sectionTitle),
+                        ),
+                        const SizedBox(height: 4),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Text(t.deliveryReportsHint, style: AppTextStyles.caption),
+                        ),
+                        const SizedBox(height: 12),
+                        MCard(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              for (final report in preview.reports)
+                                CheckboxListTile(
+                                  value: !state.excludedReportIds.contains(report.id),
+                                  onChanged: state.isSending ? null : (_) => cubit.toggleReport(report.id),
+                                  controlAffinity: ListTileControlAffinity.leading,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                                  title: Text(
+                                    report.fileName,
+                                    style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  subtitle: Text(
+                                    [formatFileSize(report.sizeBytes), if (report.machineName != null) report.machineName!]
+                                        .join(' · '),
+                                    style: AppTextStyles.caption,
+                                  ),
+                                ),
+                              const Divider(height: 16, color: AppColours.borderSubtle),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                                child: Text(
+                                  t.deliveryEmailSize(
+                                    formatFileSize(state.emailBytes),
+                                    formatFileSize(preview.maxEmailBytes),
+                                  ),
+                                  style: AppTextStyles.caption.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: state.isOverSizeLimit ? AppColours.errorText : null,
+                                  ),
+                                ),
+                              ),
+                              // Over the limit: said here, with the way out. The
+                              // API's own "too large" blocker says the same when
+                              // the sizes weren't enough to tell.
+                              if (state.includedReports.isNotEmpty &&
+                                  (state.isOverSizeLimit || preview.reportBlockers.isNotEmpty))
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
+                                  child: MNotice(
+                                    type: MNoticeType.error,
+                                    message: t.deliveryEmailTooLarge(formatFileSize(preview.maxEmailBytes)),
+                                  ),
+                                ),
                             ],
                           ),
                         ),

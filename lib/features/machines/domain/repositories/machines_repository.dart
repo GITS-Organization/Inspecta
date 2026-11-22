@@ -55,14 +55,17 @@ abstract interface class MachinesRepository {
   /// The coordinator hands the job's certificates to the client by email: the
   /// job becomes sent to client. Every part is optional — pass only what the
   /// coordinator edited ([sentTo], up to ten [cc] addresses, [subject], the
-  /// text in [message]); the rest is what the preview said. Throws a
-  /// [DeliveryFailure] when the email can't go out.
+  /// text in [message]); the rest is what the preview said. The inspector's
+  /// reports go with the certificates unless their ids are in
+  /// [excludedReportIds]. Throws a [DeliveryFailure] when the email can't go
+  /// out — `emailTooLarge` when the ticked reports make it too big.
   Future<DeliveryResult> deliverToClient(
     String requestId, {
     String? sentTo,
     List<String>? cc,
     String? subject,
     String? message,
+    List<String>? excludedReportIds,
   });
 
   /// The machine's certificate PDF as the API renders it: marked DRAFT until

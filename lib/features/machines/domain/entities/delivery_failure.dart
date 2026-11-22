@@ -14,6 +14,10 @@ enum DeliveryFailureCode {
   /// sending again is safe.
   mailRefused,
 
+  /// 409 `email_too_large`: with the ticked reports the email is over the size
+  /// limit. Nothing was sent or changed; unticking some reports fixes it.
+  emailTooLarge,
+
   /// The job changed under the coordinator (already sent, no longer ready).
   conflict,
   unknown,

@@ -2666,4 +2666,135 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get sentNoResultsHint =>
       'Try a different certificate number, quotation or client.';
+
+  @override
+  String get reportsTitle => 'Reports';
+
+  @override
+  String get reportsAddAction => 'Add report';
+
+  @override
+  String get reportsEmpty => 'No reports attached yet.';
+
+  @override
+  String get reportsEmptyReadOnly => 'No reports were attached to this job.';
+
+  @override
+  String reportsLimitsHint(int files, int fileMb, int totalMb) {
+    return 'Up to $files files, $fileMb MB each and $totalMb MB in all. PDF, images, text and Office files.';
+  }
+
+  @override
+  String reportsExpiry(String date) {
+    return 'These files will be deleted on $date.';
+  }
+
+  @override
+  String get reportsWholeJob => 'Whole job';
+
+  @override
+  String get reportsMachineSheetTitle => 'Which machine is this report for?';
+
+  @override
+  String get reportsMachineSheetHint =>
+      'Optional. Pick “Whole job” if it covers more than one.';
+
+  @override
+  String get reportsRemoveTitle => 'Remove this report?';
+
+  @override
+  String reportsRemoveMessage(String name) {
+    return '$name will be removed from the job.';
+  }
+
+  @override
+  String get reportsRemoveAction => 'Remove';
+
+  @override
+  String get reportsRemoveTooltip => 'Remove report';
+
+  @override
+  String get reportsDownloadAllAction => 'Download all (ZIP)';
+
+  @override
+  String get reportsAdded => 'Report added.';
+
+  @override
+  String get reportsRemoved => 'Report removed.';
+
+  @override
+  String get reportsSaved => 'File saved.';
+
+  @override
+  String get reportsSaveFailed => 'The file could not be saved.';
+
+  @override
+  String get reportsLoadError => 'The reports could not be loaded.';
+
+  @override
+  String get reportsErrorForbidden => 'You can\'t do that with this report.';
+
+  @override
+  String get reportsErrorNotTheReviewer =>
+      'Only the technical manager reviewing this job can remove this report.';
+
+  @override
+  String get reportsErrorNotFound =>
+      'That report is no longer there. Refresh and try again.';
+
+  @override
+  String get reportsErrorLocked =>
+      'Reports can\'t be changed now: the job is no longer in progress or returned.';
+
+  @override
+  String get reportsErrorLimit =>
+      'The job has reached its report limit. Remove a file first.';
+
+  @override
+  String get reportsErrorNotApproved =>
+      'Reports are available once the certificates are approved.';
+
+  @override
+  String get reportsErrorBadRequest =>
+      'The file was refused. Check its type and size.';
+
+  @override
+  String get reportsErrorType =>
+      'That file type isn\'t accepted. Use PDF, PNG, JPG, GIF, TXT, CSV or an Office file.';
+
+  @override
+  String get reportsErrorHeic =>
+      'HEIC photos aren\'t accepted. Convert it to JPEG first.';
+
+  @override
+  String get reportsErrorEmpty => 'That file is empty.';
+
+  @override
+  String reportsErrorTooLarge(int mb) {
+    return 'That file is over $mb MB.';
+  }
+
+  @override
+  String get reportsErrorUnreadable => 'That file could not be read.';
+
+  @override
+  String get deliveryReportsTitle => 'Reports from the inspector';
+
+  @override
+  String get deliveryReportsHint =>
+      'They are sent with the certificates. Untick any you don\'t want to send.';
+
+  @override
+  String deliveryEmailSize(String size, String limit) {
+    return 'Email size: $size of $limit';
+  }
+
+  @override
+  String deliveryEmailTooLarge(String limit) {
+    return 'With these reports the email is over the $limit limit. Untick some reports.';
+  }
+
+  @override
+  String get deliveryErrorEmailTooLarge =>
+      'The email is too large with these reports. Nothing was sent. Untick some reports and send again.';
 }

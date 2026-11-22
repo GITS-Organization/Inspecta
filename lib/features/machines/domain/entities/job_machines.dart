@@ -152,6 +152,12 @@ class JobMachines extends Equatable {
   /// What went out to the client; null until the job has been delivered.
   final DeliveryResult? delivery;
 
+  /// How many report files the inspector attached to the job (0 for a
+  /// coordinator until the job is approved), and whether the current user may
+  /// add one now.
+  final int reportCount;
+  final bool canUploadReports;
+
   const JobMachines({
     required this.requestId,
     required this.requestStatus,
@@ -167,6 +173,8 @@ class JobMachines extends Equatable {
     this.reviewBlockers = const [],
     this.reviewHistory = const [],
     this.delivery,
+    this.reportCount = 0,
+    this.canUploadReports = false,
   });
 
   @override
@@ -185,5 +193,7 @@ class JobMachines extends Equatable {
     reviewBlockers,
     reviewHistory,
     delivery,
+    reportCount,
+    canUploadReports,
   ];
 }

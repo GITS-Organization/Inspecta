@@ -21,6 +21,7 @@ import '../../../machines/presentation/widgets/machine_widgets.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/domain/entities/request_source.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
+import '../../../job_reports/presentation/widgets/job_reports_section.dart';
 import '../bloc/review_summary_cubit.dart';
 import '../widgets/return_note_dialog.dart';
 import '../widgets/review_machine_ticket.dart';
@@ -159,6 +160,10 @@ class _Body extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
               ],
+            // The inspector's report files, which the reviewer can read and
+            // remove; they are never part of a certificate.
+            JobReportsSection(requestId: state.request.id, machines: state.machines),
+            const SizedBox(height: 16),
             // When approving isn't possible, these are why — shown in place of
             // the Approve button.
             if (state.canReview &&

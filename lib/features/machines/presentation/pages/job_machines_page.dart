@@ -23,6 +23,7 @@ import '../../../certificate/domain/certificate_number.dart';
 import '../../../certificate/presentation/pages/certificate_page.dart';
 import '../../../inspector/presentation/widgets/inspector_design.dart';
 import '../../../inspector/presentation/widgets/inspector_machine_ticket.dart';
+import '../../../job_reports/presentation/widgets/job_reports_section.dart';
 import '../../../requests/domain/entities/inspection_request.dart';
 import '../../../requests/domain/entities/requests_failure.dart';
 import '../../../requests/presentation/widgets/requests_labels.dart';
@@ -289,6 +290,10 @@ class _Body extends StatelessWidget {
                         _card(context, job, machine),
                         SizedBox(height: inspectorLook ? 14 : 12),
                       ],
+                    // The report files attached to the job: shown when there
+                    // are some, or when this user may add one.
+                    if (job.canUploadReports || job.reportCount > 0)
+                      JobReportsSection(requestId: request.id, machines: job.machines),
                   ],
                 ),
               ),

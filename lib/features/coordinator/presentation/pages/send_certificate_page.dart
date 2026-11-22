@@ -15,6 +15,7 @@ import '../../../../core/widgets/pdf_preview_page.dart';
 import '../../../../injection.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../certificate/domain/certificate_number.dart';
+import '../../../job_reports/presentation/widgets/job_reports_section.dart';
 import '../../../machines/domain/entities/delivery.dart';
 import '../../../machines/domain/entities/job_machines.dart';
 import '../../../machines/domain/entities/machine_status.dart';
@@ -133,6 +134,9 @@ class _SendView extends StatelessWidget {
                         _CertificateCard(machine: machine, onOpen: () => _viewPdf(context, machine)),
                         const SizedBox(height: 12),
                       ],
+                      // The inspector's reports go with the certificates; here
+                      // they can be read and downloaded (read only).
+                      JobReportsSection(requestId: request.id, machines: state.certificates),
                     ],
                   ),
                 );

@@ -9,6 +9,7 @@ extension DeliveryFailureMessage on DeliveryFailureCode {
     DeliveryFailureCode.invalidAddress => t.deliveryErrorInvalidAddress,
     DeliveryFailureCode.noRecipient => t.deliveryErrorNoRecipient,
     DeliveryFailureCode.mailRefused => t.deliveryErrorMailRefused,
+    DeliveryFailureCode.emailTooLarge => t.deliveryErrorEmailTooLarge,
     DeliveryFailureCode.conflict => t.deliveryErrorConflict,
     DeliveryFailureCode.unknown => t.actionFailed,
   };

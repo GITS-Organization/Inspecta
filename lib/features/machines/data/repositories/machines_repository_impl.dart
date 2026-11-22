@@ -154,13 +154,16 @@ class MachinesRepositoryImpl implements MachinesRepository {
     List<String>? cc,
     String? subject,
     String? message,
+    List<String>? excludedReportIds,
   }) async {
-    // Every part is optional: what is left out is what the preview said.
+    // Every part is optional: what is left out is what the preview said. With
+    // no `excludedReportIds` every report goes.
     final body = <String, dynamic>{
       if (sentTo != null && sentTo.isNotEmpty) 'sentTo': sentTo,
       if (cc != null) 'cc': cc,
       if (subject != null && subject.isNotEmpty) 'subject': subject,
       if (message != null && message.isNotEmpty) 'message': message,
+      if (excludedReportIds != null && excludedReportIds.isNotEmpty) 'excludedReportIds': excludedReportIds,
     };
     final result = await _safeApi(
       () async => MachinesParser.deliveryResult(await _api.deliverToClient(requestId, body)),
@@ -178,6 +181,9 @@ class MachinesRepositoryImpl implements MachinesRepository {
     return switch (error.response?.statusCode) {
       400 => const DeliveryFailure(DeliveryFailureCode.invalidAddress),
       409 when data is Map && data['code'] == 'no_recipient' => const DeliveryFailure(DeliveryFailureCode.noRecipient),
+      409 when data is Map && data['code'] == 'email_too_large' => const DeliveryFailure(
+        DeliveryFailureCode.emailTooLarge,
+      ),
       502 => const DeliveryFailure(DeliveryFailureCode.mailRefused),
       _ => null,
     };

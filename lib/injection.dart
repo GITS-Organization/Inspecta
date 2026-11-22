@@ -36,6 +36,15 @@ import 'features/coordinator/data/repositories/coordinator_repository_impl.dart'
 import 'features/coordinator/domain/repositories/coordinator_repository.dart';
 import 'features/coordinator/domain/usecases/list_inspectors.dart';
 import 'features/coordinator/presentation/bloc/assign_inspector_cubit.dart';
+import 'features/job_reports/data/datasources/job_reports_api_client_services.dart';
+import 'features/job_reports/data/repositories/job_reports_repository_impl.dart';
+import 'features/job_reports/domain/repositories/job_reports_repository.dart';
+import 'features/job_reports/domain/usecases/delete_job_report.dart';
+import 'features/job_reports/domain/usecases/download_job_report.dart';
+import 'features/job_reports/domain/usecases/download_job_reports_zip.dart';
+import 'features/job_reports/domain/usecases/get_job_reports.dart';
+import 'features/job_reports/domain/usecases/upload_job_report.dart';
+import 'features/job_reports/presentation/bloc/job_reports_cubit.dart';
 import 'features/machines/data/datasources/machines_api_client_services.dart';
 import 'features/machines/data/repositories/machines_repository_impl.dart';
 import 'features/machines/domain/repositories/machines_repository.dart';
@@ -116,6 +125,7 @@ Future<void> setupDependencies() async {
   _registerCoordinator();
   _registerQueue();
   _registerMachines();
+  _registerJobReports();
   _registerProfile(storage);
   _registerInspector();
   _registerCertificate();
@@ -254,6 +264,27 @@ void _registerMachines() {
         getMachines: getIt(),
         startInspection: getIt(),
         submitAll: getIt(),
+      ),
+    );
+}
+
+void _registerJobReports() {
+  getIt
+    ..registerLazySingleton(() => JobReportsApiClientServices(DioFactory.getDio()))
+    ..registerLazySingleton<JobReportsRepository>(() => JobReportsRepositoryImpl(getIt()))
+    ..registerLazySingleton(() => GetJobReports(getIt()))
+    ..registerLazySingleton(() => UploadJobReport(getIt()))
+    ..registerLazySingleton(() => DeleteJobReport(getIt()))
+    ..registerLazySingleton(() => DownloadJobReport(getIt()))
+    ..registerLazySingleton(() => DownloadJobReportsZip(getIt()))
+    ..registerFactoryParam<JobReportsCubit, String, void>(
+      (requestId, _) => JobReportsCubit(
+        requestId: requestId,
+        getJobReports: getIt(),
+        uploadJobReport: getIt(),
+        deleteJobReport: getIt(),
+        downloadJobReport: getIt(),
+        downloadJobReportsZip: getIt(),
       ),
     );
 }

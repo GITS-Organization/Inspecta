@@ -50,8 +50,16 @@ class MachinesParser {
       nextExaminationDate: _pick(json, ['nextExaminationDate', 'nextExaminationDue']),
       checkUrl: _pick(json, ['checkUrl', 'verifyUrl', 'verificationUrl', 'qrUrl']),
       pdfUrl: pdfUrl,
+      sizeBytes: _int(json['sizeBytes']),
     );
   }
+
+  static DeliveryReport _deliveryReport(Map<String, dynamic> json) => DeliveryReport(
+    id: _string(json['id']),
+    fileName: _string(json['fileName']),
+    sizeBytes: _int(json['sizeBytes']),
+    machineName: _nullableString(json['machineName']),
+  );
 
   static DeliveryPreview deliveryPreview(Map<String, dynamic> json) {
     final to = json['to'];
@@ -71,6 +79,12 @@ class MachinesParser {
       // Without a flag, the email can go unless the API names a blocker.
       canSend: json['canSend'] is bool ? json['canSend'] as bool : blockers.isEmpty,
       blockers: blockers,
+      reports: [for (final report in _maps(json['reports'])) _deliveryReport(report)]
+          .where((report) => report.id.isNotEmpty)
+          .toList(),
+      maxEmailBytes: json['maxEmailBytes'] is num && (json['maxEmailBytes'] as num) > 0
+          ? (json['maxEmailBytes'] as num).toInt()
+          : DeliveryPreview.defaultMaxEmailBytes,
     );
   }
 
@@ -192,6 +206,8 @@ class MachinesParser {
             if (_comment(entry) case final comment?) comment,
       ],
       delivery: _delivery(json['delivery']),
+      reportCount: _int(json['reportCount']),
+      canUploadReports: _bool(json['canUploadReports']),
     );
   }
 

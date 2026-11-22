@@ -88,6 +88,14 @@ class DeliveryEmailCubit extends Cubit<DeliveryEmailState> {
 
   void removeCc(String address) => emit(state.copyWith(cc: [...state.cc]..remove(address)));
 
+  /// Ticks or unticks a report: an unticked one stays out of the email.
+  void toggleReport(String reportId) {
+    if (state.isSending) return;
+    final excluded = {...state.excludedReportIds};
+    if (!excluded.remove(reportId)) excluded.add(reportId);
+    emit(state.copyWith(excludedReportIds: excluded));
+  }
+
   Future<void> send() async {
     final preview = state.preview;
     if (preview == null || !state.canSend) return;
@@ -105,6 +113,8 @@ class DeliveryEmailCubit extends Cubit<DeliveryEmailState> {
         cc: listEquals(state.cc, preview.cc) ? null : state.cc,
         subject: subject == preview.subject.trim() ? null : subject,
         message: body == preview.body.trim() ? null : body,
+        // Left out when every report is ticked: they all go by default.
+        excludedReportIds: state.excludedReportIds.isEmpty ? null : state.excludedReportIds.toList(),
       );
       if (isClosed) return;
       emit(
