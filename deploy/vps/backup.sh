@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Daily database backup: a compressed pg_dump kept in ./backups (the newest BACKUP_KEEP_DAYS days).
-# If RCLONE_REMOTE is set in .env (for example a storage box or S3-compatible bucket configured with `rclone config`), each dump is also copied there.
+# If RCLONE_REMOTE is set in .env to a full rclone destination such as `b2backup:my-bucket/inspecta` (a remote made with `rclone config`), each dump is also copied there and copies older than BACKUP_KEEP_DAYS are pruned.
 # Run by hand or by cron (see RUNBOOK.md). The exit code is not 0 when the backup or the off-server copy failed.
 set -euo pipefail
 umask 077
@@ -28,9 +28,9 @@ echo "Backup written: ${FILE} ($(du -h "${FILE}" | cut -f1))"
 
 if [ -n "${RCLONE_REMOTE}" ]; then
   # Not part of an && list: a failed copy must fail the whole script.
-  rclone copy "${FILE}" "${RCLONE_REMOTE}:inspecta-backups/"
+  rclone copy "${FILE}" "${RCLONE_REMOTE}"
   echo "Copied to ${RCLONE_REMOTE}"
-  rclone delete "${RCLONE_REMOTE}:inspecta-backups/" --min-age "${KEEP}d" || echo "Could not prune old copies on ${RCLONE_REMOTE} (not fatal)."
+  rclone delete "${RCLONE_REMOTE}" --min-age "${KEEP}d" || echo "Could not prune old copies on ${RCLONE_REMOTE} (not fatal)."
 fi
 
 # Keep the newest KEEP days here, and drop failed partial files older than a day.

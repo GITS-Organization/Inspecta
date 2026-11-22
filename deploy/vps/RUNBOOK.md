@@ -80,7 +80,13 @@ docker compose logs api --tail 50
 crontab -e                        # ضيف السطر ده:
 0 3 * * * /home/deploy/inspecta/deploy/vps/backup.sh >> /home/deploy/backup.log 2>&1
 ```
-**نسخة خارج السيرفر:** اعمل مكان تخزين خارجي رخيص (**Hetzner Storage Box** حوالي 4 يورو، أو أي bucket متوافق مع S3 زي Backblaze B2 أو Cloudflare R2)، اضبطه بـ `rclone config` (اسم الـ remote مثلًا `storagebox`) وحط الاسم في `RCLONE_REMOTE` في `.env`. من غير ده النسخ بتفضل على نفس السيرفر.
+**نسخة خارج السيرفر (Backblaze B2):**
+1. اعمل حساب على Backblaze، واعمل **Bucket** خاص (Private)، اسمه فريد (مثلًا `inspecta-backups-<أي-حروف-عشوائية>`)، وفعّل **Default Encryption**.
+2. اعمل **Application Key** مقصور على الـ bucket ده بس (Read and Write): هيديك `keyID` و`applicationKey` (بتظهر مرة واحدة، احفظها في مدير كلمات السر، **ما تبعتهاش في شات**).
+3. على السيرفر: `rclone config` ثم `n` (new remote) ثم الاسم `b2backup` والنوع `b2`، وحط `keyID` كـ account وال`applicationKey` كـ key، وسيب الباقي افتراضي.
+4. جرّب: `rclone lsd b2backup:` المفروض يعرض الـ bucket.
+5. في `.env`: `RCLONE_REMOTE=b2backup:<اسم-الـ-bucket>/inspecta` ثم `./backup.sh` وتأكد إن آخر سطر `Copied to ...`، و`rclone ls b2backup:<اسم-الـ-bucket>/inspecta` يعرض الملف.
+النسخ الأقدم من `BACKUP_KEEP_DAYS` بتتمسح تلقائي من الـ bucket كمان. الـ backup بيحتوي بيانات العملاء، فخلّي الـ bucket Private ومفتاح الـ API مقصور عليه.
 جرّب الاسترجاع مرة كل شهر.
 
 ## 8) تجربة قبل التحويل (على العنوان التجريبي)
