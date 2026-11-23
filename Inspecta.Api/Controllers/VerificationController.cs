@@ -77,6 +77,8 @@ public sealed class VerificationController(ClientCertificateService certificates
             _ => ("#c53030", "Certificate not found")
         };
         var body = new StringBuilder();
+        // The company that issued the certificate is named first, large, so whoever scans the QR code sees whose certificate it is.
+        if (result.Valid && !string.IsNullOrWhiteSpace(result.IssuedBy)) body.Append($"<div class=\"brand\">{H(result.IssuedBy)}</div>");
         body.Append($"<h1 style=\"color:{colour}\">{headline}</h1>");
         if (result.Valid)
         {
@@ -102,7 +104,7 @@ public sealed class VerificationController(ClientCertificateService certificates
                "<title>Certificate verification</title><style>" +
                "body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#f4f6fa;margin:0;padding:24px;color:#1b2433}" +
                ".card{max-width:520px;margin:24px auto;background:#fff;border:1px solid #dbe3ef;border-radius:10px;padding:22px}" +
-               "h1{font-size:20px;margin:0 0 14px}table{width:100%;border-collapse:collapse}" +
+               ".brand{font-size:18px;font-weight:700;color:#184896;margin:0 0 4px}h1{font-size:20px;margin:0 0 14px}table{width:100%;border-collapse:collapse}" +
                "th{text-align:left;color:#5b6b85;font-weight:600;padding:6px 8px 6px 0;width:42%}td{padding:6px 0}" +
                "tr+tr{border-top:1px solid #edf1f7}.foot{margin-top:16px;color:#5b6b85;font-size:12px}" +
                ".button{display:block;margin-top:18px;padding:12px;border-radius:8px;background:#2b66a6;color:#fff;text-align:center;font-weight:600;text-decoration:none}" +

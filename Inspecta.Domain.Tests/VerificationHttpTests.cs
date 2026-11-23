@@ -85,6 +85,8 @@ public sealed class VerificationHttpTests : IClassFixture<ApiHttpTests.Api>
         var pdf = await phone.GetByteArrayAsync($"/verify/{code}/pdf");
 
         Assert.Contains("Genuine certificate", html);
+        Assert.Contains("class=\"brand\"", html); // the issuing company is named first on the page
+        Assert.True(html.IndexOf("class=\"brand\"", StringComparison.Ordinal) < html.IndexOf("Genuine certificate", StringComparison.Ordinal));
         Assert.DoesNotContain("secret-weld-report", html);
         Assert.DoesNotContain("secret-weld-report", json);
         Assert.Equal(certificate, pdf); // the stored certificate is served exactly, with no report in it
