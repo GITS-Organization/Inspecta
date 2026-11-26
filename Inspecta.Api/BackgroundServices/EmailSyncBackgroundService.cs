@@ -87,7 +87,7 @@ public sealed partial class EmailSyncBackgroundService(
             message.MessageId,
             message.InReplyTo,
             message.References.Count > 0 ? string.Join(" ", message.References) : null,
-            message.Date == DateTimeOffset.MinValue ? null : message.Date,
+            message.Date == DateTimeOffset.MinValue ? null : message.Date.ToUniversalTime(),
             Inspecta.Infrastructure.Mail.AutomaticMessageDetector.IsAutomatic(message));
     }
 

@@ -106,5 +106,36 @@ public sealed class EmailImportPersistenceTests : IDisposable
         Assert.Equal(0, await repository.PromoteMatchingMaybesAsync(manager.Id, senders));
     }
 
+    private static IncomingEmail EmailWith(long uid, string? messageId, DateTimeOffset? sentAt = null) => new(
+        "1", uid, "Please inspect 4 air receivers.", null, "stranger@elsewhere.com", "Sender", "Quote request", [], [], [], [], [], messageId, null, null, sentAt);
+
+    [Fact]
+    public async Task AnEmailWithANonUtcDateIsSavedAndKeptAsTheSameInstantInUtc()
+    {
+        var plusTwo = new DateTimeOffset(2026, 11, 20, 10, 30, 0, TimeSpan.FromHours(2));
+        var plusFiveThirty = new DateTimeOffset(2026, 11, 21, 9, 15, 0, TimeSpan.FromMinutes(330));
+        await using var db = Background();
+        var repository = new EfEmailSyncRepository(db);
+        var first = InspectionRequest.CreateFromEmail(manager.Id, coordinator.Id, EmailWith(1, "<a@x>", plusTwo), triage: RequestTriage.Maybe, receivedAt: plusFiveThirty);
+        var second = InspectionRequest.CreateFromEmail(manager.Id, coordinator.Id, EmailWith(2, "<b@x>", plusFiveThirty), triage: RequestTriage.Maybe, receivedAt: plusTwo);
+
+        Assert.True(await repository.SaveRequestIfNewAsync(first));
+        Assert.True(await repository.SaveRequestIfNewAsync(second));
+
+        await using var check = Background();
+        var saved = await check.Requests.IgnoreQueryFilters().Include(item => item.Email).ToDictionaryAsync(item => item.Id);
+        Assert.Equal(plusTwo, saved[first.Id].Email!.SentAt);
+        Assert.Equal(plusFiveThirty, saved[first.Id].Email!.ReceivedAt);
+        Assert.Equal(plusTwo, saved[first.Id].ReceivedAt);
+        Assert.Equal(plusFiveThirty, saved[second.Id].Email!.SentAt);
+        Assert.Equal(plusFiveThirty, saved[second.Id].ReceivedAt);
+        Assert.All(saved.Values, item =>
+        {
+            Assert.Equal(TimeSpan.Zero, item.ReceivedAt.Offset);
+            Assert.Equal(TimeSpan.Zero, item.Email!.SentAt!.Value.Offset);
+            Assert.Equal(TimeSpan.Zero, item.Email.ReceivedAt.Offset);
+        });
+    }
+
     public void Dispose() => connection.Dispose();
 }

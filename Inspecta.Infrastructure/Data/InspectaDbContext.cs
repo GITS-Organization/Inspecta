@@ -2,6 +2,7 @@ using Inspecta.Domain.Entities;
 using Inspecta.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Inspecta.Infrastructure.Data;
 
@@ -43,6 +44,20 @@ public sealed class InspectaDbContext(
     public DbSet<ExecutiveTargets> ExecutiveTargets => Set<ExecutiveTargets>();
     public DbSet<InvoicePayment> InvoicePayments => Set<InvoicePayment>();
     public DbSet<InvoiceEvent> InvoiceEvents => Set<InvoiceEvent>();
+
+    /// <summary>
+    /// PostgreSQL ('timestamp with time zone') only accepts a DateTimeOffset with offset 0, and a mail Date header or an API date can carry any
+    /// offset. Every DateTimeOffset of every entity is written as the same instant in UTC, so no entity can ever hit that error.
+    /// </summary>
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTimeOffset>().HaveConversion<UtcDateTimeOffsetConverter>();
+        configurationBuilder.Properties<DateTimeOffset?>().HaveConversion<UtcDateTimeOffsetConverter>();
+    }
+
+    private sealed class UtcDateTimeOffsetConverter() : ValueConverter<DateTimeOffset, DateTimeOffset>(
+        value => value.ToUniversalTime(),
+        value => value);
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
