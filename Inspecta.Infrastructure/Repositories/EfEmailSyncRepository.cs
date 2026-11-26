@@ -197,6 +197,32 @@ public sealed class EfEmailSyncRepository(
             .Where(request => request.Triage == RequestTriage.Maybe && request.CreatedAt < createdBefore)
             .ExecuteDeleteAsync(cancellationToken);
 
+    /// <summary>
+    /// The same email sent to several mailboxes of one company (people in CC) is one request: the first mailbox to import it owns it.
+    /// It is the same email when the Message-ID (no angle brackets, any case) and the sender match, so a mailer that reuses one Message-ID
+    /// for different emails never hides one. Only the company's own requests count, and only an email that has both. The sync has no
+    /// signed-in user, so the tenant filter is bypassed on purpose and the company is matched by hand.
+    /// </summary>
+    public async Task<Guid?> FindSameEmailOwnerAsync(
+        InspectionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var email = request.Email;
+        var bare = email?.MessageId?.Trim().Trim('<', '>').Trim().ToLowerInvariant();
+        var sender = email?.FromAddress?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(bare) || string.IsNullOrEmpty(sender)) return null;
+
+        var forms = new[] { bare, $"<{bare}>" };
+        return await dbContext.RequestEmails.IgnoreQueryFilters().AsNoTracking()
+            .Where(existing => existing.MessageId != null &&
+                               forms.Contains(existing.MessageId.ToLower()) &&
+                               existing.FromAddress != null &&
+                               existing.FromAddress.Trim().ToLower() == sender &&
+                               existing.Request!.ManagerId == request.ManagerId)
+            .Select(existing => (Guid?)existing.CoordinatorId)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<bool> SaveRequestIfNewAsync(
         InspectionRequest request,
         CancellationToken cancellationToken = default)
@@ -212,20 +238,7 @@ public sealed class EfEmailSyncRepository(
                 cancellationToken))
             return false;
 
-        // The same email sent to several mailboxes of one company (people in CC) is one request: the first mailbox to import it owns it.
-        // Only the company's own requests count, and only an email that has a Message-ID. The sync has no signed-in user, so the tenant
-        // filter is bypassed on purpose and the company is matched by hand.
-        var bare = email.MessageId?.Trim().Trim('<', '>').Trim().ToLowerInvariant();
-        if (!string.IsNullOrEmpty(bare))
-        {
-            var forms = new[] { bare, $"<{bare}>" };
-            if (await dbContext.RequestEmails.IgnoreQueryFilters().AnyAsync(
-                    existing => existing.MessageId != null &&
-                                forms.Contains(existing.MessageId.ToLower()) &&
-                                existing.Request!.ManagerId == request.ManagerId,
-                    cancellationToken))
-                return false;
-        }
+        if (await FindSameEmailOwnerAsync(request, cancellationToken) is not null) return false;
 
         dbContext.Requests.Add(request);
         try

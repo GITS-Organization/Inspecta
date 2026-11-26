@@ -415,6 +415,7 @@ public sealed class MailTriageTests
             Task.FromResult<IReadOnlyList<SenderRule>>(rules);
 
         public Task<bool> SaveRequestIfNewAsync(InspectionRequest request, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task<Guid?> FindSameEmailOwnerAsync(InspectionRequest request, CancellationToken cancellationToken = default) => Task.FromResult<Guid?>(null);
 
         public Task<int> PromoteMatchingMaybesAsync(
             Guid managerId, IReadOnlyList<SenderRule> senders, Func<InspectionRequest, Task<IReadOnlyList<RequestItem>>>? autofill = null,

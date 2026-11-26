@@ -76,6 +76,8 @@ public sealed class EmailBacklogTests
         public Task<IReadOnlyList<SenderRule>> ListSenderRulesAsync(Guid managerId, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<SenderRule>>([]);
 
+        public Task<Guid?> FindSameEmailOwnerAsync(InspectionRequest request, CancellationToken cancellationToken = default) => Task.FromResult<Guid?>(null);
+
         public Task<bool> SaveRequestIfNewAsync(InspectionRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(true);
 

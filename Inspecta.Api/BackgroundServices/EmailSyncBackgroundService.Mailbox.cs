@@ -158,15 +158,28 @@ public sealed partial class EmailSyncBackgroundService
                             }
                         }
 
+                        var imported = true;
                         try
                         {
-                            await repository.SaveRequestIfNewAsync(request, cancellationToken);
+                            imported = await GatedRequestImport.SaveAsync(repository, request, cancellationToken);
                         }
                         catch (Exception exception) when (filled > 0 && exception is not (OperationCanceledException or ImapProtocolException or IOException))
                         {
                             // The machines are only a help: if saving them is what failed, the email is saved without them.
                             logger.LogWarning(exception, "Could not save message UID {Uid} with its machines; importing it without them.", uid.Id);
-                            await repository.SaveRequestIfNewAsync(NewRequest(), cancellationToken);
+                            request = NewRequest();
+                            imported = await GatedRequestImport.SaveAsync(repository, request, cancellationToken);
+                        }
+
+                        if (!imported)
+                        {
+                            // Not a failure: another mailbox of the same company already holds this email (the same one sent to several people).
+                            // The owner is named so support can tell why it is missing from this coordinator. No subject or body is logged.
+                            var owner = await repository.FindSameEmailOwnerAsync(request, cancellationToken);
+                            if (owner is not null)
+                                logger.LogInformation(
+                                    "Message UID {Uid} of coordinator {CoordinatorId} was already imported by coordinator {OwnerCoordinatorId} of team {ManagerId}; not imported again.",
+                                    uid.Id, config.CoordinatorId, owner, config.TenantId);
                         }
 
                         FailedImports.TryRemove((config.CoordinatorId, uid.Id), out _);

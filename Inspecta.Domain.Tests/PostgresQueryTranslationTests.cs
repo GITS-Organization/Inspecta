@@ -91,7 +91,10 @@ public sealed class PostgresQueryTranslationTests
                 .Select(email => (Guid?)email.RequestId).ToQueryString(),
             db.ClientReplies.AsNoTracking().Where(reply => reply.ManagerId == manager && reply.MessageId != null && reply.MessageId.ToLower() == "a@b.c").ToQueryString(),
             // The same email already imported by another mailbox of the company (EfEmailSyncRepository.SaveRequestIfNewAsync).
-            db.RequestEmails.IgnoreQueryFilters().Where(email => email.MessageId != null && new[] { "a@b.c", "<a@b.c>" }.Contains(email.MessageId.ToLower()) && email.Request!.ManagerId == manager).ToQueryString(),
+            db.RequestEmails.IgnoreQueryFilters().AsNoTracking()
+                .Where(email => email.MessageId != null && new[] { "a@b.c", "<a@b.c>" }.Contains(email.MessageId.ToLower()) &&
+                                email.FromAddress != null && email.FromAddress.Trim().ToLower() == "a@b.c" && email.Request!.ManagerId == manager)
+                .Select(email => (Guid?)email.CoordinatorId).ToQueryString(),
             db.Items.AsNoTracking()
                 .Where(item => item.NextInspectionDueAt != null && item.NextInspectionDueAt <= DateTimeOffset.UtcNow && item.Status == EquipmentStatus.Active &&
                                !item.IsArchived && item.ArchivedAt == null && item.Client!.ArchivedAt == null)

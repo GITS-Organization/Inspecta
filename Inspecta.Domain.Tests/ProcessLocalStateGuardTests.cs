@@ -40,6 +40,8 @@ public sealed class ProcessLocalStateGuardTests
         "EmailSyncBackgroundService.FailedImports",
         // Per-team promotion lock: two instances could promote the same waiting maybes together. Needs a database lock.
         "EmailSyncBackgroundService.TeamPromotion",
+        // Per-company import lock: two instances could each import the same email sent to several mailboxes. Needs a database lock (advisory lock) or a unique key on company + Message-ID.
+        "GatedRequestImport.PerCompany",
         // Sign-in lock-out: each instance counts failures alone, so the limit multiplies. Needs a shared store (database or Redis).
         "LoginAttemptTracker.states",
         // Microsoft access tokens and renewal gates: a second instance only refreshes more often and could spend one refresh token twice. Needs a database lock or a shared cache.

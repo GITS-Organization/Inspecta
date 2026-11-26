@@ -23,6 +23,14 @@ public interface IEmailSyncRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// The coordinator whose mailbox already imported the same email (same Message-ID and sender) for the same company, or
+    /// <c>null</c> when there is none. It is why <see cref="SaveRequestIfNewAsync"/> skips a copy of an email sent to several mailboxes.
+    /// </summary>
+    Task<Guid?> FindSameEmailOwnerAsync(
+        InspectionRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Turns the waiting "maybe" emails of the team whose sender now belongs to a client (a registered sender, or an email
     /// of the client record) into requests of that client, with its location and, through <paramref name="autofill"/>, the
     /// machines the email names. Runs on every sync cycle, so a sender that is added to a client later, by any route,

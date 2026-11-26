@@ -106,8 +106,8 @@ public sealed class EmailImportPersistenceTests : IDisposable
         Assert.Equal(0, await repository.PromoteMatchingMaybesAsync(manager.Id, senders));
     }
 
-    private static IncomingEmail EmailWith(long uid, string? messageId, DateTimeOffset? sentAt = null) => new(
-        "1", uid, "Please inspect 4 air receivers.", null, "stranger@elsewhere.com", "Sender", "Quote request", [], [], [], [], [], messageId, null, null, sentAt);
+    private static IncomingEmail EmailWith(long uid, string? messageId, DateTimeOffset? sentAt = null, string from = "stranger@elsewhere.com") => new(
+        "1", uid, "Please inspect 4 air receivers.", null, from, "Sender", "Quote request", [], [], [], [], [], messageId, null, null, sentAt);
 
     [Fact]
     public async Task AnEmailWithANonUtcDateIsSavedAndKeptAsTheSameInstantInUtc()
@@ -169,9 +169,63 @@ public sealed class EmailImportPersistenceTests : IDisposable
 
         Assert.True(await ImportAsync(manager.Id, coordinator.Id, EmailWith(10, "<Same@mail.example>")));
         // Another mailbox, another uid, the id written differently: still the same email.
-        Assert.False(await ImportAsync(manager.Id, second.Id, EmailWith(55, "  same@MAIL.example ")));
+        Assert.False(await ImportAsync(manager.Id, second.Id, EmailWith(55, "  same@MAIL.example ", from: " STRANGER@Elsewhere.com ")));
 
         Assert.Equal(1, await CountRequestsAsync(manager.Id));
+
+        // The skip is explainable: the copy points at the mailbox that owns the request.
+        await using var db = Background();
+        var copy = InspectionRequest.CreateFromEmail(manager.Id, second.Id, EmailWith(55, "<same@mail.example>"), triage: RequestTriage.Maybe);
+        Assert.Equal(coordinator.Id, await new EfEmailSyncRepository(db).FindSameEmailOwnerAsync(copy));
+    }
+
+    [Fact]
+    public async Task TheSameMessageIdFromADifferentSenderIsNotACopyAndBothAreImported()
+    {
+        var (second, _, _) = await MoreMailboxesAsync();
+
+        Assert.True(await ImportAsync(manager.Id, coordinator.Id, EmailWith(10, "<reused@mailer.example>", from: "first@client.com")));
+        Assert.True(await ImportAsync(manager.Id, second.Id, EmailWith(11, "<reused@mailer.example>", from: "other@client.com")));
+
+        Assert.Equal(2, await CountRequestsAsync(manager.Id));
+    }
+
+    [Fact]
+    public async Task TwoMailboxesImportingTheSameEmailAtTheSameTimeMakeOneRequest()
+    {
+        // Separate connections to one file, the way two mailboxes of the background service have their own scope.
+        var file = Path.Combine(Path.GetTempPath(), $"inspecta-race-{Guid.NewGuid():N}.db");
+        try
+        {
+            var raceOptions = new DbContextOptionsBuilder<InspectaDbContext>().UseSqlite($"Data Source={file};Pooling=False").Options;
+            InspectaDbContext Race() => new(raceOptions, new CurrentTenant(new HttpContextAccessor()));
+            var company = AppUser.Create("race-manager@example.com", "Race Manager", UserRole.TechnicalManager);
+            var first = AppUser.Create("race-1@example.com", "Race 1", UserRole.Coordinator);
+            var second = AppUser.Create("race-2@example.com", "Race 2", UserRole.Coordinator);
+            await using (var setup = Race())
+            {
+                await setup.Database.EnsureCreatedAsync();
+                setup.AddRange(company, first, second);
+                await setup.SaveChangesAsync();
+            }
+
+            async Task<bool> Import(Guid coordinatorId, long uid)
+            {
+                await using var db = Race();
+                var request = InspectionRequest.CreateFromEmail(company.Id, coordinatorId, EmailWith(uid, "<cc@mail.example>"), triage: RequestTriage.Maybe);
+                return await Inspecta.Api.BackgroundServices.GatedRequestImport.SaveAsync(new EfEmailSyncRepository(db), request, CancellationToken.None);
+            }
+
+            var results = await Task.WhenAll(Task.Run(() => Import(first.Id, 5)), Task.Run(() => Import(second.Id, 9)));
+
+            Assert.Equal(1, results.Count(saved => saved));
+            await using var check = Race();
+            Assert.Equal(1, await check.Requests.IgnoreQueryFilters().CountAsync(item => item.ManagerId == company.Id));
+        }
+        finally
+        {
+            foreach (var path in Directory.GetFiles(Path.GetTempPath(), Path.GetFileName(file) + "*")) File.Delete(path);
+        }
     }
 
     [Fact]
