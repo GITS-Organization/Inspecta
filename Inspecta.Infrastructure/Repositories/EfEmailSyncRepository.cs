@@ -212,6 +212,21 @@ public sealed class EfEmailSyncRepository(
                 cancellationToken))
             return false;
 
+        // The same email sent to several mailboxes of one company (people in CC) is one request: the first mailbox to import it owns it.
+        // Only the company's own requests count, and only an email that has a Message-ID. The sync has no signed-in user, so the tenant
+        // filter is bypassed on purpose and the company is matched by hand.
+        var bare = email.MessageId?.Trim().Trim('<', '>').Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(bare))
+        {
+            var forms = new[] { bare, $"<{bare}>" };
+            if (await dbContext.RequestEmails.IgnoreQueryFilters().AnyAsync(
+                    existing => existing.MessageId != null &&
+                                forms.Contains(existing.MessageId.ToLower()) &&
+                                existing.Request!.ManagerId == request.ManagerId,
+                    cancellationToken))
+                return false;
+        }
+
         dbContext.Requests.Add(request);
         try
         {

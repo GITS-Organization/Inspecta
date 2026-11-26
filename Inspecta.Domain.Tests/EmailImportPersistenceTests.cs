@@ -137,5 +137,80 @@ public sealed class EmailImportPersistenceTests : IDisposable
         });
     }
 
+    /// <summary>A second mailbox of the same company, a mailbox of another company, and the same message in each.</summary>
+    private async Task<(AppUser SecondCoordinator, AppUser OtherManager, AppUser OtherCoordinator)> MoreMailboxesAsync()
+    {
+        var secondCoordinator = AppUser.Create("coordinator2@example.com", "Coordinator 2", UserRole.Coordinator);
+        var otherManager = AppUser.Create("manager2@example.com", "Manager 2", UserRole.TechnicalManager);
+        var otherCoordinator = AppUser.Create("coordinator3@example.com", "Coordinator 3", UserRole.Coordinator);
+        await using var db = Background();
+        db.AddRange(secondCoordinator, otherManager, otherCoordinator);
+        await db.SaveChangesAsync();
+        return (secondCoordinator, otherManager, otherCoordinator);
+    }
+
+    private async Task<bool> ImportAsync(Guid managerId, Guid coordinatorId, IncomingEmail email)
+    {
+        await using var db = Background();
+        return await new EfEmailSyncRepository(db).SaveRequestIfNewAsync(
+            InspectionRequest.CreateFromEmail(managerId, coordinatorId, email, triage: RequestTriage.Maybe));
+    }
+
+    private async Task<int> CountRequestsAsync(Guid managerId)
+    {
+        await using var db = Background();
+        return await db.Requests.IgnoreQueryFilters().CountAsync(item => item.ManagerId == managerId);
+    }
+
+    [Fact]
+    public async Task TheSameEmailInTwoMailboxesOfOneCompanyMakesOneRequest()
+    {
+        var (second, _, _) = await MoreMailboxesAsync();
+
+        Assert.True(await ImportAsync(manager.Id, coordinator.Id, EmailWith(10, "<Same@mail.example>")));
+        // Another mailbox, another uid, the id written differently: still the same email.
+        Assert.False(await ImportAsync(manager.Id, second.Id, EmailWith(55, "  same@MAIL.example ")));
+
+        Assert.Equal(1, await CountRequestsAsync(manager.Id));
+    }
+
+    [Fact]
+    public async Task TheSameMessageIdInAnotherCompanyStillMakesItsOwnRequest()
+    {
+        var (_, otherManager, otherCoordinator) = await MoreMailboxesAsync();
+
+        Assert.True(await ImportAsync(manager.Id, coordinator.Id, EmailWith(10, "<same@mail.example>")));
+        Assert.True(await ImportAsync(otherManager.Id, otherCoordinator.Id, EmailWith(10, "<same@mail.example>")));
+
+        Assert.Equal(1, await CountRequestsAsync(manager.Id));
+        Assert.Equal(1, await CountRequestsAsync(otherManager.Id));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("<>")]
+    public async Task EmailsWithoutAMessageIdAreAllImported(string? messageId)
+    {
+        var (second, _, _) = await MoreMailboxesAsync();
+
+        Assert.True(await ImportAsync(manager.Id, coordinator.Id, EmailWith(10, messageId)));
+        Assert.True(await ImportAsync(manager.Id, second.Id, EmailWith(11, messageId)));
+
+        Assert.Equal(2, await CountRequestsAsync(manager.Id));
+    }
+
+    [Fact]
+    public async Task ADifferentMessageIdInAnotherMailboxOfTheCompanyIsAnotherRequest()
+    {
+        var (second, _, _) = await MoreMailboxesAsync();
+
+        Assert.True(await ImportAsync(manager.Id, coordinator.Id, EmailWith(10, "<one@mail.example>")));
+        Assert.True(await ImportAsync(manager.Id, second.Id, EmailWith(10, "<two@mail.example>")));
+
+        Assert.Equal(2, await CountRequestsAsync(manager.Id));
+    }
+
     public void Dispose() => connection.Dispose();
 }

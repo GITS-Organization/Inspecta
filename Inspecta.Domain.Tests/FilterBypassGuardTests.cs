@@ -18,7 +18,8 @@ public sealed class FilterBypassGuardTests
         ["EfClientRepository.cs"] = 3,
         // The public page has no signed-in user and the company endpoints must see a host another company owns: one lookup of "which company owns this host", returning only a company id.
         ["EfCompanyVerificationDomainRepository.cs"] = 1,
-        ["EfEmailSyncRepository.cs"] = 10,
+        // 10 + 1: the same email (same Message-ID) already imported by another mailbox of the same company is not imported again; matched by ManagerId, no signed-in user in the sync.
+        ["EfEmailSyncRepository.cs"] = 11,
         ["EfEquipmentCatalog.cs"] = 1,
         ["EfEquipmentRepository.cs"] = 2,
         // The clean-up of expired job reports runs in the background with no company: it finds and deletes expired files of every team (2 queries).
